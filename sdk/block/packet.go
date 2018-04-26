@@ -3,12 +3,13 @@ package block
 import (
 	"errors"
 	"fmt"
-	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk"
 	"hash/crc32"
 	"strconv"
 	"strings"
 	"sync/atomic"
+
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/sdk"
 )
 
 const KeySegsCnt = 7 // cfs/{version}/{vid}/{fid}/{offset}/{size}/{crc}

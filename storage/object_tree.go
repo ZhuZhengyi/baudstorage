@@ -2,11 +2,12 @@ package storage
 
 import (
 	"encoding/binary"
-	"github.com/google/btree"
 	"io"
 	"math"
 	"os"
 	"sync"
+
+	"github.com/google/btree"
 )
 
 const (
@@ -113,7 +114,7 @@ func WalkIndexFile(f *os.File, fn func(oid uint64, offset, size, crc uint32) err
 
 	for count > 0 && err == nil || err == io.EOF {
 		for iter = 0; iter+ObjectHeaderSize <= count; iter += ObjectHeaderSize {
-			o.Uomarshal(bytes[iter: iter+ObjectHeaderSize])
+			o.Uomarshal(bytes[iter : iter+ObjectHeaderSize])
 			if maxOid < o.Oid {
 				maxOid = o.Oid
 			}

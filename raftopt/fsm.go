@@ -3,13 +3,14 @@ package raftopt
 import (
 	"errors"
 	"fmt"
+	"io"
+	"strconv"
+	"strings"
+
 	pbproto "github.com/golang/protobuf/proto"
 	"github.com/tecbot/gorocksdb"
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
-	"io"
-	"strconv"
-	"strings"
 )
 
 const (

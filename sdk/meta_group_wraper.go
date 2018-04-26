@@ -2,14 +2,15 @@ package sdk
 
 import (
 	"encoding/json"
-	"github.com/google/btree"
-	"github.com/juju/errors"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/google/btree"
+	"github.com/juju/errors"
 
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/pool"

@@ -2,12 +2,13 @@ package storage
 
 import (
 	"fmt"
-	"github.com/juju/errors"
-	util "github.com/tiglabs/baudstorage/util"
 	"os"
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/juju/errors"
+	util "github.com/tiglabs/baudstorage/util"
 )
 
 const (

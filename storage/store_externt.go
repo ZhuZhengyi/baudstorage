@@ -4,7 +4,6 @@ import (
 	"container/list"
 	"encoding/binary"
 	"fmt"
-	"github.com/juju/errors"
 	"hash/crc32"
 	"io"
 	"io/ioutil"
@@ -14,6 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+
+	"github.com/juju/errors"
 )
 
 var (
@@ -225,7 +226,7 @@ func (s *ExtentStore) Read(extentId uint64, offset, size int64, nbuf []byte) (cr
 	}
 	blockNo := offset / BlockSize
 	if offsetInBlock == 0 {
-		crc = binary.BigEndian.Uint32(e.blocksCrc[blockNo*4: (blockNo+1)*4])
+		crc = binary.BigEndian.Uint32(e.blocksCrc[blockNo*4 : (blockNo+1)*4])
 	} else {
 		crc = crc32.ChecksumIEEE(nbuf)
 	}

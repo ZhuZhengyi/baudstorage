@@ -3,11 +3,12 @@ package metanode
 import (
 	"context"
 	"errors"
+	"regexp"
+	"sync"
+
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
-	"regexp"
-	"sync"
 )
 
 // Configuration keys
@@ -32,7 +33,7 @@ type nodeState uint8
 
 // State constants
 const (
-	sReady   nodeState = iota
+	sReady nodeState = iota
 	sRunning
 )
 

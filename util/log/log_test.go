@@ -56,7 +56,7 @@ func testPrint(t *testing.T, flag int, prefix string, pattern string, useFormat 
 		Println("hello", 23, "world")
 	}
 	line := buf.String()
-	line = line[0: len(line)-1]
+	line = line[0 : len(line)-1]
 	pattern = "^" + pattern + "hello 23 world$"
 	matched, err4 := regexp.MatchString(pattern, line)
 	if err4 != nil {

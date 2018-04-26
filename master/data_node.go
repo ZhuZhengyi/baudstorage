@@ -1,10 +1,11 @@
 package master
 
 import (
-	"github.com/tiglabs/baudstorage/util"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/tiglabs/baudstorage/util"
 )
 
 const (

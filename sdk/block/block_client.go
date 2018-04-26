@@ -2,6 +2,7 @@ package block
 
 import (
 	"errors"
+
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
 	"github.com/tiglabs/baudstorage/util/pool"

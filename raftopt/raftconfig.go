@@ -2,10 +2,11 @@ package raftopt
 
 import (
 	"errors"
-	"github.com/tiglabs/baudstorage/util/config"
-	"github.com/tiglabs/raft/proto"
 	"strconv"
 	"strings"
+
+	"github.com/tiglabs/baudstorage/util/config"
+	"github.com/tiglabs/raft/proto"
 )
 
 const (
