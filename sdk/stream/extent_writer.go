@@ -34,20 +34,20 @@ type ExtentWriter struct {
 	inode            uint64
 	requestQueue     *list.List
 	requestQueueLock sync.Mutex
-	sync.Mutex
-	volGroup      *sdk.VolGroup
-	wraper        *sdk.VolGroupWraper
-	extentId      uint64
-	currentPacket *Packet
-	seqNo         uint64
-	byteAck       uint64
-	offset        int
-	connect       net.Conn
-	handleCh      chan bool
-	recoverCnt    int
+	volGroup         *sdk.VolGroup
+	wraper           *sdk.VolGroupWraper
+	extentId         uint64
+	currentPacket    *Packet
+	seqNo            uint64
+	byteAck          uint64
+	offset           int
+	connect          net.Conn
+	handleCh         chan bool
+	recoverCnt       int
 
 	flushCond *sync.Cond
 	needFlush bool
+	sync.Mutex
 }
 
 func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper, extentId uint64) (writer *ExtentWriter, err error) {
@@ -391,9 +391,13 @@ func (writer *ExtentWriter) getNeedRetrySendPacket() (sendList *list.List) {
 }
 
 func (writer *ExtentWriter) getPacket() (p *Packet) {
+	writer.Lock()
+	defer writer.Unlock()
 	return writer.currentPacket
 }
 
 func (writer *ExtentWriter) setPacket(p *Packet) {
+	writer.Lock()
+	defer writer.Unlock()
 	writer.currentPacket = p
 }
