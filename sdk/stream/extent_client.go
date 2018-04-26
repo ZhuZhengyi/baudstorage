@@ -9,7 +9,7 @@ import (
 )
 
 type ExtentClient struct {
-	wrapper     *sdk.VolGroupWraper
+	wrapper    *sdk.VolGroupWraper
 	writers    map[uint64]*StreamWriter
 	writerLock sync.RWMutex
 	readers    map[uint64]*StreamReader
@@ -63,12 +63,12 @@ func (client *ExtentClient) Read(inode uint64, offset uint64, size uint32) (read
 }
 
 func (client *ExtentClient) Delete(keys []ExtentKey) (err error) {
-	for _,k:=range keys{
-		vol,err:=client.wrapper.GetVol(k.VolId)
-		if err!=nil {
+	for _, k := range keys {
+		vol, err := client.wrapper.GetVol(k.VolId)
+		if err != nil {
 			continue
 		}
-		client.delete(vol,k.ExtentId)
+		client.delete(vol, k.ExtentId)
 	}
 
 	return nil

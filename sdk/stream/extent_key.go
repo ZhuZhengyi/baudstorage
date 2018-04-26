@@ -1,8 +1,8 @@
 package stream
 
 import (
+	"errors"
 	"fmt"
-	"github.com/juju/errors"
 	"strconv"
 	"strings"
 )
@@ -15,8 +15,14 @@ type ExtentKey struct {
 }
 
 type StreamKey struct {
-	inode   uint64
-	extents []ExtentKey
+	Inode   uint64
+	Extents []ExtentKey
+}
+
+func NewStreamKey(ino uint64) *StreamKey {
+	return &StreamKey{
+		Inode: ino,
+	}
 }
 
 func (sk *StreamKey) Put(k ExtentKey) {
