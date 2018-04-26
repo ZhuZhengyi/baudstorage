@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/sdk/stream"
+	"time"
 )
 
 // Dentry wraps necessary properties of `dentry` information in file system.
@@ -60,7 +61,19 @@ type Inode struct {
 	Size       uint64
 	AccessTime int64
 	ModifyTime int64
-	Stream     stream.StreamKey
+	Stream     *stream.StreamKey
+}
+
+func NewInode(ino uint64, name string, t uint32) *Inode {
+	ts := time.Now().Unix()
+	return &Inode{
+		Inode:      ino,
+		Name:       name,
+		Type:       t,
+		AccessTime: ts,
+		ModifyTime: ts,
+		Stream:     stream.NewStreamKey(ino),
+	}
 }
 
 func (i *Inode) Less(than btree.Item) bool {
