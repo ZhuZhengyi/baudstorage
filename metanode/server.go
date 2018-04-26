@@ -101,10 +101,12 @@ func (m *MetaNode) Shutdown() {
 		// Only work if this MetaNode current is running.
 		return
 	}
-	// Shutdown node
+	// Shutdown node and release resource.
 	if m.ctxCancelFunc != nil {
 		m.ctxCancelFunc()
 	}
+	close(m.masterReplyC)
+
 	m.state = sReady
 	m.waitGroup.Done()
 }

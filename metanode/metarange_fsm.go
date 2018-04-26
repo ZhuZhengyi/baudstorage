@@ -8,9 +8,9 @@ import (
 )
 
 type MetaRangeFsm struct {
-	dentryLock sync.Locker
+	dLock      sync.Locker
 	DentryTree *btree.BTree
-	inodeLock  sync.Locker
+	iLock      sync.Locker
 	InodeTree  *btree.BTree
 	raftopt.RaftStoreFsm
 }
@@ -24,8 +24,8 @@ func NewMetaRangeFsm() *MetaRangeFsm {
 
 // looks for the dentry in the DentryTree, returning it.
 // returns nil if unable to find that dentry.
-func (mf *MetaRangeFsm) LookupDentry(dentry *Dentry) *Dentry {
-	item := mf.DentryTree.Get(dentry)
+func (mr *MetaRangeFsm) GetDentry(dentry *Dentry) *Dentry {
+	item := mr.DentryTree.Get(dentry)
 	if item == nil {
 		return nil
 	}
@@ -33,32 +33,52 @@ func (mf *MetaRangeFsm) LookupDentry(dentry *Dentry) *Dentry {
 	return d
 }
 
+func (mr *MetaRangeFsm) GetInode(ino *Inode) *Inode {
+	item := mr.InodeTree.Get(ino)
+	if item == nil {
+		return nil
+	}
+	i := item.(*Inode)
+	return i
+}
+
+func (mr *MetaRangeFsm) GetStream(ino uint64) {
+
+}
+
 func (mr *MetaRangeFsm) Create(inode *Inode, dentry *Dentry) (response *proto.CreateResponse) {
 	//TODO: first raft sync
 
 	//insert inode tree
-	mr.inodeLock.Lock()
+	mr.iLock.Lock()
 	if mr.InodeTree.Has(inode) {
-		defer mr.inodeLock.Unlock()
+		defer mr.iLock.Unlock()
 		//TODO: inode is already there.
 
 		return
 	}
 	mr.InodeTree.ReplaceOrInsert(inode)
-	mr.inodeLock.Unlock()
+	mr.iLock.Unlock()
 
 	//insert dentry tree
-	mr.dentryLock.Lock()
+	mr.dLock.Lock()
 	mr.DentryTree.ReplaceOrInsert(dentry)
-	mr.dentryLock.Unlock()
-	response.Status = int(proto.OpOk)
-	response.Inode = dentry.Inode
-	response.Name = dentry.Name
-	response.Type = dentry.Type
+	mr.dLock.Unlock()
+
+	//TODO:
 	return
 }
 
-func (mr *MetaRangeFsm) Delete(request *proto.DeleteRequest) (response *proto.DeleteResponse) {
+func (mr *MetaRangeFsm) Delete(inode *Inode, dentry *Dentry) (response *proto.DeleteResponse) {
+	if !mr.DentryTree.Has(dentry) {
+		return
+	}
+	mr.dLock.Lock()
+	mr.DentryTree.Delete(dentry)
+	mr.dLock.Unlock()
+	mr.iLock.Lock()
+	mr.InodeTree.Delete(inode)
+	mr.iLock.Unlock()
 	return
 }
 

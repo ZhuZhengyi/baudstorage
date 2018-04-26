@@ -89,7 +89,7 @@ type RenameResponse struct {
 
 type ReadDirRequest struct {
 	Namespace string
-	ParaentId uint64
+	ParentId  uint64
 }
 
 type ReadDirResponse struct {

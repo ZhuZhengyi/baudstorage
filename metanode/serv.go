@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func (m *MetaNode) startTcpService(ctx context.Context) (err error) {
+func (m *MetaNode) startTcpService() (err error) {
 	// Init and start server.
 	ln, err := net.Listen("tcp", m.addr)
 	if err != nil {
@@ -32,7 +32,7 @@ func (m *MetaNode) startTcpService(ctx context.Context) (err error) {
 			// Start a goroutine for tcp connection handling.
 			go m.serveTCPConn(conn, ctx)
 		}
-	}(ctx)
+	}(m.ctx)
 	return
 }
 
@@ -61,13 +61,16 @@ func (m *MetaNode) serveTCPConn(conn net.Conn, ctx context.Context) {
 
 func (m *MetaNode) operatorPkg(conn net.Conn, p *Packet) (err error) {
 	switch p.Opcode {
-	case proto.OpCreate:
-		err = m.opCreate(conn, p)
-	case proto.OpRename:
-	case proto.OpDelete:
-	case proto.OpList:
-	case proto.OpOpen:
-	case proto.OpCreateMetaRange:
+	case proto.OpMetaCreate:
+		err = m.create(conn, p)
+	case proto.OpMetaRename:
+		err = m.rename(conn, p)
+	case proto.OpMetaDelete:
+		err = m.delete(conn, p)
+	case proto.OpMetaReadDir:
+		err = m.clientReadDir(conn, p)
+	case proto.OpMetaOpen:
+	case proto.OpMetaCreateMetaRange:
 		err = m.createMetaRange(conn, p)
 	default:
 		err = errors.New("unknown Opcode: " + proto.GetOpMesg(p.Opcode))
@@ -76,22 +79,42 @@ func (m *MetaNode) operatorPkg(conn net.Conn, p *Packet) (err error) {
 }
 
 // handle OpCreate
-func (m *MetaNode) opCreate(conn net.Conn, p *Packet) (err error) {
-	request := new(proto.CreateRequest)
-	if err = json.Unmarshal(p.Data, request); err != nil {
+func (m *MetaNode) create(conn net.Conn, p *Packet) (err error) {
+	req := new(proto.CreateRequest)
+	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
 	var mr *MetaRange
-	if v, ok := m.metaRanges.Load(request.Namespace); !ok {
-		err = errors.New("unknown namespace: " + request.Namespace)
+	if v, ok := m.metaRanges.Load(req.Namespace); !ok {
+		err = errors.New("unknown namespace: " + req.Namespace)
 		return
 	} else {
 		mr = v.(*MetaRange)
 	}
 
-	response := mr.Create(request)
+	response := mr.Create(req)
 	//FIXME: HTTP Response
 
+	return
+}
+
+func (m *MetaNode) rename(conn net.Conn, p *Packet) (err error) {
+	req := new(proto.RenameRequest)
+	if err = json.Unmarshal(p.Data, req); err != nil {
+		return
+	}
+	return
+}
+
+func (m *MetaNode) delete(conn net.Conn, p *Packet) (err error) {
+	req := new(proto.DeleteRequest)
+	if err = json.Unmarshal(p.Data, req); err != nil {
+		return
+	}
+	return
+}
+
+func (m *MetaNode) clientReadDir(conn net.Conn, p *Packet) (err error) {
 	return
 }
 func (m *MetaNode) createMetaRange(conn net.Conn,
@@ -109,11 +132,7 @@ func (m *MetaNode) createMetaRange(conn net.Conn,
 	if _, ok := m.metaRanges.LoadOrStore(request.MetaId, mr); !ok {
 		err = errors.New("metaNode createRange failed: " + request.MetaId)
 	}
-	response := proto.CreateMetaRangeResponse{
-		Status: proto.OpOk,
-		Result: proto.GetOpMesg(proto.OpOk),
-	}
-	//task response
+	//FIXME: HTTP Response
 
 	return
 }

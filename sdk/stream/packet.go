@@ -10,6 +10,7 @@ import (
 
 type Packet struct {
 	proto.Packet
+	fillBytes uint32
 }
 
 func NewPacket(vol *sdk.VolGroup) (p *Packet) {
@@ -53,13 +54,12 @@ func IsEqual(request, reply *Packet) bool {
 	return false
 }
 
-func (p *Packet) fill(data []byte, offset int, size int) (canWrite int) {
-	blockSpace := CFSBLOCKSIZE - (offset % CFSBLOCKSIZE)
-	remain := blockSpace - len(p.Data)
+func (p *Packet) fill(data []byte, size int) (canWrite int) {
+	blockSpace := CFSBLOCKSIZE - (p.Offset % CFSBLOCKSIZE)
+	remain := int(blockSpace) - int(p.Size)
 	canWrite = util.Min(remain, size)
 	p.Data = append(p.Data, data[:canWrite]...)
 	p.Size = uint32(len(p.Data))
-	//p.Crc = crc32.ChecksumIEEE(p.Data)
 
 	return
 }

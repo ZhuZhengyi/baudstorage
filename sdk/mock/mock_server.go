@@ -60,10 +60,11 @@ func (m *MockServer) volGroupView() (views []*sdk.VolGroup) {
 }
 
 func (m *MockServer) packErrorBody(request *proto.Packet, err error) {
+	log.LogError(fmt.Sprintf("request [%v]Action[%v] error[%v]", request.GetUniqLogId(),
+		proto.GetOpMesg(request.Opcode), err.Error()))
 	request.Data = make([]byte, len(err.Error()))
 	copy(request.Data, ([]byte)(err.Error()))
 	request.Size = uint32(len(request.Data))
-	log.LogError(fmt.Sprintf("Action[%v] error[%v]", proto.GetOpMesg(request.Opcode), err.Error()))
 	request.Opcode = proto.OpIntraGroupNetErr
 
 	return

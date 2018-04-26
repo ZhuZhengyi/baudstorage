@@ -1,8 +1,8 @@
 package stream
 
 import (
+	"errors"
 	"fmt"
-	"github.com/juju/errors"
 	"strconv"
 	"strings"
 )
@@ -15,28 +15,34 @@ type ExtentKey struct {
 }
 
 type StreamKey struct {
-	inode   uint64
-	extents []ExtentKey
+	Inode   uint64
+	Extents []ExtentKey
+}
+
+func NewStreamKey(ino uint64) *StreamKey {
+	return &StreamKey{
+		Inode: ino,
+	}
 }
 
 func (sk *StreamKey) Put(k ExtentKey) {
 	isFound := false
-	for _, okey := range sk.extents {
-		if okey.VolId == k.VolId && okey.ExtentId == k.ExtentId {
-			okey.Size = k.Size
+	for index:=0;index<len(sk.Extents);index++{
+		if sk.Extents[index].VolId == k.VolId && sk.Extents[index].ExtentId == k.ExtentId {
+			sk.Extents[index].Size = k.Size
 			isFound = true
 			return
 		}
 	}
 	if !isFound {
-		sk.extents = append(sk.extents, k)
+		sk.Extents = append(sk.Extents, k)
 	}
 
 	return
 }
 
 func (sk *StreamKey) Size() (bytes uint64) {
-	for _, okey := range sk.extents {
+	for _, okey := range sk.Extents {
 		bytes += uint64(okey.Size)
 	}
 	return
@@ -45,7 +51,7 @@ func (sk *StreamKey) Size() (bytes uint64) {
 // Range calls f sequentially for each key and value present in the extent key collection.
 // If f returns false, range stops the iteration.
 func (sk *StreamKey) Range(f func(i int, v ExtentKey) bool) {
-	for i, v := range sk.extents {
+	for i, v := range sk.Extents {
 		if !f(i, v) {
 			return
 		}

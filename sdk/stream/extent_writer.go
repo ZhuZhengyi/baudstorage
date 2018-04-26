@@ -34,20 +34,20 @@ type ExtentWriter struct {
 	inode            uint64
 	requestQueue     *list.List
 	requestQueueLock sync.Mutex
-	sync.Mutex
-	volGroup      *sdk.VolGroup
-	wraper        *sdk.VolGroupWraper
-	extentId      uint64
-	currentPacket *Packet
-	seqNo         uint64
-	byteAck       uint64
-	offset        int
-	connect       net.Conn
-	handleCh      chan bool
-	recoverCnt    int
+	volGroup         *sdk.VolGroup
+	wraper           *sdk.VolGroupWraper
+	extentId         uint64
+	currentPacket    *Packet
+	seqNo            uint64
+	byteAck          uint64
+	offset           int
+	connect          net.Conn
+	handleCh         chan bool
+	recoverCnt       int
 
 	flushCond *sync.Cond
 	needFlush bool
+	sync.Mutex
 }
 
 func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper, extentId uint64) (writer *ExtentWriter, err error) {
@@ -81,8 +81,8 @@ func (writer *ExtentWriter) write(data []byte, size int) (total int, err error) 
 			writer.addSeqNo()
 			writer.setPacket(NewWritePacket(writer.volGroup, writer.extentId, writer.getSeqNo(), writer.offset))
 		}
-		canWrite = writer.getPacket().fill(data[total:size], total, size-total)
-		if writer.getPacket().isFull() {
+		canWrite = writer.getPacket().fill(data[total:size], size-total)
+		if writer.getPacket().isFull() || canWrite == 0 {
 			err = writer.sendCurrPacket()
 			if err != nil && !writer.recover() {
 				break
@@ -99,10 +99,15 @@ func (writer *ExtentWriter) sendCurrPacket() (err error) {
 	if writer.getPacket() == nil {
 		return
 	}
+	if writer.getPacket().Size == 0 {
+		return
+	}
 	packet := writer.getPacket()
 	writer.pushRequestToQueue(packet)
 	writer.setPacket(nil)
 	writer.offset += packet.getDataLength()
+	//fmt.Printf("packet[%v] pkgOffset[%v] pkgSize[%v] isfullpkg[%v]\n",packet.GetUniqLogId(),packet.Offset,packet.Size,
+	//	uint32(packet.Offset%CFSBLOCKSIZE)+packet.Size)
 	err = packet.writeTo(writer.connect)
 	if err == nil {
 		writer.handleCh <- ContinueRecive
@@ -386,9 +391,13 @@ func (writer *ExtentWriter) getNeedRetrySendPacket() (sendList *list.List) {
 }
 
 func (writer *ExtentWriter) getPacket() (p *Packet) {
+	writer.Lock()
+	defer writer.Unlock()
 	return writer.currentPacket
 }
 
 func (writer *ExtentWriter) setPacket(p *Packet) {
+	writer.Lock()
+	defer writer.Unlock()
 	writer.currentPacket = p
 }
