@@ -171,7 +171,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 		if extentId, err = stream.createExtent(vol); err != nil {
 			continue
 		}
-		if writer, err = NewExtentWriter(vol, stream.wraper, extentId); err != nil {
+		if writer, err = NewExtentWriter(stream.currentInode, vol, stream.wraper, extentId); err != nil {
 			continue
 		}
 		break

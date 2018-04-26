@@ -22,7 +22,7 @@ const (
 	NotRecive              = false
 	ExtentWriterRecoverCnt = 3
 
-	DefaultBufferSize = 20
+	DefaultBufferSize = 1280 * util.KB
 )
 
 var (
@@ -35,16 +35,16 @@ type ExtentWriter struct {
 	requestQueue     *list.List
 	requestQueueLock sync.Mutex
 	sync.Mutex
-	volGroup         *sdk.VolGroup
-	wraper           *sdk.VolGroupWraper
-	extentId         uint64
-	currentPacket    *Packet
-	seqNo            uint64
-	byteAck          uint64
-	offset           int
-	connect          net.Conn
-	handleCh         chan bool
-	recoverCnt       int
+	volGroup      *sdk.VolGroup
+	wraper        *sdk.VolGroupWraper
+	extentId      uint64
+	currentPacket *Packet
+	seqNo         uint64
+	byteAck       uint64
+	offset        int
+	connect       net.Conn
+	handleCh      chan bool
+	recoverCnt    int
 
 	flushCond *sync.Cond
 	needFlush bool
@@ -53,7 +53,7 @@ type ExtentWriter struct {
 func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper, extentId uint64) (writer *ExtentWriter, err error) {
 	writer = new(ExtentWriter)
 	writer.requestQueue = list.New()
-	writer.handleCh = make(chan bool, DefaultBufferSize)
+	writer.handleCh = make(chan bool, DefaultBufferSize/(64*util.KB))
 	writer.extentId = extentId
 	writer.volGroup = vol
 	writer.inode = inode
@@ -382,6 +382,7 @@ func (writer *ExtentWriter) getNeedRetrySendPacket() (sendList *list.List) {
 		sendList.PushBack(lastPacket)
 	}
 	writer.requestQueueLock.Unlock()
+	return
 }
 
 func (writer *ExtentWriter) getPacket() (p *Packet) {

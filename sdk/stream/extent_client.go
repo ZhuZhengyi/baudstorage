@@ -17,21 +17,18 @@ type ExtentClient struct {
 	readerLock sync.Mutex
 }
 
-func NewExtentClient(logdir string, master string) (client *ExtentClient) {
+func NewExtentClient(logdir string, master string) (client *ExtentClient, err error) {
 	client = new(ExtentClient)
-	_, err := log.NewLog(logdir, "extentclient", log.DebugLevel)
+	_, err = log.NewLog(logdir, "extentclient", log.DebugLevel)
 	if err != nil {
-		fmt.Println("init Log Failed[%v]", err.Error())
-		return nil
+		return nil, fmt.Errorf("init Log Failed[%v]", err.Error())
 	}
 	client.wraper, err = sdk.NewVolGroupWraper(master)
 	if err != nil {
-		log.LogError("init volGroup Wrapper failed [%v]", err.Error())
-		return nil
+		return nil, fmt.Errorf("init volGroup Wrapper failed [%v]", err.Error())
 	}
 	client.writers = make(map[uint64]*StreamWriter)
 	client.readers = make(map[uint64]*StreamReader)
-	time.Sleep(time.Second * 5)
 
 	return
 }
@@ -67,8 +64,15 @@ func (client *ExtentClient) Read(inode uint64, offset uint64, size uint32) (read
 }
 
 func (client *ExtentClient) Delete(keys []ExtentKey) (err error) {
+	for _,k:=range keys{
+		vol,err:=client.wraper.GetVol(k.VolId)
+		if err!=nil {
+			continue
+		}
+		client.delete(vol,k.ExtentId)
+	}
 
-	return
+	return nil
 }
 
 func (client *ExtentClient) delete(vol *sdk.VolGroup, extentId uint64) (err error) {

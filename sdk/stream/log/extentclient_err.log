@@ -1,2 +1,0 @@
-2018-04-25 16:26:28,747 [ERROR] vol_group_wraper.go:82: ActionGetVolGroupViewget VolView from master[127.0.0.1:7778] err[Get http://127.0.0.1:7778/client/view: dial tcp 127.0.0.1:7778: getsockopt: connection refused]
-2018-04-25 16:26:28,747 [ERROR] vol_group_wraper.go:82: ActionGetVolGroupViewget VolView from master[127.0.0.1:7778] err[Get http://127.0.0.1:7778/client/view: dial tcp 127.0.0.1:7778: getsockopt: connection refused]
