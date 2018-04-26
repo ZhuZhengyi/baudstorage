@@ -67,7 +67,23 @@ func NewMetaGroupWrapper(namespace, masterHosts string) (*MetaGroupWrapper, erro
 }
 
 func (wrapper *MetaGroupWrapper) Create(req *proto.CreateRequest) (*proto.CreateResponse, error) {
+	var err error
+	reqPacket := proto.NewPacket()
+	reqPacket.Data, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	replyPacket, err := wrapper.send(req.ParentId, reqPacket)
+	if err != nil {
+		return nil, err
+	}
+
 	resp := new(proto.CreateResponse)
+	err = json.Unmarshal(replyPacket.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
 	return resp, nil
 }
 
@@ -209,6 +225,7 @@ func (wrapper *MetaGroupWrapper) send(ino uint64, req *proto.Packet) (*proto.Pac
 		return nil, errors.New("No such meta group")
 	}
 
+	//TODO: deal with member is not leader
 	conn, err := wrapper.getConn(mg.Members[0])
 	if err != nil {
 		return nil, err
