@@ -33,12 +33,12 @@ type CreateResponse struct {
 	Dentry
 }
 
-type OpenFileRequest struct {
+type OpenRequest struct {
 	Namespace string
 	Inode     uint64
 }
 
-type OpenFileResponse struct {
+type OpenResponse struct {
 	Status int
 }
 

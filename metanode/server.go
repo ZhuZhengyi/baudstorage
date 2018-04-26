@@ -10,11 +10,6 @@ import (
 	"sync"
 )
 
-// API url mappings
-const (
-	ReplyToMasterUrl = "/node/response"
-)
-
 // Configuration keys
 const (
 	configKeyAddr = "address"
@@ -43,11 +38,11 @@ const (
 
 type MetaNode struct {
 	// Configuration
-	addr       string
-	ip         string
-	logDir     string
-	masterAddr string
-	metaRanges sync.Map // Mapping: namespace_start_end → MetaRange
+	addr           string
+	ip             string
+	logDir         string
+	masterAddr     string
+	metaRangeGroup MetaRangeGroup
 	// Context
 	ctx           context.Context
 	ctxCancelFunc context.CancelFunc
@@ -56,7 +51,7 @@ type MetaNode struct {
 	log        *log.Log
 	state      nodeState
 	stateMutex sync.RWMutex
-	waitGroup  sync.WaitGroup
+	wg         sync.WaitGroup
 }
 
 // Start this MeteNode with specified configuration.
@@ -78,17 +73,13 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	if m.log, err = log.NewLog(m.logDir, "metanode", log.DebugLevel); err != nil {
 		return
 	}
-	// Start service for task reply.
-	if err = m.starTaskReplyService(m.ctx, m.masterReplyC); err != nil {
-		return
-	}
 	// Start TCP listen
-	if err = m.startTcpService(m.ctx); err != nil {
+	if err = m.startTcpService(); err != nil {
 		return
 	}
 	// Start reply
 	m.state = sRunning
-	m.waitGroup.Add(1)
+	m.wg.Add(1)
 	return
 }
 
@@ -108,12 +99,12 @@ func (m *MetaNode) Shutdown() {
 	close(m.masterReplyC)
 
 	m.state = sReady
-	m.waitGroup.Done()
+	m.wg.Done()
 }
 
 // Sync will block invoker goroutine until this MetaNode shutdown.
 func (m *MetaNode) Sync() {
-	m.waitGroup.Wait()
+	m.wg.Wait()
 }
 
 func (m *MetaNode) prepareConfig(cfg *config.Config) (err error) {

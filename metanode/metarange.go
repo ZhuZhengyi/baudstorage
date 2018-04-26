@@ -31,23 +31,38 @@ func (mr *MetaRange) getInode() uint64 {
 	return atomic.AddUint64(&mr.offset, 1)
 }
 
-func (mr *MetaRange) Create(request *proto.CreateRequest) (response *proto.CreateResponse) {
-	// TODO: Implement create operation.
+func (mr *MetaRange) Create(req *proto.CreateRequest) (resp *proto.CreateResponse) {
 	dentry := &Dentry{
-		ParentId: request.ParentId,
-		Name:     request.Name,
-		Type:     request.Mode,
+		ParentId: req.ParentId,
+		Name:     req.Name,
+		Type:     req.Mode,
 	}
-	if v := mr.store.GetDentry(dentry); v != nil {
-		return
-	}
-
-	inode := NewInode(mr.getInode(), request.Name, request.Mode)
+	inode := NewInode(mr.getInode(), req.Name, req.Mode)
 	dentry.Inode = inode.Inode
-	return mr.store.Create(inode, dentry)
+	resp = &proto.CreateResponse{}
+	resp.Status = int(mr.store.Create(inode, dentry))
+	resp.Inode = inode.Inode
+	resp.Name = req.Name
+	resp.Type = req.Mode
+	return
 }
 
-func (mr *MetaRange) Rename(request *proto.RenameRequest) (response *proto.RenameResponse)  {
+func (mr *MetaRange) Rename(req *proto.RenameRequest) (resp *proto.RenameResponse) {
 	// TODO: Implement rename operation.
+	return
+}
+
+func (mr *MetaRange) Delete(req *proto.DeleteRequest) (resp *proto.DeleteResponse) {
+	// TODO: Implement delete operation.
+	return
+}
+
+func (mr *MetaRange) ReadDir(req *proto.ReadDirRequest) (resp *proto.ReadDirResponse) {
+	// TODO: Implement read dir operation.
+	return
+}
+
+func (mr *MetaRange) Open(req *proto.OpenRequest) (resp *proto.OpenResponse) {
+	// TODO: Implement open operation.
 	return
 }

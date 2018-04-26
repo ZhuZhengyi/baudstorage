@@ -22,28 +22,24 @@ func NewMetaRangeFsm() *MetaRangeFsm {
 	return m
 }
 
-// looks for the dentry in the DentryTree, returning it.
-// returns nil if unable to find that dentry.
-func (mr *MetaRangeFsm) GetDentry(dentry *Dentry) (*Dentry, uint8) {
+// GetDentry query dentry item from DentryTree with specified dentry
+// info and returns dentry entity if it exist, or nil.
+func (mr *MetaRangeFsm) GetDentry(dentry *Dentry) (result *Dentry) {
 	item := mr.DentryTree.Get(dentry)
-	if item == nil {
-		return nil, proto.OpFileExistErr
-	}
-	d := item.(*Dentry)
-	return d, proto.OpOk
+	result = item.(*Dentry)
+	return
 }
 
-func (mr *MetaRangeFsm) GetInode(ino *Inode) (*Inode, uint8) {
+// GetInode query inode entity from InodeTree with specified inode
+// info and returns inode entity if it exist, or nil.
+func (mr *MetaRangeFsm) GetInode(ino *Inode) (result *Inode) {
 	item := mr.InodeTree.Get(ino)
-	if item == nil {
-		return nil, proto.OpFileExistErr
-	}
-	i := item.(*Inode)
-	return i, proto.OpOk
+	result = item.(*Inode)
+	return
 }
 
 func (mr *MetaRangeFsm) GetStream(ino uint64) {
-
+	// TODO: implement it.
 }
 
 func (mr *MetaRangeFsm) Create(inode *Inode, dentry *Dentry) uint8 {
@@ -88,18 +84,4 @@ func (mr *MetaRangeFsm) Delete(inode *Inode, dentry *Dentry) uint8 {
 	mr.InodeTree.Delete(inode)
 	mr.iLock.Unlock()
 	return proto.OpOk
-}
-
-func (mr *MetaRangeFsm) OpenFile(request *proto.OpenFileRequest) (response *proto.OpenFileResponse) {
-	return
-}
-
-func (mr *MetaRangeFsm) Rename(req *proto.RenameRequest) (response *proto.RenameResponse) {
-
-	return
-}
-
-func (mr *MetaRangeFsm) List(request *proto.ReadDirRequest) (response *proto.ReadDirResponse) {
-
-	return
 }
