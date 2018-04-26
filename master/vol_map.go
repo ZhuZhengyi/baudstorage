@@ -8,8 +8,8 @@ import (
 )
 
 type VolMap struct {
-	clusterID        string
-	clusterType      string
+	clusterID   string
+	clusterType string
 	sync.RWMutex
 	volMap           map[uint64]*VolGroup
 	volCount         int

@@ -10,7 +10,6 @@ type VolResponse struct {
 	Status     uint8
 	ReplicaNum uint8
 	Hosts      []string
-	Zones      []string
 }
 
 type VolsView struct {

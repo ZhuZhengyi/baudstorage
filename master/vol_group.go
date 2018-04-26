@@ -43,42 +43,13 @@ func (v *VolGroup) checkBadStatus() {
 func (v *VolGroup) SelectHosts(c *Cluster) (err error) {
 	var (
 		addrs []string
-		zones []*Zone
 	)
-	if zones, err = c.topology.allocZone(v.replicaNum, nil); err != nil {
-		return
-	}
 	v.Lock()
 	defer v.Unlock()
-	if len(zones) == 2 {
-		masterZone := zones[0]
-		slaveZone := zones[1]
-		masterGoal := (int)(v.replicaNum)/2 + 1
-		slaveGoal := (int)(v.replicaNum) - masterGoal
-		if addrs, err = masterZone.getAvailHostExcludeSpecify(&v.PersistenceHosts, masterGoal); err != nil {
-			goto errDeal
-		}
-
-		v.PersistenceHosts = append(v.PersistenceHosts, addrs...)
-		if addrs, err = slaveZone.getAvailHostExcludeSpecify(&v.PersistenceHosts, slaveGoal); err != nil {
-			goto errDeal
-		}
-		v.PersistenceHosts = append(v.PersistenceHosts, addrs...)
-	} else if len(zones) == int(v.replicaNum) {
-		for index := 0; index < int(v.replicaNum); index++ {
-			zone := zones[index]
-			if addrs, err = zone.getAvailHostExcludeSpecify(&v.PersistenceHosts, 1); err != nil {
-				goto errDeal
-			}
-			v.PersistenceHosts = append(v.PersistenceHosts, addrs[0])
-		}
-	} else if len(zones) == 1 {
-		zone := zones[0]
-		if addrs, err = zone.getAvailHostExcludeSpecify(&v.PersistenceHosts, int(v.replicaNum)); err != nil {
-			goto errDeal
-		}
-		v.PersistenceHosts = append(v.PersistenceHosts, addrs...)
+	if addrs, err = c.getAvailHostExcludeSpecify(&v.PersistenceHosts, int(v.replicaNum)); err != nil {
+		goto errDeal
 	}
+	v.PersistenceHosts = append(v.PersistenceHosts, addrs...)
 
 	if len(v.PersistenceHosts) != (int)(v.replicaNum) {
 		err = fmt.Errorf("no have enough volhost exsited")
@@ -94,9 +65,7 @@ errDeal:
 func (v *VolGroup) generateCreateVolGroupTasks() (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	for _, addr := range v.PersistenceHosts {
-		if t, err := proto.NewAdminTask(OpCreateVol, addr, nil); err == nil {
-			tasks = append(tasks, t)
-		}
+		tasks = append(tasks, proto.NewAdminTask(OpCreateVol, addr, nil))
 	}
 	return
 }
