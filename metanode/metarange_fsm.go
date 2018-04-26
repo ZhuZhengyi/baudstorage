@@ -24,73 +24,82 @@ func NewMetaRangeFsm() *MetaRangeFsm {
 
 // looks for the dentry in the DentryTree, returning it.
 // returns nil if unable to find that dentry.
-func (mr *MetaRangeFsm) GetDentry(dentry *Dentry) *Dentry {
+func (mr *MetaRangeFsm) GetDentry(dentry *Dentry) (*Dentry, uint8) {
 	item := mr.DentryTree.Get(dentry)
 	if item == nil {
-		return nil
+		return nil, proto.OpFileExistErr
 	}
 	d := item.(*Dentry)
-	return d
+	return d, proto.OpOk
 }
 
-func (mr *MetaRangeFsm) GetInode(ino *Inode) *Inode {
+func (mr *MetaRangeFsm) GetInode(ino *Inode) (*Inode, uint8) {
 	item := mr.InodeTree.Get(ino)
 	if item == nil {
-		return nil
+		return nil, proto.OpFileExistErr
 	}
 	i := item.(*Inode)
-	return i
+	return i, proto.OpOk
 }
 
 func (mr *MetaRangeFsm) GetStream(ino uint64) {
 
 }
 
-func (mr *MetaRangeFsm) Create(inode *Inode, dentry *Dentry) (response *proto.CreateResponse) {
+func (mr *MetaRangeFsm) Create(inode *Inode, dentry *Dentry) uint8 {
 	//TODO: first raft sync
 
+	//insert dentry tree
+	mr.dLock.Lock()
+	if mr.DentryTree.Has(dentry) {
+		defer mr.dLock.Unlock()
+		return proto.OpFileExistErr
+	}
+	mr.DentryTree.ReplaceOrInsert(dentry)
+	mr.dLock.Unlock()
 	//insert inode tree
 	mr.iLock.Lock()
 	if mr.InodeTree.Has(inode) {
 		defer mr.iLock.Unlock()
-		//TODO: inode is already there.
-
-		return
+		return proto.OpFileExistErr
 	}
 	mr.InodeTree.ReplaceOrInsert(inode)
 	mr.iLock.Unlock()
-
-	//insert dentry tree
-	mr.dLock.Lock()
-	mr.DentryTree.ReplaceOrInsert(dentry)
-	mr.dLock.Unlock()
-
-	//TODO:
-	return
+	return proto.OpOk
 }
 
-func (mr *MetaRangeFsm) Delete(inode *Inode, dentry *Dentry) (response *proto.DeleteResponse) {
-	if !mr.DentryTree.Has(dentry) {
-		return
-	}
+func (mr *MetaRangeFsm) Delete(inode *Inode, dentry *Dentry) uint8 {
+	//TODO: raft sync
+
+	//delete dentry from dentrytree
 	mr.dLock.Lock()
+	if !mr.DentryTree.Has(inode) {
+		defer mr.dLock.Unlock()
+		return proto.OpFileExistErr
+	}
 	mr.DentryTree.Delete(dentry)
 	mr.dLock.Unlock()
+	//delete inode from inodetree
 	mr.iLock.Lock()
+	if !mr.InodeTree.Has(inode) {
+		defer mr.iLock.Unlock()
+		return proto.OpFileExistErr
+	}
 	mr.InodeTree.Delete(inode)
 	mr.iLock.Unlock()
-	return
+	return proto.OpOk
 }
 
 func (mr *MetaRangeFsm) OpenFile(request *proto.OpenFileRequest) (response *proto.OpenFileResponse) {
 	return
 }
 
-func (mr *MetaRangeFsm) Rename(request *proto.RenameRequest) (response *proto.RenameResponse) {
+func (mr *MetaRangeFsm) Rename(req *proto.RenameRequest) (response *proto.RenameResponse) {
 
 	return
 }
 
 func (mr *MetaRangeFsm) List(request *proto.ReadDirRequest) (response *proto.ReadDirResponse) {
+
 	return
 }
