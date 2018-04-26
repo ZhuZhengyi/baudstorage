@@ -231,7 +231,10 @@ func (stream *StreamWriter) flush() {
 	for {
 		select {
 		case <-ticker:
-			//stream.flushCurrExtentWriter()
+			if stream.getWriter() == nil {
+				continue
+			}
+			stream.flushCurrExtentWriter()
 		}
 	}
 

@@ -52,9 +52,7 @@ func (mg *MetaGroup) createRange() {
 func (mg *MetaGroup) generateCreateMetaGroupTasks() (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	for _, addr := range mg.PersistenceHosts {
-		if t, err := proto.NewAdminTask(OpCreateMetaGroup, addr, nil); err == nil {
-			tasks = append(tasks, t)
-		}
+		tasks = append(tasks, proto.NewAdminTask(OpCreateMetaGroup, addr, nil))
 	}
 	return
 }
