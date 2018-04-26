@@ -32,18 +32,22 @@ func (mr *MetaRange) getInode() uint64 {
 }
 
 func (mr *MetaRange) Create(request *proto.CreateRequest) (response *proto.CreateResponse) {
+	// TODO: Implement create operation.
 	dentry := &Dentry{
 		ParentId: request.ParentId,
 		Name:     request.Name,
 		Type:     request.Mode,
 	}
 	if v := mr.store.GetDentry(dentry); v != nil {
-		//TODO: file or dir existed
-
 		return
 	}
 
 	inode := NewInode(mr.getInode(), request.Name, request.Mode)
 	dentry.Inode = inode.Inode
 	return mr.store.Create(inode, dentry)
+}
+
+func (mr *MetaRange) Rename(request *proto.RenameRequest) (response *proto.RenameResponse)  {
+	// TODO: Implement rename operation.
+	return
 }
