@@ -3,15 +3,16 @@ package stream
 import (
 	"container/list"
 	"fmt"
+	"net"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
-	"net"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 const (

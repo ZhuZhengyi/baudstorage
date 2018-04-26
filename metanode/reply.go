@@ -3,6 +3,7 @@ package metanode
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"

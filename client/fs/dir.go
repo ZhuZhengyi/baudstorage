@@ -1,10 +1,11 @@
 package fs
 
 import (
+	"os"
+
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"golang.org/x/net/context"
-	"os"
 )
 
 type Dir struct {

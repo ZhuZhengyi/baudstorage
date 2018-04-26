@@ -3,8 +3,9 @@ package master
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"sync"
+
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type VolMap struct {

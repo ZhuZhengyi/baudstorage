@@ -3,11 +3,12 @@ package metanode
 import (
 	"context"
 	"errors"
+	"regexp"
+	"sync"
+
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
-	"regexp"
-	"sync"
 )
 
 // API url mappings
@@ -37,7 +38,7 @@ type nodeState uint8
 
 // State constants
 const (
-	sReady   nodeState = iota
+	sReady nodeState = iota
 	sRunning
 )
 
@@ -79,11 +80,11 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 		return
 	}
 	// Start service for task reply.
-	if err = m.starTaskReplyService(m.ctx, m.masterReplyC); err != nil {
+	if err = m.starTaskReplyService(); err != nil {
 		return
 	}
 	// Start TCP listen
-	if err = m.startTcpService(m.ctx); err != nil {
+	if err = m.startTcpService(); err != nil {
 		return
 	}
 	// Start reply

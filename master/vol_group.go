@@ -2,9 +2,10 @@ package master
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
-	"sync"
 )
 
 type Vol struct {

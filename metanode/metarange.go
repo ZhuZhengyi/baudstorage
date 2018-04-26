@@ -1,8 +1,9 @@
 package metanode
 
 import (
-	"github.com/tiglabs/baudstorage/proto"
 	"sync/atomic"
+
+	"github.com/tiglabs/baudstorage/proto"
 )
 
 type MetaRange struct {
@@ -33,21 +34,38 @@ func (mr *MetaRange) getInode() uint64 {
 
 func (mr *MetaRange) Create(request *proto.CreateRequest) (response *proto.CreateResponse) {
 	// TODO: Implement create operation.
+	response.Status = int(proto.OpFileExistErr)
 	dentry := &Dentry{
 		ParentId: request.ParentId,
 		Name:     request.Name,
 		Type:     request.Mode,
 	}
-	if v := mr.store.GetDentry(dentry); v != nil {
+	if _, status := mr.store.GetDentry(dentry); status == proto.OpOk {
 		return
 	}
 
 	inode := NewInode(mr.getInode(), request.Name, request.Mode)
 	dentry.Inode = inode.Inode
-	return mr.store.Create(inode, dentry)
+	status := mr.store.Create(inode, dentry)
+	if status == proto.OpOk {
+		response.Status = int(proto.OpOk)
+		response.Inode = dentry.Inode
+		response.Name = dentry.Name
+		response.Type = dentry.Type
+	}
+	return
 }
 
-func (mr *MetaRange) Rename(request *proto.RenameRequest) (response *proto.RenameResponse)  {
+func (mr *MetaRange) Rename(request *proto.RenameRequest) (response *proto.RenameResponse) {
 	// TODO: Implement rename operation.
+	return mr.store.Rename(request)
+}
+
+func (mr *MetaRange) Delete(request *proto.DeleteRequest) (response *proto.DeleteResponse) {
+	dentry := &Dentry{
+		ParentId: request.ParentId,
+		Name:     request.Name,
+	}
+	response.Status = int(mr.store.Delete(dentry))
 	return
 }

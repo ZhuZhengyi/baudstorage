@@ -46,7 +46,7 @@ func TestExtentClient_Write(t *testing.T) {
 	for seqNo := 0; seqNo < CFSBLOCKSIZE; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
 		ndata := data[:1]
-		time.Sleep(time.Second*3)
+		time.Sleep(time.Second * 3)
 		writebytes += len(ndata)
 		write, err := client.Write(inode, ndata)
 		if err != nil {

@@ -1,10 +1,11 @@
 package main
 
 import (
-	"bazil.org/fuse"
-	"bazil.org/fuse/fs"
 	"flag"
 	"fmt"
+
+	"bazil.org/fuse"
+	"bazil.org/fuse/fs"
 
 	bdfs "github.com/tiglabs/baudstorage/client/fs"
 	"github.com/tiglabs/baudstorage/util/config"

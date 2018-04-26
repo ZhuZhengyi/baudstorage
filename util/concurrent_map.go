@@ -1,7 +1,7 @@
 package util
 
 import (
-"sync"
+	"sync"
 )
 
 type ConcurrentMap struct {
@@ -49,4 +49,3 @@ func (s *ConcurrentMap) Len() int {
 	defer s.RUnlock()
 	return len(s.m)
 }
-

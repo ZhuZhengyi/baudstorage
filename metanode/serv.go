@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/juju/errors"
-	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util/log"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 func (m *MetaNode) startTcpService() (err error) {
@@ -108,7 +109,7 @@ func (m *MetaNode) create(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	// Reply operation result to client though TCP connection.
-	p.Data = []byte(respJson)
+	p.Data = respJson
 	err = p.WriteToConn(conn)
 	return
 }
@@ -119,7 +120,7 @@ func (m *MetaNode) rename(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	val , has := m.metaRanges.Load(req.Namespace)
+	val, has := m.metaRanges.Load(req.Namespace)
 	if !has {
 		err = m.newUnknownNamespaceErr(req.Namespace)
 		return
@@ -131,7 +132,7 @@ func (m *MetaNode) rename(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	// Reply operation result to client though TCP connection.
-	p.Data = []byte(respJson)
+	p.Data = respJson
 	err = p.WriteToConn(conn)
 	return
 }
@@ -141,6 +142,15 @@ func (m *MetaNode) delete(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
+	val, has := m.metaRanges.Load(req.Namespace)
+	if !has {
+		err = m.newUnknownNamespaceErr(req.Namespace)
+		return
+	}
+	mr := val.(*MetaRange)
+	resp := mr.Delete(req)
+	p.Data, _ = json.Marshal(resp)
+	err = p.WriteToConn(conn)
 	return
 }
 

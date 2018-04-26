@@ -3,10 +3,11 @@ package util
 import (
 	"bytes"
 	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 const (
