@@ -5,7 +5,8 @@ import (
 	"bazil.org/fuse/fs"
 	"flag"
 	"fmt"
-	"github.com/tiglabs/baudstorage/client/cfs"
+
+	bdfs "github.com/tiglabs/baudstorage/client/fs"
 	"github.com/tiglabs/baudstorage/util/config"
 )
 
@@ -45,7 +46,7 @@ func Mount(cfg *config.Config) error {
 	}
 	defer c.Close()
 
-	super := fs.NewSuper(namespace, master)
+	super := bdfs.NewSuper(namespace, master)
 
 	//TODO:init super
 
