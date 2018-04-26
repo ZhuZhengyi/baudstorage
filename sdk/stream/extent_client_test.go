@@ -10,7 +10,11 @@ import (
 
 func TestExtentClient_Write(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	client := NewExtentClient("log", "127.0.0.1:7778")
+	client, err := NewExtentClient("log", "127.0.0.1:7778")
+	if err != nil {
+		t.Logf(err.Error())
+		t.FailNow()
+	}
 	keysChan := make(chan ExtentKey, 100)
 	if client == nil {
 		t.Logf("init failed")

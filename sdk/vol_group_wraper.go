@@ -72,12 +72,13 @@ func (wraper *VolGroupWraper) update() {
 	}
 }
 
-func (wraper *VolGroupWraper) getVolsFromMaster() error {
+func (wraper *VolGroupWraper) getVolsFromMaster() (err error) {
 	for _, m := range wraper.MasterAddrs {
 		if m == "" {
 			continue
 		}
-		resp, err := http.Get("http://" + m + VolViewUrl)
+		var resp *http.Response
+		resp, err = http.Get("http://" + m + VolViewUrl)
 		if err != nil {
 			log.LogError(fmt.Sprintf(ActionGetVolGroupView+"get VolView from master[%v] err[%v]", m, err.Error()))
 			continue
@@ -96,7 +97,7 @@ func (wraper *VolGroupWraper) getVolsFromMaster() error {
 		break
 	}
 
-	return nil
+	return
 }
 
 func (wraper *VolGroupWraper) insertVol(vg VolGroup) {

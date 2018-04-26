@@ -25,14 +25,14 @@ var (
 	logLevel   = flag.Int("log", 0, "log level, as DebugLevel = 0")
 )
 
-type CFSServer interface {
+type Server interface {
 	Start(cfg *config.Config) error
 	Shutdown()
 	// Sync will block invoker goroutine until this MetaNode shutdown.
 	Sync()
 }
 
-func interceptSignal(s CFSServer) {
+func interceptSignal(s Server) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -57,7 +57,7 @@ func main() {
 		log.Println(http.ListenAndServe(":"+profPort, nil))
 	}()
 
-	var server CFSServer
+	var server Server
 
 	switch role {
 	case "metanode":

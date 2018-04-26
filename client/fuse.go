@@ -45,7 +45,7 @@ func Mount(cfg *config.Config) error {
 	}
 	defer c.Close()
 
-	super := cfs.NewSuper(namespace, master)
+	super := fs.NewSuper(namespace, master)
 
 	//TODO:init super
 
