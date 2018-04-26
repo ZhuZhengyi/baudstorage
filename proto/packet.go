@@ -45,18 +45,23 @@ const (
 	OpSyncDelNeedle         = 0x0C
 	OpNotifyCompact         = 0x0D
 
-	OpRename          = 0x0E
-	OpOpen            = 0x0F
-	OpCreate          = 0x10
-	OpDelete          = 0x11
-	OpList            = 0x12
-	OpExtentsAdd      = 0x13
-	OpExtentsDel      = 0x14
-	OpExtentsList     = 0x15
-	OpCreateMetaRange = 0x16
+	// Operations between Client and MetaNode.
+	OpRename      = 0x0E
+	OpOpen        = 0x0F
+	OpCreate      = 0x10
+	OpDelete      = 0x11
+	OpLookup      = 0x12
+	OpReaddir     = 0x13
+	OpInodeGet    = 0x14
+	OpExtentsAdd  = 0x15
+	OpExtentsDel  = 0x16
+	OpExtentsList = 0x17
+
+	// Operations between Master and MetaNode
+	OpCreateMetaRange = 0x18
 
 	OpIntraGroupNetErr uint8 = 0xF3
-	OpArgUnmatchErr    uint8 = 0xF4
+	OpArgMismatchErr   uint8 = 0xF4
 	OpFileNotExistErr  uint8 = 0xF5
 	OpDiskNoSpaceErr   uint8 = 0xF6
 	OpDiskErr          uint8 = 0xF7
@@ -132,7 +137,7 @@ func GetOpMesg(opcode uint8) (m string) {
 		m = "FlowInfo"
 	case OpIntraGroupNetErr:
 		m = "IntraGroupNetErr"
-	case OpArgUnmatchErr:
+	case OpArgMismatchErr:
 		m = "ArgUnmatchErr"
 	case OpFileNotExistErr:
 		m = "FileNotExistErr"
