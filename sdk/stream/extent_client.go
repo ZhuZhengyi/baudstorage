@@ -29,7 +29,6 @@ func NewExtentClient(logdir string, master string) (client *ExtentClient, err er
 	}
 	client.writers = make(map[uint64]*StreamWriter)
 	client.readers = make(map[uint64]*StreamReader)
-	time.Sleep(time.Second * 5)
 
 	return
 }
