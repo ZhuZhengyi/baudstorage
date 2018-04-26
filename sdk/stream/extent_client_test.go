@@ -32,7 +32,7 @@ func TestExtentClient_Write(t *testing.T) {
 			select {
 			case k := <-keysChan:
 				sk.Put(k)
-				fmt.Println(fmt.Sprintf("k %v return keysize:%v", k.Marshal(), sk.getSize()))
+				fmt.Println(fmt.Sprintf("k %v return keysize:%v", k.Marshal(), sk.Size()))
 			}
 		}
 	}()
@@ -45,8 +45,8 @@ func TestExtentClient_Write(t *testing.T) {
 	writebytes := 0
 	for seqNo := 0; seqNo < CFSBLOCKSIZE; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
-		ndata := data[:rand.Int31n(CFSBLOCKSIZE)+CFSBLOCKSIZE]
-		time.Sleep(time.Second)
+		ndata := data[:1]
+		time.Sleep(time.Second*3)
 		writebytes += len(ndata)
 		write, err := client.Write(inode, ndata)
 		if err != nil {
@@ -58,7 +58,7 @@ func TestExtentClient_Write(t *testing.T) {
 	fmt.Println("sum write bytes:", writebytes)
 	for {
 		time.Sleep(time.Second)
-		if sk.getSize() == uint64(writebytes) {
+		if sk.Size() == uint64(writebytes) {
 			break
 		}
 	}
