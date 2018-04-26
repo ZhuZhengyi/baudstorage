@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func (m *MetaNode) startTcpService(ctx context.Context) (err error) {
+func (m *MetaNode) startTcpService() (err error) {
 	// Init and start server.
 	ln, err := net.Listen("tcp", m.addr)
 	if err != nil {
@@ -32,7 +32,7 @@ func (m *MetaNode) startTcpService(ctx context.Context) (err error) {
 			// Start a goroutine for tcp connection handling.
 			go m.serveTCPConn(conn, ctx)
 		}
-	}(ctx)
+	}(m.ctx)
 	return
 }
 
