@@ -65,8 +65,15 @@ func (client *ExtentClient) Read(inode uint64, offset uint64, size uint32) (read
 }
 
 func (client *ExtentClient) Delete(keys []ExtentKey) (err error) {
+	for _,k:=range keys{
+		vol,err:=client.wraper.GetVol(k.VolId)
+		if err!=nil {
+			continue
+		}
+		client.delete(vol,k.ExtentId)
+	}
 
-	return
+	return nil
 }
 
 func (client *ExtentClient) delete(vol *sdk.VolGroup, extentId uint64) (err error) {
