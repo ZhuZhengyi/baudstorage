@@ -45,21 +45,22 @@ const (
 	OpSyncDelNeedle         = 0x0C
 	OpNotifyCompact         = 0x0D
 
-	// Operations between Client and MetaNode.
-	OpRename      = 0x0E
-	OpOpen        = 0x0F
-	OpCreate      = 0x10
-	OpDelete      = 0x11
-	OpLookup      = 0x12
-	OpReaddir     = 0x13
-	OpInodeGet    = 0x14
-	OpExtentsAdd  = 0x15
-	OpExtentsDel  = 0x16
-	OpExtentsList = 0x17
+	// Operations: Client -> MetaNode.
+	OpMetaRename      = 0x0E
+	OpMetaOpen        = 0x0F
+	OpMetaCreate      = 0x10
+	OpMetaDelete      = 0x11
+	OpMetaLookup      = 0x12
+	OpMetaReadDir     = 0x13
+	OpMetaInodeGet    = 0x14
+	OpMetaExtentsAdd  = 0x15
+	OpMetaExtentsDel  = 0x16
+	OpMetaExtentsList = 0x17
 
-	// Operations between Master and MetaNode
-	OpCreateMetaRange = 0x18
+	// Operations: Master -> MetaNode
+	OpMetaCreateMetaRange = 0x18
 
+	// Commons
 	OpIntraGroupNetErr uint8 = 0xF3
 	OpArgMismatchErr   uint8 = 0xF4
 	OpFileNotExistErr  uint8 = 0xF5
@@ -68,8 +69,7 @@ const (
 	OpErr              uint8 = 0xF8
 	OpAgain            uint8 = 0xF9
 	OpFileExistErr     uint8 = 0xFA
-
-	OpOk uint8 = 0x00
+	OpOk               uint8 = 0x00
 )
 
 const (
