@@ -1,0 +1,647 @@
+2018-04-25 16:25:24,065 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[902] currentExtentId[Extent{volGroup=902 extentId=412 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[0] ActionAllocNewExtentWriter success
+2018-04-25 16:25:24,369 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[284] currentExtentId[Extent{volGroup=284 extentId=0 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[1] ActionAllocNewExtentWriter success
+2018-04-25 16:26:49,545 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[798] currentExtentId[Extent{volGroup=798 extentId=1 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[0] ActionAllocNewExtentWriter success
+2018-04-25 16:26:49,639 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=798 extentId=1 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:49,639 [INFO.] extent_writer.go:195: Extent{volGroup=798 extentId=1 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:49,687 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[346] currentExtentId[Extent{volGroup=346 extentId=2 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[1] ActionAllocNewExtentWriter success
+2018-04-25 16:26:49,781 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=346 extentId=2 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:49,782 [INFO.] extent_writer.go:195: Extent{volGroup=346 extentId=2 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:49,837 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[520] currentExtentId[Extent{volGroup=520 extentId=3 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[2] ActionAllocNewExtentWriter success
+2018-04-25 16:26:49,930 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=520 extentId=3 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-25 16:26:49,930 [INFO.] extent_writer.go:195: Extent{volGroup=520 extentId=3 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:49,987 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[399] currentExtentId[Extent{volGroup=399 extentId=4 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[3] ActionAllocNewExtentWriter success
+2018-04-25 16:26:50,072 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=399 extentId=4 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:50,072 [INFO.] extent_writer.go:195: Extent{volGroup=399 extentId=4 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:50,112 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[773] currentExtentId[Extent{volGroup=773 extentId=5 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[4] ActionAllocNewExtentWriter success
+2018-04-25 16:26:50,194 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=773 extentId=5 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:50,194 [INFO.] extent_writer.go:195: Extent{volGroup=773 extentId=5 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:50,238 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[5] currentExtentId[Extent{volGroup=5 extentId=6 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[5] ActionAllocNewExtentWriter success
+2018-04-25 16:26:50,319 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=5 extentId=6 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:50,319 [INFO.] extent_writer.go:195: Extent{volGroup=5 extentId=6 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:50,380 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[580] currentExtentId[Extent{volGroup=580 extentId=7 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[6] ActionAllocNewExtentWriter success
+2018-04-25 16:26:50,480 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=580 extentId=7 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:50,481 [INFO.] extent_writer.go:195: Extent{volGroup=580 extentId=7 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:51,222 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[487] currentExtentId[Extent{volGroup=487 extentId=8 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[7] ActionAllocNewExtentWriter success
+2018-04-25 16:26:51,315 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=487 extentId=8 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:51,315 [INFO.] extent_writer.go:195: Extent{volGroup=487 extentId=8 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:52,222 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[112] currentExtentId[Extent{volGroup=112 extentId=9 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[8] ActionAllocNewExtentWriter success
+2018-04-25 16:26:52,324 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=112 extentId=9 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-25 16:26:52,325 [INFO.] extent_writer.go:195: Extent{volGroup=112 extentId=9 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:52,381 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[216] currentExtentId[Extent{volGroup=216 extentId=10 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[9] ActionAllocNewExtentWriter success
+2018-04-25 16:26:52,461 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=216 extentId=10 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:52,462 [INFO.] extent_writer.go:195: Extent{volGroup=216 extentId=10 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:52,514 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[854] currentExtentId[Extent{volGroup=854 extentId=11 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[10] ActionAllocNewExtentWriter success
+2018-04-25 16:26:52,617 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=854 extentId=11 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:52,617 [INFO.] extent_writer.go:195: Extent{volGroup=854 extentId=11 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:53,771 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[726] currentExtentId[Extent{volGroup=726 extentId=12 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[11] ActionAllocNewExtentWriter success
+2018-04-25 16:26:53,864 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=726 extentId=12 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:53,865 [INFO.] extent_writer.go:195: Extent{volGroup=726 extentId=12 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:53,973 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[547] currentExtentId[Extent{volGroup=547 extentId=13 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[12] ActionAllocNewExtentWriter success
+2018-04-25 16:26:54,077 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=547 extentId=13 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:54,077 [INFO.] extent_writer.go:195: Extent{volGroup=547 extentId=13 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:54,132 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[633] currentExtentId[Extent{volGroup=633 extentId=14 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[13] ActionAllocNewExtentWriter success
+2018-04-25 16:26:54,237 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=633 extentId=14 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:54,237 [INFO.] extent_writer.go:195: Extent{volGroup=633 extentId=14 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:55,208 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[307] currentExtentId[Extent{volGroup=307 extentId=15 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[14] ActionAllocNewExtentWriter success
+2018-04-25 16:26:55,296 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=307 extentId=15 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:55,296 [INFO.] extent_writer.go:195: Extent{volGroup=307 extentId=15 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:55,324 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[253] currentExtentId[Extent{volGroup=253 extentId=16 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[15] ActionAllocNewExtentWriter success
+2018-04-25 16:26:55,404 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=253 extentId=16 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:55,404 [INFO.] extent_writer.go:195: Extent{volGroup=253 extentId=16 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:55,450 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[735] currentExtentId[Extent{volGroup=735 extentId=17 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[16] ActionAllocNewExtentWriter success
+2018-04-25 16:26:55,550 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=735 extentId=17 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:55,550 [INFO.] extent_writer.go:195: Extent{volGroup=735 extentId=17 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:55,892 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[104] currentExtentId[Extent{volGroup=104 extentId=18 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[17] ActionAllocNewExtentWriter success
+2018-04-25 16:26:55,979 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=104 extentId=18 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:55,979 [INFO.] extent_writer.go:195: Extent{volGroup=104 extentId=18 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:56,610 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[39] currentExtentId[Extent{volGroup=39 extentId=19 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[18] ActionAllocNewExtentWriter success
+2018-04-25 16:26:56,697 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=39 extentId=19 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:56,697 [INFO.] extent_writer.go:195: Extent{volGroup=39 extentId=19 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:57,051 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[173] currentExtentId[Extent{volGroup=173 extentId=20 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[19] ActionAllocNewExtentWriter success
+2018-04-25 16:26:57,153 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=173 extentId=20 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:57,153 [INFO.] extent_writer.go:195: Extent{volGroup=173 extentId=20 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:58,035 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[243] currentExtentId[Extent{volGroup=243 extentId=21 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[20] ActionAllocNewExtentWriter success
+2018-04-25 16:26:58,137 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=243 extentId=21 retryCnt=0 handleCh[0] requestQueueLen[1] currentPkg=}] start
+2018-04-25 16:26:58,137 [INFO.] extent_writer.go:195: Extent{volGroup=243 extentId=21 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:58,193 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[209] currentExtentId[Extent{volGroup=209 extentId=22 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[21] ActionAllocNewExtentWriter success
+2018-04-25 16:26:58,278 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=209 extentId=22 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:58,278 [INFO.] extent_writer.go:195: Extent{volGroup=209 extentId=22 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:26:58,843 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[608] currentExtentId[Extent{volGroup=608 extentId=23 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[22] ActionAllocNewExtentWriter success
+2018-04-25 16:26:58,927 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=608 extentId=23 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:26:58,927 [INFO.] extent_writer.go:195: Extent{volGroup=608 extentId=23 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:00,369 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[472] currentExtentId[Extent{volGroup=472 extentId=24 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[23] ActionAllocNewExtentWriter success
+2018-04-25 16:27:00,453 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=472 extentId=24 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:00,454 [INFO.] extent_writer.go:195: Extent{volGroup=472 extentId=24 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:00,511 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[45] currentExtentId[Extent{volGroup=45 extentId=25 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[24] ActionAllocNewExtentWriter success
+2018-04-25 16:27:00,599 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=45 extentId=25 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:00,599 [INFO.] extent_writer.go:195: Extent{volGroup=45 extentId=25 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:00,669 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[434] currentExtentId[Extent{volGroup=434 extentId=26 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[25] ActionAllocNewExtentWriter success
+2018-04-25 16:27:00,755 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=434 extentId=26 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:00,755 [INFO.] extent_writer.go:195: Extent{volGroup=434 extentId=26 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:00,811 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[807] currentExtentId[Extent{volGroup=807 extentId=27 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[26] ActionAllocNewExtentWriter success
+2018-04-25 16:27:00,894 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=807 extentId=27 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:00,894 [INFO.] extent_writer.go:195: Extent{volGroup=807 extentId=27 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:01,561 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[224] currentExtentId[Extent{volGroup=224 extentId=28 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[27] ActionAllocNewExtentWriter success
+2018-04-25 16:27:01,650 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=224 extentId=28 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:01,650 [INFO.] extent_writer.go:195: Extent{volGroup=224 extentId=28 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:01,695 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[401] currentExtentId[Extent{volGroup=401 extentId=29 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[28] ActionAllocNewExtentWriter success
+2018-04-25 16:27:01,796 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=401 extentId=29 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:01,796 [INFO.] extent_writer.go:195: Extent{volGroup=401 extentId=29 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:02,112 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[865] currentExtentId[Extent{volGroup=865 extentId=30 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[29] ActionAllocNewExtentWriter success
+2018-04-25 16:27:02,200 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=865 extentId=30 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-25 16:27:02,201 [INFO.] extent_writer.go:195: Extent{volGroup=865 extentId=30 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:02,787 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[77] currentExtentId[Extent{volGroup=77 extentId=31 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[30] ActionAllocNewExtentWriter success
+2018-04-25 16:27:02,870 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=77 extentId=31 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-25 16:27:02,870 [INFO.] extent_writer.go:195: Extent{volGroup=77 extentId=31 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:03,480 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[519] currentExtentId[Extent{volGroup=519 extentId=32 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[31] ActionAllocNewExtentWriter success
+2018-04-25 16:27:03,557 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=519 extentId=32 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:03,557 [INFO.] extent_writer.go:195: Extent{volGroup=519 extentId=32 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:03,638 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[256] currentExtentId[Extent{volGroup=256 extentId=33 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[32] ActionAllocNewExtentWriter success
+2018-04-25 16:27:03,724 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=256 extentId=33 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:03,724 [INFO.] extent_writer.go:195: Extent{volGroup=256 extentId=33 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:04,130 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[840] currentExtentId[Extent{volGroup=840 extentId=34 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[33] ActionAllocNewExtentWriter success
+2018-04-25 16:27:04,219 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=840 extentId=34 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:04,219 [INFO.] extent_writer.go:195: Extent{volGroup=840 extentId=34 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:05,198 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[969] currentExtentId[Extent{volGroup=969 extentId=35 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[34] ActionAllocNewExtentWriter success
+2018-04-25 16:27:05,283 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=969 extentId=35 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:05,283 [INFO.] extent_writer.go:195: Extent{volGroup=969 extentId=35 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:05,356 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[322] currentExtentId[Extent{volGroup=322 extentId=36 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[35] ActionAllocNewExtentWriter success
+2018-04-25 16:27:05,438 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=322 extentId=36 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:05,438 [INFO.] extent_writer.go:195: Extent{volGroup=322 extentId=36 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:05,498 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[399] currentExtentId[Extent{volGroup=399 extentId=37 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[36] ActionAllocNewExtentWriter success
+2018-04-25 16:27:05,605 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=399 extentId=37 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:05,605 [INFO.] extent_writer.go:195: Extent{volGroup=399 extentId=37 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:06,606 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[713] currentExtentId[Extent{volGroup=713 extentId=38 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[37] ActionAllocNewExtentWriter success
+2018-04-25 16:27:06,689 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=713 extentId=38 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-25 16:27:06,689 [INFO.] extent_writer.go:195: Extent{volGroup=713 extentId=38 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:07,066 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[876] currentExtentId[Extent{volGroup=876 extentId=39 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[38] ActionAllocNewExtentWriter success
+2018-04-25 16:27:07,154 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=876 extentId=39 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:07,154 [INFO.] extent_writer.go:195: Extent{volGroup=876 extentId=39 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:07,207 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[107] currentExtentId[Extent{volGroup=107 extentId=40 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[39] ActionAllocNewExtentWriter success
+2018-04-25 16:27:07,296 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=107 extentId=40 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:07,296 [INFO.] extent_writer.go:195: Extent{volGroup=107 extentId=40 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:07,333 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[740] currentExtentId[Extent{volGroup=740 extentId=41 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[40] ActionAllocNewExtentWriter success
+2018-04-25 16:27:07,427 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=740 extentId=41 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:07,427 [INFO.] extent_writer.go:195: Extent{volGroup=740 extentId=41 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:08,883 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[375] currentExtentId[Extent{volGroup=375 extentId=42 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[41] ActionAllocNewExtentWriter success
+2018-04-25 16:27:08,969 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=375 extentId=42 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-25 16:27:08,969 [INFO.] extent_writer.go:195: Extent{volGroup=375 extentId=42 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:09,000 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[540] currentExtentId[Extent{volGroup=540 extentId=43 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[42] ActionAllocNewExtentWriter success
+2018-04-25 16:27:09,093 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=540 extentId=43 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:09,093 [INFO.] extent_writer.go:195: Extent{volGroup=540 extentId=43 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:09,125 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[970] currentExtentId[Extent{volGroup=970 extentId=44 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[43] ActionAllocNewExtentWriter success
+2018-04-25 16:27:09,206 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=970 extentId=44 retryCnt=0 handleCh[2] requestQueueLen[2] currentPkg=}] start
+2018-04-25 16:27:09,206 [INFO.] extent_writer.go:195: Extent{volGroup=970 extentId=44 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:09,242 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[669] currentExtentId[Extent{volGroup=669 extentId=45 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[44] ActionAllocNewExtentWriter success
+2018-04-25 16:27:09,340 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=669 extentId=45 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-25 16:27:09,340 [INFO.] extent_writer.go:195: Extent{volGroup=669 extentId=45 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:10,443 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[707] currentExtentId[Extent{volGroup=707 extentId=46 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[45] ActionAllocNewExtentWriter success
+2018-04-25 16:27:10,541 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=707 extentId=46 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:10,541 [INFO.] extent_writer.go:195: Extent{volGroup=707 extentId=46 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:10,668 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[840] currentExtentId[Extent{volGroup=840 extentId=47 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[46] ActionAllocNewExtentWriter success
+2018-04-25 16:27:10,751 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=840 extentId=47 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:10,751 [INFO.] extent_writer.go:195: Extent{volGroup=840 extentId=47 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:10,785 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[953] currentExtentId[Extent{volGroup=953 extentId=48 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[47] ActionAllocNewExtentWriter success
+2018-04-25 16:27:10,875 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=953 extentId=48 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:10,875 [INFO.] extent_writer.go:195: Extent{volGroup=953 extentId=48 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:11,852 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[307] currentExtentId[Extent{volGroup=307 extentId=49 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[48] ActionAllocNewExtentWriter success
+2018-04-25 16:27:11,939 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=307 extentId=49 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:11,939 [INFO.] extent_writer.go:195: Extent{volGroup=307 extentId=49 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:11,994 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[763] currentExtentId[Extent{volGroup=763 extentId=50 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[49] ActionAllocNewExtentWriter success
+2018-04-25 16:27:12,091 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=763 extentId=50 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:12,091 [INFO.] extent_writer.go:195: Extent{volGroup=763 extentId=50 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:12,127 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[40] currentExtentId[Extent{volGroup=40 extentId=51 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[50] ActionAllocNewExtentWriter success
+2018-04-25 16:27:12,212 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=40 extentId=51 retryCnt=0 handleCh[0] requestQueueLen[1] currentPkg=}] start
+2018-04-25 16:27:12,212 [INFO.] extent_writer.go:195: Extent{volGroup=40 extentId=51 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:12,903 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[277] currentExtentId[Extent{volGroup=277 extentId=52 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[51] ActionAllocNewExtentWriter success
+2018-04-25 16:27:12,985 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=277 extentId=52 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:12,985 [INFO.] extent_writer.go:195: Extent{volGroup=277 extentId=52 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:13,020 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[239] currentExtentId[Extent{volGroup=239 extentId=53 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[52] ActionAllocNewExtentWriter success
+2018-04-25 16:27:13,144 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=239 extentId=53 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:13,144 [INFO.] extent_writer.go:195: Extent{volGroup=239 extentId=53 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:13,820 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[775] currentExtentId[Extent{volGroup=775 extentId=54 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[53] ActionAllocNewExtentWriter success
+2018-04-25 16:27:13,903 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=775 extentId=54 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] start
+2018-04-25 16:27:13,903 [INFO.] extent_writer.go:195: Extent{volGroup=775 extentId=54 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:13,937 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[360] currentExtentId[Extent{volGroup=360 extentId=55 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[54] ActionAllocNewExtentWriter success
+2018-04-25 16:27:14,057 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=360 extentId=55 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:14,058 [INFO.] extent_writer.go:195: Extent{volGroup=360 extentId=55 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:15,513 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[672] currentExtentId[Extent{volGroup=672 extentId=56 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[55] ActionAllocNewExtentWriter success
+2018-04-25 16:27:15,639 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=672 extentId=56 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:15,639 [INFO.] extent_writer.go:195: Extent{volGroup=672 extentId=56 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:15,696 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[612] currentExtentId[Extent{volGroup=612 extentId=57 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[56] ActionAllocNewExtentWriter success
+2018-04-25 16:27:15,789 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=612 extentId=57 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:15,789 [INFO.] extent_writer.go:195: Extent{volGroup=612 extentId=57 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:15,871 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[713] currentExtentId[Extent{volGroup=713 extentId=58 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[57] ActionAllocNewExtentWriter success
+2018-04-25 16:27:15,957 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=713 extentId=58 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:15,957 [INFO.] extent_writer.go:195: Extent{volGroup=713 extentId=58 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:15,996 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[336] currentExtentId[Extent{volGroup=336 extentId=59 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[58] ActionAllocNewExtentWriter success
+2018-04-25 16:27:16,096 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=336 extentId=59 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:16,096 [INFO.] extent_writer.go:195: Extent{volGroup=336 extentId=59 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:17,022 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[755] currentExtentId[Extent{volGroup=755 extentId=60 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[59] ActionAllocNewExtentWriter success
+2018-04-25 16:27:17,121 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=755 extentId=60 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:17,121 [INFO.] extent_writer.go:195: Extent{volGroup=755 extentId=60 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:17,406 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[399] currentExtentId[Extent{volGroup=399 extentId=61 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[60] ActionAllocNewExtentWriter success
+2018-04-25 16:27:17,503 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=399 extentId=61 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:17,504 [INFO.] extent_writer.go:195: Extent{volGroup=399 extentId=61 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:17,564 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[743] currentExtentId[Extent{volGroup=743 extentId=62 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[61] ActionAllocNewExtentWriter success
+2018-04-25 16:27:17,658 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=743 extentId=62 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:17,658 [INFO.] extent_writer.go:195: Extent{volGroup=743 extentId=62 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:18,473 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[330] currentExtentId[Extent{volGroup=330 extentId=63 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[62] ActionAllocNewExtentWriter success
+2018-04-25 16:27:18,576 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=330 extentId=63 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:18,576 [INFO.] extent_writer.go:195: Extent{volGroup=330 extentId=63 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:18,631 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[857] currentExtentId[Extent{volGroup=857 extentId=64 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[63] ActionAllocNewExtentWriter success
+2018-04-25 16:27:18,723 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=857 extentId=64 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] start
+2018-04-25 16:27:18,723 [INFO.] extent_writer.go:195: Extent{volGroup=857 extentId=64 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:19,115 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[42] currentExtentId[Extent{volGroup=42 extentId=65 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[64] ActionAllocNewExtentWriter success
+2018-04-25 16:27:19,205 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=42 extentId=65 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] start
+2018-04-25 16:27:19,205 [INFO.] extent_writer.go:195: Extent{volGroup=42 extentId=65 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:20,015 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[538] currentExtentId[Extent{volGroup=538 extentId=66 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[65] ActionAllocNewExtentWriter success
+2018-04-25 16:27:20,123 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=538 extentId=66 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:20,124 [INFO.] extent_writer.go:195: Extent{volGroup=538 extentId=66 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:20,166 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[537] currentExtentId[Extent{volGroup=537 extentId=67 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[66] ActionAllocNewExtentWriter success
+2018-04-25 16:27:20,266 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=537 extentId=67 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-25 16:27:20,266 [INFO.] extent_writer.go:195: Extent{volGroup=537 extentId=67 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:21,049 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[185] currentExtentId[Extent{volGroup=185 extentId=68 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[67] ActionAllocNewExtentWriter success
+2018-04-25 16:27:21,154 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=185 extentId=68 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:21,154 [INFO.] extent_writer.go:195: Extent{volGroup=185 extentId=68 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:21,224 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[756] currentExtentId[Extent{volGroup=756 extentId=69 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[68] ActionAllocNewExtentWriter success
+2018-04-25 16:27:21,324 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=756 extentId=69 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:21,324 [INFO.] extent_writer.go:195: Extent{volGroup=756 extentId=69 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:22,138 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[340] currentExtentId[Extent{volGroup=340 extentId=70 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[69] ActionAllocNewExtentWriter success
+2018-04-25 16:27:22,236 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=340 extentId=70 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:22,236 [INFO.] extent_writer.go:195: Extent{volGroup=340 extentId=70 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:22,275 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[269] currentExtentId[Extent{volGroup=269 extentId=71 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[70] ActionAllocNewExtentWriter success
+2018-04-25 16:27:22,368 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=269 extentId=71 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:22,368 [INFO.] extent_writer.go:195: Extent{volGroup=269 extentId=71 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:23,100 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[953] currentExtentId[Extent{volGroup=953 extentId=72 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[71] ActionAllocNewExtentWriter success
+2018-04-25 16:27:23,188 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=953 extentId=72 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:23,188 [INFO.] extent_writer.go:195: Extent{volGroup=953 extentId=72 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:23,242 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[93] currentExtentId[Extent{volGroup=93 extentId=73 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[72] ActionAllocNewExtentWriter success
+2018-04-25 16:27:23,342 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=93 extentId=73 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:23,343 [INFO.] extent_writer.go:195: Extent{volGroup=93 extentId=73 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:24,110 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[504] currentExtentId[Extent{volGroup=504 extentId=74 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[73] ActionAllocNewExtentWriter success
+2018-04-25 16:27:24,202 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=504 extentId=74 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:24,202 [INFO.] extent_writer.go:195: Extent{volGroup=504 extentId=74 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:24,243 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[299] currentExtentId[Extent{volGroup=299 extentId=75 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[74] ActionAllocNewExtentWriter success
+2018-04-25 16:27:24,333 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=299 extentId=75 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:24,334 [INFO.] extent_writer.go:195: Extent{volGroup=299 extentId=75 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:24,760 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[380] currentExtentId[Extent{volGroup=380 extentId=76 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[75] ActionAllocNewExtentWriter success
+2018-04-25 16:27:24,866 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=380 extentId=76 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:24,866 [INFO.] extent_writer.go:195: Extent{volGroup=380 extentId=76 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:25,653 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[615] currentExtentId[Extent{volGroup=615 extentId=77 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[76] ActionAllocNewExtentWriter success
+2018-04-25 16:27:25,745 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=615 extentId=77 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-25 16:27:25,745 [INFO.] extent_writer.go:195: Extent{volGroup=615 extentId=77 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:25,786 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[303] currentExtentId[Extent{volGroup=303 extentId=78 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[77] ActionAllocNewExtentWriter success
+2018-04-25 16:27:25,872 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=303 extentId=78 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:25,873 [INFO.] extent_writer.go:195: Extent{volGroup=303 extentId=78 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:26,487 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[595] currentExtentId[Extent{volGroup=595 extentId=79 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[78] ActionAllocNewExtentWriter success
+2018-04-25 16:27:26,657 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=595 extentId=79 retryCnt=0 handleCh[1] requestQueueLen[1] currentPkg=}] start
+2018-04-25 16:27:26,657 [INFO.] extent_writer.go:195: Extent{volGroup=595 extentId=79 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:26,762 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[100] currentExtentId[Extent{volGroup=100 extentId=80 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[79] ActionAllocNewExtentWriter success
+2018-04-25 16:27:26,855 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=100 extentId=80 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:26,855 [INFO.] extent_writer.go:195: Extent{volGroup=100 extentId=80 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:27,445 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[481] currentExtentId[Extent{volGroup=481 extentId=81 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[80] ActionAllocNewExtentWriter success
+2018-04-25 16:27:27,537 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=481 extentId=81 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:27,537 [INFO.] extent_writer.go:195: Extent{volGroup=481 extentId=81 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:28,121 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[375] currentExtentId[Extent{volGroup=375 extentId=82 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[81] ActionAllocNewExtentWriter success
+2018-04-25 16:27:28,207 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=375 extentId=82 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:28,207 [INFO.] extent_writer.go:195: Extent{volGroup=375 extentId=82 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:28,263 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[879] currentExtentId[Extent{volGroup=879 extentId=83 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[82] ActionAllocNewExtentWriter success
+2018-04-25 16:27:28,358 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=879 extentId=83 retryCnt=0 handleCh[0] requestQueueLen[1] currentPkg=}] start
+2018-04-25 16:27:28,358 [INFO.] extent_writer.go:195: Extent{volGroup=879 extentId=83 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:29,455 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[203] currentExtentId[Extent{volGroup=203 extentId=84 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[83] ActionAllocNewExtentWriter success
+2018-04-25 16:27:29,547 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=203 extentId=84 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:29,547 [INFO.] extent_writer.go:195: Extent{volGroup=203 extentId=84 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:29,580 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[261] currentExtentId[Extent{volGroup=261 extentId=85 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[84] ActionAllocNewExtentWriter success
+2018-04-25 16:27:29,667 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=261 extentId=85 retryCnt=0 handleCh[0] requestQueueLen[1] currentPkg=}] start
+2018-04-25 16:27:29,667 [INFO.] extent_writer.go:195: Extent{volGroup=261 extentId=85 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:29,697 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[475] currentExtentId[Extent{volGroup=475 extentId=86 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[85] ActionAllocNewExtentWriter success
+2018-04-25 16:27:29,798 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=475 extentId=86 retryCnt=0 handleCh[0] requestQueueLen[1] currentPkg=}] start
+2018-04-25 16:27:29,798 [INFO.] extent_writer.go:195: Extent{volGroup=475 extentId=86 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:30,547 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[682] currentExtentId[Extent{volGroup=682 extentId=87 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[86] ActionAllocNewExtentWriter success
+2018-04-25 16:27:30,653 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=682 extentId=87 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] start
+2018-04-25 16:27:30,653 [INFO.] extent_writer.go:195: Extent{volGroup=682 extentId=87 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:30,714 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[269] currentExtentId[Extent{volGroup=269 extentId=88 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[87] ActionAllocNewExtentWriter success
+2018-04-25 16:27:30,819 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=269 extentId=88 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:30,820 [INFO.] extent_writer.go:195: Extent{volGroup=269 extentId=88 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:31,498 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[340] currentExtentId[Extent{volGroup=340 extentId=89 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[88] ActionAllocNewExtentWriter success
+2018-04-25 16:27:31,600 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=340 extentId=89 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] start
+2018-04-25 16:27:31,600 [INFO.] extent_writer.go:195: Extent{volGroup=340 extentId=89 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:31,706 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[5] currentExtentId[Extent{volGroup=5 extentId=90 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[89] ActionAllocNewExtentWriter success
+2018-04-25 16:27:31,798 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=5 extentId=90 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:31,798 [INFO.] extent_writer.go:195: Extent{volGroup=5 extentId=90 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:32,740 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[307] currentExtentId[Extent{volGroup=307 extentId=91 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[90] ActionAllocNewExtentWriter success
+2018-04-25 16:27:32,837 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=307 extentId=91 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:32,837 [INFO.] extent_writer.go:195: Extent{volGroup=307 extentId=91 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:32,874 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[701] currentExtentId[Extent{volGroup=701 extentId=92 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[91] ActionAllocNewExtentWriter success
+2018-04-25 16:27:32,971 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=701 extentId=92 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:32,971 [INFO.] extent_writer.go:195: Extent{volGroup=701 extentId=92 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:33,583 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[26] currentExtentId[Extent{volGroup=26 extentId=93 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[92] ActionAllocNewExtentWriter success
+2018-04-25 16:27:33,672 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=26 extentId=93 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:33,672 [INFO.] extent_writer.go:195: Extent{volGroup=26 extentId=93 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:34,841 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[278] currentExtentId[Extent{volGroup=278 extentId=94 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[93] ActionAllocNewExtentWriter success
+2018-04-25 16:27:34,927 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=278 extentId=94 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:34,928 [INFO.] extent_writer.go:195: Extent{volGroup=278 extentId=94 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:34,983 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[239] currentExtentId[Extent{volGroup=239 extentId=95 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[94] ActionAllocNewExtentWriter success
+2018-04-25 16:27:35,080 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=239 extentId=95 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] start
+2018-04-25 16:27:35,080 [INFO.] extent_writer.go:195: Extent{volGroup=239 extentId=95 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:35,133 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[909] currentExtentId[Extent{volGroup=909 extentId=96 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[95] ActionAllocNewExtentWriter success
+2018-04-25 16:27:35,218 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=909 extentId=96 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-25 16:27:35,218 [INFO.] extent_writer.go:195: Extent{volGroup=909 extentId=96 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-25 16:27:35,275 [INFO.] stream_writer.go:184: StreamWriter[inode[1] currentVol[209] currentExtentId[Extent{volGroup=209 extentId=97 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0] extentCount[96] ActionAllocNewExtentWriter success
+2018-04-25 16:27:35,289 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=209 extentId=97 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=136_209_97_8847360_}] start
+2018-04-25 16:27:35,289 [INFO.] extent_writer.go:195: Extent{volGroup=209 extentId=97 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:16,845 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[805] currentExtentId[Extent{volGroup=805 extentId=98 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:16,936 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=805 extentId=98 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:16,936 [INFO.] extent_writer.go:195: Extent{volGroup=805 extentId=98 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:16,996 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[590] currentExtentId[Extent{volGroup=590 extentId=99 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:17,089 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=590 extentId=99 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:23:17,089 [INFO.] extent_writer.go:195: Extent{volGroup=590 extentId=99 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:17,146 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[237] currentExtentId[Extent{volGroup=237 extentId=100 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:17,231 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=237 extentId=100 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:17,231 [INFO.] extent_writer.go:195: Extent{volGroup=237 extentId=100 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:17,254 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[843] currentExtentId[Extent{volGroup=843 extentId=101 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:17,338 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=843 extentId=101 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:17,338 [INFO.] extent_writer.go:195: Extent{volGroup=843 extentId=101 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:17,363 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[394] currentExtentId[Extent{volGroup=394 extentId=102 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:17,450 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=394 extentId=102 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:23:17,450 [INFO.] extent_writer.go:195: Extent{volGroup=394 extentId=102 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:17,480 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[38] currentExtentId[Extent{volGroup=38 extentId=103 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:17,566 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=38 extentId=103 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:17,566 [INFO.] extent_writer.go:195: Extent{volGroup=38 extentId=103 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:17,622 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[112] currentExtentId[Extent{volGroup=112 extentId=104 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:17,712 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=112 extentId=104 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:17,712 [INFO.] extent_writer.go:195: Extent{volGroup=112 extentId=104 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:18,514 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[938] currentExtentId[Extent{volGroup=938 extentId=105 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:18,631 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=938 extentId=105 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:18,631 [INFO.] extent_writer.go:195: Extent{volGroup=938 extentId=105 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:18,689 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[705] currentExtentId[Extent{volGroup=705 extentId=106 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:18,773 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=705 extentId=106 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] start
+2018-04-26 09:23:18,773 [INFO.] extent_writer.go:195: Extent{volGroup=705 extentId=106 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:19,548 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[342] currentExtentId[Extent{volGroup=342 extentId=107 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:19,687 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=342 extentId=107 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:19,687 [INFO.] extent_writer.go:195: Extent{volGroup=342 extentId=107 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:19,748 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[98] currentExtentId[Extent{volGroup=98 extentId=108 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:19,840 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=98 extentId=108 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:23:19,840 [INFO.] extent_writer.go:195: Extent{volGroup=98 extentId=108 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:20,982 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[745] currentExtentId[Extent{volGroup=745 extentId=109 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:21,066 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=745 extentId=109 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:21,066 [INFO.] extent_writer.go:195: Extent{volGroup=745 extentId=109 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:21,115 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[310] currentExtentId[Extent{volGroup=310 extentId=110 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:21,198 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=310 extentId=110 retryCnt=0 handleCh[2] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:23:21,198 [INFO.] extent_writer.go:195: Extent{volGroup=310 extentId=110 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:21,232 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[879] currentExtentId[Extent{volGroup=879 extentId=111 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:21,327 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=879 extentId=111 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:21,327 [INFO.] extent_writer.go:195: Extent{volGroup=879 extentId=111 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:22,074 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[77] currentExtentId[Extent{volGroup=77 extentId=112 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:22,202 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=77 extentId=112 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:22,203 [INFO.] extent_writer.go:195: Extent{volGroup=77 extentId=112 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:22,249 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[156] currentExtentId[Extent{volGroup=156 extentId=113 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:22,348 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=156 extentId=113 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:22,348 [INFO.] extent_writer.go:195: Extent{volGroup=156 extentId=113 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:23,811 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[864] currentExtentId[Extent{volGroup=864 extentId=114 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:23,900 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=864 extentId=114 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:23:23,901 [INFO.] extent_writer.go:195: Extent{volGroup=864 extentId=114 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:23,942 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[154] currentExtentId[Extent{volGroup=154 extentId=115 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:24,029 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=154 extentId=115 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:24,029 [INFO.] extent_writer.go:195: Extent{volGroup=154 extentId=115 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:24,067 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[82] currentExtentId[Extent{volGroup=82 extentId=116 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:24,162 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=82 extentId=116 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:24,162 [INFO.] extent_writer.go:195: Extent{volGroup=82 extentId=116 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:24,217 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[182] currentExtentId[Extent{volGroup=182 extentId=117 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:24,318 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=182 extentId=117 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:24,319 [INFO.] extent_writer.go:195: Extent{volGroup=182 extentId=117 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:23:24,693 [INFO.] stream_writer.go:180: StreamWriter[inode[1] currentVol[744] currentExtentId[Extent{volGroup=744 extentId=118 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:23:24,789 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=744 extentId=118 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:23:24,789 [INFO.] extent_writer.go:195: Extent{volGroup=744 extentId=118 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:23,056 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[733] currentExtentId[Extent{volGroup=733 extentId=120 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:23,152 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=733 extentId=120 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:23,152 [INFO.] extent_writer.go:195: Extent{volGroup=733 extentId=120 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:23,206 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[395] currentExtentId[Extent{volGroup=395 extentId=121 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:23,294 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=395 extentId=121 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:23,294 [INFO.] extent_writer.go:195: Extent{volGroup=395 extentId=121 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:23,348 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[92] currentExtentId[Extent{volGroup=92 extentId=122 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:23,434 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=92 extentId=122 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:23,435 [INFO.] extent_writer.go:195: Extent{volGroup=92 extentId=122 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:23,490 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[97] currentExtentId[Extent{volGroup=97 extentId=123 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:23,571 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=97 extentId=123 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:23,572 [INFO.] extent_writer.go:195: Extent{volGroup=97 extentId=123 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:23,632 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[665] currentExtentId[Extent{volGroup=665 extentId=124 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:23,713 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=665 extentId=124 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:23,713 [INFO.] extent_writer.go:195: Extent{volGroup=665 extentId=124 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:23,757 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[141] currentExtentId[Extent{volGroup=141 extentId=125 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:23,839 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=141 extentId=125 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:23,839 [INFO.] extent_writer.go:195: Extent{volGroup=141 extentId=125 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:23,899 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[968] currentExtentId[Extent{volGroup=968 extentId=126 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:23,990 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=968 extentId=126 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:23,990 [INFO.] extent_writer.go:195: Extent{volGroup=968 extentId=126 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:24,997 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[370] currentExtentId[Extent{volGroup=370 extentId=127 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:25,182 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=370 extentId=127 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:25,182 [INFO.] extent_writer.go:195: Extent{volGroup=370 extentId=127 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:25,250 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[360] currentExtentId[Extent{volGroup=360 extentId=128 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:25,367 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=360 extentId=128 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:25,367 [INFO.] extent_writer.go:195: Extent{volGroup=360 extentId=128 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:26,714 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[409] currentExtentId[Extent{volGroup=409 extentId=129 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:26,858 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=409 extentId=129 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:26,858 [INFO.] extent_writer.go:195: Extent{volGroup=409 extentId=129 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:27,284 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[334] currentExtentId[Extent{volGroup=334 extentId=130 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:27,375 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=334 extentId=130 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:27,376 [INFO.] extent_writer.go:195: Extent{volGroup=334 extentId=130 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:27,434 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[58] currentExtentId[Extent{volGroup=58 extentId=131 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:27,523 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=58 extentId=131 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:27,523 [INFO.] extent_writer.go:195: Extent{volGroup=58 extentId=131 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:27,568 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[881] currentExtentId[Extent{volGroup=881 extentId=132 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:27,657 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=881 extentId=132 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:27,658 [INFO.] extent_writer.go:195: Extent{volGroup=881 extentId=132 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:27,709 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[996] currentExtentId[Extent{volGroup=996 extentId=133 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:27,802 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=996 extentId=133 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:27,803 [INFO.] extent_writer.go:195: Extent{volGroup=996 extentId=133 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:28,218 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[276] currentExtentId[Extent{volGroup=276 extentId=134 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:28,316 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=276 extentId=134 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] start
+2018-04-26 09:52:28,316 [INFO.] extent_writer.go:195: Extent{volGroup=276 extentId=134 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:29,152 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[148] currentExtentId[Extent{volGroup=148 extentId=135 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:29,242 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=148 extentId=135 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:29,242 [INFO.] extent_writer.go:195: Extent{volGroup=148 extentId=135 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:29,286 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[912] currentExtentId[Extent{volGroup=912 extentId=136 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:29,382 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=912 extentId=136 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:29,382 [INFO.] extent_writer.go:195: Extent{volGroup=912 extentId=136 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:30,153 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[103] currentExtentId[Extent{volGroup=103 extentId=137 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:30,277 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=103 extentId=137 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:30,278 [INFO.] extent_writer.go:195: Extent{volGroup=103 extentId=137 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:30,328 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[148] currentExtentId[Extent{volGroup=148 extentId=138 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:30,430 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=148 extentId=138 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:30,430 [INFO.] extent_writer.go:195: Extent{volGroup=148 extentId=138 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:31,212 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[470] currentExtentId[Extent{volGroup=470 extentId=139 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:31,354 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=470 extentId=139 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:31,354 [INFO.] extent_writer.go:195: Extent{volGroup=470 extentId=139 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:31,387 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[130] currentExtentId[Extent{volGroup=130 extentId=140 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:31,482 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=130 extentId=140 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:31,482 [INFO.] extent_writer.go:195: Extent{volGroup=130 extentId=140 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:32,263 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[489] currentExtentId[Extent{volGroup=489 extentId=141 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:32,439 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=489 extentId=141 retryCnt=0 handleCh[2] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:32,440 [INFO.] extent_writer.go:195: Extent{volGroup=489 extentId=141 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:32,496 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[445] currentExtentId[Extent{volGroup=445 extentId=142 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:32,600 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=445 extentId=142 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:32,600 [INFO.] extent_writer.go:195: Extent{volGroup=445 extentId=142 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:33,396 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[130] currentExtentId[Extent{volGroup=130 extentId=143 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:33,492 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=130 extentId=143 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:33,492 [INFO.] extent_writer.go:195: Extent{volGroup=130 extentId=143 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:33,522 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[455] currentExtentId[Extent{volGroup=455 extentId=144 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:33,622 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=455 extentId=144 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:33,623 [INFO.] extent_writer.go:195: Extent{volGroup=455 extentId=144 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:34,389 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[808] currentExtentId[Extent{volGroup=808 extentId=145 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:34,495 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=808 extentId=145 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:34,495 [INFO.] extent_writer.go:195: Extent{volGroup=808 extentId=145 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:34,539 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[186] currentExtentId[Extent{volGroup=186 extentId=146 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:34,630 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=186 extentId=146 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:34,630 [INFO.] extent_writer.go:195: Extent{volGroup=186 extentId=146 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:35,006 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[229] currentExtentId[Extent{volGroup=229 extentId=147 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:35,156 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=229 extentId=147 retryCnt=0 handleCh[0] requestQueueLen[1] currentPkg=}] start
+2018-04-26 09:52:35,156 [INFO.] extent_writer.go:195: Extent{volGroup=229 extentId=147 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:35,556 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[714] currentExtentId[Extent{volGroup=714 extentId=148 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:35,655 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=714 extentId=148 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:35,655 [INFO.] extent_writer.go:195: Extent{volGroup=714 extentId=148 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:35,715 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[924] currentExtentId[Extent{volGroup=924 extentId=149 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:35,817 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=924 extentId=149 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:35,817 [INFO.] extent_writer.go:195: Extent{volGroup=924 extentId=149 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:37,582 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[289] currentExtentId[Extent{volGroup=289 extentId=150 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:37,749 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=289 extentId=150 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:37,749 [INFO.] extent_writer.go:195: Extent{volGroup=289 extentId=150 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:38,074 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[724] currentExtentId[Extent{volGroup=724 extentId=151 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:38,165 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=724 extentId=151 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:38,165 [INFO.] extent_writer.go:195: Extent{volGroup=724 extentId=151 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:38,224 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[384] currentExtentId[Extent{volGroup=384 extentId=152 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:38,323 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=384 extentId=152 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:38,323 [INFO.] extent_writer.go:195: Extent{volGroup=384 extentId=152 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:38,357 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[762] currentExtentId[Extent{volGroup=762 extentId=153 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:38,459 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=762 extentId=153 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:38,460 [INFO.] extent_writer.go:195: Extent{volGroup=762 extentId=153 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:38,516 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[274] currentExtentId[Extent{volGroup=274 extentId=154 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:38,607 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=274 extentId=154 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:38,608 [INFO.] extent_writer.go:195: Extent{volGroup=274 extentId=154 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:39,057 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[434] currentExtentId[Extent{volGroup=434 extentId=155 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:39,143 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=434 extentId=155 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:39,143 [INFO.] extent_writer.go:195: Extent{volGroup=434 extentId=155 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:39,900 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[173] currentExtentId[Extent{volGroup=173 extentId=156 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:40,065 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=173 extentId=156 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:40,065 [INFO.] extent_writer.go:195: Extent{volGroup=173 extentId=156 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:40,117 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[141] currentExtentId[Extent{volGroup=141 extentId=157 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:40,199 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=141 extentId=157 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:40,199 [INFO.] extent_writer.go:195: Extent{volGroup=141 extentId=157 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:40,559 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[948] currentExtentId[Extent{volGroup=948 extentId=158 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:40,645 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=948 extentId=158 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:40,645 [INFO.] extent_writer.go:195: Extent{volGroup=948 extentId=158 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:41,176 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[808] currentExtentId[Extent{volGroup=808 extentId=159 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:41,260 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=808 extentId=159 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:41,260 [INFO.] extent_writer.go:195: Extent{volGroup=808 extentId=159 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:42,060 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[17] currentExtentId[Extent{volGroup=17 extentId=160 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:42,146 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=17 extentId=160 retryCnt=0 handleCh[0] requestQueueLen[1] currentPkg=}] start
+2018-04-26 09:52:42,146 [INFO.] extent_writer.go:195: Extent{volGroup=17 extentId=160 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:42,185 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[73] currentExtentId[Extent{volGroup=73 extentId=161 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:42,293 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=73 extentId=161 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:42,293 [INFO.] extent_writer.go:195: Extent{volGroup=73 extentId=161 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:43,124 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[112] currentExtentId[Extent{volGroup=112 extentId=162 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:43,223 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=112 extentId=162 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:43,223 [INFO.] extent_writer.go:195: Extent{volGroup=112 extentId=162 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:43,310 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[905] currentExtentId[Extent{volGroup=905 extentId=163 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:43,397 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=905 extentId=163 retryCnt=0 handleCh[0] requestQueueLen[1] currentPkg=}] start
+2018-04-26 09:52:43,397 [INFO.] extent_writer.go:195: Extent{volGroup=905 extentId=163 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:43,919 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[476] currentExtentId[Extent{volGroup=476 extentId=164 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:44,038 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=476 extentId=164 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:44,039 [INFO.] extent_writer.go:195: Extent{volGroup=476 extentId=164 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:44,445 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[388] currentExtentId[Extent{volGroup=388 extentId=165 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:44,539 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=388 extentId=165 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:44,539 [INFO.] extent_writer.go:195: Extent{volGroup=388 extentId=165 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:44,961 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[225] currentExtentId[Extent{volGroup=225 extentId=166 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:45,048 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=225 extentId=166 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:45,048 [INFO.] extent_writer.go:195: Extent{volGroup=225 extentId=166 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:45,912 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[412] currentExtentId[Extent{volGroup=412 extentId=167 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:45,996 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=412 extentId=167 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:45,996 [INFO.] extent_writer.go:195: Extent{volGroup=412 extentId=167 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:46,045 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[553] currentExtentId[Extent{volGroup=553 extentId=168 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:46,132 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=553 extentId=168 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:46,133 [INFO.] extent_writer.go:195: Extent{volGroup=553 extentId=168 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:46,162 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[644] currentExtentId[Extent{volGroup=644 extentId=169 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:46,262 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=644 extentId=169 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:46,263 [INFO.] extent_writer.go:195: Extent{volGroup=644 extentId=169 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:46,930 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[160] currentExtentId[Extent{volGroup=160 extentId=170 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:47,089 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=160 extentId=170 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:47,089 [INFO.] extent_writer.go:195: Extent{volGroup=160 extentId=170 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:47,122 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[374] currentExtentId[Extent{volGroup=374 extentId=171 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:47,227 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=374 extentId=171 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:47,227 [INFO.] extent_writer.go:195: Extent{volGroup=374 extentId=171 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:47,739 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[42] currentExtentId[Extent{volGroup=42 extentId=172 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:47,833 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=42 extentId=172 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] start
+2018-04-26 09:52:47,833 [INFO.] extent_writer.go:195: Extent{volGroup=42 extentId=172 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:48,748 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[426] currentExtentId[Extent{volGroup=426 extentId=173 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:48,852 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=426 extentId=173 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:48,852 [INFO.] extent_writer.go:195: Extent{volGroup=426 extentId=173 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:49,640 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[115] currentExtentId[Extent{volGroup=115 extentId=174 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:49,727 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=115 extentId=174 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:49,727 [INFO.] extent_writer.go:195: Extent{volGroup=115 extentId=174 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:49,773 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[186] currentExtentId[Extent{volGroup=186 extentId=175 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:49,856 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=186 extentId=175 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:49,856 [INFO.] extent_writer.go:195: Extent{volGroup=186 extentId=175 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:49,907 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[309] currentExtentId[Extent{volGroup=309 extentId=176 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:50,005 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=309 extentId=176 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:50,005 [INFO.] extent_writer.go:195: Extent{volGroup=309 extentId=176 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:50,040 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[591] currentExtentId[Extent{volGroup=591 extentId=177 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:50,150 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=591 extentId=177 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:50,150 [INFO.] extent_writer.go:195: Extent{volGroup=591 extentId=177 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:50,916 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[64] currentExtentId[Extent{volGroup=64 extentId=178 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:51,041 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=64 extentId=178 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:51,041 [INFO.] extent_writer.go:195: Extent{volGroup=64 extentId=178 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:51,074 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[765] currentExtentId[Extent{volGroup=765 extentId=179 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:51,176 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=765 extentId=179 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:51,176 [INFO.] extent_writer.go:195: Extent{volGroup=765 extentId=179 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:51,791 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[173] currentExtentId[Extent{volGroup=173 extentId=180 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:51,873 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=173 extentId=180 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:51,873 [INFO.] extent_writer.go:195: Extent{volGroup=173 extentId=180 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:52,033 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[991] currentExtentId[Extent{volGroup=991 extentId=181 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:52,135 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=991 extentId=181 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:52,136 [INFO.] extent_writer.go:195: Extent{volGroup=991 extentId=181 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:52,817 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[451] currentExtentId[Extent{volGroup=451 extentId=182 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:52,975 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=451 extentId=182 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:52,975 [INFO.] extent_writer.go:195: Extent{volGroup=451 extentId=182 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:53,017 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[27] currentExtentId[Extent{volGroup=27 extentId=183 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:53,143 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=27 extentId=183 retryCnt=0 handleCh[2] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:53,143 [INFO.] extent_writer.go:195: Extent{volGroup=27 extentId=183 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:53,826 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[215] currentExtentId[Extent{volGroup=215 extentId=184 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:53,924 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=215 extentId=184 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:53,924 [INFO.] extent_writer.go:195: Extent{volGroup=215 extentId=184 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:53,959 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[158] currentExtentId[Extent{volGroup=158 extentId=185 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:54,059 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=158 extentId=185 retryCnt=0 handleCh[0] requestQueueLen[1] currentPkg=}] start
+2018-04-26 09:52:54,059 [INFO.] extent_writer.go:195: Extent{volGroup=158 extentId=185 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:55,110 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[121] currentExtentId[Extent{volGroup=121 extentId=186 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:55,271 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=121 extentId=186 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:55,271 [INFO.] extent_writer.go:195: Extent{volGroup=121 extentId=186 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:55,318 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[865] currentExtentId[Extent{volGroup=865 extentId=187 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:55,407 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=865 extentId=187 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:55,407 [INFO.] extent_writer.go:195: Extent{volGroup=865 extentId=187 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:55,477 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[329] currentExtentId[Extent{volGroup=329 extentId=188 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:55,575 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=329 extentId=188 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:55,575 [INFO.] extent_writer.go:195: Extent{volGroup=329 extentId=188 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:56,319 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[41] currentExtentId[Extent{volGroup=41 extentId=189 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:56,406 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=41 extentId=189 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:56,406 [INFO.] extent_writer.go:195: Extent{volGroup=41 extentId=189 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:56,460 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[805] currentExtentId[Extent{volGroup=805 extentId=190 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:56,559 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=805 extentId=190 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:56,559 [INFO.] extent_writer.go:195: Extent{volGroup=805 extentId=190 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:57,619 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[611] currentExtentId[Extent{volGroup=611 extentId=191 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:57,710 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=611 extentId=191 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:57,710 [INFO.] extent_writer.go:195: Extent{volGroup=611 extentId=191 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:57,744 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[705] currentExtentId[Extent{volGroup=705 extentId=192 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:57,827 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=705 extentId=192 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:57,827 [INFO.] extent_writer.go:195: Extent{volGroup=705 extentId=192 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:57,886 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[792] currentExtentId[Extent{volGroup=792 extentId=193 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:57,984 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=792 extentId=193 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:52:57,984 [INFO.] extent_writer.go:195: Extent{volGroup=792 extentId=193 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:58,678 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[532] currentExtentId[Extent{volGroup=532 extentId=194 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:58,770 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=532 extentId=194 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:58,770 [INFO.] extent_writer.go:195: Extent{volGroup=532 extentId=194 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:52:58,820 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[241] currentExtentId[Extent{volGroup=241 extentId=195 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:52:58,913 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=241 extentId=195 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:52:58,913 [INFO.] extent_writer.go:195: Extent{volGroup=241 extentId=195 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:01,063 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[654] currentExtentId[Extent{volGroup=654 extentId=196 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:01,206 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=654 extentId=196 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:53:01,206 [INFO.] extent_writer.go:195: Extent{volGroup=654 extentId=196 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:01,363 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[434] currentExtentId[Extent{volGroup=434 extentId=197 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:01,451 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=434 extentId=197 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] start
+2018-04-26 09:53:01,451 [INFO.] extent_writer.go:195: Extent{volGroup=434 extentId=197 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:01,480 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[805] currentExtentId[Extent{volGroup=805 extentId=198 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:01,565 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=805 extentId=198 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:53:01,565 [INFO.] extent_writer.go:195: Extent{volGroup=805 extentId=198 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:01,605 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[360] currentExtentId[Extent{volGroup=360 extentId=199 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:01,700 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=360 extentId=199 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:53:01,700 [INFO.] extent_writer.go:195: Extent{volGroup=360 extentId=199 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:01,755 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[985] currentExtentId[Extent{volGroup=985 extentId=200 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:01,846 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=985 extentId=200 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:53:01,846 [INFO.] extent_writer.go:195: Extent{volGroup=985 extentId=200 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:01,880 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[729] currentExtentId[Extent{volGroup=729 extentId=201 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:01,981 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=729 extentId=201 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:53:01,981 [INFO.] extent_writer.go:195: Extent{volGroup=729 extentId=201 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:03,039 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[528] currentExtentId[Extent{volGroup=528 extentId=202 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:03,194 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=528 extentId=202 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:53:03,194 [INFO.] extent_writer.go:195: Extent{volGroup=528 extentId=202 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:03,223 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[694] currentExtentId[Extent{volGroup=694 extentId=203 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:03,322 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=694 extentId=203 retryCnt=0 handleCh[1] requestQueueLen[1] currentPkg=}] start
+2018-04-26 09:53:03,322 [INFO.] extent_writer.go:195: Extent{volGroup=694 extentId=203 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:03,373 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[774] currentExtentId[Extent{volGroup=774 extentId=204 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:03,500 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=774 extentId=204 retryCnt=0 handleCh[0] requestQueueLen[1] currentPkg=}] start
+2018-04-26 09:53:03,500 [INFO.] extent_writer.go:195: Extent{volGroup=774 extentId=204 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:04,240 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[865] currentExtentId[Extent{volGroup=865 extentId=205 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:04,331 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=865 extentId=205 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:53:04,331 [INFO.] extent_writer.go:195: Extent{volGroup=865 extentId=205 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:04,365 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[286] currentExtentId[Extent{volGroup=286 extentId=206 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:04,475 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=286 extentId=206 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:53:04,475 [INFO.] extent_writer.go:195: Extent{volGroup=286 extentId=206 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:05,508 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[448] currentExtentId[Extent{volGroup=448 extentId=207 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:05,597 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=448 extentId=207 retryCnt=0 handleCh[2] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:53:05,597 [INFO.] extent_writer.go:195: Extent{volGroup=448 extentId=207 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:05,649 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[839] currentExtentId[Extent{volGroup=839 extentId=208 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:05,746 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=839 extentId=208 retryCnt=0 handleCh[2] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:53:05,747 [INFO.] extent_writer.go:195: Extent{volGroup=839 extentId=208 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:05,783 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[867] currentExtentId[Extent{volGroup=867 extentId=209 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:05,877 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=867 extentId=209 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:53:05,878 [INFO.] extent_writer.go:195: Extent{volGroup=867 extentId=209 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:06,609 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[484] currentExtentId[Extent{volGroup=484 extentId=210 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:06,707 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=484 extentId=210 retryCnt=0 handleCh[1] requestQueueLen[2] currentPkg=}] start
+2018-04-26 09:53:06,707 [INFO.] extent_writer.go:195: Extent{volGroup=484 extentId=210 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:06,758 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[896] currentExtentId[Extent{volGroup=896 extentId=211 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:06,848 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=896 extentId=211 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:53:06,848 [INFO.] extent_writer.go:195: Extent{volGroup=896 extentId=211 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:07,551 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[873] currentExtentId[Extent{volGroup=873 extentId=212 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:07,671 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=873 extentId=212 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:53:07,672 [INFO.] extent_writer.go:195: Extent{volGroup=873 extentId=212 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:07,867 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[920] currentExtentId[Extent{volGroup=920 extentId=213 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:07,961 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=920 extentId=213 retryCnt=0 handleCh[0] requestQueueLen[1] currentPkg=}] start
+2018-04-26 09:53:07,961 [INFO.] extent_writer.go:195: Extent{volGroup=920 extentId=213 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:08,860 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[65] currentExtentId[Extent{volGroup=65 extentId=214 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:08,954 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=65 extentId=214 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:53:08,954 [INFO.] extent_writer.go:195: Extent{volGroup=65 extentId=214 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:09,002 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[757] currentExtentId[Extent{volGroup=757 extentId=215 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:09,116 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=757 extentId=215 retryCnt=0 handleCh[2] requestQueueLen[3] currentPkg=}] start
+2018-04-26 09:53:09,117 [INFO.] extent_writer.go:195: Extent{volGroup=757 extentId=215 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok
+2018-04-26 09:53:09,827 [INFO.] stream_writer.go:181: StreamWriter[inode[1] currentVol[350] currentExtentId[Extent{volGroup=350 extentId=216 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=}] bytesWriten[0] errCount[0]] ActionAllocNewExtentWriter success
+2018-04-26 09:53:09,842 [INFO.] extent_writer.go:191: ActionFlushExtent [Extent{volGroup=350 extentId=216 retryCnt=0 handleCh[2] requestQueueLen[2] currentPkg=118_350_216_7667712_Ok}] start
+2018-04-26 09:53:09,842 [INFO.] extent_writer.go:195: Extent{volGroup=350 extentId=216 retryCnt=0 handleCh[0] requestQueueLen[0] currentPkg=} flush ok

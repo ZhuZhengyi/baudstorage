@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package protos;
+
+message kv {
+    uint32 opt = 1;
+    string k = 2;
+    bytes v = 3;
+}

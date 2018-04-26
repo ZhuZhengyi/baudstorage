@@ -1,0 +1,13 @@
+metanode概述
+
+概述：　metanode的主要作用是管理所有的metaRange，而metaRange是metaGroup的一个成员，metaGroup是一组metaRange的raftGroup组
+metaRange其是某个namespace下的inode一定范围内的元数据信息。
+
+每个metaRange包含inode 和dentry的2个ＢTREE. 详细信息查看kernel.go了解数据结构
+
+metaRange的持久化也就是raft的snapshot，应该自己实现。也就是遍历metarange，然后mashal出来存储为文件
+在重启的时候，使用snapshot+raftlog恢复到最新的btree
+
+metarange的名字构成:namespace_startId_endId
+
+
