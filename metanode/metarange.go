@@ -3,7 +3,6 @@ package metanode
 import (
 	"github.com/tiglabs/baudstorage/proto"
 	"sync/atomic"
-	"time"
 )
 
 type MetaRange struct {
@@ -38,19 +37,13 @@ func (mr *MetaRange) Create(request *proto.CreateRequest) (response *proto.Creat
 		Name:     request.Name,
 		Type:     request.Mode,
 	}
-	if v := mr.store.LookupDentry(dentry); v != nil {
+	if v := mr.store.GetDentry(dentry); v != nil {
 		//TODO: file or dir existed
 
 		return
 	}
-	t := time.Now().Unix()
-	inode := &Inode{
-		Inode:      mr.getInode(),
-		Name:       request.Name,
-		Type:       request.Mode,
-		AccessTime: t,
-		ModifyTime: t,
-	}
+
+	inode := NewInode(mr.getInode(), request.Name, request.Mode)
 	dentry.Inode = inode.Inode
 	return mr.store.Create(inode, dentry)
 }
