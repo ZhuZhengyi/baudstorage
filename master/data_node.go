@@ -19,8 +19,8 @@ type DataNode struct {
 	ZoneName           string `json:"Zone"`
 	HttpAddr           string
 
-	reportTime  time.Time
-	isActive    bool
+	reportTime time.Time
+	isActive   bool
 	sync.Mutex
 	ratio       float64
 	selectCount uint64
@@ -28,13 +28,12 @@ type DataNode struct {
 	sender      *AdminTaskSender
 }
 
-func NewDataNode(addr string, zoneName string) (dataNode *DataNode) {
+func NewDataNode(addr string) (dataNode *DataNode) {
 	dataNode = new(DataNode)
 	dataNode.carry = rand.Float64()
 	dataNode.Total = 1
 	dataNode.sender = NewAdminTaskSender(dataNode.HttpAddr)
 	dataNode.HttpAddr = addr
-	dataNode.ZoneName = zoneName
 	return
 }
 

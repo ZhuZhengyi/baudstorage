@@ -6,20 +6,18 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 	"io"
 	"net/http"
-	"strings"
 )
 
 func (m *Master) addMetaNode(w http.ResponseWriter, r *http.Request) {
 	var (
 		nodeAddr string
-		zoneName string
 		err      error
 	)
-	if zoneName, nodeAddr, err = parseAddMetaNodePara(r); err != nil {
+	if nodeAddr, err = parseAddMetaNodePara(r); err != nil {
 		goto errDeal
 	}
 
-	if err = m.cluster.addMetaNode(nodeAddr, zoneName); err != nil {
+	if err = m.cluster.addMetaNode(nodeAddr); err != nil {
 		goto errDeal
 	}
 	io.WriteString(w, fmt.Sprintf("addMetaNode %v successed\n", nodeAddr))
@@ -30,18 +28,8 @@ errDeal:
 	return
 }
 
-func parseAddMetaNodePara(r *http.Request) (zoneName, nodeAddr string, err error) {
+func parseAddMetaNodePara(r *http.Request) (nodeAddr string, err error) {
 	r.ParseForm()
-
-	if zoneName = r.FormValue(ParaZoneName); zoneName == "" {
-		err = paraNotFound(ParaZoneName)
-		return
-	}
-
-	if arr := strings.Split(zoneName, UnderlineSeparator); len(arr) != 2 {
-		err = paraFormatInvalid(zoneName)
-		return
-	}
 	if nodeAddr = r.FormValue(ParaNodeAddr); nodeAddr == "" {
 		err = paraNotFound(ParaNodeAddr)
 	}
@@ -59,7 +47,7 @@ func (m *Master) getMetaNode(w http.ResponseWriter, r *http.Request) {
 		goto errDeal
 	}
 
-	if metaNode, _, _, err = m.cluster.topology.getMetaNode(nodeAddr); err != nil {
+	if metaNode, err = m.cluster.getMetaNode(nodeAddr); err != nil {
 		goto errDeal
 	}
 	if body, err = json.Marshal(metaNode); err != nil {
@@ -85,7 +73,7 @@ func (m *Master) metaNodeOffline(w http.ResponseWriter, r *http.Request) {
 		goto errDeal
 	}
 
-	if metaNode, _, err = m.cluster.getMetaNodeFromCluster(offLineAddr); err != nil {
+	if metaNode, err = m.cluster.getMetaNode(offLineAddr); err != nil {
 		goto errDeal
 	}
 	m.cluster.metaNodeOffLine(metaNode)
