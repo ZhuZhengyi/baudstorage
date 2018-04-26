@@ -41,10 +41,10 @@ NFS
 
 ## Use Cases and Ecosystem
 
-BaudEngine on CFS
+BaudEngine on BaudStorage
 
 minio integration
 
-CBASE - HBase on CFS
+HBase on BaudStorage
 
 nginx integration for image service
