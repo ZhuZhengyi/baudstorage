@@ -13,6 +13,7 @@ import (
 	"github.com/tiglabs/baudstorage/master"
 )
 
+// StartTcpService bind and listen specified port and accept tcp connections.
 func (m *MetaNode) startTcpService() (err error) {
 	// Init and start server.
 	ln, err := net.Listen("tcp", m.addr)
@@ -33,13 +34,15 @@ func (m *MetaNode) startTcpService() (err error) {
 				continue
 			}
 			// Start a goroutine for tcp connection handling.
-			go m.serveTCPConn(conn, ctx)
+			go m.serveTcpConn(conn, ctx)
 		}
 	}(m.ctx)
 	return
 }
 
-func (m *MetaNode) serveTCPConn(conn net.Conn, ctx context.Context) {
+// ServeTcpConn read data from specified tco connection until connection
+// closed by remote or tcp service have been shutdown.
+func (m *MetaNode) serveTcpConn(conn net.Conn, ctx context.Context) {
 	defer conn.Close()
 	for {
 		select {
@@ -54,7 +57,7 @@ func (m *MetaNode) serveTCPConn(conn net.Conn, ctx context.Context) {
 		}
 		// Start a goroutine for packet handling.
 		go func() {
-			if err := m.operatorPkg(conn, p); err != nil {
+			if err := m.routePacket(conn, p); err != nil {
 				log.LogError("serve operatorPkg: ", err.Error())
 				return
 			}
@@ -62,7 +65,8 @@ func (m *MetaNode) serveTCPConn(conn net.Conn, ctx context.Context) {
 	}
 }
 
-func (m *MetaNode) operatorPkg(conn net.Conn, p *Packet) (err error) {
+// RoutePacket check the OpCode in specified packet and route it to handler.
+func (m *MetaNode) routePacket(conn net.Conn, p *Packet) (err error) {
 	switch p.Opcode {
 	case proto.OpMetaCreate:
 		// Client → MetaNode
@@ -83,12 +87,13 @@ func (m *MetaNode) operatorPkg(conn net.Conn, p *Packet) (err error) {
 		// Mater → MetaNode
 		err = m.opCreateMetaRange(conn, p)
 	default:
-		// Unknown
+		// Unknown operation
 		err = errors.New("unknown Opcode: " + proto.GetOpMesg(p.Opcode))
 	}
 	return
 }
 
+// ReplyToClient send reply data though tcp connection to client.
 func (m *MetaNode) replyToClient(conn net.Conn, p *Packet, data interface{}) (err error) {
 	// Handle panic
 	defer func() {
@@ -111,6 +116,7 @@ func (m *MetaNode) replyToClient(conn net.Conn, p *Packet, data interface{}) (er
 	return
 }
 
+// ReplyToMaster reply operation result to master by sending http request.
 func (m *MetaNode) replyToMaster(ip string, data interface{}) (err error) {
 	// Handle panic
 	defer func() {
@@ -128,7 +134,8 @@ func (m *MetaNode) replyToMaster(ip string, data interface{}) (err error) {
 	if err != nil {
 		return
 	}
-	util.PostToNode(jsonBytes, fmt.Sprintf("http://%s%s", ip, master.MetaNodeResponse))
+	url := fmt.Sprintf("http://%s%s", ip, master.MetaNodeResponse)
+	util.PostToNode(jsonBytes, url)
 	return
 }
 
@@ -164,6 +171,7 @@ func (m *MetaNode) opRename(conn net.Conn, p *Packet) (err error) {
 	return
 }
 
+// Handle OpDelete
 func (m *MetaNode) opDelete(conn net.Conn, p *Packet) (err error) {
 	req := &proto.DeleteRequest{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
@@ -179,6 +187,7 @@ func (m *MetaNode) opDelete(conn net.Conn, p *Packet) (err error) {
 	return
 }
 
+// Handle OpReadDir
 func (m *MetaNode) opReadDir(conn net.Conn, p *Packet) (err error) {
 	req := &proto.ReadDirRequest{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
@@ -194,6 +203,7 @@ func (m *MetaNode) opReadDir(conn net.Conn, p *Packet) (err error) {
 	return
 }
 
+// Handle OpOpen
 func (m *MetaNode) opOpen(conn net.Conn, p *Packet) (err error) {
 	req := &proto.OpenRequest{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
@@ -209,6 +219,7 @@ func (m *MetaNode) opOpen(conn net.Conn, p *Packet) (err error) {
 	return
 }
 
+// Handle OpCreateMetaRange
 func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 	remoteAddr := conn.RemoteAddr()
 	m.masterAddr = net.ParseIP(remoteAddr.String()).String()
