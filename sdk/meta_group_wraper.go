@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/google/btree"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -159,4 +160,12 @@ func (wrapper *MetaGroupWrapper) GetNamespaceView() (*NamespaceView, error) {
 	}
 
 	return view, nil
+}
+
+func (wrapper *MetaGroupWrapper) GetConnect(addr string) (net.Conn, error) {
+	return wrapper.conns.Get(addr)
+}
+
+func (wrapper *MetaGroupWrapper) PutConnect(conn net.Conn) {
+	wrapper.conns.Put(conn)
 }
