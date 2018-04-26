@@ -61,16 +61,16 @@ func (m *MetaNode) serveTCPConn(conn net.Conn, ctx context.Context) {
 
 func (m *MetaNode) operatorPkg(conn net.Conn, p *Packet) (err error) {
 	switch p.Opcode {
-	case proto.OpCreate:
+	case proto.OpMetaCreate:
 		err = m.create(conn, p)
-	case proto.OpRename:
+	case proto.OpMetaRename:
 		err = m.rename(conn, p)
-	case proto.OpDelete:
+	case proto.OpMetaDelete:
 		err = m.delete(conn, p)
-	case proto.OpList:
-		err = m.list(conn, p)
-	case proto.OpOpen:
-	case proto.OpCreateMetaRange:
+	case proto.OpMetaReadDir:
+		err = m.clientReadDir(conn, p)
+	case proto.OpMetaOpen:
+	case proto.OpMetaCreateMetaRange:
 		err = m.createMetaRange(conn, p)
 	default:
 		err = errors.New("unknown Opcode: " + proto.GetOpMesg(p.Opcode))
@@ -114,7 +114,7 @@ func (m *MetaNode) delete(conn net.Conn, p *Packet) (err error) {
 	return
 }
 
-func (m *MetaNode) list(conn net.Conn, p *Packet) (err error) {
+func (m *MetaNode) clientReadDir(conn net.Conn, p *Packet) (err error) {
 	return
 }
 func (m *MetaNode) createMetaRange(conn net.Conn,

@@ -7,6 +7,7 @@ import (
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 	"sync"
+	"time"
 )
 
 const (
@@ -35,19 +36,26 @@ func NewStreamWriter(wraper *sdk.VolGroupWraper, inode uint64, keys *chan Extent
 	stream.keys = keys
 	stream.wraper = wraper
 	stream.currentInode = inode
+	go stream.flush()
 
 	return
 }
 
 func (stream *StreamWriter) getWriter() (writer *ExtentWriter) {
+	stream.Lock()
+	defer stream.Unlock()
 	return stream.currentWriter
 }
 
 func (stream *StreamWriter) setWriterToNull() {
+	stream.Lock()
+	defer stream.Unlock()
 	stream.currentWriter = nil
 }
 
 func (stream *StreamWriter) setWriter(writer *ExtentWriter) {
+	stream.Lock()
+	defer stream.Unlock()
 	stream.currentWriter = writer
 }
 
@@ -216,4 +224,18 @@ func (stream *StreamWriter) createExtent(vol *sdk.VolGroup) (extentId uint64, er
 	extentId = p.FileID
 
 	return
+}
+
+func (stream *StreamWriter) flush() {
+	ticker := time.Tick(time.Second * 2)
+	for {
+		select {
+		case <-ticker:
+			if stream.getWriter() == nil {
+				continue
+			}
+			stream.flushCurrExtentWriter()
+		}
+	}
+
 }

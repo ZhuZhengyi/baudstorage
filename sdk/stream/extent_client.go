@@ -6,11 +6,10 @@ import (
 	"github.com/tiglabs/baudstorage/sdk"
 	"github.com/tiglabs/baudstorage/util/log"
 	"sync"
-	"time"
 )
 
 type ExtentClient struct {
-	wraper     *sdk.VolGroupWraper
+	wrapper    *sdk.VolGroupWraper
 	writers    map[uint64]*StreamWriter
 	writerLock sync.RWMutex
 	readers    map[uint64]*StreamReader
@@ -23,7 +22,7 @@ func NewExtentClient(logdir string, master string) (client *ExtentClient, err er
 	if err != nil {
 		return nil, fmt.Errorf("init Log Failed[%v]", err.Error())
 	}
-	client.wraper, err = sdk.NewVolGroupWraper(master)
+	client.wrapper, err = sdk.NewVolGroupWraper(master)
 	if err != nil {
 		return nil, fmt.Errorf("init volGroup Wrapper failed [%v]", err.Error())
 	}
@@ -34,7 +33,7 @@ func NewExtentClient(logdir string, master string) (client *ExtentClient, err er
 }
 
 func (client *ExtentClient) InitWrite(inode uint64, keyCh *chan ExtentKey) {
-	stream := NewStreamWriter(client.wraper, inode, keyCh)
+	stream := NewStreamWriter(client.wrapper, inode, keyCh)
 	client.writerLock.Lock()
 	client.writers[inode] = stream
 	client.writerLock.Unlock()
@@ -64,25 +63,25 @@ func (client *ExtentClient) Read(inode uint64, offset uint64, size uint32) (read
 }
 
 func (client *ExtentClient) Delete(keys []ExtentKey) (err error) {
-	for _,k:=range keys{
-		vol,err:=client.wraper.GetVol(k.VolId)
-		if err!=nil {
+	for _, k := range keys {
+		vol, err := client.wrapper.GetVol(k.VolId)
+		if err != nil {
 			continue
 		}
-		client.delete(vol,k.ExtentId)
+		client.delete(vol, k.ExtentId)
 	}
 
 	return nil
 }
 
 func (client *ExtentClient) delete(vol *sdk.VolGroup, extentId uint64) (err error) {
-	connect, err := client.wraper.GetConnect(vol.Hosts[0])
+	connect, err := client.wrapper.GetConnect(vol.Hosts[0])
 	if err != nil {
 		return
 	}
 	defer func() {
 		if err == nil {
-			client.wraper.PutConnect(connect)
+			client.wrapper.PutConnect(connect)
 		} else {
 			connect.Close()
 		}

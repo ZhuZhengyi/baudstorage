@@ -23,14 +23,16 @@ func TestExtentClient_Write(t *testing.T) {
 	var inode uint64
 	inode = 1
 	client.InitWrite(inode, &keysChan)
-	var sk StreamKey
+	var sk *StreamKey
+	sk = new(StreamKey)
+	sk.Inode = inode
 
 	go func() {
 		for {
 			select {
 			case k := <-keysChan:
 				sk.Put(k)
-				fmt.Println(fmt.Sprintf("return keysize:%v", sk.Size()))
+				fmt.Println(fmt.Sprintf("k %v return keysize:%v", k.Marshal(), sk.Size()))
 			}
 		}
 	}()
@@ -43,7 +45,8 @@ func TestExtentClient_Write(t *testing.T) {
 	writebytes := 0
 	for seqNo := 0; seqNo < CFSBLOCKSIZE; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
-		ndata := data[:rand.Int31n(CFSBLOCKSIZE)+CFSBLOCKSIZE]
+		ndata := data[:1]
+		time.Sleep(time.Second*3)
 		writebytes += len(ndata)
 		write, err := client.Write(inode, ndata)
 		if err != nil {
