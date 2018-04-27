@@ -8,7 +8,7 @@ type InodeInfo struct {
 	Inode      uint64    `json:"inode"`
 	Type       uint32    `json:"type"`
 	Name       string    `json:"name"`
-	ParentId   uint64    `json:"parentId"`
+	ParentID   uint64    `json:"parentID"`
 	ModifyTime time.Time `json:"modify_time"`
 	CreateTime time.Time `json:"create_time"`
 	AccessTime time.Time `json:"access_time"`
@@ -16,80 +16,97 @@ type InodeInfo struct {
 }
 
 type Dentry struct {
+	Name  string `json:"name"`
 	Inode uint64 `json:"inode"`
 	Type  uint32 `json:"type"`
-	Name  string `json:"name"`
 }
 
-type CreateRequest struct {
+type CreateInodeRequest struct {
 	Namespace string `json:"namespace"`
-	ParentId  uint64 `json:"parentId"`
 	Name      string `json:"name"`
 	Mode      uint32 `json:"mode"`
 }
 
-type CreateResponse struct {
+type CreateInodeResponse struct {
+	Status int    `json:"status"`
+	Inode  uint64 `json:"inode"`
+}
+
+type DeleteInodeRequest struct {
+	Namespace string `json:"namespace"`
+	Inode     uint64 `json:"inode"`
+}
+
+type DeleteInodeResponse struct {
 	Status int `json:"status"`
-	Dentry
+}
+
+type CreateDentryRequest struct {
+	Namespace string `json:"namespace"`
+	ParentID  uint64 `json:"parentID"`
+	Inode     uint64 `json:"inode"`
+	Name      string `json:"name"`
+	Mode      uint32 `json:"mode"`
+}
+
+type CreateDentryResponse struct {
+	Status int `json:"status"`
+}
+
+type DeleteDentryRequest struct {
+	Namespace string `json:"namespace"`
+	ParentID  uint64 `json:"parentID"`
+	Name      string `json:"name"`
+}
+
+type DeleteDentryResponse struct {
+	Status int `json:"status"`
+}
+
+type UpdateInodeNameRequest struct {
+	Namespace string `json:"namespace"`
+	Inode     uint64 `json:"inode"`
+	Name      string `json:"name"`
+}
+
+type UpdateInodeNameResponse struct {
+	Status int `json:"status"`
 }
 
 type OpenRequest struct {
-	Namespace string
-	Inode     uint64
+	Namespace string `json:"namespace"`
+	Inode     uint64 `json:"inode"`
 }
 
 type OpenResponse struct {
-	Status int
+	Status int `json:"status"`
 }
 
 type LookupRequest struct {
-	Namespace string
-	ParentId  uint64
-	Name      string
+	Namespace string `json:"namespace"`
+	ParentID  uint64 `json:"parentID"`
+	Name      string `json:"name"`
 }
 
 type LookupResponse struct {
-	Status int
-	Inode  uint64
-	Mode   uint32
+	Status int    `json:"status"`
+	Inode  uint64 `json:"inode"`
+	Mode   uint32 `json:"mode"`
 }
 
 type InodeGetRequest struct {
-	Namespace string
-	Inode     uint64
+	Namespace string `json:"namespace"`
+	Inode     uint64 `json:"inode"`
 }
 
 type InodeGetResponse struct {
-	Status int
+	Status int `json:"status"`
 	InodeInfo
 }
 
-type DeleteRequest struct {
-	Namespace string
-	ParentId  uint64
-	Name      string
-}
-
-type DeleteResponse struct {
-	Status int
-}
-
-type RenameRequest struct {
-	Namespace   string
-	SrcParentId uint64
-	SrcName     string
-	DstParentId uint64
-	DstName     string
-	Status      int
-}
-
-type RenameResponse struct {
-	Status int
-}
-
 type ReadDirRequest struct {
-	Namespace string
-	ParentId  uint64
+	Namespace string `json:"namespace"`
+	ParentID  uint64 `json:"parentID"`
 }
 
 type ReadDirResponse struct {
