@@ -131,10 +131,10 @@ func (mf *MetaRangeFsm) OpenFile(request *proto.OpenRequest) (response *proto.Op
 
 func (mf *MetaRangeFsm) ReadDir(request *proto.ReadDirRequest) (response *proto.ReadDirResponse) {
 	begDentry := &Dentry{
-		ParentId: request.ParentId,
+		ParentId: request.ParentID,
 	}
 	endDentry := &Dentry{
-		ParentId: request.ParentId + 1,
+		ParentId: request.ParentID + 1,
 	}
 	mf.DentryTree.AscendRange(begDentry, endDentry, func(i btree.Item) bool {
 		d := i.(*Dentry)
