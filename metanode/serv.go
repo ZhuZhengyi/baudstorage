@@ -3,14 +3,15 @@ package metanode
 import (
 	"context"
 	"encoding/json"
-	"github.com/juju/errors"
-	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util/log"
+	"fmt"
 	"net"
 	"time"
-	"github.com/tiglabs/baudstorage/util"
-	"fmt"
+
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/master"
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 // StartTcpService bind and listen specified port and accept tcp connections.
@@ -140,8 +141,8 @@ func (m *MetaNode) replyToMaster(ip string, data interface{}) (err error) {
 }
 
 // Handle OpCreate
-func (m *MetaNode) opCreate(conn net.Conn, p *Packet) (err error) {
-	req := &proto.CreateRequest{}
+func (m *MetaNode) opCreateDentry(conn net.Conn, p *Packet) (err error) {
+	req := &createDentryReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
@@ -149,15 +150,15 @@ func (m *MetaNode) opCreate(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return err
 	}
-	resp := mr.Create(req)
+	resp := mr.CreateDentry(req)
 	// Reply operation result to client though TCP connection.
 	err = m.replyToClient(conn, p, resp)
 	return
 }
 
-// Handle OpRename
-func (m *MetaNode) opRename(conn net.Conn, p *Packet) (err error) {
-	req := &proto.RenameRequest{}
+// Handle OpDelete Dentry
+func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
+	req := &deleteDentryReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
@@ -165,15 +166,15 @@ func (m *MetaNode) opRename(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	resp := mr.Rename(req)
+	resp := mr.DeleteDentry(req)
 	// Reply operation result to client though TCP connection.
 	err = m.replyToClient(conn, p, resp)
 	return
 }
 
-// Handle OpDelete
-func (m *MetaNode) opDelete(conn net.Conn, p *Packet) (err error) {
-	req := &proto.DeleteRequest{}
+// Handle OpCreate Inode
+func (m *MetaNode) opCreateInode(conn net.Conn, p *Packet) (err error) {
+	req := &createInoReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
@@ -181,8 +182,22 @@ func (m *MetaNode) opDelete(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	resp := mr.Delete(req)
+	resp := mr.CreateInode(req)
 	// Reply operation result to client though TCP connection.
+	err = m.replyToClient(conn, p, resp)
+	return
+}
+
+func (m *MetaNode) opDeleteInode(conn net.Conn, p *Packet) (err error) {
+	req := &deleteInoReq{}
+	if err = json.Unmarshal(p.Data, req); err != nil {
+		return
+	}
+	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	if err != nil {
+		return
+	}
+	resp := mr.DeleteInode(req)
 	err = m.replyToClient(conn, p, resp)
 	return
 }
@@ -247,8 +262,7 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 		errors.New("invalid request body")
 		return
 	}
-	mr := NewMetaRange(req.MetaId, req.Start, req.End,
-		req.Members)
+	mr := NewMetaRange(req.MetaId, req.Start, req.End, req.Members)
 	// Store MetaRange to group.
 	m.metaRangeGroup.StoreMetaRange(req.MetaId, mr)
 	return

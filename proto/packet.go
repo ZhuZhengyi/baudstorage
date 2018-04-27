@@ -69,6 +69,7 @@ const (
 	OpErr              uint8 = 0xF8
 	OpAgain            uint8 = 0xF9
 	OpFileExistErr     uint8 = 0xFA
+	OpInodeFullErr     uint8 = 0xFB
 	OpOk               uint8 = 0x00
 )
 
@@ -155,6 +156,8 @@ func GetOpMesg(opcode uint8) (m string) {
 		m = "OpSyncHasDelNeedle"
 	case OpFileExistErr:
 		m = "FileExistErr"
+	case OpInodeFullErr:
+		m = "InodeFullErr"
 	default:
 		return ""
 
@@ -302,7 +305,7 @@ func (p *Packet) PackOkGetInfoReply(buf []byte) {
 }
 
 func (p *Packet) GetUniqLogId() (m string) {
-	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v", p.ReqID, p.VolID, p.FileID, p.Offset,p.Size, GetOpMesg(p.OrgOpcode))
+	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v", p.ReqID, p.VolID, p.FileID, p.Offset, p.Size, GetOpMesg(p.OrgOpcode))
 
 	return
 }
