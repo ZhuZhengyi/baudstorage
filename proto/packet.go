@@ -302,7 +302,7 @@ func (p *Packet) PackOkGetInfoReply(buf []byte) {
 }
 
 func (p *Packet) GetUniqLogId() (m string) {
-	m = fmt.Sprintf("%v_%v_%v_%v_%v", p.ReqID, p.VolID, p.FileID, p.Offset, GetOpMesg(p.OrgOpcode))
+	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v", p.ReqID, p.VolID, p.FileID, p.Offset,p.Size, GetOpMesg(p.OrgOpcode))
 
 	return
 }
