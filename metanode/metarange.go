@@ -3,6 +3,7 @@ package metanode
 import (
 	"sync/atomic"
 
+	"errors"
 	"github.com/tiglabs/baudstorage/proto"
 )
 
@@ -28,54 +29,51 @@ func NewMetaRange(id string, start, end uint64, peers []string) *MetaRange {
 	}
 }
 
-func (mr *MetaRange) getInode() uint64 {
-	return atomic.AddUint64(&mr.offset, 1)
+func (mr *MetaRange) getInode() (uint64, error) {
+	i := atomic.AddUint64(&mr.offset, 1)
+	if i > mr.end {
+		return -1, errors.New("inode no space left")
+	}
+	return i, nil
 }
 
-func (mr *MetaRange) Create(request *proto.CreateRequest) (response *proto.CreateResponse) {
-	// TODO: Implement create operation.
-	response.Status = int(proto.OpFileExistErr)
-	dentry := &Dentry{
-		ParentId: request.ParentId,
-		Name:     request.Name,
-		Type:     request.Mode,
-	}
-	if _, status := mr.store.GetDentry(dentry); status == proto.OpOk {
-		return
-	}
-
-	inode := NewInode(mr.getInode(), request.Name, request.Mode)
-	dentry.Inode = inode.Inode
-	status := mr.store.Create(inode, dentry)
-	if status == proto.OpOk {
-		response.Status = int(proto.OpOk)
-		response.Inode = dentry.Inode
-		response.Name = dentry.Name
-		response.Type = dentry.Type
-	}
+func (mr *MetaRange) CreateDentry(request *proto.CreateRequest) (
+	response *proto.CreateResponse) {
+	// TODO: Implement create dentry operation.
 	return
 }
 
-func (mr *MetaRange) Rename(request *proto.RenameRequest) (response *proto.RenameResponse) {
-	// TODO: Implement rename operation.
-	return mr.store.Rename(request)
+func (mr *MetaRange) DeleteDentry() {
+	//TODO:
+	return
 }
 
-func (mr *MetaRange) Delete(request *proto.DeleteRequest) (response *proto.DeleteResponse) {
-	dentry := &Dentry{
-		ParentId: request.ParentId,
-		Name:     request.Name,
-	}
-	response.Status = int(mr.store.Delete(dentry))
+func (mr *MetaRange) CreateInode() {
+	//TODO:
+	return
+}
+
+func (mr *MetaRange) DeleteInode() {
+	//TODO:
+	return
+}
+
+func (mr *MetaRange) UpdateInodeName() {
+	return
+}
+
+func (mr *MetaRange) PutStreamKey() {
 	return
 }
 
 func (mr *MetaRange) ReadDir(req *proto.ReadDirRequest) (resp *proto.ReadDirResponse) {
 	// TODO: Implement read dir operation.
+	resp = mr.store.ReadDir(req)
 	return
 }
 
 func (mr *MetaRange) Open(req *proto.OpenRequest) (resp *proto.OpenResponse) {
 	// TODO: Implement open operation.
+	resp = mr.store.OpenFile(req)
 	return
 }

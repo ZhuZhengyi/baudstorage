@@ -2,12 +2,12 @@ package metanode
 
 import (
 	"sync"
-
 	"time"
 
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftopt"
+	"github.com/tiglabs/baudstorage/sdk/stream"
 )
 
 type MetaRangeFsm struct {
@@ -25,78 +25,97 @@ func NewMetaRangeFsm() *MetaRangeFsm {
 	return m
 }
 
-// GetDentry query dentry item from DentryTree with specified dentry
-// info and returns dentry entity if it exist, or nil.
-func (mr *MetaRangeFsm) GetDentry(dentry *Dentry) (result *Dentry, status uint8) {
-	item := mr.DentryTree.Get(dentry)
+// GetDentry query dentry from DentryTree with specified dentry info;
+// if it exist, the required parameter is the dentry entity,
+// if not exist, not change
+func (mf *MetaRangeFsm) GetDentry(dentry *Dentry) (status uint8) {
+	status = proto.OpOk
+	item := mf.DentryTree.Get(dentry)
 	if item == nil {
-		return nil, proto.OpFileNotExistErr
+		status = proto.OpFileNotExistErr
+		return
 	}
-	d := item.(*Dentry)
-	return d, proto.OpOk
+	dentry = item.(*Dentry)
+	return
 }
 
-// GetInode query inode entity from InodeTree with specified inode
-// info and returns inode entity if it exist, or nil.
-func (mr *MetaRangeFsm) GetInode(ino *Inode) (result *Inode, status uint8) {
-	item := mr.InodeTree.Get(ino)
+// GetInode query inode from InodeTree with specified inode info;
+// if it exist, the required parameter is the inode entity,
+// if not exist, not change
+func (mf *MetaRangeFsm) GetInode(ino *Inode) (status uint8) {
+	status = proto.OpOk
+	item := mf.InodeTree.Get(ino)
 	if item == nil {
-		return nil, proto.OpFileNotExistErr
+		status = proto.OpFileNotExistErr
+		return
 	}
-	i := item.(*Inode)
-	return i, proto.OpOk
+	ino = item.(*Inode)
+	return
 }
 
-func (mr *MetaRangeFsm) AddStream(ino uint64) {
-
-}
-
-func (mr *MetaRangeFsm) Create(inode *Inode, dentry *Dentry) uint8 {
-	//TODO: first raft sync
-
-	//insert dentry tree
-	mr.dLock.Lock()
-	if mr.DentryTree.Has(dentry) {
-		mr.dLock.Unlock()
-		return proto.OpFileExistErr
+//CreateDentry insert dentry into dentry tree
+func (mf *MetaRangeFsm) CreateDentry(dentry *Dentry) (status uint8) {
+	status = proto.OpOk
+	mf.dLock.Lock()
+	if mf.DentryTree.Has(dentry) {
+		mf.dLock.Unlock()
+		status = proto.OpFileExistErr
+		return
 	}
-	mr.DentryTree.ReplaceOrInsert(dentry)
-	mr.dLock.Unlock()
-	//insert inode tree
-	mr.iLock.Lock()
-	if mr.InodeTree.Has(inode) {
-		mr.iLock.Unlock()
-		return proto.OpFileExistErr
-	}
-	mr.InodeTree.ReplaceOrInsert(inode)
-	mr.iLock.Unlock()
-	return proto.OpOk
-}
-
-func (mr *MetaRangeFsm) Delete(dentry *Dentry) uint8 {
+	mf.DentryTree.ReplaceOrInsert(dentry)
+	mf.dLock.Unlock()
 	//TODO: raft sync
 
-	//delete dentry from dentrytree
-	mr.dLock.Lock()
-	if item := mr.DentryTree.Delete(dentry); item == nil {
-		defer mr.dLock.Unlock()
-		return proto.OpFileNotExistErr
-	} else {
-		dentry = item.(*Dentry)
-	}
-	mr.dLock.Unlock()
-	//delete inode from inodetree
-	mr.iLock.Lock()
-	if item := mr.InodeTree.Delete(&Inode{Inode: dentry.Inode}); item == nil {
-		defer mr.iLock.Unlock()
-		return proto.OpFileNotExistErr
-	}
-	mr.iLock.Unlock()
-	return proto.OpOk
+	return
 }
 
-func (mr *MetaRangeFsm) OpenFile(request *proto.OpenRequest) (response *proto.OpenResponse) {
-	item := mr.InodeTree.Get(&Inode{
+//DeleteDentry delete dentry from dentry tree
+func (mf *MetaRangeFsm) DeleteDentry(dentry *Dentry) (status uint8) {
+	status = proto.OpOk
+	mf.dLock.Lock()
+	item := mf.DentryTree.Delete(dentry)
+	mf.dLock.Unlock()
+	if item == nil {
+		status = proto.OpFileExistErr
+		return
+	}
+	dentry = item.(*Dentry)
+	//TODO: raft sync
+
+	return
+}
+
+func (mf *MetaRangeFsm) CreateInode(inode *Inode) (status uint8) {
+	status = proto.OpOk
+	mf.iLock.Lock()
+	if mf.InodeTree.Has(inode) {
+		mf.iLock.Unlock()
+		status = proto.OpFileExistErr
+		return
+	}
+	mf.InodeTree.ReplaceOrInsert(inode)
+	mf.iLock.Unlock()
+	//TODO: raft sync
+
+	return
+}
+
+func (mf *MetaRangeFsm) DeleteInode(ino *Inode) (status uint8) {
+	status = proto.OpOk
+	mf.iLock.Lock()
+	item := mf.InodeTree.Delete(ino)
+	mf.iLock.Unlock()
+	if item == nil {
+		status = proto.OpFileNotExistErr
+		return
+	}
+	ino = item.(*Inode)
+	//TODO: raft sync
+	return
+}
+
+func (mf *MetaRangeFsm) OpenFile(request *proto.OpenRequest) (response *proto.OpenResponse) {
+	item := mf.InodeTree.Get(&Inode{
 		Inode: request.Inode,
 	})
 	if item == nil {
@@ -105,55 +124,19 @@ func (mr *MetaRangeFsm) OpenFile(request *proto.OpenRequest) (response *proto.Op
 	}
 	item.(*Inode).AccessTime = time.Now().Unix()
 	response.Status = int(proto.OpOk)
-	return
-}
-
-func (mr *MetaRangeFsm) Rename(req *proto.RenameRequest) (response *proto.RenameResponse) {
-	dentry := &Dentry{
-		ParentId: req.SrcParentId,
-		Name:     req.SrcName,
-	}
-	dentry, status := mr.GetDentry(dentry)
-	if status != proto.OpOk {
-		response.Status = int(status)
-		return
-	}
-	//rename inode name
-	{
-		inode := &Inode{
-			Inode: dentry.Inode,
-		}
-		inode, status := mr.GetInode(inode)
-		if status != proto.OpOk {
-			response.Status = int(status)
-			return
-		}
-		inode.Name = req.DstName
-	}
-	//delete old dentry from dentry tree
-	mr.dLock.Lock()
-	mr.DentryTree.Delete(dentry)
-	mr.dLock.Unlock()
-	//insert new dentry to dentry tree
-	dentry.ParentId = req.DstParentId
-	dentry.Name = req.DstName
-	mr.dLock.Lock()
-	mr.DentryTree.ReplaceOrInsert(dentry)
 	//TODO: raft sync
 
-	//response status
-	response.Status = int(proto.OpOk)
 	return
 }
 
-func (mr *MetaRangeFsm) List(request *proto.ReadDirRequest) (response *proto.ReadDirResponse) {
+func (mf *MetaRangeFsm) ReadDir(request *proto.ReadDirRequest) (response *proto.ReadDirResponse) {
 	begDentry := &Dentry{
 		ParentId: request.ParentId,
 	}
 	endDentry := &Dentry{
 		ParentId: request.ParentId + 1,
 	}
-	mr.DentryTree.AscendRange(begDentry, endDentry, func(i btree.Item) bool {
+	mf.DentryTree.AscendRange(begDentry, endDentry, func(i btree.Item) bool {
 		d := i.(*Dentry)
 		response.Children = append(response.Children, proto.Dentry{
 			Inode: d.Inode,
@@ -162,5 +145,17 @@ func (mr *MetaRangeFsm) List(request *proto.ReadDirRequest) (response *proto.Rea
 		})
 		return true
 	})
+	return
+}
+
+func (mf *MetaRangeFsm) PutStreamKey(ino *Inode, k stream.ExtentKey) (status uint8) {
+	status = proto.OpOk
+	item := mf.InodeTree.Get(ino)
+	if item == nil {
+		status = proto.OpFileNotExistErr
+		return
+	}
+	ino = item.(*Inode)
+	ino.Stream.Put(k)
 	return
 }
