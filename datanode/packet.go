@@ -3,10 +3,11 @@ package datanode
 import (
 	"errors"
 	"fmt"
-	"github.com/tiglabs/baudstorage/proto"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/tiglabs/baudstorage/proto"
 )
 
 var (

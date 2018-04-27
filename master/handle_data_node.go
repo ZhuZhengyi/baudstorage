@@ -3,22 +3,22 @@ package master
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"io"
 	"net/http"
+
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 func (m *Master) addDataNode(w http.ResponseWriter, r *http.Request) {
 	var (
 		nodeAddr string
-		zoneName string
 		err      error
 	)
-	if zoneName, nodeAddr, err = parseAddMetaNodePara(r); err != nil {
+	if nodeAddr, err = parseAddMetaNodePara(r); err != nil {
 		goto errDeal
 	}
 
-	if err = m.cluster.addDataNode(nodeAddr, zoneName); err != nil {
+	if err = m.cluster.addDataNode(nodeAddr); err != nil {
 		goto errDeal
 	}
 	io.WriteString(w, fmt.Sprintf("addDataNode %v successed\n", nodeAddr))
@@ -40,7 +40,7 @@ func (m *Master) getDataNode(w http.ResponseWriter, r *http.Request) {
 		goto errDeal
 	}
 
-	if dataNode, _, _, err = m.cluster.topology.getDataNode(nodeAddr); err != nil {
+	if dataNode, err = m.cluster.getDataNode(nodeAddr); err != nil {
 		goto errDeal
 	}
 	if body, err = json.Marshal(dataNode); err != nil {
@@ -67,7 +67,7 @@ func (m *Master) dataNodeOffline(w http.ResponseWriter, r *http.Request) {
 		goto errDeal
 	}
 
-	if node, _, err = m.cluster.getDataNodeFromCluster(offLineAddr); err != nil {
+	if node, err = m.cluster.getDataNode(offLineAddr); err != nil {
 		goto errDeal
 	}
 	m.cluster.dataNodeOffLine(node)

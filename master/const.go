@@ -2,7 +2,6 @@ package master
 
 const (
 	ParaNodeAddr = "addr"
-	ParaZoneName = "zone"
 	ParaName     = "name"
 	ParaId       = "id"
 	ParaCount    = "count"
@@ -58,6 +57,6 @@ const (
 )
 
 const (
-	OK     = iota
+	OK = iota
 	Failed
 )

@@ -3,13 +3,14 @@ package master
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"sync"
+
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type VolMap struct {
-	clusterID        string
-	clusterType      string
+	clusterID   string
+	clusterType string
 	sync.RWMutex
 	volMap           map[uint64]*VolGroup
 	volCount         int

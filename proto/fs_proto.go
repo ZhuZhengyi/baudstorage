@@ -16,9 +16,9 @@ type InodeInfo struct {
 }
 
 type Dentry struct {
-	Inode uint64
-	Type  uint32
-	Name  string
+	Inode uint64 `json:"inode"`
+	Type  uint32 `json:"type"`
+	Name  string `json:"name"`
 }
 
 type CreateRequest struct {
@@ -29,16 +29,16 @@ type CreateRequest struct {
 }
 
 type CreateResponse struct {
-	Status int
+	Status int `json:"status"`
 	Dentry
 }
 
-type OpenFileRequest struct {
+type OpenRequest struct {
 	Namespace string
 	Inode     uint64
 }
 
-type OpenFileResponse struct {
+type OpenResponse struct {
 	Status int
 }
 

@@ -2,10 +2,11 @@ package master
 
 import (
 	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"math/rand"
 	"sort"
 	"time"
+
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type NodeTab struct {
@@ -48,30 +49,29 @@ func (sts NodeTabSorterByCarry) SetNodeTabCarry(availCarryCount, demand int) {
 	}
 }
 
-func (zone *Zone) GetMaxTotal() (maxTotal uint64) {
-	for _, dataNode := range zone.DataNodes {
+func (c *Cluster) GetMaxTotal() (maxTotal uint64) {
+	c.dataNodes.Range(func(key, value interface{}) bool {
+		dataNode := value.(*DataNode)
 		if dataNode.Total > maxTotal {
 			maxTotal = dataNode.Total
 		}
-	}
-
+		return true
+	})
 	return
 }
 
-func (zone *Zone) getAvailHostExcludeSpecify(specifyAddrsPtr *[]string, demand int) (newHosts []string, err error) {
+func (c *Cluster) getAvailHostExcludeSpecify(specifyAddrsPtr *[]string, demand int) (newHosts []string, err error) {
 	orderHosts := make([]string, 0)
 	newHosts = make([]string, 0)
-	zone.RLock()
-	defer zone.RUnlock()
 	if demand == 0 {
 		return
 	}
 
-	maxTotal := zone.GetMaxTotal()
-	nodeTabs, availCarryCount := zone.GetAvailCarryNodeTab(maxTotal, specifyAddrsPtr)
+	maxTotal := c.GetMaxTotal()
+	nodeTabs, availCarryCount := c.GetAvailCarryNodeTab(maxTotal, specifyAddrsPtr)
 	if len(nodeTabs) < demand {
-		err = fmt.Errorf(GetAvailHostExcludeSpecifyErr+" zone:%v  err:%v ,ActiveNodeCount:%v  MatchNodeCount:%v  ",
-			zone.Name, ClusterNotHaveAnyNodeToWrite, len(zone.DataNodes), len(nodeTabs))
+		err = fmt.Errorf(GetAvailHostExcludeSpecifyErr+" err:%v ,ActiveNodeCount:%v  MatchNodeCount:%v  ",
+			ClusterNotHaveAnyNodeToWrite, c.DataNodeCount(), len(nodeTabs))
 		goto errDeal
 	}
 
@@ -84,8 +84,8 @@ func (zone *Zone) getAvailHostExcludeSpecify(specifyAddrsPtr *[]string, demand i
 		orderHosts = append(orderHosts, node.HttpAddr)
 	}
 
-	if newHosts, err = zone.DisOrderArray(&orderHosts); err != nil {
-		err = fmt.Errorf(GetAvailHostExcludeSpecifyErr+"zone name:%v, err:%v  orderHosts is nil", zone.Name, err.Error())
+	if newHosts, err = c.DisOrderArray(&orderHosts); err != nil {
+		err = fmt.Errorf(GetAvailHostExcludeSpecifyErr+"err:%v  orderHosts is nil", err.Error())
 		goto errDeal
 	}
 
@@ -114,14 +114,16 @@ func AddrIsInSpecifyAddr(specifyAddrsPtr *[]string, addr string) (ok bool) {
 	return
 }
 
-func (zone *Zone) GetAvailCarryNodeTab(maxTotal uint64, specifyAddrsPtr *[]string) (nodeTabs NodeTabSorterByCarry, availCount int) {
+func (c *Cluster) GetAvailCarryNodeTab(maxTotal uint64, specifyAddrsPtr *[]string) (nodeTabs NodeTabSorterByCarry, availCount int) {
 	nodeTabs = make(NodeTabSorterByCarry, 0)
-	for addr, dataNode := range zone.DataNodes {
-		if AddrIsInSpecifyAddr(specifyAddrsPtr, addr) == true {
-			continue
+
+	c.dataNodes.Range(func(key, value interface{}) bool {
+		dataNode := value.(*DataNode)
+		if AddrIsInSpecifyAddr(specifyAddrsPtr, dataNode.HttpAddr) == true {
+			return true
 		}
 		if dataNode.IsWriteAble() == false {
-			continue
+			return true
 		}
 		if dataNode.IsAvailCarryNode() == true {
 			availCount++
@@ -135,18 +137,20 @@ func (zone *Zone) GetAvailCarryNodeTab(maxTotal uint64, specifyAddrsPtr *[]strin
 		}
 		nt.Ptr = dataNode
 		nodeTabs = append(nodeTabs, nt)
-	}
+
+		return true
+	})
 
 	return
 }
 
-func (zone *Zone) DisOrderArray(oldHostsPtr *[]string) (newHosts []string, err error) {
+func (c *Cluster) DisOrderArray(oldHostsPtr *[]string) (newHosts []string, err error) {
 	var (
 		newCurrPos int
 	)
 
 	if oldHostsPtr == nil || *oldHostsPtr == nil || len(*oldHostsPtr) == 0 {
-		log.LogError(fmt.Sprintf("action[DisOrderArray],zone:%v,err:%v", zone.Name, DisOrderArrayErr))
+		log.LogError(fmt.Sprintf("action[DisOrderArray],err:%v", DisOrderArrayErr))
 		err = DisOrderArrayErr
 		return
 	}

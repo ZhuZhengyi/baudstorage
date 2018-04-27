@@ -6,7 +6,6 @@ import (
 	metanode "github.com/tiglabs/baudstorage/metanode"
 
 	"flag"
-	"github.com/tiglabs/baudstorage/util/config"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -14,6 +13,8 @@ import (
 	"os/signal"
 	"runtime"
 	"syscall"
+
+	"github.com/tiglabs/baudstorage/util/config"
 )
 
 const (

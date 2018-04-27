@@ -2,10 +2,11 @@ package stream
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
 	"github.com/tiglabs/baudstorage/util/log"
-	"sync"
 )
 
 type ExtentClient struct {

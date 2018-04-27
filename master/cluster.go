@@ -2,10 +2,10 @@ package master
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
-	"strings"
-	"sync"
 )
 
 type Cluster struct {
@@ -14,7 +14,8 @@ type Cluster struct {
 	namespaces        map[string]*NameSpace
 	volReplicas       uint8
 	metaRangeReplicas uint8
-	topology          *Topology
+	dataNodes         sync.Map
+	metaNodes         sync.Map
 	createVolLock     sync.Mutex
 	addZoneLock       sync.Mutex
 }
@@ -23,56 +24,39 @@ func NewCluster(name string) (c *Cluster) {
 	c = new(Cluster)
 	c.Name = name
 	c.vols = NewVolMap()
-	c.topology = NewTopology()
 	return
 }
 
-func (c *Cluster) addMetaNode(nodeAddr, zoneName string) (err error) {
+func (c *Cluster) addMetaNode(nodeAddr string) (err error) {
 	var metaNode *MetaNode
-	if _, ok := c.topology.metaNodeMap[nodeAddr]; ok {
+	if _, ok := c.metaNodes.Load(nodeAddr); ok {
 		err = hasExist(nodeAddr)
 		goto errDeal
 	}
-
-	if _, err = c.topology.getZone(zoneName); err == nil {
-		err = hasExist(zoneName)
-		goto errDeal
-	}
-	metaNode = NewMetaNode(nodeAddr, zoneName)
+	metaNode = NewMetaNode(nodeAddr)
 	//todo sync node by raft
-
-	if err = c.topology.addMetaNode(metaNode); err != nil {
-		metaNode.clean()
-		goto errDeal
-	}
+	c.metaNodes.Store(nodeAddr, metaNode)
 	return
 errDeal:
-	err = fmt.Errorf("action[addMetaNode],zoneName:%v,metaNodeAddr:%v err:%v ", zoneName, nodeAddr, err.Error())
+	err = fmt.Errorf("action[addMetaNode],metaNodeAddr:%v err:%v ", nodeAddr, err.Error())
 	log.LogWarn(err.Error())
 	return err
 }
 
-func (c *Cluster) addDataNode(nodeAddr, zoneName string) (err error) {
+func (c *Cluster) addDataNode(nodeAddr string) (err error) {
 	var dataNode *DataNode
-	if _, ok := c.topology.metaNodeMap[nodeAddr]; ok {
+	if _, ok := c.dataNodes.Load(nodeAddr); ok {
 		err = hasExist(nodeAddr)
 		goto errDeal
 	}
 
-	if _, err = c.topology.getZone(zoneName); err == nil {
-		err = hasExist(zoneName)
-		goto errDeal
-	}
-	dataNode = NewDataNode(nodeAddr, zoneName)
+	dataNode = NewDataNode(nodeAddr)
 	//todo sync node by raft
 
-	if err = c.topology.addDataNode(dataNode); err != nil {
-		dataNode.clean()
-		goto errDeal
-	}
+	c.dataNodes.Store(nodeAddr, dataNode)
 	return
 errDeal:
-	err = fmt.Errorf("action[addMetaNode],zoneName:%v,metaNodeAddr:%v err:%v ", zoneName, nodeAddr, err.Error())
+	err = fmt.Errorf("action[addMetaNode],metaNodeAddr:%v err:%v ", nodeAddr, err.Error())
 	log.LogWarn(err.Error())
 	return err
 }
@@ -132,13 +116,21 @@ func (c *Cluster) getVolByVolID(volID uint64) (vol *VolGroup, err error) {
 	return c.vols.getVol(volID)
 }
 
-func (c *Cluster) getDataNodeFromCluster(addr string) (dataNode *DataNode, zone *Zone, err error) {
-	dataNode, _, zone, err = c.topology.getDataNode(addr)
+func (c *Cluster) getDataNode(addr string) (dataNode *DataNode, err error) {
+	value, ok := c.dataNodes.Load(addr)
+	if !ok {
+		err = DataNodeNotFound
+	}
+	dataNode = value.(*DataNode)
 	return
 }
 
-func (c *Cluster) getMetaNodeFromCluster(addr string) (metaNode *MetaNode, zone *Zone, err error) {
-	metaNode, _, zone, err = c.topology.getMetaNode(addr)
+func (c *Cluster) getMetaNode(addr string) (metaNode *MetaNode, err error) {
+	value, ok := c.metaNodes.Load(addr)
+	if !ok {
+		err = MetaNodeNotFound
+	}
+	metaNode = value.(*MetaNode)
 	return
 }
 
@@ -156,30 +148,11 @@ func (c *Cluster) dataNodeOffLine(dataNode *DataNode) {
 	msg := fmt.Sprintf("action[dataNodeOffLine], Node[%v] OffLine", dataNode.HttpAddr)
 	log.LogWarn(msg)
 	c.vols.dataNodeOffline(dataNode.HttpAddr)
-	if err := c.topology.deleteDataNode(dataNode); err != nil {
-		log.LogError(fmt.Sprintf("action[dataNodeOffLine],nodeAddr:%v,err:%v", dataNode.HttpAddr, err))
-	}
-
+	c.dataNodes.Delete(dataNode.HttpAddr)
 }
 
 func (c *Cluster) metaNodeOffLine(metaNode *MetaNode) {
 
-}
-
-func (c *Cluster) addZone(zoneName string) (err error) {
-	c.addZoneLock.Lock()
-	defer c.addZoneLock.Unlock()
-	if _, err = c.topology.getZone(zoneName); err == nil {
-		err = hasExist(zoneName)
-		goto errDeal
-	}
-	//todo sync zone by raft
-	c.putRegionAndZoneToMem(zoneName)
-	return nil
-errDeal:
-	err = fmt.Errorf("action[addZone], zoneName:%v, err:%v ", zoneName, err.Error())
-	log.LogError(err.Error())
-	return
 }
 
 func (c *Cluster) createNamespace(name string) (err error) {
@@ -208,33 +181,13 @@ errDeal:
 	return
 }
 
-func (c *Cluster) putRegionAndZoneToMem(zoneName string) {
-	var (
-		r          *Region
-		zone       *Zone
-		arr        []string
-		regionName string
-		err        error
-	)
-	arr = strings.Split(zoneName, UnderlineSeparator)
-	regionName = arr[0]
-	if r, err = c.topology.getRegion(regionName); err != nil {
-		r = NewRegion(regionName)
-		c.topology.putRegion(r)
-	}
-	if zone, err = c.topology.getZone(zoneName); err != nil {
-		zone = NewZone(zoneName)
-		c.topology.putZone(zone)
-	}
-}
-
 func (c *Cluster) putDataNodeTasks(tasks []*proto.AdminTask) {
 
 	for _, t := range tasks {
 		if t == nil {
 			continue
 		}
-		if node, _, err := c.getDataNodeFromCluster(t.OperatorAddr); err != nil {
+		if node, err := c.getDataNode(t.OperatorAddr); err != nil {
 			log.LogWarn(fmt.Sprintf("action[putTasks],nodeAddr:%v,taskID:%v,err:%v", node.HttpAddr, t.ID, err.Error()))
 		} else {
 			node.sender.PutTask(t)
@@ -249,11 +202,20 @@ func (c *Cluster) putMetaNodeTasks(tasks []*proto.AdminTask) {
 		if t == nil {
 			continue
 		}
-		if node, _, err := c.getMetaNodeFromCluster(t.OperatorAddr); err != nil {
+		if node, err := c.getMetaNode(t.OperatorAddr); err != nil {
 			log.LogWarn(fmt.Sprintf("action[putTasks],nodeAddr:%v,taskID:%v,err:%v", node.Addr, t.ID, err.Error()))
 		} else {
 			node.sender.PutTask(t)
 
 		}
 	}
+}
+
+func (c *Cluster) DataNodeCount() (len int) {
+
+	c.dataNodes.Range(func(key, value interface{}) bool {
+		len++
+		return true
+	})
+	return
 }

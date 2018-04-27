@@ -2,12 +2,13 @@ package storage
 
 import (
 	"encoding/binary"
-	"github.com/tiglabs/baudstorage/util"
 	"hash/crc32"
 	"os"
 	"strconv"
 	"sync"
 	"sync/atomic"
+
+	"github.com/tiglabs/baudstorage/util"
 )
 
 type Chunk struct {

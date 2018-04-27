@@ -3,11 +3,11 @@ package master
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
+
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
@@ -63,10 +63,6 @@ errDeal:
 }
 
 func (m *Master) newVolResponseForGetVol(v *VolGroup) (vr *VolResponse) {
-	var (
-		zone *Zone
-		err  error
-	)
 	vr = new(VolResponse)
 	v.Lock()
 	defer v.Unlock()
@@ -75,13 +71,6 @@ func (m *Master) newVolResponseForGetVol(v *VolGroup) (vr *VolResponse) {
 	vr.ReplicaNum = v.replicaNum
 	vr.Hosts = make([]string, len(v.PersistenceHosts))
 	copy(vr.Hosts, v.PersistenceHosts)
-	vr.Zones = make([]string, 0)
-	for _, volHostAddr := range v.PersistenceHosts {
-		if _, zone, err = m.cluster.getDataNodeFromCluster(volHostAddr); err != nil {
-			continue
-		}
-		vr.Zones = append(vr.Zones, zone.Name)
-	}
 	return
 }
 
@@ -138,32 +127,6 @@ func (m *Master) volOffline(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage(AdminVolOffline, r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg, http.StatusBadRequest, w)
-	return
-}
-
-func (m *Master) handleAddZone(w http.ResponseWriter, r *http.Request) {
-	var (
-		msg      string
-		zoneName string
-		err      error
-	)
-
-	if zoneName, err = parseAddZonePara(r); err != nil {
-		goto errDeal
-	}
-
-	if err = m.cluster.addZone(zoneName); err != nil {
-		goto errDeal
-	}
-
-	msg = fmt.Sprintf("AddZone zone name:%v successed\n", zoneName)
-	io.WriteString(w, msg)
-	log.LogInfo(msg)
-
-	return
-errDeal:
-	logMsg := getReturnMessage("AddZone", r.RemoteAddr, err.Error(), http.StatusBadRequest)
 	HandleError(logMsg, http.StatusBadRequest, w)
 	return
 }
@@ -239,20 +202,5 @@ func checkNodeAddr(r *http.Request) (nodeAddr string, err error) {
 		err = paraNotFound(ParaNodeAddr)
 		return
 	}
-	return
-}
-
-func parseAddZonePara(r *http.Request) (zoneName string, err error) {
-	r.ParseForm()
-	if zoneName = r.FormValue(ParaZoneName); zoneName == "" {
-		err = paraNotFound(ParaZoneName)
-		return
-	}
-
-	if arr := strings.Split(zoneName, UnderlineSeparator); len(arr) != 2 {
-		err = ParaFormatInvalid
-		return
-	}
-
 	return
 }

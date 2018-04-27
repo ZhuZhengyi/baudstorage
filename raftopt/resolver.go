@@ -3,8 +3,9 @@ package raftopt
 import (
 	"errors"
 	"fmt"
-	"github.com/tiglabs/raft"
 	"sync"
+
+	"github.com/tiglabs/raft"
 )
 
 //Resolver ...

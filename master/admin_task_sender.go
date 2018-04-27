@@ -2,10 +2,11 @@ package master
 
 import (
 	"encoding/json"
-	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util"
 	"sync"
 	"time"
+
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util"
 )
 
 const (
@@ -24,7 +25,7 @@ type AdminTaskSender struct {
 	targetAddr string
 	taskMap    map[string]*proto.AdminTask
 	sync.Mutex
-	exitCh     chan struct{}
+	exitCh chan struct{}
 }
 
 func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {

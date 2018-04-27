@@ -1,11 +1,12 @@
 package stream
 
 import (
+	"hash/crc32"
+	"net"
+
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
 	"github.com/tiglabs/baudstorage/util"
-	"hash/crc32"
-	"net"
 )
 
 type Packet struct {
