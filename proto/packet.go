@@ -142,8 +142,8 @@ func GetOpMesg(opcode uint8) (m string) {
 		m = "IntraGroupNetErr"
 	case OpArgMismatchErr:
 		m = "ArgUnmatchErr"
-	case OpFileNotExistErr:
-		m = "FileNotExistErr"
+	case OpNotExistErr:
+		m = "NotExistErr"
 	case OpDiskNoSpaceErr:
 		m = "DiskNoSpaceErr"
 	case OpDiskErr:
@@ -156,8 +156,8 @@ func GetOpMesg(opcode uint8) (m string) {
 		m = "Ok"
 	case OpSyncDelNeedle:
 		m = "OpSyncHasDelNeedle"
-	case OpFileExistErr:
-		m = "FileExistErr"
+	case OpExistErr:
+		m = "ExistErr"
 	case OpInodeFullErr:
 		m = "InodeFullErr"
 	default:

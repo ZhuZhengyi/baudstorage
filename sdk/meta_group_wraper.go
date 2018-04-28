@@ -21,6 +21,9 @@ const (
 	MetaGroupViewURL = "/client/namespace?name="
 
 	RefreshMetaGroupsInterval = time.Minute * 5
+	CreateInodeTimeout        = time.Second * 5
+
+	MetaAllocBufSize = 1000
 )
 
 type MetaGroup struct {
@@ -45,6 +48,7 @@ type MetaGroupWrapper struct {
 	groups map[string]*MetaGroup
 	ranges *btree.BTree // *MetaGroup tree indexed by Start
 
+	allocMeta chan string
 	sync.RWMutex
 }
 
@@ -59,6 +63,7 @@ func NewMetaGroupWrapper(namespace, masterHosts string) (*MetaGroupWrapper, erro
 	wrapper.conns = pool.NewConnPool()
 	wrapper.groups = make(map[string]*MetaGroup)
 	wrapper.ranges = btree.New(32)
+	wrapper.allocMeta = make(chan string, MetaAllocBufSize)
 	if err := wrapper.UpdateMetaGroups(); err != nil {
 		return nil, err
 	}
@@ -66,43 +71,116 @@ func NewMetaGroupWrapper(namespace, masterHosts string) (*MetaGroupWrapper, erro
 	return wrapper, nil
 }
 
-func (wrapper *MetaGroupWrapper) Create(parent uint64, name string, mode uint32) (status int, ino uint64, err error) {
-	//TODO: lookup to make sure there is no such file or dir
-	//TODO: find a metarange to create inode, might try several metaranges
+func (wrapper *MetaGroupWrapper) Create(parentID uint64, name string, mode uint32) (status int, inode uint64, err error) {
+	_, parentConn, err := wrapper.connect(parentID)
+	if err != nil {
+		return
+	}
+	defer wrapper.putConn(parentConn, err)
+
+	// Create Inode
+	for {
+		// Reset timer for each select
+		t := time.NewTicker(CreateInodeTimeout)
+		select {
+		case <-t.C:
+			break
+		case groupid := <-wrapper.allocMeta:
+			mg := wrapper.getMetaGroupByID(groupid)
+			if mg == nil {
+				continue
+			}
+			inodeConn, err := wrapper.getConn(mg)
+			if err != nil {
+				continue
+			}
+			status, inode, err = wrapper.icreate(inodeConn)
+			if err == nil && status == int(proto.OpOk) {
+				// create inode is successful
+				wrapper.allocMeta <- groupid
+				break
+			}
+		}
+	}
 	//TODO: create a dentry in the parent inode
 	return
 }
 
-func (wrapper *MetaGroupWrapper) Lookup(req *proto.LookupRequest) (resp *proto.LookupResponse, err error) {
-	reqPacket := proto.NewPacket()
-	reqPacket.Opcode = proto.OpMetaLookup
-	reqPacket.Data, err = json.Marshal(req)
-	if err != nil {
-		return
-	}
-
-	replyPacket, err := wrapper.send(req.ParentID, reqPacket)
-	if err != nil {
-		return
-	}
-	err = json.Unmarshal(replyPacket.Data, &resp)
+func (wrapper *MetaGroupWrapper) icreate(conn net.Conn) (status int, inode uint64, err error) {
 	return
 }
 
-func (wrapper *MetaGroupWrapper) InodeGet(req *proto.InodeGetRequest) (resp *proto.InodeGetResponse, err error) {
-	reqPacket := proto.NewPacket()
-	reqPacket.Opcode = proto.OpMetaInodeGet
-	reqPacket.Data, err = json.Marshal(req)
+func (wrapper *MetaGroupWrapper) Lookup(parentID uint64, name string) (status int, inode uint64, mode uint32, err error) {
+	_, conn, err := wrapper.connect(parentID)
+	if err != nil {
+		return
+	}
+	defer wrapper.putConn(conn, err)
+
+	status, inode, mode, err = wrapper.lookup(parentID, name, conn)
+	return
+}
+
+func (wrapper *MetaGroupWrapper) lookup(parentID uint64, name string, conn net.Conn) (status int, inode uint64, mode uint32, err error) {
+	req := &proto.LookupRequest{
+		Namespace: wrapper.namespace,
+		ParentID:  parentID,
+		Name:      name,
+	}
+	packet := proto.NewPacket()
+	packet.Opcode = proto.OpMetaLookup
+	packet.Data, err = json.Marshal(req)
 	if err != nil {
 		return
 	}
 
-	replyPacket, err := wrapper.send(req.Inode, reqPacket)
+	packet, err = wrapper.send(conn, packet)
 	if err != nil {
 		return
 	}
-	err = json.Unmarshal(replyPacket.Data, &resp)
+
+	resp := new(proto.LookupResponse)
+	err = json.Unmarshal(packet.Data, &resp)
+	if err != nil {
+		return
+	}
+	return resp.Status, resp.Inode, resp.Mode, nil
+}
+
+func (wrapper *MetaGroupWrapper) InodeGet(inode uint64) (status int, info *proto.InodeInfo, err error) {
+	_, conn, err := wrapper.connect(inode)
+	if err != nil {
+		return
+	}
+	defer wrapper.putConn(conn, err)
+
+	status, info, err = wrapper.iget(inode, conn)
 	return
+}
+
+func (wrapper *MetaGroupWrapper) iget(inode uint64, conn net.Conn) (status int, info *proto.InodeInfo, err error) {
+	req := &proto.InodeGetRequest{
+		Namespace: wrapper.namespace,
+		Inode:     inode,
+	}
+	packet := proto.NewPacket()
+	packet.Opcode = proto.OpMetaInodeGet
+	packet.Data, err = json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	packet, err = wrapper.send(conn, packet)
+	if err != nil {
+		return
+	}
+
+	resp := new(proto.InodeGetResponse)
+	err = json.Unmarshal(packet.Data, &resp)
+	if err != nil {
+		return
+	}
+	return resp.Status, resp.Info, nil
 }
 
 func (wrapper *MetaGroupWrapper) Delete(parent uint64, name string) (status int, err error) {
@@ -119,20 +197,40 @@ func (wrapper *MetaGroupWrapper) Rename(srcParent uint64, srcName string, dstPar
 	return
 }
 
-func (wrapper *MetaGroupWrapper) ReadDir(req *proto.ReadDirRequest) (resp *proto.ReadDirResponse, err error) {
-	reqPacket := proto.NewPacket()
-	reqPacket.Opcode = proto.OpMetaReadDir
-	reqPacket.Data, err = json.Marshal(req)
+func (wrapper *MetaGroupWrapper) ReadDir(parentID uint64) (children []proto.Dentry, err error) {
+	_, conn, err := wrapper.connect(parentID)
+	if err != nil {
+		return
+	}
+	defer wrapper.putConn(conn, err)
+
+	children, err = wrapper.readdir(parentID, conn)
+	return
+}
+
+func (wrapper *MetaGroupWrapper) readdir(parentID uint64, conn net.Conn) (children []proto.Dentry, err error) {
+	req := &proto.ReadDirRequest{
+		Namespace: wrapper.namespace,
+		ParentID:  parentID,
+	}
+	packet := proto.NewPacket()
+	packet.Opcode = proto.OpMetaReadDir
+	packet.Data, err = json.Marshal(req)
 	if err != nil {
 		return
 	}
 
-	replyPacket, err := wrapper.send(req.ParentID, reqPacket)
+	packet, err = wrapper.send(conn, packet)
 	if err != nil {
 		return
 	}
-	err = json.Unmarshal(replyPacket.Data, &resp)
-	return
+
+	resp := new(proto.ReadDirResponse)
+	err = json.Unmarshal(packet.Data, &resp)
+	if err != nil {
+		return
+	}
+	return resp.Children, nil
 }
 
 func (wrapper *MetaGroupWrapper) refresh() {
@@ -155,6 +253,11 @@ func (wrapper *MetaGroupWrapper) UpdateMetaGroups() error {
 
 	for _, mg := range nv.MetaGroups {
 		wrapper.replaceOrInsertMetaGroup(mg)
+		//TODO: if the meta group is full, do not put into the channel
+		select {
+		case wrapper.allocMeta <- mg.GroupID:
+		default:
+		}
 	}
 
 	return nil
@@ -198,6 +301,8 @@ func (wrapper *MetaGroupWrapper) getMetaGroupByInode(ino uint64) *MetaGroup {
 		return false
 	})
 
+	//TODO: if mg is nil, update meta groups and try again
+
 	return mg
 }
 
@@ -234,44 +339,41 @@ func (wrapper *MetaGroupWrapper) getNamespaceView() (*NamespaceView, error) {
 	return view, nil
 }
 
-func (wrapper *MetaGroupWrapper) getConn(addr string) (net.Conn, error) {
+func (wrapper *MetaGroupWrapper) getConn(mg *MetaGroup) (net.Conn, error) {
+	addr := mg.Members[0]
+	//TODO: deal with member 0 is not leader
 	return wrapper.conns.Get(addr)
 }
 
-func (wrapper *MetaGroupWrapper) putConn(conn net.Conn) {
-	wrapper.conns.Put(conn)
+func (wrapper *MetaGroupWrapper) putConn(conn net.Conn, err error) {
+	if err != nil {
+		conn.Close()
+	} else {
+		wrapper.conns.Put(conn)
+	}
 }
 
-func (wrapper *MetaGroupWrapper) send(ino uint64, req *proto.Packet) (*proto.Packet, error) {
-	mg := wrapper.getMetaGroupByInode(ino)
+func (wrapper *MetaGroupWrapper) connect(inode uint64) (*MetaGroup, net.Conn, error) {
+	mg := wrapper.getMetaGroupByInode(inode)
 	if mg == nil {
-		return nil, errors.New("No such meta group")
+		return nil, nil, errors.New("No such meta group")
 	}
+	conn, err := wrapper.getConn(mg)
+	if err != nil {
+		return nil, nil, err
+	}
+	return mg, conn, nil
+}
 
-	//TODO: deal with member is not leader
-	conn, err := wrapper.getConn(mg.Members[0])
+func (wrapper *MetaGroupWrapper) send(conn net.Conn, req *proto.Packet) (*proto.Packet, error) {
+	err := req.WriteToConn(conn)
 	if err != nil {
 		return nil, err
 	}
-
-	defer func() {
-		if err != nil {
-			conn.Close()
-		} else {
-			wrapper.putConn(conn)
-		}
-	}()
-
-	err = req.WriteToConn(conn)
-	if err != nil {
-		return nil, err
-	}
-
 	resp := proto.NewPacket()
 	err = resp.ReadFromConn(conn, proto.ReadDeadlineTime)
 	if err != nil {
 		return nil, err
 	}
-
 	return resp, nil
 }
