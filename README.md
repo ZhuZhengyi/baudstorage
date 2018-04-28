@@ -4,13 +4,13 @@
 
 BaudStorage is a distributed storage system of immutable objects and streaming files. And it provides several pragmatic abstractions: 
 
-**L1**: object store without namespaces - particularly for images or short video etc. Put an object and the system returns a unique key. Objects are immutable and can be delete however. 
+* object store without namespaces - particularly for images or short video etc. Put an object and the system returns a unique key. Objects are immutable and can be delete however. 
 
-**L2**: object store with plat namespaces - compatible with the S3 API. 
+* object store with plat namespaces - compatible with the S3 API. 
 
-**L3**: filesystems with hierachical namespaces, random read and append-only write.  
+* hierachical filesystem namespaces
 
-**L4**: filesystems with hierachical namespaces, random read/write and complelete filesystem semantics. 
+* file streams of append-only extents
 
 ## Architecture
 
@@ -20,9 +20,7 @@ BS consists of several subsystems:
 
 * the metanode cluster. multi-raft replication, a metadata range (ino range) per raft; a namespace is partitioned by ino range. 
 
-* the objectnode cluster. de-clustering volumes of objects or object segments;  
-
-* the extentnode cluster. multi-raft replication of stream extents (.e.g, BaudEngine's redo logging)
+* the datanode cluster. de-clustering volumes of object segments or file extents
 
 a namespace = a filesystem instance = an object bucket
 
