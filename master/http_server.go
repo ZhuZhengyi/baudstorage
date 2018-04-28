@@ -29,7 +29,8 @@ const (
 	GetMetaNode     = "admin/getMetaNode"
 
 	// Operation response
-	MetaNodeResponse = "task/response" // Method: 'POST', ContentType: 'application/json'
+	MetaNodeResponse = "metaNode/response" // Method: 'POST', ContentType: 'application/json'
+	DataNodeResponse = "dataNode/response" // Method: 'POST', ContentType: 'application/json'
 )
 
 func (m *Master) startHttpService() (err error) {
@@ -83,6 +84,10 @@ func (m *Master) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		m.getNamespace(w, r)
 	case ClientMetaGroup:
 		m.getMetaGroup(w, r)
+	case DataNodeResponse:
+		m.dataNodeTaskResponse(w, r)
+	case MetaNodeResponse:
+		m.metaNodeTaskResponse(w, r)
 	default:
 
 	}
