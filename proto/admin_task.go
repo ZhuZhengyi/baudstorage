@@ -6,13 +6,13 @@ import (
 )
 
 const (
-	TaskFail         = -1
-	TaskStart        = 0
-	TaskSuccess      = 1
-	ResponseInterval = 30
-	ResponseTimeOut  = 100
-	MaxSendCount     = 5
-	CreateVol        = iota
+	TaskFail           = -1
+	TaskStart          = 0
+	TaskSuccess        = 1
+	ResponseInterval   = 30
+	ResponseTimeOut    = 100
+	MaxSendCount       = 5
+	CreateVol          = iota
 	LoadVol
 	CreateMetaRange
 	GetMetaRangeMetric

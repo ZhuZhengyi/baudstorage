@@ -69,15 +69,21 @@ func (m *MetaNode) serveTcpConn(conn net.Conn, ctx context.Context) {
 // RoutePacket check the OpCode in specified packet and route it to handler.
 func (m *MetaNode) routePacket(conn net.Conn, p *Packet) (err error) {
 	switch p.Opcode {
-	case proto.OpMetaCreate:
+	case proto.OpMetaCreateInode:
 		// Client → MetaNode
-		err = m.opCreate(conn, p)
-	case proto.OpMetaRename:
+		err = m.opCreateInode(conn, p)
+	case proto.OpMetaCreateDentry:
 		// Client → MetaNode
-		err = m.opRename(conn, p)
-	case proto.OpMetaDelete:
+		err = m.opCreateDentry(conn, p)
+	case proto.OpMetaUpdateInodeName:
 		// Client → MetaNode
-		err = m.opDelete(conn, p)
+		err = m.opUpdateInode(conn, p)
+	case proto.OpMetaDeleteInode:
+		// Client → MetaNode
+		err = m.opDeleteInode(conn, p)
+	case proto.OpMetaDeleteDentry:
+		// Client → MetaNode
+		err = m.opDeleteDentry(conn, p)
 	case proto.OpMetaReadDir:
 		// Client → MetaNode
 		err = m.opReadDir(conn, p)
@@ -167,6 +173,22 @@ func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	resp := mr.DeleteDentry(req)
+	// Reply operation result to client though TCP connection.
+	err = m.replyToClient(conn, p, resp)
+	return
+}
+
+// Handle OpUpdateInode
+func (m *MetaNode) opUpdateInode(conn net.Conn, p *Packet) (err error) {
+	req := &updateInoNameReq{}
+	if err = json.Unmarshal(p.Data, req); err != nil {
+		return
+	}
+	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	if err != nil {
+		return
+	}
+	resp := mr.UpdateInode(req)
 	// Reply operation result to client though TCP connection.
 	err = m.replyToClient(conn, p, resp)
 	return

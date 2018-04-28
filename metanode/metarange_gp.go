@@ -1,9 +1,9 @@
 package metanode
 
 import (
-	"sync"
-	"strings"
 	"github.com/juju/errors"
+	"strings"
+	"sync"
 )
 
 // MetaRangeGroup manage all MetaRange and make mapping between namespace and MetaRange.

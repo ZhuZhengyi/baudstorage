@@ -65,7 +65,7 @@ func (mr *MetaRange) DeleteDentry(req *deleteDentryReq) (resp *deleteDentryResp)
 func (mr *MetaRange) CreateInode(req *createInoReq) (resp *createInoResp) {
 	//TODO: Implement create inode
 	var status uint8
-	resp.Inode, status = mr.getInode()
+	resp.Inode, status = mr.getInodeID()
 	if status != proto.OpOk {
 		resp.Status = int(status)
 		return
@@ -96,7 +96,7 @@ func (mr *MetaRange) DeleteInode(req *deleteInoReq) (resp *deleteInoResp) {
 	return
 }
 
-func (mr *MetaRange) UpdateInodeName(req *updateInoNameReq) (resp *updateInoNameResp) {
+func (mr *MetaRange) UpdateInode(req *updateInoNameReq) (resp *updateInoNameResp) {
 	ino := &Inode{
 		Inode: req.Inode,
 	}
