@@ -85,15 +85,15 @@ func (mf *MetaRangeFsm) DeleteDentry(dentry *Dentry) (status uint8) {
 	return
 }
 
-func (mf *MetaRangeFsm) CreateInode(inode *Inode) (status uint8) {
+func (mf *MetaRangeFsm) CreateInode(ino *Inode) (status uint8) {
 	status = proto.OpOk
 	mf.iLock.Lock()
-	if mf.InodeTree.Has(inode) {
+	if mf.InodeTree.Has(ino) {
 		mf.iLock.Unlock()
 		status = proto.OpFileExistErr
 		return
 	}
-	mf.InodeTree.ReplaceOrInsert(inode)
+	mf.InodeTree.ReplaceOrInsert(ino)
 	mf.iLock.Unlock()
 	//TODO: raft sync
 
@@ -114,31 +114,31 @@ func (mf *MetaRangeFsm) DeleteInode(ino *Inode) (status uint8) {
 	return
 }
 
-func (mf *MetaRangeFsm) OpenFile(request *proto.OpenRequest) (response *proto.OpenResponse) {
+func (mf *MetaRangeFsm) OpenFile(req *openReq) (resp *openResp) {
 	item := mf.InodeTree.Get(&Inode{
-		Inode: request.Inode,
+		Inode: req.Inode,
 	})
 	if item == nil {
-		response.Status = int(proto.OpFileNotExistErr)
+		resp.Status = int(proto.OpFileNotExistErr)
 		return
 	}
 	item.(*Inode).AccessTime = time.Now().Unix()
-	response.Status = int(proto.OpOk)
+	resp.Status = int(proto.OpOk)
 	//TODO: raft sync
 
 	return
 }
 
-func (mf *MetaRangeFsm) ReadDir(request *proto.ReadDirRequest) (response *proto.ReadDirResponse) {
+func (mf *MetaRangeFsm) ReadDir(req *readdirReq) (resp *readdirResp) {
 	begDentry := &Dentry{
-		ParentId: request.ParentID,
+		ParentId: req.ParentID,
 	}
 	endDentry := &Dentry{
-		ParentId: request.ParentID + 1,
+		ParentId: req.ParentID + 1,
 	}
 	mf.DentryTree.AscendRange(begDentry, endDentry, func(i btree.Item) bool {
 		d := i.(*Dentry)
-		response.Children = append(response.Children, proto.Dentry{
+		resp.Children = append(resp.Children, proto.Dentry{
 			Inode: d.Inode,
 			Type:  d.Type,
 			Name:  d.Name,

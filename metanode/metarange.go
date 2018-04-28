@@ -65,7 +65,7 @@ func (mr *MetaRange) DeleteDentry(req *deleteDentryReq) (resp *deleteDentryResp)
 func (mr *MetaRange) CreateInode(req *createInoReq) (resp *createInoResp) {
 	//TODO: Implement create inode
 	var status uint8
-	resp.Inode, status = mr.getInode()
+	resp.Inode, status = mr.getInodeID()
 	if status != proto.OpOk {
 		resp.Status = int(status)
 		return
