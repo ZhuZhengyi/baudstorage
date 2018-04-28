@@ -48,7 +48,7 @@ func (m *Master) getVol(w http.ResponseWriter, r *http.Request) {
 	if vol, err = m.cluster.getVolByVolID(volID); err != nil {
 		goto errDeal
 	}
-	vr = m.newVolResponseForGetVol(vol)
+	vr = vol.convertToVolResponse()
 	if body, err = json.Marshal(vr); err != nil {
 		goto errDeal
 	}
@@ -58,18 +58,6 @@ func (m *Master) getVol(w http.ResponseWriter, r *http.Request) {
 errDeal:
 	logMsg := getReturnMessage("getVol", r.RemoteAddr, err.Error(), http.StatusBadRequest)
 	HandleError(logMsg, http.StatusBadRequest, w)
-	return
-}
-
-func (m *Master) newVolResponseForGetVol(v *VolGroup) (vr *VolResponse) {
-	vr = new(VolResponse)
-	v.Lock()
-	defer v.Unlock()
-	vr.VolID = v.VolID
-	vr.Status = v.status
-	vr.ReplicaNum = v.replicaNum
-	vr.Hosts = make([]string, len(v.PersistenceHosts))
-	copy(vr.Hosts, v.PersistenceHosts)
 	return
 }
 

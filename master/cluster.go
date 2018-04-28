@@ -5,25 +5,63 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 	"sync"
+	"time"
 )
 
 type Cluster struct {
 	Name              string
-	vols              *VolMap
+	volGroups         *VolGroupMap
 	namespaces        map[string]*NameSpace
-	volReplicas       uint8
 	metaRangeReplicas uint8
 	dataNodes         sync.Map
 	metaNodes         sync.Map
 	createVolLock     sync.Mutex
 	addZoneLock       sync.Mutex
+	cfg               *ClusterConfig
 }
 
 func NewCluster(name string) (c *Cluster) {
 	c = new(Cluster)
 	c.Name = name
-	c.vols = NewVolMap()
+	c.volGroups = NewVolMap()
+	c.cfg = NewClusterConfig()
+	c.startCheckVolGroups()
+	c.startCheckBackendLoadVolGroups()
+	c.startCheckReleaseVolGroups()
 	return
+}
+
+func (c *Cluster) startCheckVolGroups() {
+	go func() {
+		for {
+			if c.volGroups != nil {
+				c.checkVolGroups()
+			}
+			time.Sleep(time.Second * time.Duration(c.cfg.CheckVolIntervalSeconds))
+		}
+	}()
+}
+
+func (c *Cluster) startCheckBackendLoadVolGroups() {
+	go func() {
+		for {
+			if c.volGroups != nil {
+				c.backendLoadVolGroup(c.cfg.everyLoadVolCount, c.cfg.LoadVolFrequencyTime)
+			}
+			time.Sleep(time.Second)
+		}
+	}()
+}
+
+func (c *Cluster) startCheckReleaseVolGroups() {
+	go func() {
+		for {
+			if c.volGroups != nil {
+				c.processReleaseVolAfterLoadVolGroup()
+			}
+			time.Sleep(time.Second * DefaultReleaseVolInternalSeconds)
+		}
+	}()
 }
 
 func (c *Cluster) addMetaNode(nodeAddr string) (err error) {
@@ -61,13 +99,13 @@ errDeal:
 }
 
 func (c *Cluster) getVolsView() (body []byte, err error) {
-	body, err = c.vols.updateVolResponseCache(NoNeedUpdateVolResponse, 0)
+	body, err = c.volGroups.updateVolResponseCache(NoNeedUpdateVolResponse, 0)
 
 	return
 }
 
 func (c *Cluster) getNamespace() (body []byte, err error) {
-	body, err = c.vols.updateVolResponseCache(NoNeedUpdateVolResponse, 0)
+	body, err = c.volGroups.updateVolResponseCache(NoNeedUpdateVolResponse, 0)
 
 	return
 }
@@ -83,14 +121,14 @@ func (c *Cluster) createVolGroup() (vg *VolGroup, err error) {
 		goto errDeal
 	}
 	//volID++
-	vg = newVolGroup(volID, c.volReplicas)
-	if err = vg.SelectHosts(c); err != nil {
+	vg = newVolGroup(volID, c.cfg.replicaNum)
+	if err = vg.ChooseTargetHosts(c); err != nil {
 		goto errDeal
 	}
 	//todo sync and persistence hosts to other node in the cluster
 	tasks = vg.generateCreateVolGroupTasks()
 	c.putDataNodeTasks(tasks)
-	c.vols.putVol(vg)
+	c.volGroups.putVol(vg)
 
 	return
 errDeal:
@@ -112,7 +150,7 @@ errDeal:
 }
 
 func (c *Cluster) getVolByVolID(volID uint64) (vol *VolGroup, err error) {
-	return c.vols.getVol(volID)
+	return c.volGroups.getVol(volID)
 }
 
 func (c *Cluster) getDataNode(addr string) (dataNode *DataNode, err error) {
@@ -133,20 +171,10 @@ func (c *Cluster) getMetaNode(addr string) (metaNode *MetaNode, err error) {
 	return
 }
 
-func (c *Cluster) loadVolAndCheckResponse(v *VolGroup, isRecover bool) {
-	go func() {
-		c.processLoadVol(v, isRecover)
-	}()
-}
-
-func (c *Cluster) processLoadVol(v *VolGroup, isRecover bool) {
-
-}
-
 func (c *Cluster) dataNodeOffLine(dataNode *DataNode) {
 	msg := fmt.Sprintf("action[dataNodeOffLine], Node[%v] OffLine", dataNode.HttpAddr)
 	log.LogWarn(msg)
-	c.vols.dataNodeOffline(dataNode.HttpAddr)
+	c.volGroups.dataNodeOffline(dataNode.HttpAddr)
 	c.dataNodes.Delete(dataNode.HttpAddr)
 }
 
@@ -165,7 +193,7 @@ func (c *Cluster) createNamespace(name string) (err error) {
 	}
 	ns = NewNameSpace(name)
 	mg = NewMetaGroup(0, DefaultMetaTabletRange-1)
-	if err = mg.SelectHosts(c); err != nil {
+	if err = mg.ChooseTargetHosts(c); err != nil {
 		goto errDeal
 	}
 	mg.createRange()
@@ -178,36 +206,6 @@ errDeal:
 	err = fmt.Errorf("action[createNamespace], name:%v, err:%v ", name, err.Error())
 	log.LogError(err.Error())
 	return
-}
-
-func (c *Cluster) putDataNodeTasks(tasks []*proto.AdminTask) {
-
-	for _, t := range tasks {
-		if t == nil {
-			continue
-		}
-		if node, err := c.getDataNode(t.OperatorAddr); err != nil {
-			log.LogWarn(fmt.Sprintf("action[putTasks],nodeAddr:%v,taskID:%v,err:%v", node.HttpAddr, t.ID, err.Error()))
-		} else {
-			node.sender.PutTask(t)
-
-		}
-	}
-}
-
-func (c *Cluster) putMetaNodeTasks(tasks []*proto.AdminTask) {
-
-	for _, t := range tasks {
-		if t == nil {
-			continue
-		}
-		if node, err := c.getMetaNode(t.OperatorAddr); err != nil {
-			log.LogWarn(fmt.Sprintf("action[putTasks],nodeAddr:%v,taskID:%v,err:%v", node.Addr, t.ID, err.Error()))
-		} else {
-			node.sender.PutTask(t)
-
-		}
-	}
 }
 
 func (c *Cluster) DataNodeCount() (len int) {

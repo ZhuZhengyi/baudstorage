@@ -9,6 +9,22 @@ const (
 )
 
 const (
+	ExtentVol = "extent"
+	ChunkVol  = "chunk"
+)
+
+const (
+	DeleteExcessReplicationErr  = "DeleteExcessReplicationErr "
+	AddLackReplicationErr       = "AddLackReplicationErr "
+	CheckVolDiskErrorErr        = "CheckVolDiskErrorErr  "
+	GetAvailDataNodeHostsErr    = "GetAvailDataNodeHostsErr "
+	GetLackFileNodeTaskErr      = "GetLackFileNodeTaskErr "
+	GetReplicateFileTaskErr     = "GetReplicateFileTaskErr "
+	DeleteFileInCoreInfo        = "DeleteFileInCoreInfo "
+	GetVolLocationFileCountInfo = "GetVolLocationFileCountInfo "
+)
+
+const (
 	UnderlineSeparator = "_"
 )
 
@@ -30,16 +46,16 @@ const (
 const (
 	DefaultVolSize         = 1024 * 1024 * 1024 * 120
 	DefaultMetaTabletRange = 1 << 23
+	RuntimeStackBufSize    = 4096
 )
 
 //OpCode
 const (
-	OpCreateVol     = 0x01
-	OpDeleteVol     = 0x02
-	OpReplicateFile = 0x03
-	OpDeleteFile    = 0x04
-	OpLoadVol       = 0x05
-
+	OpCreateVol       = 0x01
+	OpDeleteVol       = 0x02
+	OpReplicateFile   = 0x03
+	OpDeleteFile      = 0x04
+	OpLoadVol         = 0x05
 	OpCreateMetaGroup = 0x06
 )
 

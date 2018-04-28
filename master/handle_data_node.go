@@ -3,8 +3,10 @@ package master
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 	"io"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -80,6 +82,38 @@ errDeal:
 	return
 }
 
+func (m *Master) dataNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
+	var (
+		dataNode *DataNode
+		trp      []*proto.AdminTask
+		code     = http.StatusOK
+		tr       *proto.AdminTask
+		err      error
+	)
+
+	if tr, err = parseTaskResponse(r); err != nil {
+		code = http.StatusBadRequest
+		goto errDeal
+	}
+
+	if dataNode, err = m.cluster.getDataNode(tr.OperatorAddr); err != nil {
+		code = http.StatusInternalServerError
+		goto errDeal
+	}
+
+	trp = make([]*proto.AdminTask, 0)
+	trp = append(trp, tr)
+	m.cluster.dealTaskResponsePack(dataNode.HttpAddr, trp[:])
+
+	return
+
+errDeal:
+	logMsg := getReturnMessage("dataNodeTaskResponse", r.RemoteAddr, err.Error(),
+		http.StatusBadRequest)
+	HandleError(logMsg, code, w)
+	return
+}
+
 func parseGetDataNodePara(r *http.Request) (nodeAddr string, err error) {
 	r.ParseForm()
 	return checkNodeAddr(r)
@@ -88,4 +122,16 @@ func parseGetDataNodePara(r *http.Request) (nodeAddr string, err error) {
 func parseDataNodeOfflinePara(r *http.Request) (nodeAddr string, err error) {
 	r.ParseForm()
 	return checkNodeAddr(r)
+}
+
+func parseTaskResponse(r *http.Request) (tr *proto.AdminTask, err error) {
+	var body []byte
+	r.ParseForm()
+
+	if body, err = ioutil.ReadAll(r.Body); err != nil {
+		return
+	}
+	tr = &proto.AdminTask{}
+	err = json.Unmarshal(body, tr)
+	return
 }

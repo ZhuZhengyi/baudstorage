@@ -14,27 +14,27 @@ type NodeTab struct {
 	Ptr    *DataNode
 }
 
-type NodeTabSorterByCarry []*NodeTab
+type NodeTabArrSorterByCarry []*NodeTab
 
-func (sts NodeTabSorterByCarry) Len() int {
-	return len(sts)
+func (nodeTabs NodeTabArrSorterByCarry) Len() int {
+	return len(nodeTabs)
 }
 
-func (sts NodeTabSorterByCarry) Less(i, j int) bool {
-	return sts[i].Carry > sts[j].Carry
+func (nodeTabs NodeTabArrSorterByCarry) Less(i, j int) bool {
+	return nodeTabs[i].Carry > nodeTabs[j].Carry
 }
 
-func (sts NodeTabSorterByCarry) Swap(i, j int) {
-	sts[i], sts[j] = sts[j], sts[i]
+func (nodeTabs NodeTabArrSorterByCarry) Swap(i, j int) {
+	nodeTabs[i], nodeTabs[j] = nodeTabs[j], nodeTabs[i]
 }
 
-func (sts NodeTabSorterByCarry) SetNodeTabCarry(availCarryCount, demand int) {
+func (nodeTabs NodeTabArrSorterByCarry) SetNodeTabCarry(availCarryCount, demand int) {
 	if availCarryCount >= demand {
 		return
 	}
 	for availCarryCount < demand {
 		availCarryCount = 0
-		for _, nt := range sts {
+		for _, nt := range nodeTabs {
 			carry := nt.Carry + nt.Weight
 			if carry > 10.0 {
 				carry = 10.0
@@ -59,7 +59,7 @@ func (c *Cluster) GetMaxTotal() (maxTotal uint64) {
 	return
 }
 
-func (c *Cluster) getAvailHostExcludeSpecify(specifyAddrsPtr *[]string, demand int) (newHosts []string, err error) {
+func (c *Cluster) getAvailDataNodeHosts(excludeHosts []string, demand int) (newHosts []string, err error) {
 	orderHosts := make([]string, 0)
 	newHosts = make([]string, 0)
 	if demand == 0 {
@@ -67,11 +67,11 @@ func (c *Cluster) getAvailHostExcludeSpecify(specifyAddrsPtr *[]string, demand i
 	}
 
 	maxTotal := c.GetMaxTotal()
-	nodeTabs, availCarryCount := c.GetAvailCarryNodeTab(maxTotal, specifyAddrsPtr)
+	nodeTabs, availCarryCount := c.GetAvailCarryNodeTab(maxTotal, excludeHosts)
 	if len(nodeTabs) < demand {
-		err = fmt.Errorf(GetAvailHostExcludeSpecifyErr+" err:%v ,ActiveNodeCount:%v  MatchNodeCount:%v  ",
-			ClusterNotHaveAnyNodeToWrite, c.DataNodeCount(), len(nodeTabs))
-		goto errDeal
+		err = fmt.Errorf(GetAvailDataNodeHostsErr+" err:%v ,ActiveNodeCount:%v  MatchNodeCount:%v  ",
+			NoHaveAnyDataNodeToWrite, c.DataNodeCount(), len(nodeTabs))
+		return
 	}
 
 	nodeTabs.SetNodeTabCarry(availCarryCount, demand)
@@ -83,27 +83,23 @@ func (c *Cluster) getAvailHostExcludeSpecify(specifyAddrsPtr *[]string, demand i
 		orderHosts = append(orderHosts, node.HttpAddr)
 	}
 
-	if newHosts, err = c.DisOrderArray(&orderHosts); err != nil {
-		err = fmt.Errorf(GetAvailHostExcludeSpecifyErr+"err:%v  orderHosts is nil", err.Error())
-		goto errDeal
+	if newHosts, err = c.DisOrderArray(orderHosts); err != nil {
+		err = fmt.Errorf(GetAvailDataNodeHostsErr+"err:%v  orderHosts is nil", err.Error())
+		return
 	}
-
-	return
-errDeal:
 	return
 }
 
-func AddrIsInSpecifyAddr(specifyAddrsPtr *[]string, addr string) (ok bool) {
-	if specifyAddrsPtr == nil {
+func AddrIsInArr(arr []string, addr string) (ok bool) {
+	if arr == nil {
 		return
 	}
 
-	specifyAddrs := *(specifyAddrsPtr)
-	if specifyAddrs == nil || len(specifyAddrs) == 0 {
+	if arr == nil || len(arr) == 0 {
 		return
 	}
 
-	for _, specifyAddr := range specifyAddrs {
+	for _, specifyAddr := range arr {
 		if specifyAddr == addr {
 			ok = true
 			break
@@ -113,12 +109,12 @@ func AddrIsInSpecifyAddr(specifyAddrsPtr *[]string, addr string) (ok bool) {
 	return
 }
 
-func (c *Cluster) GetAvailCarryNodeTab(maxTotal uint64, specifyAddrsPtr *[]string) (nodeTabs NodeTabSorterByCarry, availCount int) {
-	nodeTabs = make(NodeTabSorterByCarry, 0)
+func (c *Cluster) GetAvailCarryNodeTab(maxTotal uint64, excludeHosts []string) (nodeTabs NodeTabArrSorterByCarry, availCount int) {
+	nodeTabs = make(NodeTabArrSorterByCarry, 0)
 
 	c.dataNodes.Range(func(key, value interface{}) bool {
 		dataNode := value.(*DataNode)
-		if AddrIsInSpecifyAddr(specifyAddrsPtr, dataNode.HttpAddr) == true {
+		if AddrIsInArr(excludeHosts, dataNode.HttpAddr) == true {
 			return true
 		}
 		if dataNode.IsWriteAble() == false {
@@ -143,18 +139,17 @@ func (c *Cluster) GetAvailCarryNodeTab(maxTotal uint64, specifyAddrsPtr *[]strin
 	return
 }
 
-func (c *Cluster) DisOrderArray(oldHostsPtr *[]string) (newHosts []string, err error) {
+func (c *Cluster) DisOrderArray(oldHosts []string) (newHosts []string, err error) {
 	var (
 		newCurrPos int
 	)
 
-	if oldHostsPtr == nil || *oldHostsPtr == nil || len(*oldHostsPtr) == 0 {
+	if oldHosts == nil || len(oldHosts) == 0 {
 		log.LogError(fmt.Sprintf("action[DisOrderArray],err:%v", DisOrderArrayErr))
 		err = DisOrderArrayErr
 		return
 	}
 
-	oldHosts := *oldHostsPtr
 	lenOldHosts := len(oldHosts)
 	newHosts = make([]string, lenOldHosts)
 	if lenOldHosts == 1 {

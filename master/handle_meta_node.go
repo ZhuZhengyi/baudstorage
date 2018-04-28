@@ -87,6 +87,10 @@ errDeal:
 	return
 }
 
+func (m *Master) metaNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
+
+}
+
 func parseGetMetaNodePara(r *http.Request) (nodeAddr string, err error) {
 	r.ParseForm()
 	return checkNodeAddr(r)
