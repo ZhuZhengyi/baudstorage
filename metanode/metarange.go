@@ -1,8 +1,11 @@
 package metanode
 
 import (
-	"github.com/tiglabs/baudstorage/proto"
 	"sync/atomic"
+	"time"
+
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/sdk/stream"
 )
 
 type MetaRange struct {
@@ -27,23 +30,96 @@ func NewMetaRange(id string, start, end uint64, peers []string) *MetaRange {
 	}
 }
 
-func (mr *MetaRange) getInode() uint64 {
-	return atomic.AddUint64(&mr.offset, 1)
+func (mr *MetaRange) getInodeID() (uint64, uint8) {
+	i := atomic.AddUint64(&mr.offset, 1)
+	if i > mr.end {
+		return -1, proto.OpInodeFullErr
+	}
+	return i, proto.OpOk
 }
 
-func (mr *MetaRange) Create(request *proto.CreateRequest) (response *proto.CreateResponse) {
+func (mr *MetaRange) CreateDentry(req *createDentryReq) (resp *createDentryResp) {
+	// TODO: Implement create dentry operation.
 	dentry := &Dentry{
-		ParentId: request.ParentId,
-		Name:     request.Name,
-		Type:     request.Mode,
+		ParentId: req.ParentID,
+		Name:     req.Name,
+		Inode:    req.Inode,
+		Type:     req.Mode,
 	}
-	if v := mr.store.GetDentry(dentry); v != nil {
-		//TODO: file or dir existed
+	status := mr.store.CreateDentry(dentry)
+	resp.Status = int(status)
+	return
+}
 
+func (mr *MetaRange) DeleteDentry(req *deleteDentryReq) (resp *deleteDentryResp) {
+	//TODO: Implement delete dentry
+	dentry := &Dentry{
+		ParentId: req.ParentID,
+		Name:     req.Name,
+	}
+	status := mr.store.DeleteDentry(dentry)
+	resp.Status = int(status)
+	return
+}
+
+func (mr *MetaRange) CreateInode(req *createInoReq) (resp *createInoResp) {
+	//TODO: Implement create inode
+	var status uint8
+	resp.Inode, status = mr.getInodeID()
+	if status != proto.OpOk {
+		resp.Status = int(status)
 		return
 	}
+	ts := time.Now().Unix()
+	ino := &Inode{
+		Inode:      resp.Inode,
+		Name:       req.Name,
+		Type:       req.Mode,
+		AccessTime: ts,
+		ModifyTime: ts,
+		Stream:     stream.NewStreamKey(resp.Inode),
+	}
+	status = mr.store.CreateInode(ino)
+	resp.Status = int(status)
+	if status != proto.OpOk {
+		resp.Inode = -1
+	}
+	return
+}
 
-	inode := NewInode(mr.getInode(), request.Name, request.Mode)
-	dentry.Inode = inode.Inode
-	return mr.store.Create(inode, dentry)
+func (mr *MetaRange) DeleteInode(req *deleteInoReq) (resp *deleteInoResp) {
+	//TODO: Implement delete inode
+	ino := &Inode{
+		Inode: req.Inode,
+	}
+	resp.Status = int(mr.store.DeleteInode(ino))
+	return
+}
+
+func (mr *MetaRange) UpdateInode(req *updateInoNameReq) (resp *updateInoNameResp) {
+	ino := &Inode{
+		Inode: req.Inode,
+	}
+	status := mr.store.GetInode(ino)
+	if status == proto.OpOk {
+		ino.Name = req.Name
+	}
+	resp.Status = int(status)
+	return
+}
+
+func (mr *MetaRange) PutStreamKey() {
+	return
+}
+
+func (mr *MetaRange) ReadDir(req *readdirReq) (resp *readdirResp) {
+	// TODO: Implement read dir operation.
+	resp = mr.store.ReadDir(req)
+	return
+}
+
+func (mr *MetaRange) Open(req *openReq) (resp *openResp) {
+	// TODO: Implement open operation.
+	resp = mr.store.OpenFile(req)
+	return
 }

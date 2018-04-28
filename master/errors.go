@@ -2,6 +2,7 @@ package master
 
 import (
 	"fmt"
+
 	"github.com/juju/errors"
 )
 

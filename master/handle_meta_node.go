@@ -3,9 +3,10 @@ package master
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"io"
 	"net/http"
+
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 func (m *Master) addMetaNode(w http.ResponseWriter, r *http.Request) {

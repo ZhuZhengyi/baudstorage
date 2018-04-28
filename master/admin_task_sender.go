@@ -2,10 +2,11 @@ package master
 
 import (
 	"encoding/json"
-	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util"
 	"sync"
 	"time"
+
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util"
 )
 
 const (

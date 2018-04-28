@@ -2,8 +2,9 @@ package master
 
 import (
 	"fmt"
-	"github.com/tiglabs/baudstorage/proto"
 	"sync"
+
+	"github.com/tiglabs/baudstorage/proto"
 )
 
 type MetaRange struct {

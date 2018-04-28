@@ -27,7 +27,7 @@ func NewStreamKey(ino uint64) *StreamKey {
 
 func (sk *StreamKey) Put(k ExtentKey) {
 	isFound := false
-	for index:=0;index<len(sk.Extents);index++{
+	for index := 0; index < len(sk.Extents); index++ {
 		if sk.Extents[index].VolId == k.VolId && sk.Extents[index].ExtentId == k.ExtentId {
 			sk.Extents[index].Size = k.Size
 			isFound = true

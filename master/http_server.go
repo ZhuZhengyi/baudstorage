@@ -2,8 +2,9 @@ package master
 
 import (
 	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"net/http"
+
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 const (

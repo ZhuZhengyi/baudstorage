@@ -3,13 +3,18 @@ package metanode
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util/log"
+	"fmt"
 	"net"
 	"time"
+
+	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/master"
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
+// StartTcpService bind and listen specified port and accept tcp connections.
 func (m *MetaNode) startTcpService() (err error) {
 	// Init and start server.
 	ln, err := net.Listen("tcp", m.addr)
@@ -30,13 +35,15 @@ func (m *MetaNode) startTcpService() (err error) {
 				continue
 			}
 			// Start a goroutine for tcp connection handling.
-			go m.serveTCPConn(conn, ctx)
+			go m.serveTcpConn(conn, ctx)
 		}
 	}(m.ctx)
 	return
 }
 
-func (m *MetaNode) serveTCPConn(conn net.Conn, ctx context.Context) {
+// ServeTcpConn read data from specified tco connection until connection
+// closed by remote or tcp service have been shutdown.
+func (m *MetaNode) serveTcpConn(conn net.Conn, ctx context.Context) {
 	defer conn.Close()
 	for {
 		select {
@@ -51,7 +58,7 @@ func (m *MetaNode) serveTCPConn(conn net.Conn, ctx context.Context) {
 		}
 		// Start a goroutine for packet handling.
 		go func() {
-			if err := m.operatorPkg(conn, p); err != nil {
+			if err := m.routePacket(conn, p); err != nil {
 				log.LogError("serve operatorPkg: ", err.Error())
 				return
 			}
@@ -59,80 +66,226 @@ func (m *MetaNode) serveTCPConn(conn net.Conn, ctx context.Context) {
 	}
 }
 
-func (m *MetaNode) operatorPkg(conn net.Conn, p *Packet) (err error) {
+// RoutePacket check the OpCode in specified packet and route it to handler.
+func (m *MetaNode) routePacket(conn net.Conn, p *Packet) (err error) {
 	switch p.Opcode {
-	case proto.OpMetaCreate:
-		err = m.create(conn, p)
-	case proto.OpMetaRename:
-		err = m.rename(conn, p)
-	case proto.OpMetaDelete:
-		err = m.delete(conn, p)
+	case proto.OpMetaCreateInode:
+		// Client → MetaNode
+		err = m.opCreateInode(conn, p)
+	case proto.OpMetaCreateDentry:
+		// Client → MetaNode
+		err = m.opCreateDentry(conn, p)
+	case proto.OpMetaUpdateInodeName:
+		// Client → MetaNode
+		err = m.opUpdateInode(conn, p)
+	case proto.OpMetaDeleteInode:
+		// Client → MetaNode
+		err = m.opDeleteInode(conn, p)
+	case proto.OpMetaDeleteDentry:
+		// Client → MetaNode
+		err = m.opDeleteDentry(conn, p)
 	case proto.OpMetaReadDir:
-		err = m.clientReadDir(conn, p)
+		// Client → MetaNode
+		err = m.opReadDir(conn, p)
 	case proto.OpMetaOpen:
+		// Client → MetaNode
+		err = m.opOpen(conn, p)
 	case proto.OpMetaCreateMetaRange:
-		err = m.createMetaRange(conn, p)
+		// Mater → MetaNode
+		err = m.opCreateMetaRange(conn, p)
 	default:
+		// Unknown operation
 		err = errors.New("unknown Opcode: " + proto.GetOpMesg(p.Opcode))
 	}
 	return
 }
 
-// handle OpCreate
-func (m *MetaNode) create(conn net.Conn, p *Packet) (err error) {
-	req := new(proto.CreateRequest)
+// ReplyToClient send reply data though tcp connection to client.
+func (m *MetaNode) replyToClient(conn net.Conn, p *Packet, data interface{}) (err error) {
+	// Handle panic
+	defer func() {
+		if r := recover(); r != nil {
+			switch data := r.(type) {
+			case error:
+				err = data
+			default:
+				err = errors.New(data.(string))
+			}
+		}
+	}()
+	// Process data and send reply though specified tcp connection.
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		return
+	}
+	p.Data = jsonBytes
+	err = p.WriteToConn(conn)
+	return
+}
+
+// ReplyToMaster reply operation result to master by sending http request.
+func (m *MetaNode) replyToMaster(ip string, data interface{}) (err error) {
+	// Handle panic
+	defer func() {
+		if r := recover(); r != nil {
+			switch data := r.(type) {
+			case error:
+				err = data
+			default:
+				err = errors.New(data.(string))
+			}
+		}
+	}()
+	// Process data and send reply though http specified remote address.
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		return
+	}
+	url := fmt.Sprintf("http://%s%s", ip, master.MetaNodeResponse)
+	util.PostToNode(jsonBytes, url)
+	return
+}
+
+// Handle OpCreate
+func (m *MetaNode) opCreateDentry(conn net.Conn, p *Packet) (err error) {
+	req := &createDentryReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	var mr *MetaRange
-	if v, ok := m.metaRanges.Load(req.Namespace); !ok {
-		err = errors.New("unknown namespace: " + req.Namespace)
-		return
-	} else {
-		mr = v.(*MetaRange)
+	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	if err != nil {
+		return err
 	}
-
-	response := mr.Create(req)
-	//FIXME: HTTP Response
-
+	resp := mr.CreateDentry(req)
+	// Reply operation result to client though TCP connection.
+	err = m.replyToClient(conn, p, resp)
 	return
 }
 
-func (m *MetaNode) rename(conn net.Conn, p *Packet) (err error) {
-	req := new(proto.RenameRequest)
+// Handle OpDelete Dentry
+func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
+	req := &deleteDentryReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
+	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	if err != nil {
+		return
+	}
+	resp := mr.DeleteDentry(req)
+	// Reply operation result to client though TCP connection.
+	err = m.replyToClient(conn, p, resp)
 	return
 }
 
-func (m *MetaNode) delete(conn net.Conn, p *Packet) (err error) {
-	req := new(proto.DeleteRequest)
+// Handle OpUpdateInode
+func (m *MetaNode) opUpdateInode(conn net.Conn, p *Packet) (err error) {
+	req := &updateInoNameReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	return
-}
-
-func (m *MetaNode) clientReadDir(conn net.Conn, p *Packet) (err error) {
-	return
-}
-func (m *MetaNode) createMetaRange(conn net.Conn,
-	p *Packet) (err error) {
-	{
-		addr := conn.RemoteAddr().String()
-		m.masterAddr = net.ParseIP(addr).String()
-	}
-	request := new(proto.CreateMetaRangeRequest)
-	if err = json.Unmarshal(p.Data, request); err != nil {
+	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	if err != nil {
 		return
 	}
-	mr := NewMetaRange(request.MetaId, request.Start, request.End,
-		request.Members)
-	if _, ok := m.metaRanges.LoadOrStore(request.MetaId, mr); !ok {
-		err = errors.New("metaNode createRange failed: " + request.MetaId)
-	}
-	//FIXME: HTTP Response
+	resp := mr.UpdateInode(req)
+	// Reply operation result to client though TCP connection.
+	err = m.replyToClient(conn, p, resp)
+	return
+}
 
+// Handle OpCreate Inode
+func (m *MetaNode) opCreateInode(conn net.Conn, p *Packet) (err error) {
+	req := &createInoReq{}
+	if err = json.Unmarshal(p.Data, req); err != nil {
+		return
+	}
+	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	if err != nil {
+		return
+	}
+	resp := mr.CreateInode(req)
+	// Reply operation result to client though TCP connection.
+	err = m.replyToClient(conn, p, resp)
+	return
+}
+
+func (m *MetaNode) opDeleteInode(conn net.Conn, p *Packet) (err error) {
+	req := &deleteInoReq{}
+	if err = json.Unmarshal(p.Data, req); err != nil {
+		return
+	}
+	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	if err != nil {
+		return
+	}
+	resp := mr.DeleteInode(req)
+	err = m.replyToClient(conn, p, resp)
+	return
+}
+
+// Handle OpReadDir
+func (m *MetaNode) opReadDir(conn net.Conn, p *Packet) (err error) {
+	req := &proto.ReadDirRequest{}
+	if err = json.Unmarshal(p.Data, req); err != nil {
+		return
+	}
+	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	if err != nil {
+		return
+	}
+	resp := mr.ReadDir(req)
+	// Reply operation result to client though TCP connection.
+	err = m.replyToClient(conn, p, resp)
+	return
+}
+
+// Handle OpOpen
+func (m *MetaNode) opOpen(conn net.Conn, p *Packet) (err error) {
+	req := &proto.OpenRequest{}
+	if err = json.Unmarshal(p.Data, req); err != nil {
+		return
+	}
+	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	if err != nil {
+		return
+	}
+	resp := mr.Open(req)
+	// Reply operation result to client though TCP connection.
+	err = m.replyToClient(conn, p, resp)
+	return
+}
+
+// Handle OpCreateMetaRange
+func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
+	remoteAddr := conn.RemoteAddr()
+	m.masterAddr = net.ParseIP(remoteAddr.String()).String()
+	defer func() {
+		resp := &proto.CreateMetaRangeResponse{}
+		if err != nil {
+			// Operation failure.
+			resp.Status = proto.OpErr
+			resp.Result = err.Error()
+			m.replyToMaster(m.masterAddr, resp)
+		} else {
+			// Operation success.
+			resp.Status = proto.OpOk
+			m.replyToMaster(m.masterAddr, resp)
+		}
+	}()
+	// Get task from packet.
+	adminTask := &proto.AdminTask{}
+	if err = json.Unmarshal(p.Data, adminTask); err != nil {
+		return
+	}
+	// Get request detail from task.
+	req, ok := adminTask.Request.(proto.CreateMetaRangeRequest)
+	if !ok {
+		errors.New("invalid request body")
+		return
+	}
+	mr := NewMetaRange(req.MetaId, req.Start, req.End, req.Members)
+	// Store MetaRange to group.
+	m.metaRangeGroup.StoreMetaRange(req.MetaId, mr)
 	return
 }

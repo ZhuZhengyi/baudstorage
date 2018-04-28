@@ -2,9 +2,10 @@ package metanode
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/sdk/stream"
-	"time"
 )
 
 // Dentry wraps necessary properties of `dentry` information in file system.

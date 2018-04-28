@@ -2,8 +2,9 @@ package raftopt
 
 import (
 	"fmt"
-	"github.com/tiglabs/raft"
 	"time"
+
+	"github.com/tiglabs/raft"
 )
 
 //CreateRaftServer ...

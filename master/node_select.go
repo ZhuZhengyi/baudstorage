@@ -2,10 +2,11 @@ package master
 
 import (
 	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"math/rand"
 	"sort"
 	"time"
+
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type NodeTab struct {

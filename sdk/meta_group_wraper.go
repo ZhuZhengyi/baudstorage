@@ -2,14 +2,15 @@ package sdk
 
 import (
 	"encoding/json"
-	"github.com/google/btree"
-	"github.com/juju/errors"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/google/btree"
+	"github.com/juju/errors"
 
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/pool"
@@ -65,34 +66,73 @@ func NewMetaGroupWrapper(namespace, masterHosts string) (*MetaGroupWrapper, erro
 	return wrapper, nil
 }
 
-func (wrapper *MetaGroupWrapper) Create(req *proto.CreateRequest) (*proto.CreateResponse, error) {
-	resp := new(proto.CreateResponse)
-	return resp, nil
+func (wrapper *MetaGroupWrapper) Create(parent uint64, name string, mode uint32) (status int, ino uint64, err error) {
+	//TODO: lookup to make sure there is no such file or dir
+	//TODO: find a metarange to create inode, might try several metaranges
+	//TODO: create a dentry in the parent inode
+	return
 }
 
-func (wrapper *MetaGroupWrapper) Lookup(req *proto.LookupRequest) (*proto.LookupResponse, error) {
-	resp := new(proto.LookupResponse)
-	return resp, nil
+func (wrapper *MetaGroupWrapper) Lookup(req *proto.LookupRequest) (resp *proto.LookupResponse, err error) {
+	reqPacket := proto.NewPacket()
+	reqPacket.Opcode = proto.OpMetaLookup
+	reqPacket.Data, err = json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	replyPacket, err := wrapper.send(req.ParentID, reqPacket)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(replyPacket.Data, &resp)
+	return
 }
 
-func (wrapper *MetaGroupWrapper) InodeGet(req *proto.InodeGetRequest) (*proto.InodeGetResponse, error) {
-	resp := new(proto.InodeGetResponse)
-	return resp, nil
+func (wrapper *MetaGroupWrapper) InodeGet(req *proto.InodeGetRequest) (resp *proto.InodeGetResponse, err error) {
+	reqPacket := proto.NewPacket()
+	reqPacket.Opcode = proto.OpMetaInodeGet
+	reqPacket.Data, err = json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	replyPacket, err := wrapper.send(req.Inode, reqPacket)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(replyPacket.Data, &resp)
+	return
 }
 
-func (wrapper *MetaGroupWrapper) Delete(req *proto.DeleteRequest) (*proto.DeleteResponse, error) {
-	resp := new(proto.DeleteResponse)
-	return resp, nil
+func (wrapper *MetaGroupWrapper) Delete(parent uint64, name string) (status int, err error) {
+	//TODO: delete dentry in parent inode
+	//TODO: delete inode
+	return
 }
 
-func (wrapper *MetaGroupWrapper) Rename(req *proto.RenameRequest) (*proto.RenameResponse, error) {
-	resp := new(proto.RenameResponse)
-	return resp, nil
+func (wrapper *MetaGroupWrapper) Rename(srcParent uint64, srcName string, dstParent uint64, dstName string) (status int, err error) {
+	//TODO: delete dentry from src parent
+	//TODO: create dentry in dst parent
+	//TODO: update inode name
+	//TODO: commit the change
+	return
 }
 
-func (wrapper *MetaGroupWrapper) ReadDir(req *proto.ReadDirRequest) (*proto.ReadDirResponse, error) {
-	resp := new(proto.ReadDirResponse)
-	return resp, nil
+func (wrapper *MetaGroupWrapper) ReadDir(req *proto.ReadDirRequest) (resp *proto.ReadDirResponse, err error) {
+	reqPacket := proto.NewPacket()
+	reqPacket.Opcode = proto.OpMetaReadDir
+	reqPacket.Data, err = json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	replyPacket, err := wrapper.send(req.ParentID, reqPacket)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(replyPacket.Data, &resp)
+	return
 }
 
 func (wrapper *MetaGroupWrapper) refresh() {
@@ -208,6 +248,7 @@ func (wrapper *MetaGroupWrapper) send(ino uint64, req *proto.Packet) (*proto.Pac
 		return nil, errors.New("No such meta group")
 	}
 
+	//TODO: deal with member is not leader
 	conn, err := wrapper.getConn(mg.Members[0])
 	if err != nil {
 		return nil, err

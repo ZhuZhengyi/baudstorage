@@ -3,17 +3,18 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"math/rand"
+	"net"
+	"net/http"
+	"time"
+
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
-	"io"
-	"math/rand"
-	"net"
-	"net/http"
-	"time"
 	//"hash/crc32"
 	"hash/crc32"
 )

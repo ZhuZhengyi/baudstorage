@@ -3,10 +3,11 @@ package master
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"io"
 	"net/http"
 	"strconv"
+
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {

@@ -3,10 +3,6 @@ package sdk
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/storage"
-	"github.com/tiglabs/baudstorage/util/log"
-	"github.com/tiglabs/baudstorage/util/pool"
 	"io/ioutil"
 	"math/rand"
 	"net"
@@ -14,6 +10,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/storage"
+	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/baudstorage/util/pool"
 )
 
 type VolGroup struct {

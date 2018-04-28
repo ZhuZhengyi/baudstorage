@@ -2,12 +2,13 @@ package stream
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
-	"sync"
-	"time"
 )
 
 const (
@@ -28,6 +29,7 @@ type StreamWriter struct {
 	currentVolId    uint32
 	currentExtentId uint64
 	currentInode    uint64
+	flushLock       sync.Mutex
 }
 
 func NewStreamWriter(wraper *sdk.VolGroupWraper, inode uint64, keys *chan ExtentKey) (stream *StreamWriter) {
@@ -115,6 +117,7 @@ func (stream *StreamWriter) write(data []byte, size int) (total int, err error) 
 
 func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 	defer func() {
+		stream.flushLock.Unlock()
 		if err == nil {
 			stream.errCount = 0
 			return
@@ -127,12 +130,17 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 			}
 		}
 	}()
-	err = stream.getWriter().flush()
+	stream.flushLock.Lock()
+	writer := stream.getWriter()
+	if writer == nil {
+		return
+	}
+	err = writer.flush()
 	if err != nil {
 		return
 	}
-	*stream.keys <- stream.getWriter().toKey()
-	if stream.getWriter().isFullExtent() {
+	*stream.keys <- writer.toKey()
+	if writer.isFullExtent() {
 		stream.setWriterToNull()
 	}
 

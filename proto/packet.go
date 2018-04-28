@@ -31,44 +31,47 @@ const (
 //operations
 const (
 	ProtoMagic        uint8 = 0xFF
-	OpCreateFile            = 0x01
-	OpMarkDelete            = 0x02
-	OpWrite                 = 0x03
-	OpRead                  = 0x04
-	OpStreamRead            = 0x05
-	OpGetWatermark          = 0x06
-	OpGetAllWatermark       = 0x07
-	OpNotifyRepair          = 0x08
-	OpERepairRead           = 0x09
-	OpCRepairRead           = 0x0A
-	OpFlowInfo              = 0x0B
-	OpSyncDelNeedle         = 0x0C
-	OpNotifyCompact         = 0x0D
+	OpCreateFile      uint8 = 0x01
+	OpMarkDelete      uint8 = 0x02
+	OpWrite           uint8 = 0x03
+	OpRead            uint8 = 0x04
+	OpStreamRead      uint8 = 0x05
+	OpGetWatermark    uint8 = 0x06
+	OpGetAllWatermark uint8 = 0x07
+	OpNotifyRepair    uint8 = 0x08
+	OpERepairRead     uint8 = 0x09
+	OpCRepairRead     uint8 = 0x0A
+	OpFlowInfo        uint8 = 0x0B
+	OpSyncDelNeedle   uint8 = 0x0C
+	OpNotifyCompact   uint8 = 0x0D
 
 	// Operations: Client -> MetaNode.
-	OpMetaRename      = 0x0E
-	OpMetaOpen        = 0x0F
-	OpMetaCreate      = 0x10
-	OpMetaDelete      = 0x11
-	OpMetaLookup      = 0x12
-	OpMetaReadDir     = 0x13
-	OpMetaInodeGet    = 0x14
-	OpMetaExtentsAdd  = 0x15
-	OpMetaExtentsDel  = 0x16
-	OpMetaExtentsList = 0x17
+	OpMetaCreateInode     uint8 = 0x0E
+	OpMetaDeleteInode     uint8 = 0x0F
+	OpMetaCreateDentry    uint8 = 0x10
+	OpMetaDeleteDentry    uint8 = 0x11
+	OpMetaUpdateInodeName uint8 = 0x12
+	OpMetaOpen            uint8 = 0x13
+	OpMetaLookup          uint8 = 0x14
+	OpMetaReadDir         uint8 = 0x15
+	OpMetaInodeGet        uint8 = 0x16
+	OpMetaExtentsAdd      uint8 = 0x17
+	OpMetaExtentsDel      uint8 = 0x18
+	OpMetaExtentsList     uint8 = 0x19
 
 	// Operations: Master -> MetaNode
-	OpMetaCreateMetaRange = 0x18
+	OpMetaCreateMetaRange uint8 = 0x1A
 
 	// Commons
 	OpIntraGroupNetErr uint8 = 0xF3
 	OpArgMismatchErr   uint8 = 0xF4
-	OpFileNotExistErr  uint8 = 0xF5
+	OpNotExistErr      uint8 = 0xF5
 	OpDiskNoSpaceErr   uint8 = 0xF6
 	OpDiskErr          uint8 = 0xF7
 	OpErr              uint8 = 0xF8
 	OpAgain            uint8 = 0xF9
-	OpFileExistErr     uint8 = 0xFA
+	OpExistErr         uint8 = 0xFA
+	OpInodeFullErr     uint8 = 0xFB
 	OpOk               uint8 = 0x00
 )
 
@@ -155,6 +158,8 @@ func GetOpMesg(opcode uint8) (m string) {
 		m = "OpSyncHasDelNeedle"
 	case OpFileExistErr:
 		m = "FileExistErr"
+	case OpInodeFullErr:
+		m = "InodeFullErr"
 	default:
 		return ""
 
@@ -302,7 +307,7 @@ func (p *Packet) PackOkGetInfoReply(buf []byte) {
 }
 
 func (p *Packet) GetUniqLogId() (m string) {
-	m = fmt.Sprintf("%v_%v_%v_%v_%v", p.ReqID, p.VolID, p.FileID, p.Offset, GetOpMesg(p.OrgOpcode))
+	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v", p.ReqID, p.VolID, p.FileID, p.Offset, p.Size, GetOpMesg(p.OrgOpcode))
 
 	return
 }
