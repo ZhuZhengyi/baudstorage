@@ -32,7 +32,7 @@ func (mf *MetaRangeFsm) GetDentry(dentry *Dentry) (status uint8) {
 	status = proto.OpOk
 	item := mf.DentryTree.Get(dentry)
 	if item == nil {
-		status = proto.OpFileNotExistErr
+		status = proto.OpNotExistErr
 		return
 	}
 	dentry = item.(*Dentry)
@@ -46,7 +46,7 @@ func (mf *MetaRangeFsm) GetInode(ino *Inode) (status uint8) {
 	status = proto.OpOk
 	item := mf.InodeTree.Get(ino)
 	if item == nil {
-		status = proto.OpFileNotExistErr
+		status = proto.OpNotExistErr
 		return
 	}
 	ino = item.(*Inode)
@@ -59,7 +59,7 @@ func (mf *MetaRangeFsm) CreateDentry(dentry *Dentry) (status uint8) {
 	mf.dLock.Lock()
 	if mf.DentryTree.Has(dentry) {
 		mf.dLock.Unlock()
-		status = proto.OpFileExistErr
+		status = proto.OpExistErr
 		return
 	}
 	mf.DentryTree.ReplaceOrInsert(dentry)
@@ -76,7 +76,7 @@ func (mf *MetaRangeFsm) DeleteDentry(dentry *Dentry) (status uint8) {
 	item := mf.DentryTree.Delete(dentry)
 	mf.dLock.Unlock()
 	if item == nil {
-		status = proto.OpFileExistErr
+		status = proto.OpExistErr
 		return
 	}
 	dentry = item.(*Dentry)
@@ -90,7 +90,7 @@ func (mf *MetaRangeFsm) CreateInode(ino *Inode) (status uint8) {
 	mf.iLock.Lock()
 	if mf.InodeTree.Has(ino) {
 		mf.iLock.Unlock()
-		status = proto.OpFileExistErr
+		status = proto.OpExistErr
 		return
 	}
 	mf.InodeTree.ReplaceOrInsert(ino)
@@ -106,7 +106,7 @@ func (mf *MetaRangeFsm) DeleteInode(ino *Inode) (status uint8) {
 	item := mf.InodeTree.Delete(ino)
 	mf.iLock.Unlock()
 	if item == nil {
-		status = proto.OpFileNotExistErr
+		status = proto.OpNotExistErr
 		return
 	}
 	ino = item.(*Inode)
@@ -119,7 +119,7 @@ func (mf *MetaRangeFsm) OpenFile(req *openReq) (resp *openResp) {
 		Inode: req.Inode,
 	})
 	if item == nil {
-		resp.Status = int(proto.OpFileNotExistErr)
+		resp.Status = int(proto.OpNotExistErr)
 		return
 	}
 	item.(*Inode).AccessTime = time.Now().Unix()
@@ -152,7 +152,7 @@ func (mf *MetaRangeFsm) PutStreamKey(ino *Inode, k stream.ExtentKey) (status uin
 	status = proto.OpOk
 	item := mf.InodeTree.Get(ino)
 	if item == nil {
-		status = proto.OpFileNotExistErr
+		status = proto.OpNotExistErr
 		return
 	}
 	ino = item.(*Inode)
