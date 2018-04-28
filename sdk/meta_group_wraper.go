@@ -73,36 +73,99 @@ func (wrapper *MetaGroupWrapper) Create(parent uint64, name string, mode uint32)
 	return
 }
 
-func (wrapper *MetaGroupWrapper) Lookup(req *proto.LookupRequest) (resp *proto.LookupResponse, err error) {
-	reqPacket := proto.NewPacket()
-	reqPacket.Opcode = proto.OpMetaLookup
-	reqPacket.Data, err = json.Marshal(req)
-	if err != nil {
+func (wrapper *MetaGroupWrapper) Lookup(parentID uint64, name string) (status int, inode uint64, mode uint32, err error) {
+	mg := wrapper.getMetaGroupByInode(parentID)
+	if mg == nil {
+		err = errors.New("No such meta group")
 		return
 	}
 
-	replyPacket, err := wrapper.send(req.ParentID, reqPacket)
+	conn, err := wrapper.getConn(mg)
 	if err != nil {
 		return
 	}
-	err = json.Unmarshal(replyPacket.Data, &resp)
-	return
+	defer func() {
+		if err != nil {
+			conn.Close()
+		} else {
+			wrapper.putConn(conn)
+		}
+	}()
+
+	return wrapper.lookup(parentID, name, conn)
 }
 
-func (wrapper *MetaGroupWrapper) InodeGet(req *proto.InodeGetRequest) (resp *proto.InodeGetResponse, err error) {
-	reqPacket := proto.NewPacket()
-	reqPacket.Opcode = proto.OpMetaInodeGet
-	reqPacket.Data, err = json.Marshal(req)
+func (wrapper *MetaGroupWrapper) lookup(parentID uint64, name string, conn net.Conn) (status int, inode uint64, mode uint32, err error) {
+	req := &proto.LookupRequest{
+		Namespace: wrapper.namespace,
+		ParentID:  parentID,
+		Name:      name,
+	}
+	packet := proto.NewPacket()
+	packet.Opcode = proto.OpMetaLookup
+	packet.Data, err = json.Marshal(req)
 	if err != nil {
 		return
 	}
 
-	replyPacket, err := wrapper.send(req.Inode, reqPacket)
+	packet, err = wrapper.send(conn, packet)
 	if err != nil {
 		return
 	}
-	err = json.Unmarshal(replyPacket.Data, &resp)
-	return
+
+	resp := new(proto.LookupResponse)
+	err = json.Unmarshal(packet.Data, &resp)
+	if err != nil {
+		return
+	}
+	return resp.Status, resp.Inode, resp.Mode, nil
+}
+
+func (wrapper *MetaGroupWrapper) InodeGet(inode uint64) (status int, info *proto.InodeInfo, err error) {
+	mg := wrapper.getMetaGroupByInode(inode)
+	if mg == nil {
+		err = errors.New("No such meta group")
+		return
+	}
+
+	conn, err := wrapper.getConn(mg)
+	if err != nil {
+		return
+	}
+	defer func() {
+		if err != nil {
+			conn.Close()
+		} else {
+			wrapper.putConn(conn)
+		}
+	}()
+
+	return wrapper.iget(inode, conn)
+}
+
+func (wrapper *MetaGroupWrapper) iget(inode uint64, conn net.Conn) (status int, info *proto.InodeInfo, err error) {
+	req := &proto.InodeGetRequest{
+		Namespace: wrapper.namespace,
+		Inode:     inode,
+	}
+	packet := proto.NewPacket()
+	packet.Opcode = proto.OpMetaInodeGet
+	packet.Data, err = json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	packet, err = wrapper.send(conn, packet)
+	if err != nil {
+		return
+	}
+
+	resp := new(proto.InodeGetResponse)
+	err = json.Unmarshal(packet.Data, &resp)
+	if err != nil {
+		return
+	}
+	return resp.Status, resp.Info, nil
 }
 
 func (wrapper *MetaGroupWrapper) Delete(parent uint64, name string) (status int, err error) {
@@ -119,20 +182,51 @@ func (wrapper *MetaGroupWrapper) Rename(srcParent uint64, srcName string, dstPar
 	return
 }
 
-func (wrapper *MetaGroupWrapper) ReadDir(req *proto.ReadDirRequest) (resp *proto.ReadDirResponse, err error) {
-	reqPacket := proto.NewPacket()
-	reqPacket.Opcode = proto.OpMetaReadDir
-	reqPacket.Data, err = json.Marshal(req)
+func (wrapper *MetaGroupWrapper) ReadDir(parentID uint64) (children []proto.Dentry, err error) {
+	mg := wrapper.getMetaGroupByInode(parentID)
+	if mg == nil {
+		err = errors.New("No such meta group")
+		return
+	}
+
+	conn, err := wrapper.getConn(mg)
+	if err != nil {
+		return
+	}
+	defer func() {
+		if err != nil {
+			conn.Close()
+		} else {
+			wrapper.putConn(conn)
+		}
+	}()
+
+	return wrapper.readdir(parentID, conn)
+}
+
+func (wrapper *MetaGroupWrapper) readdir(parentID uint64, conn net.Conn) (children []proto.Dentry, err error) {
+	req := &proto.ReadDirRequest{
+		Namespace: wrapper.namespace,
+		ParentID:  parentID,
+	}
+	packet := proto.NewPacket()
+	packet.Opcode = proto.OpMetaReadDir
+	packet.Data, err = json.Marshal(req)
 	if err != nil {
 		return
 	}
 
-	replyPacket, err := wrapper.send(req.ParentID, reqPacket)
+	packet, err = wrapper.send(conn, packet)
 	if err != nil {
 		return
 	}
-	err = json.Unmarshal(replyPacket.Data, &resp)
-	return
+
+	resp := new(proto.ReadDirResponse)
+	err = json.Unmarshal(packet.Data, &resp)
+	if err != nil {
+		return
+	}
+	return resp.Children, nil
 }
 
 func (wrapper *MetaGroupWrapper) refresh() {
@@ -198,6 +292,8 @@ func (wrapper *MetaGroupWrapper) getMetaGroupByInode(ino uint64) *MetaGroup {
 		return false
 	})
 
+	//TODO: if mg is nil, update meta groups and try again
+
 	return mg
 }
 
@@ -234,7 +330,9 @@ func (wrapper *MetaGroupWrapper) getNamespaceView() (*NamespaceView, error) {
 	return view, nil
 }
 
-func (wrapper *MetaGroupWrapper) getConn(addr string) (net.Conn, error) {
+func (wrapper *MetaGroupWrapper) getConn(mg *MetaGroup) (net.Conn, error) {
+	addr := mg.Members[0]
+	//TODO: deal with member 0 is not leader
 	return wrapper.conns.Get(addr)
 }
 
@@ -242,36 +340,15 @@ func (wrapper *MetaGroupWrapper) putConn(conn net.Conn) {
 	wrapper.conns.Put(conn)
 }
 
-func (wrapper *MetaGroupWrapper) send(ino uint64, req *proto.Packet) (*proto.Packet, error) {
-	mg := wrapper.getMetaGroupByInode(ino)
-	if mg == nil {
-		return nil, errors.New("No such meta group")
-	}
-
-	//TODO: deal with member is not leader
-	conn, err := wrapper.getConn(mg.Members[0])
+func (wrapper *MetaGroupWrapper) send(conn net.Conn, req *proto.Packet) (*proto.Packet, error) {
+	err := req.WriteToConn(conn)
 	if err != nil {
 		return nil, err
 	}
-
-	defer func() {
-		if err != nil {
-			conn.Close()
-		} else {
-			wrapper.putConn(conn)
-		}
-	}()
-
-	err = req.WriteToConn(conn)
-	if err != nil {
-		return nil, err
-	}
-
 	resp := proto.NewPacket()
 	err = resp.ReadFromConn(conn, proto.ReadDeadlineTime)
 	if err != nil {
 		return nil, err
 	}
-
 	return resp, nil
 }

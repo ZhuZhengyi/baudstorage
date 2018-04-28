@@ -102,7 +102,7 @@ type InodeGetRequest struct {
 
 type InodeGetResponse struct {
 	Status int `json:"status"`
-	InodeInfo
+	Info   *InodeInfo
 }
 
 type ReadDirRequest struct {
