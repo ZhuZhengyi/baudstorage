@@ -21,6 +21,9 @@ const (
 	MetaGroupViewURL = "/client/namespace?name="
 
 	RefreshMetaGroupsInterval = time.Minute * 5
+	CreateInodeTimeout        = time.Second * 5
+
+	MetaAllocBufSize = 1000
 )
 
 type MetaGroup struct {
@@ -45,6 +48,7 @@ type MetaGroupWrapper struct {
 	groups map[string]*MetaGroup
 	ranges *btree.BTree // *MetaGroup tree indexed by Start
 
+	allocMeta chan string
 	sync.RWMutex
 }
 
@@ -59,6 +63,7 @@ func NewMetaGroupWrapper(namespace, masterHosts string) (*MetaGroupWrapper, erro
 	wrapper.conns = pool.NewConnPool()
 	wrapper.groups = make(map[string]*MetaGroup)
 	wrapper.ranges = btree.New(32)
+	wrapper.allocMeta = make(chan string, MetaAllocBufSize)
 	if err := wrapper.UpdateMetaGroups(); err != nil {
 		return nil, err
 	}
@@ -66,33 +71,54 @@ func NewMetaGroupWrapper(namespace, masterHosts string) (*MetaGroupWrapper, erro
 	return wrapper, nil
 }
 
-func (wrapper *MetaGroupWrapper) Create(parent uint64, name string, mode uint32) (status int, ino uint64, err error) {
-	//TODO: lookup to make sure there is no such file or dir
-	//TODO: find a metarange to create inode, might try several metaranges
+func (wrapper *MetaGroupWrapper) Create(parentID uint64, name string, mode uint32) (status int, inode uint64, err error) {
+	_, parentConn, err := wrapper.connect(parentID)
+	if err != nil {
+		return
+	}
+	defer wrapper.putConn(parentConn, err)
+
+	// Create Inode
+	for {
+		// Reset timer for each select
+		t := time.NewTicker(CreateInodeTimeout)
+		select {
+		case <-t.C:
+			break
+		case groupid := <-wrapper.allocMeta:
+			mg := wrapper.getMetaGroupByID(groupid)
+			if mg == nil {
+				continue
+			}
+			inodeConn, err := wrapper.getConn(mg)
+			if err != nil {
+				continue
+			}
+			status, inode, err = wrapper.icreate(inodeConn)
+			if err == nil && status == int(proto.OpOk) {
+				// create inode is successful
+				wrapper.allocMeta <- groupid
+				break
+			}
+		}
+	}
 	//TODO: create a dentry in the parent inode
 	return
 }
 
-func (wrapper *MetaGroupWrapper) Lookup(parentID uint64, name string) (status int, inode uint64, mode uint32, err error) {
-	mg := wrapper.getMetaGroupByInode(parentID)
-	if mg == nil {
-		err = errors.New("No such meta group")
-		return
-	}
+func (wrapper *MetaGroupWrapper) icreate(conn net.Conn) (status int, inode uint64, err error) {
+	return
+}
 
-	conn, err := wrapper.getConn(mg)
+func (wrapper *MetaGroupWrapper) Lookup(parentID uint64, name string) (status int, inode uint64, mode uint32, err error) {
+	_, conn, err := wrapper.connect(parentID)
 	if err != nil {
 		return
 	}
-	defer func() {
-		if err != nil {
-			conn.Close()
-		} else {
-			wrapper.putConn(conn)
-		}
-	}()
+	defer wrapper.putConn(conn, err)
 
-	return wrapper.lookup(parentID, name, conn)
+	status, inode, mode, err = wrapper.lookup(parentID, name, conn)
+	return
 }
 
 func (wrapper *MetaGroupWrapper) lookup(parentID uint64, name string, conn net.Conn) (status int, inode uint64, mode uint32, err error) {
@@ -122,25 +148,14 @@ func (wrapper *MetaGroupWrapper) lookup(parentID uint64, name string, conn net.C
 }
 
 func (wrapper *MetaGroupWrapper) InodeGet(inode uint64) (status int, info *proto.InodeInfo, err error) {
-	mg := wrapper.getMetaGroupByInode(inode)
-	if mg == nil {
-		err = errors.New("No such meta group")
-		return
-	}
-
-	conn, err := wrapper.getConn(mg)
+	_, conn, err := wrapper.connect(inode)
 	if err != nil {
 		return
 	}
-	defer func() {
-		if err != nil {
-			conn.Close()
-		} else {
-			wrapper.putConn(conn)
-		}
-	}()
+	defer wrapper.putConn(conn, err)
 
-	return wrapper.iget(inode, conn)
+	status, info, err = wrapper.iget(inode, conn)
+	return
 }
 
 func (wrapper *MetaGroupWrapper) iget(inode uint64, conn net.Conn) (status int, info *proto.InodeInfo, err error) {
@@ -183,25 +198,14 @@ func (wrapper *MetaGroupWrapper) Rename(srcParent uint64, srcName string, dstPar
 }
 
 func (wrapper *MetaGroupWrapper) ReadDir(parentID uint64) (children []proto.Dentry, err error) {
-	mg := wrapper.getMetaGroupByInode(parentID)
-	if mg == nil {
-		err = errors.New("No such meta group")
-		return
-	}
-
-	conn, err := wrapper.getConn(mg)
+	_, conn, err := wrapper.connect(parentID)
 	if err != nil {
 		return
 	}
-	defer func() {
-		if err != nil {
-			conn.Close()
-		} else {
-			wrapper.putConn(conn)
-		}
-	}()
+	defer wrapper.putConn(conn, err)
 
-	return wrapper.readdir(parentID, conn)
+	children, err = wrapper.readdir(parentID, conn)
+	return
 }
 
 func (wrapper *MetaGroupWrapper) readdir(parentID uint64, conn net.Conn) (children []proto.Dentry, err error) {
@@ -249,6 +253,11 @@ func (wrapper *MetaGroupWrapper) UpdateMetaGroups() error {
 
 	for _, mg := range nv.MetaGroups {
 		wrapper.replaceOrInsertMetaGroup(mg)
+		//TODO: if the meta group is full, do not put into the channel
+		select {
+		case wrapper.allocMeta <- mg.GroupID:
+		default:
+		}
 	}
 
 	return nil
@@ -336,8 +345,24 @@ func (wrapper *MetaGroupWrapper) getConn(mg *MetaGroup) (net.Conn, error) {
 	return wrapper.conns.Get(addr)
 }
 
-func (wrapper *MetaGroupWrapper) putConn(conn net.Conn) {
-	wrapper.conns.Put(conn)
+func (wrapper *MetaGroupWrapper) putConn(conn net.Conn, err error) {
+	if err != nil {
+		conn.Close()
+	} else {
+		wrapper.conns.Put(conn)
+	}
+}
+
+func (wrapper *MetaGroupWrapper) connect(inode uint64) (*MetaGroup, net.Conn, error) {
+	mg := wrapper.getMetaGroupByInode(inode)
+	if mg == nil {
+		return nil, nil, errors.New("No such meta group")
+	}
+	conn, err := wrapper.getConn(mg)
+	if err != nil {
+		return nil, nil, err
+	}
+	return mg, conn, nil
 }
 
 func (wrapper *MetaGroupWrapper) send(conn net.Conn, req *proto.Packet) (*proto.Packet, error) {
