@@ -33,7 +33,7 @@ type nodeState uint8
 
 // State constants
 const (
-	sReady nodeState = iota
+	sReady   nodeState = iota
 	sRunning
 )
 

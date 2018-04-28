@@ -7,19 +7,21 @@ import (
 )
 
 var (
-	NoAvailVol        = errors.New("no avail vol")
-	VolNotFound       = errors.New("vol not found")
-	DataNodeNotFound  = errors.New("data node not found")
-	MetaNodeNotFound  = errors.New("meta node not found")
-	NamespaceNotFound = errors.New("namespace not found")
-	MetaGroupNotFound = errors.New("metaGroup not found")
-	UnMatchPara       = errors.New("para not unmatched")
+	NoAvailVol          = errors.New("no avail vol")
+	VolNotFound         = errors.New("vol not found")
+	DataNodeNotFound    = errors.New("data node not found")
+	MetaNodeNotFound    = errors.New("meta node not found")
+	NamespaceNotFound   = errors.New("namespace not found")
+	MetaGroupNotFound   = errors.New("metaGroup not found")
+	VolLocationNotFound = errors.New("volume server not found")
+	UnMatchPara         = errors.New("para not unmatched")
 
-	NoZoneForCreateVol = errors.New("no zone from create vol")
-	DisOrderArrayErr   = errors.New("dis order array is nil")
-
-	GetAvailHostExcludeSpecifyErr = "GetAvailHostExcludeSpecifyErr "
-	ClusterNotHaveAnyNodeToWrite  = errors.New("cluster not have any node for create volume")
+	NoZoneForCreateVol           = errors.New("no zone from create vol")
+	DisOrderArrayErr             = errors.New("dis order array is nil")
+	VolReplicationExcessError    = errors.New("vol Replication Excess error")
+	VolReplicationLackError      = errors.New("vol Replication Lack error")
+	VolPersistedNotAnyReplicates = errors.New("volume persisted not have any replicates")
+	NoHaveAnyDataNodeToWrite     = errors.New("No have any data node for create volume")
 )
 
 func paraNotFound(name string) (err error) {

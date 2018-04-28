@@ -40,7 +40,7 @@ func (mg *MetaGroup) AddMember(mr *MetaRange) (err error) {
 	return
 }
 
-func (mg *MetaGroup) SelectHosts(c *Cluster) (err error) {
+func (mg *MetaGroup) ChooseTargetHosts(c *Cluster) (err error) {
 	return
 }
 

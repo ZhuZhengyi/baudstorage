@@ -72,16 +72,18 @@ func (m *MetaNode) routePacket(conn net.Conn, p *Packet) (err error) {
 	case proto.OpMetaCreateInode:
 		// Client → MetaNode
 		err = m.opCreateInode(conn, p)
-	case proto.OpMetaDeleteInode:
-		// Client → MetaNode
-		err = m.opDeleteInode(conn, p)
 	case proto.OpMetaCreateDentry:
 		// Client → MetaNode
 		err = m.opCreateDentry(conn, p)
-	case proto.OpMetaDeleteDentry:
-		err = m.opDeleteDentry(conn, p)
 	case proto.OpMetaUpdateInodeName:
+		// Client → MetaNode
 		err = m.opUpdateInodeName(conn, p)
+	case proto.OpMetaDeleteInode:
+		// Client → MetaNode
+		err = m.opDeleteInode(conn, p)
+	case proto.OpMetaDeleteDentry:
+		// Client → MetaNode
+		err = m.opDeleteDentry(conn, p)
 	case proto.OpMetaReadDir:
 		// Client → MetaNode
 		err = m.opReadDir(conn, p)
@@ -176,6 +178,22 @@ func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
 	return
 }
 
+// Handle OpUpdateInode
+func (m *MetaNode) opUpdateInodeName(conn net.Conn, p *Packet) (err error) {
+	req := &updateInoNameReq{}
+	if err = json.Unmarshal(p.Data, req); err != nil {
+		return
+	}
+	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	if err != nil {
+		return
+	}
+	resp := mr.UpdateInodeName(req)
+	// Reply operation result to client though TCP connection.
+	err = m.replyToClient(conn, p, resp)
+	return
+}
+
 // Handle OpCreate Inode
 func (m *MetaNode) opCreateInode(conn net.Conn, p *Packet) (err error) {
 	req := &createInoReq{}
@@ -234,21 +252,6 @@ func (m *MetaNode) opOpen(conn net.Conn, p *Packet) (err error) {
 	}
 	resp := mr.Open(req)
 	// Reply operation result to client though TCP connection.
-	err = m.replyToClient(conn, p, resp)
-	return
-}
-
-func (m *MetaNode) opUpdateInodeName(conn net.Conn, p *Packet) (err error) {
-	req := &updateInoNameReq{}
-	resp := &updateInoNameResp{}
-	if err = json.Unmarshal(p.Data, req); err != nil {
-		return
-	}
-	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
-	if err != nil {
-		return
-	}
-	resp = mr.UpdateInodeName(req)
 	err = m.replyToClient(conn, p, resp)
 	return
 }

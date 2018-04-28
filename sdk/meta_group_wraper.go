@@ -81,7 +81,7 @@ func (wrapper *MetaGroupWrapper) Lookup(req *proto.LookupRequest) (resp *proto.L
 		return
 	}
 
-	replyPacket, err := wrapper.send(req.ParentId, reqPacket)
+	replyPacket, err := wrapper.send(req.ParentID, reqPacket)
 	if err != nil {
 		return
 	}
@@ -127,7 +127,7 @@ func (wrapper *MetaGroupWrapper) ReadDir(req *proto.ReadDirRequest) (resp *proto
 		return
 	}
 
-	replyPacket, err := wrapper.send(req.ParentId, reqPacket)
+	replyPacket, err := wrapper.send(req.ParentID, reqPacket)
 	if err != nil {
 		return
 	}

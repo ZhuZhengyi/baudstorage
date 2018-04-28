@@ -96,7 +96,8 @@ func (mr *MetaRange) DeleteInode(req *deleteInoReq) (resp *deleteInoResp) {
 	return
 }
 
-func (mr *MetaRange) UpdateInodeName(req *updateInoNameReq) (resp *updateInoNameResp) {
+func (mr *MetaRange) UpdateInodeName(req *updateInoNameReq) (
+	resp *updateInoNameResp) {
 	ino := &Inode{
 		Inode: req.Inode,
 	}
