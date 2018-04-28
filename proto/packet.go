@@ -46,19 +46,21 @@ const (
 	OpNotifyCompact         = 0x0D
 
 	// Operations: Client -> MetaNode.
-	OpMetaRename      = 0x0E
-	OpMetaOpen        = 0x0F
-	OpMetaCreate      = 0x10
-	OpMetaDelete      = 0x11
-	OpMetaLookup      = 0x12
-	OpMetaReadDir     = 0x13
-	OpMetaInodeGet    = 0x14
-	OpMetaExtentsAdd  = 0x15
-	OpMetaExtentsDel  = 0x16
-	OpMetaExtentsList = 0x17
+	OpMetaCreateInode     = 0x0E
+	OpMetaDeleteInode     = 0x0F
+	OpMetaCreateDentry    = 0x10
+	OpMetaDeleteDentry    = 0x11
+	OpMetaUpdateInodeName = 0x12
+	OpMetaOpen            = 0x13
+	OpMetaLookup          = 0x14
+	OpMetaReadDir         = 0x15
+	OpMetaInodeGet        = 0x16
+	OpMetaExtentsAdd      = 0x17
+	OpMetaExtentsDel      = 0x18
+	OpMetaExtentsList     = 0x19
 
 	// Operations: Master -> MetaNode
-	OpMetaCreateMetaRange = 0x18
+	OpMetaCreateMetaRange = 0x1A
 
 	// Commons
 	OpIntraGroupNetErr uint8 = 0xF3
