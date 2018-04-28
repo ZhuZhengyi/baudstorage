@@ -60,7 +60,8 @@ type DeleteDentryRequest struct {
 }
 
 type DeleteDentryResponse struct {
-	Status int `json:"status"`
+	Status int    `json:"status"`
+	Inode  uint64 `json:"inode"`
 }
 
 type UpdateInodeNameRequest struct {
