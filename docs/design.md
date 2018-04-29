@@ -1,5 +1,10 @@
 # key design points of BaudStorage
 
+## Concepts
+
+multi-tenancy - a Baudstorage cluster may host multiple filesystem instances. 
+
+
 ## Append
 
 1, consistency
@@ -14,7 +19,12 @@ the client firstly writes to the extent and then to the inode - double write ove
 
 observation: actually we don't need absolutely accurate file size. 
 
-optimization: synchronously update inode when sealing the last extent and creating a new extent; asynchronously update file size when appending the current extent. 
+optimization: 
+
+* synchronously update inode when sealing the last extent and creating a new extent
+
+* asynchronously update file size by the extent leader
+
 
 
 
