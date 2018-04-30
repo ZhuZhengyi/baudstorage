@@ -17,7 +17,8 @@ type Dentry struct {
 	Type     uint32 // Dentry type.
 }
 
-// Less tests whether the current item is less than the given argument.
+// Less tests whether the current dentry item is less than the given one.
+// This method is necessary fot B-Tree item implementation.
 func (d *Dentry) Less(than btree.Item) (less bool) {
 	dentry, ok := than.(*Dentry)
 	less = ok && d.GetKey() < dentry.GetKey()
@@ -56,7 +57,7 @@ func (d *Dentry) GetValueBytes() (m []byte) {
 
 // Inode wraps necessary properties of `inode` information in file system.
 type Inode struct {
-	Inode      uint64 // Inode Id
+	Inode      uint64 // Inode ID
 	Name       string
 	Type       uint32
 	Size       uint64
@@ -65,6 +66,8 @@ type Inode struct {
 	Stream     *stream.StreamKey
 }
 
+// NewInode returns a new inode instance pointer with specified inode ID, name and inode type code.
+// The AccessTime and ModifyTime of new instance will be set to current time.
 func NewInode(ino uint64, name string, t uint32) *Inode {
 	ts := time.Now().Unix()
 	return &Inode{
@@ -77,6 +80,8 @@ func NewInode(ino uint64, name string, t uint32) *Inode {
 	}
 }
 
+// Less tests whether the current inode item is less than the given one.
+// This method is necessary fot B-Tree item implementation.
 func (i *Inode) Less(than btree.Item) bool {
 	ino, ok := than.(*Inode)
 	return ok && i.Inode < ino.Inode
