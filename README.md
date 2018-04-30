@@ -2,32 +2,30 @@
 
 ## Overview
 
-BaudStorage is a distributed storage system of immutable objects and streaming files. And it provides several pragmatic abstractions: 
+BaudStorage is a datacenter storage system for immutable objects and streaming files. And it provides several pragmatic abstractions: 
 
-* object store without namespaces - particularly for images or short video etc. Put an object and the system returns a unique key. Objects are immutable and can be delete however. 
+* BLOBs like images and short videos
 
-* object store with plat namespaces - compatible with the S3 API. 
-
-* hierachical filesystem namespaces
+* hierachical directories
 
 * file streams of append-only extents
 
 ## Architecture
 
-BS consists of several subsystems: 
+BS consists of several components:
 
 * the cluster master. single raft replication
 
-* the metanode cluster. multi-raft replication, a metadata range (ino range) per raft; a namespace is partitioned by ino range. 
+* metanode. multi-raft replication, a metadata range (inode range) per raft; a namespace is partitioned to inode ranges 
 
-* the datanode cluster. de-clustering volumes of object segments or file extents
+* datanode. de-clustering volumes of objects or extents; volume works as the replication unit and every volume is replicated via a consistent replication protocol. 
 
-a namespace = a filesystem instance = an object bucket
+Note that BS is a highly available storage system with strong consistency: the master, the metadata store, the object store, and the extent store are all consistently replication. 
 
 
 ## APIs
 
-- RESTful s3-compatible API 
+- RESTful S3-compatible API 
 - FUSE
 - Java SDK
 - Go SDK
@@ -42,3 +40,4 @@ minio integration
 HBase on BaudStorage
 
 nginx integration for image service
+
