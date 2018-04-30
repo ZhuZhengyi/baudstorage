@@ -2,9 +2,9 @@
 
 ## Overview
 
-BaudStorage is a distributed storage system of immutable objects and streaming files. And it provides several pragmatic abstractions: 
+BaudStorage is a datacenter storage system for immutable objects and streaming files. And it provides several pragmatic abstractions: 
 
-* BLOBs like images or short video etc
+* BLOBs like images and short videos
 
 * hierachical directories
 
@@ -12,13 +12,15 @@ BaudStorage is a distributed storage system of immutable objects and streaming f
 
 ## Architecture
 
-BS consists of several subsystems: 
+BS consists of several components:
 
 * the cluster master. single raft replication
 
-* the metanode cluster. multi-raft replication, a metadata range (ino range) per raft; a namespace is partitioned by ino range. 
+* metanode. multi-raft replication, a metadata range (inode range) per raft; a namespace is partitioned to inode ranges 
 
-* the datanode cluster. de-clustering volumes of objects or extents
+* datanode. de-clustering volumes of objects or extents; volume works as the replication unit and every volume is replicated via a consistent replication protocol. 
+
+Note that BS is a highly available storage system with strong consistency: the master, the metadata store, the object store, and the extent store are all consistently replication. 
 
 
 ## APIs
