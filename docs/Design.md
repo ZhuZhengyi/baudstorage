@@ -18,11 +18,58 @@ extentmap: array of (offset, length, extentID)
 
 ## the Cluster Master
 
-## the Metadata Range
+* data structures
+
+RangeMap
+
+VolumeMap
+
+* persistence
+
+in-memory but also persisted to a key-value store like rocksdb
+
+* replication
+
+raft
+
+## the Metadata Store
+
+* Free Ino Space Management
+
+Reclaiming or not? No. 
+
+1, ino is 64bit. we can add new ranges.
+
+2, bitmap etc. impact performance and bring engineering cost.
+
+* Partitioning by Inode Range
+
+Partitioning or not? Yes. 
+
+But we do not break a namespace into fixed ino ranges
+
+say a namespace initially has one inode range [0, ++],
+
+when the memory usage of this range has reached to a threshold say 8GB, and the current maxinum ino is 2^20, then the Baudstorage Master creates a new range [2^21, ++] and seals the original one as [0, 2^21) -- note the first range still can allocate new inodes. 
+
+
+* Data structures
+
+the in-memory dentry B+Tree, and the in-memory inode B+Tree, both implemented via the Google's btree pkg
+
+also written to the underlying key-value store
 
 ## the Extent Volume
 
-No need to divide exent as blocks. 
+TODO: No need to divide exent as blocks? 
+
+* persistence
+
+extents as local files
+
+* replication protocol
+
+TODO: review the dataflow in the normal case and exceptional cases. 
 
 ## Append
 
