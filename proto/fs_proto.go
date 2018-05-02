@@ -27,7 +27,6 @@ type OpResult struct {
 
 type CreateInodeRequest struct {
 	Namespace string `json:"namespace"`
-	Name      string `json:"name"`
 	Mode      uint32 `json:"mode"`
 }
 

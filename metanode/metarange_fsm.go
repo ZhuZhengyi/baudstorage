@@ -114,22 +114,22 @@ func (mf *MetaRangeFsm) DeleteInode(ino *Inode) (status uint8) {
 	return
 }
 
-func (mf *MetaRangeFsm) OpenFile(req *openReq) (resp *openResp) {
+func (mf *MetaRangeFsm) OpenFile(req *OpenReq) (resp *OpenResp) {
 	item := mf.InodeTree.Get(&Inode{
 		Inode: req.Inode,
 	})
 	if item == nil {
-		resp.Status = int(proto.OpNotExistErr)
+		resp.Status = proto.OpNotExistErr
 		return
 	}
 	item.(*Inode).AccessTime = time.Now().Unix()
-	resp.Status = int(proto.OpOk)
+	resp.Status = proto.OpOk
 	//TODO: raft sync
 
 	return
 }
 
-func (mf *MetaRangeFsm) ReadDir(req *readdirReq) (resp *readdirResp) {
+func (mf *MetaRangeFsm) ReadDir(req *ReadDirReq) (resp *ReadDirResp) {
 	begDentry := &Dentry{
 		ParentId: req.ParentID,
 	}

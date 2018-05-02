@@ -85,7 +85,6 @@ func (mr *MetaRange) CreateInode(req *CreateInoReq) (resp *CreateInoResp) {
 	ts := time.Now().Unix()
 	ino := &Inode{
 		Inode:      resp.Inode,
-		Name:       req.Name,
 		Type:       req.Mode,
 		AccessTime: ts,
 		ModifyTime: ts,
@@ -100,19 +99,6 @@ func (mr *MetaRange) DeleteInode(req *deleteInoReq) (resp *deleteInoResp) {
 		Inode: req.Inode,
 	}
 	resp.Status = mr.store.DeleteInode(ino)
-	return
-}
-
-func (mr *MetaRange) UpdateInodeName(req *UpdateInoNameReq) (
-	resp *UpdateInoNameResp) {
-	ino := &Inode{
-		Inode: req.Inode,
-	}
-	status := mr.store.GetInode(ino)
-	if status == proto.OpOk {
-		ino.Name = req.Name
-	}
-	resp.Status = status
 	return
 }
 

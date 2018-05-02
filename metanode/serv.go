@@ -75,9 +75,6 @@ func (m *MetaNode) routePacket(conn net.Conn, p *Packet) (err error) {
 	case proto.OpMetaCreateDentry:
 		// Client → MetaNode
 		err = m.opCreateDentry(conn, p)
-	case proto.OpMetaUpdateInodeName:
-		// Client → MetaNode
-		err = m.opUpdateInodeName(conn, p)
 	case proto.OpMetaDeleteInode:
 		// Client → MetaNode
 		err = m.opDeleteInode(conn, p)
@@ -148,7 +145,7 @@ func (m *MetaNode) replyToMaster(ip string, data interface{}) (err error) {
 
 // Handle OpCreate
 func (m *MetaNode) opCreateDentry(conn net.Conn, p *Packet) (err error) {
-	req := &createDentryReq{}
+	req := &CreateDentryReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
@@ -164,7 +161,7 @@ func (m *MetaNode) opCreateDentry(conn net.Conn, p *Packet) (err error) {
 
 // Handle OpDelete Dentry
 func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
-	req := &deleteDentryReq{}
+	req := &DeleteDentryReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
@@ -178,25 +175,9 @@ func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
 	return
 }
 
-// Handle OpUpdateInode
-func (m *MetaNode) opUpdateInodeName(conn net.Conn, p *Packet) (err error) {
-	req := &updateInoNameReq{}
-	if err = json.Unmarshal(p.Data, req); err != nil {
-		return
-	}
-	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
-	if err != nil {
-		return
-	}
-	resp := mr.UpdateInodeName(req)
-	// Reply operation result to client though TCP connection.
-	err = m.replyToClient(conn, p, resp)
-	return
-}
-
 // Handle OpCreate Inode
 func (m *MetaNode) opCreateInode(conn net.Conn, p *Packet) (err error) {
-	req := &createInoReq{}
+	req := &CreateInoReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}

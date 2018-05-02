@@ -4,7 +4,6 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 )
 
-
 // Type alias.
 type (
 	// Client -> MetaNode create inode request struct

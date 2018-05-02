@@ -58,7 +58,6 @@ func (d *Dentry) GetValueBytes() (m []byte) {
 // Inode wraps necessary properties of `inode` information in file system.
 type Inode struct {
 	Inode      uint64 // Inode ID
-	Name       string
 	Type       uint32
 	Size       uint64
 	AccessTime int64
@@ -68,11 +67,10 @@ type Inode struct {
 
 // NewInode returns a new inode instance pointer with specified inode ID, name and inode type code.
 // The AccessTime and ModifyTime of new instance will be set to current time.
-func NewInode(ino uint64, name string, t uint32) *Inode {
+func NewInode(ino uint64, t uint32) *Inode {
 	ts := time.Now().Unix()
 	return &Inode{
 		Inode:      ino,
-		Name:       name,
 		Type:       t,
 		AccessTime: ts,
 		ModifyTime: ts,
@@ -101,7 +99,7 @@ func (i *Inode) GetKeyBytes() (m []byte) {
 // GetValue returns string value of this Inode which consists of Name, Size, AccessTime and
 // ModifyTime properties and connected by '*'.
 func (i *Inode) GetValue() (m string) {
-	s := fmt.Sprintf("%s*%d*%d*%d", i.Name, i.Size, i.AccessTime, i.ModifyTime)
+	s := fmt.Sprintf("%d*%d*%d", i.Size, i.AccessTime, i.ModifyTime)
 	i.Stream.Range(func(index int, extentKey stream.ExtentKey) bool {
 		if uint64(index) == i.Stream.Size() {
 			s += extentKey.Marshal()

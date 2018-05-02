@@ -46,18 +46,17 @@ const (
 	OpNotifyCompact   uint8 = 0x0D
 
 	// Operations: Client -> MetaNode.
-	OpMetaCreateInode     uint8 = 0x0E
-	OpMetaDeleteInode     uint8 = 0x0F
-	OpMetaCreateDentry    uint8 = 0x10
-	OpMetaDeleteDentry    uint8 = 0x11
-	OpMetaUpdateInodeName uint8 = 0x12
-	OpMetaOpen            uint8 = 0x13
-	OpMetaLookup          uint8 = 0x14
-	OpMetaReadDir         uint8 = 0x15
-	OpMetaInodeGet        uint8 = 0x16
-	OpMetaExtentsAdd      uint8 = 0x17
-	OpMetaExtentsDel      uint8 = 0x18
-	OpMetaExtentsList     uint8 = 0x19
+	OpMetaCreateInode  uint8 = 0x0E
+	OpMetaDeleteInode  uint8 = 0x0F
+	OpMetaCreateDentry uint8 = 0x10
+	OpMetaDeleteDentry uint8 = 0x11
+	OpMetaOpen         uint8 = 0x13
+	OpMetaLookup       uint8 = 0x14
+	OpMetaReadDir      uint8 = 0x15
+	OpMetaInodeGet     uint8 = 0x16
+	OpMetaExtentsAdd   uint8 = 0x17
+	OpMetaExtentsDel   uint8 = 0x18
+	OpMetaExtentsList  uint8 = 0x19
 
 	// Operations: Master -> MetaNode
 	OpMetaCreateMetaRange uint8 = 0x1A
