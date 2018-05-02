@@ -78,6 +78,7 @@ func (wrapper *MetaGroupWrapper) Create(parentID uint64, name string, mode uint3
 	}
 	defer wrapper.putConn(parentConn, err)
 
+	var inodeConn net.Conn
 	// Create Inode
 	for {
 		// Reset timer for each select
@@ -90,16 +91,19 @@ func (wrapper *MetaGroupWrapper) Create(parentID uint64, name string, mode uint3
 			if mg == nil {
 				continue
 			}
-			inodeConn, err := wrapper.getConn(mg)
+			// establish the connection
+			inodeConn, err = wrapper.getConn(mg)
 			if err != nil {
 				continue
 			}
 			status, inode, err = wrapper.icreate(inodeConn)
 			if err == nil && status == int(proto.OpOk) {
-				// create inode is successful
+				// create inode is successful, and keep the connection
 				wrapper.allocMeta <- groupid
 				break
 			}
+			// break the connection
+			wrapper.putConn(inodeConn, err)
 		}
 	}
 	//TODO: create a dentry in the parent inode
@@ -108,6 +112,10 @@ func (wrapper *MetaGroupWrapper) Create(parentID uint64, name string, mode uint3
 
 func (wrapper *MetaGroupWrapper) icreate(conn net.Conn) (status int, inode uint64, err error) {
 	return
+}
+
+func (wrapper *MetaGroupWrapper) dcreate(conn net.Conn, parentID uint64, name string, inode uint64, mode uint32) (status int, err error) {
+	return 0, nil
 }
 
 func (wrapper *MetaGroupWrapper) Lookup(parentID uint64, name string) (status int, inode uint64, mode uint32, err error) {
@@ -144,7 +152,7 @@ func (wrapper *MetaGroupWrapper) lookup(parentID uint64, name string, conn net.C
 	if err != nil {
 		return
 	}
-	return resp.Status, resp.Inode, resp.Mode, nil
+	return int(resp.Status), resp.Inode, resp.Mode, nil
 }
 
 func (wrapper *MetaGroupWrapper) InodeGet(inode uint64) (status int, info *proto.InodeInfo, err error) {
@@ -180,7 +188,7 @@ func (wrapper *MetaGroupWrapper) iget(inode uint64, conn net.Conn) (status int, 
 	if err != nil {
 		return
 	}
-	return resp.Status, resp.Info, nil
+	return int(resp.Status), resp.Info, nil
 }
 
 func (wrapper *MetaGroupWrapper) Delete(parent uint64, name string) (status int, err error) {
