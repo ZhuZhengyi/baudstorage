@@ -166,9 +166,33 @@ func (wrapper *MetaGroupWrapper) Delete(parentID uint64, name string) (status in
 	return
 }
 
-func (wrapper *MetaGroupWrapper) Rename(srcParent uint64, srcName string, dstParent uint64, dstName string) (status int, err error) {
-	//TODO: create dentry in dst parent
-	//TODO: delete dentry from src parent
+func (wrapper *MetaGroupWrapper) Rename(srcParentID uint64, srcName string, dstParentID uint64, dstName string) (status int, err error) {
+	_, srcParentConn, err := wrapper.connect(srcParentID)
+	if err != nil {
+		return
+	}
+	defer wrapper.putConn(srcParentConn, err)
+	_, dstParentConn, err := wrapper.connect(dstParentID)
+	if err != nil {
+		return
+	}
+	defer wrapper.putConn(dstParentConn, err)
+
+	// look up for the ino
+	status, inode, mode, err := wrapper.lookup(srcParentConn, srcParentID, srcName)
+	if err != nil || status != int(proto.OpOk) {
+		return
+	}
+	// create dentry in dst parent
+	status, err = wrapper.dcreate(dstParentConn, dstParentID, dstName, inode, mode)
+	if err != nil || status != int(proto.OpOk) {
+		return
+	}
+	// delete dentry from src parent
+	status, _, err = wrapper.ddelete(srcParentConn, srcParentID, srcName)
+	if err != nil || status != int(proto.OpOk) {
+		wrapper.ddelete(dstParentConn, dstParentID, dstName) //TODO: deal with error
+	}
 	return
 }
 
