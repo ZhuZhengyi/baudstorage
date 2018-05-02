@@ -1,6 +1,7 @@
 package metanode
 
 import (
+	"github.com/juju/errors"
 	"sync/atomic"
 	"time"
 
@@ -8,12 +9,17 @@ import (
 	"github.com/tiglabs/baudstorage/sdk/stream"
 )
 
+// Errors
+var (
+	ErrInodeOutOfRange = errors.New("inode ID out of range.")
+)
+
 type MetaRange struct {
-	id          string // Consist with 'namespace_start_end'
+	id          string // Consist with 'namespace_start_end'.
 	start       uint64
 	end         uint64
 	store       *MetaRangeFsm
-	offset      uint64
+	cur         uint64 // Cur ID value of inode what have been already assigned.
 	peers       []string
 	raftGroupId uint64
 	status      int
@@ -21,25 +27,32 @@ type MetaRange struct {
 
 func NewMetaRange(id string, start, end uint64, peers []string) *MetaRange {
 	return &MetaRange{
-		id:     id,
-		start:  start,
-		end:    end,
-		store:  NewMetaRangeFsm(),
-		offset: start,
-		peers:  peers,
+		id:    id,
+		start: start,
+		end:   end,
+		store: NewMetaRangeFsm(),
+		cur:   start,
+		peers: peers,
 	}
 }
 
-func (mr *MetaRange) getInodeID() (uint64, uint8) {
-	i := atomic.AddUint64(&mr.offset, 1)
-	if i > mr.end {
-		return -1, proto.OpInodeFullErr
+// NextInodeId returns a new ID value of inode and update offset.
+// If inode ID is out of this MetaRange limit then return ErrInodeOutOfRange error.
+func (mr *MetaRange) nextInodeID() (newOffset uint64, err error) {
+	for {
+		cur := mr.cur
+		end := mr.end
+		if cur >= end {
+			return 0, ErrInodeOutOfRange
+		}
+		newId := cur + 1
+		if atomic.CompareAndSwapUint64(&mr.cur, cur, newId) {
+			return newId, nil
+		}
 	}
-	return i, proto.OpOk
 }
 
-func (mr *MetaRange) CreateDentry(req *createDentryReq) (resp *createDentryResp) {
-	// TODO: Implement create dentry operation.
+func (mr *MetaRange) CreateDentry(req *CreateDentryReq) (resp *CreateDentryResp) {
 	dentry := &Dentry{
 		ParentId: req.ParentID,
 		Name:     req.Name,
@@ -47,27 +60,26 @@ func (mr *MetaRange) CreateDentry(req *createDentryReq) (resp *createDentryResp)
 		Type:     req.Mode,
 	}
 	status := mr.store.CreateDentry(dentry)
-	resp.Status = int(status)
+	resp.Status = status
 	return
 }
 
-func (mr *MetaRange) DeleteDentry(req *deleteDentryReq) (resp *deleteDentryResp) {
-	//TODO: Implement delete dentry
+func (mr *MetaRange) DeleteDentry(req *DeleteDentryReq) (resp *DeleteDentryResp) {
 	dentry := &Dentry{
 		ParentId: req.ParentID,
 		Name:     req.Name,
 	}
 	status := mr.store.DeleteDentry(dentry)
-	resp.Status = int(status)
+	resp.Status = status
+	resp.Inode = dentry.Inode
 	return
 }
 
-func (mr *MetaRange) CreateInode(req *createInoReq) (resp *createInoResp) {
-	//TODO: Implement create inode
-	var status uint8
-	resp.Inode, status = mr.getInodeID()
-	if status != proto.OpOk {
-		resp.Status = int(status)
+func (mr *MetaRange) CreateInode(req *CreateInoReq) (resp *CreateInoResp) {
+	var err error
+	resp.Inode, err = mr.nextInodeID()
+	if err != nil {
+		resp.Status = proto.OpInodeFullErr
 		return
 	}
 	ts := time.Now().Unix()
@@ -79,25 +91,20 @@ func (mr *MetaRange) CreateInode(req *createInoReq) (resp *createInoResp) {
 		ModifyTime: ts,
 		Stream:     stream.NewStreamKey(resp.Inode),
 	}
-	status = mr.store.CreateInode(ino)
-	resp.Status = int(status)
-	if status != proto.OpOk {
-		resp.Inode = -1
-	}
+	resp.Status = mr.store.CreateInode(ino)
 	return
 }
 
 func (mr *MetaRange) DeleteInode(req *deleteInoReq) (resp *deleteInoResp) {
-	//TODO: Implement delete inode
 	ino := &Inode{
 		Inode: req.Inode,
 	}
-	resp.Status = int(mr.store.DeleteInode(ino))
+	resp.Status = mr.store.DeleteInode(ino)
 	return
 }
 
-func (mr *MetaRange) UpdateInodeName(req *updateInoNameReq) (
-	resp *updateInoNameResp) {
+func (mr *MetaRange) UpdateInodeName(req *UpdateInoNameReq) (
+	resp *UpdateInoNameResp) {
 	ino := &Inode{
 		Inode: req.Inode,
 	}
@@ -105,7 +112,7 @@ func (mr *MetaRange) UpdateInodeName(req *updateInoNameReq) (
 	if status == proto.OpOk {
 		ino.Name = req.Name
 	}
-	resp.Status = int(status)
+	resp.Status = status
 	return
 }
 
@@ -113,13 +120,13 @@ func (mr *MetaRange) PutStreamKey() {
 	return
 }
 
-func (mr *MetaRange) ReadDir(req *readdirReq) (resp *readdirResp) {
+func (mr *MetaRange) ReadDir(req *ReadDirReq) (resp *ReadDirResp) {
 	// TODO: Implement read dir operation.
 	resp = mr.store.ReadDir(req)
 	return
 }
 
-func (mr *MetaRange) Open(req *openReq) (resp *openResp) {
+func (mr *MetaRange) Open(req *OpenReq) (resp *OpenResp) {
 	// TODO: Implement open operation.
 	resp = mr.store.OpenFile(req)
 	return

@@ -4,33 +4,35 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 )
 
+
+// Type alias.
 type (
-	//client -> metaNode create inode request struct
-	createInoReq = proto.CreateInodeRequest
-	//metaNode -> client create inode response struct
-	createInoResp = proto.CreateInodeResponse
-	//client -> metaNode delete inode request struct
+	// Client -> MetaNode create inode request struct
+	CreateInoReq = proto.CreateInodeRequest
+	// MetaNode -> Client create inode response struct
+	CreateInoResp = proto.CreateInodeResponse
+	// Client -> MetaNode delete inode request struct
 	deleteInoReq = proto.DeleteInodeRequest
-	//metaNode -> client delete inode response struc
+	// MetaNode -> Client delete inode response struct
 	deleteInoResp = proto.DeleteInodeResponse
-	//client -> metaNode create dentry request struct
-	createDentryReq = proto.CreateDentryRequest
-	//metaNode -> client create dentry response struct
-	createDentryResp = proto.CreateDentryResponse
-	//client -> metaNode delete dentry request struct
-	deleteDentryReq = proto.DeleteDentryRequest
-	//metaNode -> client delete dentry response struct
-	deleteDentryResp = proto.DeleteDentryResponse
-	//client -> metaNode update inode name request struct
-	updateInoNameReq = proto.UpdateInodeNameRequest
-	//metaNode -> client update inode name response struct
-	updateInoNameResp = proto.UpdateInodeNameResponse
-	//client -> metaNode read dir request struct
-	readdirReq = proto.ReadDirRequest
-	//metaNode -> client read dir response struct
-	readdirResp = proto.ReadDirResponse
-	//client -> metaNode open file request struct
-	openReq = proto.OpenRequest
-	//metaNode -> client open file response struct
-	openResp = proto.OpenResponse
+	// Client -> MetaNode create dentry request struct
+	CreateDentryReq = proto.CreateDentryRequest
+	// MetaNode -> Client create dentry response struct
+	CreateDentryResp = proto.CreateDentryResponse
+	// Client -> MetaNode delete dentry request struct
+	DeleteDentryReq = proto.DeleteDentryRequest
+	// MetaNode -> Client delete dentry response struct
+	DeleteDentryResp = proto.DeleteDentryResponse
+	// Client -> MetaNode update inode name request struct
+	UpdateInoNameReq = proto.UpdateInodeNameRequest
+	// MetaNode -> Client update inode name response struct
+	UpdateInoNameResp = proto.UpdateInodeNameResponse
+	// Client -> MetaNode read dir request struct
+	ReadDirReq = proto.ReadDirRequest
+	// MetaNode -> Client read dir response struct
+	ReadDirResp = proto.ReadDirResponse
+	// Client -> MetaNode open file request struct
+	OpenReq = proto.OpenRequest
+	// MetaNode -> Client open file response struct
+	OpenResp = proto.OpenResponse
 )

@@ -21,6 +21,10 @@ type Dentry struct {
 	Type  uint32 `json:"type"`
 }
 
+type OpResult struct {
+	Status uint8 `json:"status"`
+}
+
 type CreateInodeRequest struct {
 	Namespace string `json:"namespace"`
 	Name      string `json:"name"`
@@ -28,8 +32,8 @@ type CreateInodeRequest struct {
 }
 
 type CreateInodeResponse struct {
-	Status int    `json:"status"`
-	Inode  uint64 `json:"inode"`
+	OpResult
+	Inode uint64 `json:"inode"`
 }
 
 type DeleteInodeRequest struct {
@@ -38,7 +42,7 @@ type DeleteInodeRequest struct {
 }
 
 type DeleteInodeResponse struct {
-	Status int `json:"status"`
+	OpResult
 }
 
 type CreateDentryRequest struct {
@@ -50,7 +54,7 @@ type CreateDentryRequest struct {
 }
 
 type CreateDentryResponse struct {
-	Status int `json:"status"`
+	OpResult
 }
 
 type DeleteDentryRequest struct {
@@ -60,7 +64,7 @@ type DeleteDentryRequest struct {
 }
 
 type DeleteDentryResponse struct {
-	Status int    `json:"status"`
+	Status uint8  `json:"status"`
 	Inode  uint64 `json:"inode"`
 }
 
@@ -71,7 +75,7 @@ type UpdateInodeNameRequest struct {
 }
 
 type UpdateInodeNameResponse struct {
-	Status int `json:"status"`
+	OpResult
 }
 
 type OpenRequest struct {
@@ -80,7 +84,7 @@ type OpenRequest struct {
 }
 
 type OpenResponse struct {
-	Status int `json:"status"`
+	OpResult
 }
 
 type LookupRequest struct {
@@ -90,9 +94,9 @@ type LookupRequest struct {
 }
 
 type LookupResponse struct {
-	Status int    `json:"status"`
-	Inode  uint64 `json:"inode"`
-	Mode   uint32 `json:"mode"`
+	OpResult
+	Inode uint64 `json:"inode"`
+	Mode  uint32 `json:"mode"`
 }
 
 type InodeGetRequest struct {
@@ -101,8 +105,8 @@ type InodeGetRequest struct {
 }
 
 type InodeGetResponse struct {
-	Status int `json:"status"`
-	Info   *InodeInfo
+	OpResult
+	Info *InodeInfo
 }
 
 type ReadDirRequest struct {
@@ -111,5 +115,6 @@ type ReadDirRequest struct {
 }
 
 type ReadDirResponse struct {
-	Children []Dentry
+	OpResult
+	Children []Dentry `json:"children"`
 }
