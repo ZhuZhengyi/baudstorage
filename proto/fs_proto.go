@@ -7,7 +7,6 @@ import (
 type InodeInfo struct {
 	Inode      uint64    `json:"inode"`
 	Type       uint32    `json:"type"`
-	Name       string    `json:"name"`
 	ParentID   uint64    `json:"parentID"`
 	ModifyTime time.Time `json:"modify_time"`
 	CreateTime time.Time `json:"create_time"`
@@ -65,16 +64,6 @@ type DeleteDentryRequest struct {
 type DeleteDentryResponse struct {
 	Status uint8  `json:"status"`
 	Inode  uint64 `json:"inode"`
-}
-
-type UpdateInodeNameRequest struct {
-	Namespace string `json:"namespace"`
-	Inode     uint64 `json:"inode"`
-	Name      string `json:"name"`
-}
-
-type UpdateInodeNameResponse struct {
-	OpResult
 }
 
 type OpenRequest struct {
