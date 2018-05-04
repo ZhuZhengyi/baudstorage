@@ -20,10 +20,18 @@ func main() {
 	var cfg *config.Config = nil //fake for test
 	var s *Server
 
-	err := StartRaftServer(s,1, cfg, RocksDBStorage)
+	err := CreateRaftServer(s,1, cfg, RocksDBStorage)
 	if err != nil{
 
 	}
+
+	p,err := NewRaftPartition(s, GroupId)
+	if err != nil{
+
+	}
+
+	s.partitions[GroupId] = p
+
 	fmt.Println("nodeid = ", s.nodeid)
 }
 
@@ -33,13 +41,12 @@ type Server struct {
 	resolver     *Resolver
 	rs           *raft.RaftServer
 	partitions   map[uint64]*partition  // 节点上的分片，key：分片ID, 一个节点上可以有多个分片
-	sm           *RaftStoreFsm
 	config       *Config
 	dbtype       string
 }
 
-func StartRaftServer(s *Server, nodeId uint64, cfg *config.Config, dbType string) (err error) {
-	//启动raft server，包含多个分片
+func CreateRaftServer(s *Server, nodeId uint64, cfg *config.Config, dbType string) (err error) {
+	//启动raft server
 	s.nodeid = nodeId
 	s.config = NewConfig()
 	s.resolver = newResolver()
@@ -69,12 +76,6 @@ func StartRaftServer(s *Server, nodeId uint64, cfg *config.Config, dbType string
 
 	for _, p := range s.config.Peers() {
 		s.resolver.AddNode(p.ID)
-	}
-
-	//TODO：单node上的partition个数怎么设置
-	// 根据配置初始化节点上的分区
-	for i := 1; i <= PartitionNum; i++ {
-		s.partitions[uint64(i)], err = newPartition(s, uint64(i))
 	}
 
 	return nil

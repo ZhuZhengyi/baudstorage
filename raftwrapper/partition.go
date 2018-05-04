@@ -12,10 +12,11 @@ type partition struct {
 	rs *raft.RaftServer
 }
 
-func newPartition(s *Server, partitionId uint64) (p *partition, err error) {
+//由应用者调用。需要提供s.rs，s.config，groupid
+func NewRaftPartition(s *Server, partitionId uint64) (p *partition, err error) {
 	p = &partition{
 		id: partitionId,
-		sm: NewRaftStateMachine(partitionId, s.nodeid, s.config.StoreDir(), s.dbtype, s.rs),
+		sm: NewRaftStateMachine(s.nodeid, partitionId, s.config.StoreDir(), s.dbtype, s.rs),
 		rs: s.rs,
 	}
 
