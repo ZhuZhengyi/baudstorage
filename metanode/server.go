@@ -3,7 +3,6 @@ package metanode
 import (
 	"context"
 	"errors"
-	"regexp"
 	"sync"
 
 	"github.com/tiglabs/baudstorage/proto"
@@ -13,14 +12,10 @@ import (
 
 // Configuration keys
 const (
-	configKeyAddr = "address"
-)
-
-// Regular expressions
-var (
-	// Match 'IP:PORT'
-	regexpAddr, _ = regexp.Compile(
-		"^((25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d)))\\.){3}(25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d))):(\\d)+$")
+	cfgNodeId   = "nodeId"
+	cfgListen   = "listen"
+	cfgDataPath = "dataPath"
+	cfgLogPath  = "logPath"
 )
 
 // Errors
@@ -37,17 +32,23 @@ const (
 	sRunning
 )
 
+// The MetaNode manage Dentry and Inode information in multiple MetaRange, and
+// through the Raft algorithm and other MetaNodes in the RageGroup for reliable
+// data synchronization to maintain data consistency within the MetaGroup.
 type MetaNode struct {
 	// Configuration
-	addr           string
-	ip             string
-	logDir         string
+	nodeId         string
+	listen         int
+	dataPath       string
+	logPath        string
 	masterAddr     string
 	metaRangeGroup MetaRangeGroup
+
 	// Context
 	ctx           context.Context
 	ctxCancelFunc context.CancelFunc
 	masterReplyC  chan *proto.AdminTask
+
 	// Runtime
 	log        *log.Log
 	state      nodeState
@@ -71,7 +72,7 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	// Init context
 	m.initNodeContext()
 	// Init logging
-	if m.log, err = log.NewLog(m.logDir, "metanode", log.DebugLevel); err != nil {
+	if m.log, err = log.NewLog(m.logPath, "MetaNode", log.DebugLevel); err != nil {
 		return
 	}
 	// Start TCP listen
@@ -113,12 +114,10 @@ func (m *MetaNode) prepareConfig(cfg *config.Config) (err error) {
 		err = errors.New("invalid configuration")
 		return
 	}
-	addr := cfg.GetString(configKeyAddr)
-	if !regexpAddr.MatchString(addr) {
-		err = ErrInvalidAddress
-		return
-	}
-	m.addr = addr
+	m.nodeId = cfg.GetString(cfgNodeId)
+	m.listen = int(cfg.GetInt(cfgListen))
+	m.dataPath = cfg.GetString(cfgDataPath)
+	m.logPath = cfg.GetString(cfgLogPath)
 	return
 }
 
