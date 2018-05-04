@@ -122,7 +122,7 @@ func (mf *MetaRangeFsm) CreateDentry(dentry *Dentry) (status uint8) {
 		// Rollback snapshot on fail.
 		if status != proto.OpOk {
 			if _, err := mf.dentryStore.Delete(storeKey); err != nil {
-				log.LogError(fmt.Sprintf("cannot rollback snapshot from RocksDB cause %s.", err))
+				log.LogError(fmt.Sprintf("cannot rollback dentry snapshot from RocksDB cause %s.", err))
 			}
 		}
 	}()
@@ -171,7 +171,7 @@ func (mf *MetaRangeFsm) DeleteDentry(dentry *Dentry) (status uint8) {
 	defer func() {
 		if status != proto.OpOk {
 			if _, err := mf.dentryStore.Put(storageKey, storageVal); err != nil {
-				log.LogError(fmt.Sprintf("cannot rollback snapshot from RocksDB cause %s.", err))
+				log.LogError(fmt.Sprintf("cannot rollback dentry snapshot from RocksDB cause %s.", err))
 			}
 		}
 	}()
@@ -221,7 +221,7 @@ func (mf *MetaRangeFsm) CreateInode(ino *Inode) (status uint8) {
 	defer func() {
 		if status != proto.OpOk {
 			if _, err := mf.inodeStore.Delete(storageKey); err != nil {
-				log.LogError(fmt.Sprintf("connot rollback snapshot from RocksDB cause %s.", err))
+				log.LogError(fmt.Sprintf("connot rollback inode snapshot from RocksDB cause %s.", err))
 			}
 		}
 	}()
@@ -232,7 +232,15 @@ func (mf *MetaRangeFsm) CreateInode(ino *Inode) (status uint8) {
 	return
 }
 
+// DeleteInode delete specified inode item from inode tree.
+// Operations:
+//  Step 1. Delete inode item from inode tree.
+//  Step 2. Snapshot inode tree through RocksDB.
+//  Step 3. Sync with raft.
+//  Step 4. Commit or rollback.
 func (mf *MetaRangeFsm) DeleteInode(ino *Inode) (status uint8) {
+
+	// Step 1. Delete inode item from inode tree.
 	status = proto.OpOk
 	mf.inodeMu.Lock()
 	item := mf.inodeTree.Delete(ino)
@@ -242,7 +250,35 @@ func (mf *MetaRangeFsm) DeleteInode(ino *Inode) (status uint8) {
 		return
 	}
 	ino = item.(*Inode)
+
+	// Define rollback policy for inode tree.
+	defer func() {
+		if status != proto.OpOk {
+			mf.inodeTree.Delete(ino)
+		}
+	}()
+
+	// Step 2. Snapshot inode tree through RocksDB.
+	storageKey := strings.Join([]string{mf.metaRangeId, ino.GetKey()}, seqSeparator)
+	storageVal := []byte(ino.GetValue())
+	if _, err := mf.inodeStore.Delete(storageKey); err != nil {
+		// Error happen while snapshot inode tree.
+		status = proto.OpErr
+		return
+	}
+
+	// Define rollback policy for RocksDB storage.
+	defer func() {
+		if status != proto.OpOk {
+			if _, err := mf.inodeStore.Put(storageKey, storageVal); err != nil {
+				log.LogError(fmt.Sprintf("connot rollback inode snapshot from RocksDB cause %s.", err))
+			}
+		}
+	}()
+
+	// Step3. Sync with raft.
 	//TODO: raft sync
+
 	return
 }
 
