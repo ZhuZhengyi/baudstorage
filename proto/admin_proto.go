@@ -8,6 +8,7 @@ package proto
 type CreateVolRequest struct {
 	VolType string
 	VolId   uint64
+	VolSize int
 }
 
 type CreateVolResponse struct {
@@ -52,4 +53,14 @@ type HeartBeatResponse struct {
 	ZoneName           string `json:"Zone"`
 	Status             uint8
 	Result             string
+}
+
+type DeleteFileRequest struct {
+	VolId uint64
+	Name  string
+}
+
+type DeleteFileResponse struct {
+	Status uint8
+	Result string
 }

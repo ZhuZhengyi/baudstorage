@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util"
+	"net"
 )
 
 const (
@@ -35,12 +35,12 @@ func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
 		taskMap:    make(map[string]*proto.AdminTask),
 		exitCh:     make(chan struct{}),
 	}
-	go sender.send()
+	go sender.process()
 
 	return
 }
 
-func (sender *AdminTaskSender) send() {
+func (sender *AdminTaskSender) process() {
 	ticker := time.Tick(time.Second)
 	for {
 		select {
@@ -61,14 +61,43 @@ func (sender *AdminTaskSender) send() {
 
 }
 
-func (sender *AdminTaskSender) sendTasks(tasks []*proto.AdminTask) error {
-	requestBody, err := json.Marshal(tasks)
-	if err != nil {
-		return err
+//todo suggest to define a new packet protocol for send control command
+func (sender *AdminTaskSender) sendTasks(tasks []*proto.AdminTask) (err error) {
+	//requestBody, err := json.Marshal(tasks)
+	//if err != nil {
+	//	return err
+	//}
+	//addr := sender.targetAddr
+	//_, err = util.PostToNode(requestBody, addr+TaskSendUrl)
+	for _, task := range tasks {
+		if err = sender.singleSend(task); err != nil {
+			break
+		}
 	}
-	addr := sender.targetAddr
-	_, err = util.PostToNode(requestBody, addr+TaskSendUrl)
 	return err
+}
+
+func (sender *AdminTaskSender) singleSend(task *proto.AdminTask) (err error) {
+	packet := proto.NewPacket()
+	packet.Opcode = task.OpCode
+	body, err := json.Marshal(task)
+	if err != nil {
+		return
+	}
+	packet.Size = uint32(len(body))
+	head := make([]byte, proto.HeaderSize)
+	packet.MarshalHeader(head)
+	conn, err := net.Dial("tcp", sender.targetAddr)
+	if err != nil {
+		return
+	}
+	conn.Write(head)
+	conn.Write(body)
+	return
+}
+
+func (sender *AdminTaskSender) batchSend(tasks []*proto.AdminTask) (err error) {
+	return
 }
 
 func (sender *AdminTaskSender) DelTask(t *proto.AdminTask) {
