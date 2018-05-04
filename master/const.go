@@ -46,6 +46,7 @@ const (
 const (
 	DefaultMetaTabletRange = 1 << 34
 	RuntimeStackBufSize    = 4096
+	ConnectionTimeout      = 5
 )
 
 //OpCode
