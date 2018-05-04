@@ -44,8 +44,7 @@ const (
 )
 
 const (
-	DefaultVolSize         = 1024 * 1024 * 1024 * 120
-	DefaultMetaTabletRange = 1 << 23
+	DefaultMetaTabletRange = 1 << 34
 	RuntimeStackBufSize    = 4096
 )
 

@@ -77,7 +77,7 @@ func (fc *FileInCore) generateFileCrcTask(volID uint64, liveVols []*Vol, volType
 	for index, crc := range fileCrcArr {
 		if index != maxCountFileCrcIndex {
 			badNode := crc.meta
-			tasks = append(tasks, generateOpDeleteFileTask(badNode.getLocationAddr()))
+			tasks = append(tasks, generateOpDeleteFileTask(badNode.getLocationAddr(), volID, fc.Name))
 			msg := fmt.Sprintf("checkFileCrcTaskErr volID:%v  File:%v  badCrc On :%v  ",
 				volID, fc.Name, badNode.getLocationAddr())
 			msg += (FileCrcSorterByCount)(fileCrcArr).log()
@@ -88,8 +88,8 @@ func (fc *FileInCore) generateFileCrcTask(volID uint64, liveVols []*Vol, volType
 	return
 }
 
-func generateOpDeleteFileTask(addr string) (task *proto.AdminTask) {
-	return proto.NewAdminTask(OpDeleteFile, addr, nil)
+func generateOpDeleteFileTask(addr string, volId uint64, name string) (task *proto.AdminTask) {
+	return proto.NewAdminTask(OpDeleteFile, addr, newDeleteFileRequest(volId, name))
 }
 
 func (fc *FileInCore) isCheckCrc() bool {
