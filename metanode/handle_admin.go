@@ -11,6 +11,7 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 	remoteAddr := conn.RemoteAddr()
 	m.masterAddr = net.ParseIP(remoteAddr.String()).String()
 	defer func() {
+		// Response task result to master.
 		resp := &proto.CreateMetaRangeResponse{}
 		if err != nil {
 			// Operation failure.
