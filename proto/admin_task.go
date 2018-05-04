@@ -28,6 +28,7 @@ type AdminTask struct {
 	SendTime     int64
 	SendCount    uint8
 	Request      interface{}
+	Response     interface{}
 }
 
 func (t *AdminTask) ToString() (msg string) {

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/google/btree"
@@ -64,7 +65,7 @@ func NewMetaGroupWrapper(namespace, masterHosts string) (*MetaGroupWrapper, erro
 	wrapper.groups = make(map[string]*MetaGroup)
 	wrapper.ranges = btree.New(32)
 	wrapper.allocMeta = make(chan string, MetaAllocBufSize)
-	if err := wrapper.UpdateMetaGroups(); err != nil {
+	if err := wrapper.update(); err != nil {
 		return nil, err
 	}
 	go wrapper.refresh()
@@ -78,6 +79,8 @@ func (wrapper *MetaGroupWrapper) Create(parentID uint64, name string, mode uint3
 	}
 	defer wrapper.putConn(parentConn, err)
 
+	var inodeConn net.Conn
+	var inodeCreated bool
 	// Create Inode
 	for {
 		// Reset timer for each select
@@ -90,23 +93,32 @@ func (wrapper *MetaGroupWrapper) Create(parentID uint64, name string, mode uint3
 			if mg == nil {
 				continue
 			}
-			inodeConn, err := wrapper.getConn(mg)
+			// establish the connection
+			inodeConn, err = wrapper.getConn(mg)
 			if err != nil {
 				continue
 			}
-			status, inode, err = wrapper.icreate(inodeConn)
+			status, inode, err = wrapper.icreate(inodeConn, mode)
 			if err == nil && status == int(proto.OpOk) {
-				// create inode is successful
+				// create inode is successful, and keep the connection
 				wrapper.allocMeta <- groupid
+				inodeCreated = true
 				break
 			}
+			// break the connection
+			wrapper.putConn(inodeConn, err)
 		}
 	}
-	//TODO: create a dentry in the parent inode
-	return
-}
 
-func (wrapper *MetaGroupWrapper) icreate(conn net.Conn) (status int, inode uint64, err error) {
+	if !inodeCreated {
+		return -1, 0, syscall.ENOMEM
+	}
+
+	status, err = wrapper.dcreate(parentConn, parentID, name, inode, mode)
+	if err != nil || status != int(proto.OpOk) {
+		wrapper.idelete(inodeConn, inode) //TODO: deal with error
+	}
+	wrapper.putConn(inodeConn, err)
 	return
 }
 
@@ -117,11 +129,189 @@ func (wrapper *MetaGroupWrapper) Lookup(parentID uint64, name string) (status in
 	}
 	defer wrapper.putConn(conn, err)
 
-	status, inode, mode, err = wrapper.lookup(parentID, name, conn)
+	status, inode, mode, err = wrapper.lookup(conn, parentID, name)
 	return
 }
 
-func (wrapper *MetaGroupWrapper) lookup(parentID uint64, name string, conn net.Conn) (status int, inode uint64, mode uint32, err error) {
+func (wrapper *MetaGroupWrapper) InodeGet(inode uint64) (status int, info *proto.InodeInfo, err error) {
+	_, conn, err := wrapper.connect(inode)
+	if err != nil {
+		return
+	}
+	defer wrapper.putConn(conn, err)
+
+	status, info, err = wrapper.iget(conn, inode)
+	return
+}
+
+func (wrapper *MetaGroupWrapper) Delete(parentID uint64, name string) (status int, err error) {
+	_, parentConn, err := wrapper.connect(parentID)
+	if err != nil {
+		return
+	}
+	defer wrapper.putConn(parentConn, err)
+
+	status, inode, err := wrapper.ddelete(parentConn, parentID, name)
+	if err != nil || status != int(proto.OpOk) {
+		return
+	}
+
+	_, inodeConn, err := wrapper.connect(inode)
+	if err != nil {
+		return
+	}
+	defer wrapper.putConn(inodeConn, err)
+
+	wrapper.idelete(inodeConn, inode) //TODO: deal with error
+	return
+}
+
+func (wrapper *MetaGroupWrapper) Rename(srcParentID uint64, srcName string, dstParentID uint64, dstName string) (status int, err error) {
+	_, srcParentConn, err := wrapper.connect(srcParentID)
+	if err != nil {
+		return
+	}
+	defer wrapper.putConn(srcParentConn, err)
+	_, dstParentConn, err := wrapper.connect(dstParentID)
+	if err != nil {
+		return
+	}
+	defer wrapper.putConn(dstParentConn, err)
+
+	// look up for the ino
+	status, inode, mode, err := wrapper.lookup(srcParentConn, srcParentID, srcName)
+	if err != nil || status != int(proto.OpOk) {
+		return
+	}
+	// create dentry in dst parent
+	status, err = wrapper.dcreate(dstParentConn, dstParentID, dstName, inode, mode)
+	if err != nil || status != int(proto.OpOk) {
+		return
+	}
+	// delete dentry from src parent
+	status, _, err = wrapper.ddelete(srcParentConn, srcParentID, srcName)
+	if err != nil || status != int(proto.OpOk) {
+		wrapper.ddelete(dstParentConn, dstParentID, dstName) //TODO: deal with error
+	}
+	return
+}
+
+func (wrapper *MetaGroupWrapper) ReadDir(parentID uint64) (children []proto.Dentry, err error) {
+	_, conn, err := wrapper.connect(parentID)
+	if err != nil {
+		return
+	}
+	defer wrapper.putConn(conn, err)
+
+	children, err = wrapper.readdir(conn, parentID)
+	return
+}
+
+func (wrapper *MetaGroupWrapper) icreate(conn net.Conn, mode uint32) (status int, inode uint64, err error) {
+	req := &proto.CreateInodeRequest{
+		Namespace: wrapper.namespace,
+		Mode:      mode,
+	}
+	packet := proto.NewPacket()
+	packet.Opcode = proto.OpMetaCreateInode
+	packet.Data, err = json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	packet, err = wrapper.send(conn, packet)
+	if err != nil {
+		return
+	}
+
+	resp := new(proto.CreateInodeResponse)
+	err = json.Unmarshal(packet.Data, &resp)
+	if err != nil {
+		return
+	}
+	return int(resp.Status), resp.Inode, nil
+}
+
+func (wrapper *MetaGroupWrapper) idelete(conn net.Conn, inode uint64) (status int, err error) {
+	req := &proto.DeleteInodeRequest{
+		Namespace: wrapper.namespace,
+		Inode:     inode,
+	}
+	packet := proto.NewPacket()
+	packet.Opcode = proto.OpMetaDeleteInode
+	packet.Data, err = json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	packet, err = wrapper.send(conn, packet)
+	if err != nil {
+		return
+	}
+
+	resp := new(proto.DeleteInodeResponse)
+	err = json.Unmarshal(packet.Data, &resp)
+	if err != nil {
+		return
+	}
+	return int(resp.Status), nil
+}
+
+func (wrapper *MetaGroupWrapper) dcreate(conn net.Conn, parentID uint64, name string, inode uint64, mode uint32) (status int, err error) {
+	req := &proto.CreateDentryRequest{
+		Namespace: wrapper.namespace,
+		ParentID:  parentID,
+		Inode:     inode,
+		Name:      name,
+		Mode:      mode,
+	}
+	packet := proto.NewPacket()
+	packet.Opcode = proto.OpMetaCreateDentry
+	packet.Data, err = json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	packet, err = wrapper.send(conn, packet)
+	if err != nil {
+		return
+	}
+
+	resp := new(proto.CreateDentryResponse)
+	err = json.Unmarshal(packet.Data, &resp)
+	if err != nil {
+		return
+	}
+	return int(resp.Status), nil
+}
+
+func (wrapper *MetaGroupWrapper) ddelete(conn net.Conn, parentID uint64, name string) (status int, inode uint64, err error) {
+	req := &proto.DeleteDentryRequest{
+		Namespace: wrapper.namespace,
+		ParentID:  parentID,
+		Name:      name,
+	}
+	packet := proto.NewPacket()
+	packet.Opcode = proto.OpMetaDeleteDentry
+	packet.Data, err = json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	packet, err = wrapper.send(conn, packet)
+	if err != nil {
+		return
+	}
+
+	resp := new(proto.DeleteDentryResponse)
+	err = json.Unmarshal(packet.Data, &resp)
+	if err != nil {
+		return
+	}
+	return int(resp.Status), resp.Inode, nil
+}
+
+func (wrapper *MetaGroupWrapper) lookup(conn net.Conn, parentID uint64, name string) (status int, inode uint64, mode uint32, err error) {
 	req := &proto.LookupRequest{
 		Namespace: wrapper.namespace,
 		ParentID:  parentID,
@@ -144,21 +334,10 @@ func (wrapper *MetaGroupWrapper) lookup(parentID uint64, name string, conn net.C
 	if err != nil {
 		return
 	}
-	return resp.Status, resp.Inode, resp.Mode, nil
+	return int(resp.Status), resp.Inode, resp.Mode, nil
 }
 
-func (wrapper *MetaGroupWrapper) InodeGet(inode uint64) (status int, info *proto.InodeInfo, err error) {
-	_, conn, err := wrapper.connect(inode)
-	if err != nil {
-		return
-	}
-	defer wrapper.putConn(conn, err)
-
-	status, info, err = wrapper.iget(inode, conn)
-	return
-}
-
-func (wrapper *MetaGroupWrapper) iget(inode uint64, conn net.Conn) (status int, info *proto.InodeInfo, err error) {
+func (wrapper *MetaGroupWrapper) iget(conn net.Conn, inode uint64) (status int, info *proto.InodeInfo, err error) {
 	req := &proto.InodeGetRequest{
 		Namespace: wrapper.namespace,
 		Inode:     inode,
@@ -180,35 +359,10 @@ func (wrapper *MetaGroupWrapper) iget(inode uint64, conn net.Conn) (status int, 
 	if err != nil {
 		return
 	}
-	return resp.Status, resp.Info, nil
+	return int(resp.Status), resp.Info, nil
 }
 
-func (wrapper *MetaGroupWrapper) Delete(parent uint64, name string) (status int, err error) {
-	//TODO: delete dentry in parent inode
-	//TODO: delete inode
-	return
-}
-
-func (wrapper *MetaGroupWrapper) Rename(srcParent uint64, srcName string, dstParent uint64, dstName string) (status int, err error) {
-	//TODO: delete dentry from src parent
-	//TODO: create dentry in dst parent
-	//TODO: update inode name
-	//TODO: commit the change
-	return
-}
-
-func (wrapper *MetaGroupWrapper) ReadDir(parentID uint64) (children []proto.Dentry, err error) {
-	_, conn, err := wrapper.connect(parentID)
-	if err != nil {
-		return
-	}
-	defer wrapper.putConn(conn, err)
-
-	children, err = wrapper.readdir(parentID, conn)
-	return
-}
-
-func (wrapper *MetaGroupWrapper) readdir(parentID uint64, conn net.Conn) (children []proto.Dentry, err error) {
+func (wrapper *MetaGroupWrapper) readdir(conn net.Conn, parentID uint64) (children []proto.Dentry, err error) {
 	req := &proto.ReadDirRequest{
 		Namespace: wrapper.namespace,
 		ParentID:  parentID,
@@ -238,14 +392,15 @@ func (wrapper *MetaGroupWrapper) refresh() {
 	for {
 		select {
 		case <-t.C:
-			if err := wrapper.UpdateMetaGroups(); err != nil {
+			if err := wrapper.update(); err != nil {
 				//TODO: log error
 			}
 		}
 	}
 }
 
-func (wrapper *MetaGroupWrapper) UpdateMetaGroups() error {
+// Update meta groups from master
+func (wrapper *MetaGroupWrapper) update() error {
 	nv, err := wrapper.getNamespaceView()
 	if err != nil {
 		return err

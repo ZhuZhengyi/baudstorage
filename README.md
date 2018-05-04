@@ -10,6 +10,8 @@ BaudStorage is a datacenter storage system for immutable objects and streaming f
 
 * file streams of append-only extents
 
+You can create any number of object buckets and filesystem instances on BaudStorage.
+
 ## Architecture
 
 BS consists of several components:
@@ -20,24 +22,28 @@ BS consists of several components:
 
 * datanode. de-clustering volumes of objects or extents; volume works as the replication unit and every volume is replicated via a consistent replication protocol. 
 
-Note that BS is a highly available storage system with strong consistency: the master, the metadata store, the object store, and the extent store are all consistently replication. 
+Note that BS is a highly available storage system with strong consistency: the master, the metadata store, the object store, and the extent store are all consistently replicated. 
+
+The detailed architecture design is in docs/Design.md
 
 
 ## APIs
 
+- Go SDK
+- Java SDK
 - RESTful S3-compatible API 
 - FUSE
-- Java SDK
-- Go SDK
 - NFS
 
 ## Use Cases and Ecosystem
 
 BaudEngine on BaudStorage
 
-minio integration
-
 HBase on BaudStorage
+
+MyRocks on BaudStorage
+
+minio integration
 
 nginx integration for image service
 

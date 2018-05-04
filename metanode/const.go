@@ -4,7 +4,6 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 )
 
-
 // Type alias.
 type (
 	// Client -> MetaNode create inode request struct
@@ -23,10 +22,6 @@ type (
 	DeleteDentryReq = proto.DeleteDentryRequest
 	// MetaNode -> Client delete dentry response struct
 	DeleteDentryResp = proto.DeleteDentryResponse
-	// Client -> MetaNode update inode name request struct
-	UpdateInoNameReq = proto.UpdateInodeNameRequest
-	// MetaNode -> Client update inode name response struct
-	UpdateInoNameResp = proto.UpdateInodeNameResponse
 	// Client -> MetaNode read dir request struct
 	ReadDirReq = proto.ReadDirRequest
 	// MetaNode -> Client read dir response struct
