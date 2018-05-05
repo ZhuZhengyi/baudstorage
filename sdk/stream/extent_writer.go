@@ -32,22 +32,22 @@ var (
 )
 
 type ExtentWriter struct {
-	inode            uint64
-	requestQueue     *list.List
+	inode            uint64     //Current write Inode
+	requestQueue     *list.List //sendPacketList
 	requestQueueLock sync.Mutex
 	volGroup         *sdk.VolGroup
 	wraper           *sdk.VolGroupWraper
-	extentId         uint64
+	extentId         uint64 //current ExtentId
 	currentPacket    *Packet
-	seqNo            uint64
-	byteAck          uint64
+	seqNo            uint64 //Current Send Packet Seq
+	byteAck          uint64 //DataNode Has Ack Bytes
 	offset           int
 	connect          net.Conn
-	handleCh         chan bool
-	recoverCnt       int
+	handleCh         chan bool //a Chan for signal recive goroutine recive packet from connect
+	recoverCnt       int       //if failed,then recover contine,this is recover count
 
-	cond       *sync.Cond
-	isFlushIng bool
+	cond       *sync.Cond //flushCond use for flush func
+	isFlushIng bool       //isFlushIng
 	sync.Mutex
 }
 
@@ -68,11 +68,13 @@ func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper
 	return
 }
 
+//InitFlushCond   when user call flush func
 func (writer *ExtentWriter) initFlushCond() {
 	writer.cond = sync.NewCond(&sync.Mutex{})
 	writer.isFlushIng = true
 }
 
+//when all packet has ack ,then signal send goroutine
 func (writer *ExtentWriter) signalFlushCond() {
 	if writer.isAllFlushed() {
 		writer.cond.L.Lock()
@@ -82,6 +84,7 @@ func (writer *ExtentWriter) signalFlushCond() {
 	}
 }
 
+//when flush func called,and sdk must wait
 func (writer *ExtentWriter) flushWait() {
 	start := time.Now().UnixNano()
 	for !writer.isAllFlushed() {
@@ -94,6 +97,7 @@ func (writer *ExtentWriter) flushWait() {
 
 }
 
+//user call write func
 func (writer *ExtentWriter) write(data []byte, size int) (total int, err error) {
 	var canWrite int
 	defer func() {
@@ -105,13 +109,13 @@ func (writer *ExtentWriter) write(data []byte, size int) (total int, err error) 
 	}()
 	for total < size && !writer.isFullExtent() {
 		if writer.getPacket() == nil {
-			writer.addSeqNo()
+			writer.addSeqNo() //init a packet
 			writer.setPacket(NewWritePacket(writer.volGroup, writer.extentId, writer.getSeqNo(), writer.offset))
 		}
-		canWrite = writer.getPacket().fill(data[total:size], size-total)
-		if writer.getPacket().isFull() || canWrite == 0 {
-			err = writer.sendCurrPacket()
-			if err != nil && !writer.recover() {
+		canWrite = writer.getPacket().fill(data[total:size], size-total) //fill this packet
+		if writer.getPacket().isFullPacket() || canWrite == 0 {
+			err = writer.sendCurrPacket()        //send packet to datanode
+			if err != nil && !writer.recover() { //if failed,recover it
 				break
 			}
 			err = nil
@@ -132,15 +136,15 @@ func (writer *ExtentWriter) sendCurrPacket() (err error) {
 	packet := writer.getPacket()
 	writer.pushRequestToQueue(packet)
 	writer.setPacket(nil)
-	writer.offset += packet.getDataLength()
+	writer.offset += packet.getPacketLength()
 	//fmt.Printf("packet[%v] pkgOffset[%v] pkgSize[%v] isfullpkg[%v]\n",packet.GetUniqLogId(),packet.Offset,packet.Size,
 	//	uint32(packet.Offset%CFSBLOCKSIZE)+packet.Size)
-	err = packet.writeTo(writer.connect)
+	err = packet.writeTo(writer.connect) //if send packet,then signal recive goroutine for recive from connect
 	if err == nil {
 		writer.handleCh <- ContinueRecive
 		return
 	} else {
-		writer.cleanHandleCh()
+		writer.cleanHandleCh() //if send packet failed,clean handleCh
 	}
 	err = errors.Annotatef(err, "extentWriter[%v] sendCurrentPacket", writer.toString())
 	log.LogError(err.Error())
@@ -148,6 +152,7 @@ func (writer *ExtentWriter) sendCurrPacket() (err error) {
 	return err
 }
 
+//if send failed,recover it
 func (writer *ExtentWriter) recover() (sucess bool) {
 	if writer.recoverCnt > ExtentWriterRecoverCnt {
 		return
@@ -170,18 +175,19 @@ func (writer *ExtentWriter) recover() (sucess bool) {
 		log.LogError(err.Error())
 
 	}()
+	//get connect from volGroupWraper
 	if connect, err = writer.wraper.GetConnect(writer.volGroup.Hosts[0]); err != nil {
 		return
 	}
 	writer.setConnect(connect)
-	requests := writer.getRequests()
+	requests := writer.getRequests() //get sendList Packet,then write it to datanode
 	for _, request := range requests {
 		err = request.WriteToConn(writer.getConnect())
 		if err != nil {
 			return
 		}
 		writer.recoverCnt = 0
-		writer.handleCh <- ContinueRecive
+		writer.handleCh <- ContinueRecive //signal recive goroutine,recive ack from connect
 	}
 
 	return true
@@ -198,10 +204,12 @@ func (writer *ExtentWriter) cleanHandleCh() {
 	}
 }
 
+//every Extent is FULL,must is 64MB
 func (writer *ExtentWriter) isFullExtent() bool {
 	return writer.offset+CFSBLOCKSIZE >= CFSEXTENTSIZE
 }
 
+//check allPacket has Ack
 func (writer *ExtentWriter) isAllFlushed() bool {
 	return !(writer.getQueueListLen() > 0 || writer.getPacket() != nil)
 }
@@ -216,7 +224,7 @@ func (writer *ExtentWriter) toString() string {
 		len(writer.handleCh), writer.getQueueListLen(), currPkgMesg)
 }
 
-func (writer *ExtentWriter) checkIsFullExtent() {
+func (writer *ExtentWriter) checkIsStopReciveGoRoutine() {
 	if writer.isAllFlushed() && writer.isFullExtent() {
 		writer.handleCh <- NotRecive
 	}
@@ -227,7 +235,7 @@ func (writer *ExtentWriter) flush() (err error) {
 	err = errors.Annotatef(FlushErr, "cannot flush writer [%v]", writer.toString())
 	log.LogInfo(fmt.Sprintf("ActionFlushExtent [%v] start", writer.toString()))
 	defer func() {
-		writer.checkIsFullExtent()
+		writer.checkIsStopReciveGoRoutine()
 		if err == nil {
 			log.LogInfo(writer.toString() + " flush ok")
 			return
@@ -258,10 +266,7 @@ func (writer *ExtentWriter) flush() (err error) {
 	if !writer.isAllFlushed() {
 		return errors.Annotatef(FlushErr, "cannot flush writer [%v]", writer.toString())
 	}
-	if writer.isAllFlushed() {
-		err = nil
-		return
-	}
+	err = nil
 
 	return
 }

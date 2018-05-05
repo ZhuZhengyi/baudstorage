@@ -65,11 +65,11 @@ func (p *Packet) fill(data []byte, size int) (canWrite int) {
 	return
 }
 
-func (p *Packet) isFull() bool {
+func (p *Packet) isFullPacket() bool {
 	return len(p.Data)-CFSBLOCKSIZE == 0
 }
 
-func (p *Packet) getDataLength() int {
+func (p *Packet) getPacketLength() int {
 	return len(p.Data)
 }
 
