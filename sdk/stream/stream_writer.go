@@ -37,7 +37,7 @@ func NewStreamWriter(wraper *sdk.VolGroupWraper, inode uint64, keys *chan Extent
 	stream.keys = keys
 	stream.wraper = wraper
 	stream.currentInode = inode
-	go stream.flush()
+	go stream.autoFlushThread()
 
 	return
 }
@@ -237,7 +237,7 @@ func (stream *StreamWriter) createExtent(vol *sdk.VolGroup) (extentId uint64, er
 	return
 }
 
-func (stream *StreamWriter) flush() {
+func (stream *StreamWriter) autoFlushThread() {
 	ticker := time.Tick(time.Second * 2)
 	for {
 		select {

@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	FlushErr      = errors.New(" flush error")
+	FlushErr      = errors.New(" backEndlush error")
 	FullExtentErr = errors.New("full Extent")
 )
 
@@ -46,7 +46,7 @@ type ExtentWriter struct {
 	handleCh         chan bool //a Chan for signal recive goroutine recive packet from connect
 	recoverCnt       int       //if failed,then recover contine,this is recover count
 
-	cond       *sync.Cond //flushCond use for flush func
+	cond       *sync.Cond //flushCond use for backEndlush func
 	isFlushIng bool       //isFlushIng
 	sync.Mutex
 }
@@ -68,7 +68,7 @@ func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper
 	return
 }
 
-//InitFlushCond   when user call flush func
+//InitFlushCond   when user call backEndlush func
 func (writer *ExtentWriter) initFlushCond() {
 	writer.cond = sync.NewCond(&sync.Mutex{})
 	writer.isFlushIng = true
@@ -84,7 +84,7 @@ func (writer *ExtentWriter) signalFlushCond() {
 	}
 }
 
-//when flush func called,and sdk must wait
+//when backEndlush func called,and sdk must wait
 func (writer *ExtentWriter) flushWait() {
 	start := time.Now().UnixNano()
 	for !writer.isAllFlushed() {
@@ -232,12 +232,12 @@ func (writer *ExtentWriter) checkIsStopReciveGoRoutine() {
 }
 
 func (writer *ExtentWriter) flush() (err error) {
-	err = errors.Annotatef(FlushErr, "cannot flush writer [%v]", writer.toString())
+	err = errors.Annotatef(FlushErr, "cannot backEndlush writer [%v]", writer.toString())
 	log.LogInfo(fmt.Sprintf("ActionFlushExtent [%v] start", writer.toString()))
 	defer func() {
 		writer.checkIsStopReciveGoRoutine()
 		if err == nil {
-			log.LogInfo(writer.toString() + " flush ok")
+			log.LogInfo(writer.toString() + " backEndlush ok")
 			return
 		}
 		if !writer.recover() {
@@ -264,7 +264,7 @@ func (writer *ExtentWriter) flush() (err error) {
 	writer.flushWait()
 
 	if !writer.isAllFlushed() {
-		return errors.Annotatef(FlushErr, "cannot flush writer [%v]", writer.toString())
+		return errors.Annotatef(FlushErr, "cannot backEndlush writer [%v]", writer.toString())
 	}
 	err = nil
 
