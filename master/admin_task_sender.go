@@ -26,6 +26,7 @@ type AdminTaskSender struct {
 	taskMap    map[string]*proto.AdminTask
 	sync.Mutex
 	exitCh chan struct{}
+	conn   *net.TCPConn
 }
 
 func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
@@ -69,11 +70,22 @@ func (sender *AdminTaskSender) sendTasks(tasks []*proto.AdminTask) (err error) {
 	//}
 	//addr := sender.targetAddr
 	//_, err = util.PostToNode(requestBody, addr+TaskSendUrl)
+	conn, err := net.DialTimeout("tcp", sender.targetAddr, ConnectionTimeout*time.Second)
+	if err != nil {
+		return
+	}
+
+	if sender.conn == nil {
+		sender.conn = conn.(*net.TCPConn)
+		sender.conn.SetNoDelay(true)
+	}
 	for _, task := range tasks {
 		if err = sender.singleSend(task); err != nil {
 			break
 		}
 	}
+	sender.conn.Close()
+	sender.conn = nil
 	return err
 }
 
@@ -87,12 +99,8 @@ func (sender *AdminTaskSender) singleSend(task *proto.AdminTask) (err error) {
 	packet.Size = uint32(len(body))
 	head := make([]byte, proto.HeaderSize)
 	packet.MarshalHeader(head)
-	conn, err := net.Dial("tcp", sender.targetAddr)
-	if err != nil {
-		return
-	}
-	conn.Write(head)
-	conn.Write(body)
+	sender.conn.Write(head)
+	sender.conn.Write(body)
 	return
 }
 

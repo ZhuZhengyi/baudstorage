@@ -15,7 +15,6 @@ import (
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
-	//"hash/crc32"
 	"hash/crc32"
 )
 

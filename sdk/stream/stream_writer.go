@@ -22,13 +22,12 @@ type StreamWriter struct {
 	sync.Mutex
 	wraper          *sdk.VolGroupWraper
 	keys            *chan ExtentKey
-	currentWriter   *ExtentWriter
-	errCount        int
-	excludeVols     []uint32
-	bytesWriten     int
-	currentVolId    uint32
-	currentExtentId uint64
-	currentInode    uint64
+	currentWriter   *ExtentWriter //current ExtentWriter
+	errCount        int           //error count
+	excludeVols     []uint32      //exclude Vols
+	currentVolId    uint32        //current VolId
+	currentExtentId uint64        //current ExtentId
+	currentInode    uint64        //inode
 	flushLock       sync.Mutex
 }
 
@@ -38,23 +37,26 @@ func NewStreamWriter(wraper *sdk.VolGroupWraper, inode uint64, keys *chan Extent
 	stream.keys = keys
 	stream.wraper = wraper
 	stream.currentInode = inode
-	go stream.flush()
+	go stream.autoFlushThread()
 
 	return
 }
 
+//get current extent writer
 func (stream *StreamWriter) getWriter() (writer *ExtentWriter) {
 	stream.Lock()
 	defer stream.Unlock()
 	return stream.currentWriter
 }
 
+//set current extent Writer to null
 func (stream *StreamWriter) setWriterToNull() {
 	stream.Lock()
 	defer stream.Unlock()
 	stream.currentWriter = nil
 }
 
+//set writer
 func (stream *StreamWriter) setWriter(writer *ExtentWriter) {
 	stream.Lock()
 	defer stream.Unlock()
@@ -66,11 +68,12 @@ func (stream *StreamWriter) toString() (m string) {
 	if stream.getWriter() != nil {
 		currentWriterMsg = stream.getWriter().toString()
 	}
-	return fmt.Sprintf("inode[%v] currentVol[%v] currentExtentId[%v] bytesWriten[%v]"+
+	return fmt.Sprintf("inode[%v] currentVol[%v] currentExtentId[%v]"+
 		" errCount[%v]", stream.currentInode, stream.currentVolId, currentWriterMsg,
-		stream.bytesWriten, stream.errCount)
+		stream.errCount)
 }
 
+//stream init,alloc a extent ,select vol and extent
 func (stream *StreamWriter) init() (err error) {
 	if stream.getWriter() != nil && stream.getWriter().isFullExtent() {
 		err = stream.flushCurrExtentWriter()
@@ -156,7 +159,7 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 		}
 	}()
 
-	sendList := stream.getWriter().getNeedRetrySendPacket()
+	sendList := stream.getWriter().getNeedRetrySendPackets()
 	if err = stream.allocateNewExtentWriter(); err != nil {
 		return
 	}
@@ -234,7 +237,7 @@ func (stream *StreamWriter) createExtent(vol *sdk.VolGroup) (extentId uint64, er
 	return
 }
 
-func (stream *StreamWriter) flush() {
+func (stream *StreamWriter) autoFlushThread() {
 	ticker := time.Tick(time.Second * 2)
 	for {
 		select {

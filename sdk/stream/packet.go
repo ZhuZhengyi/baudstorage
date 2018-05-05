@@ -47,7 +47,7 @@ func NewReply(reqId int64, volId uint32, extentId uint64) (p *Packet) {
 	return
 }
 
-func IsEqual(request, reply *Packet) bool {
+func IsEqualPacket(request, reply *Packet) bool {
 	if request.ReqID == reply.ReqID && request.VolID == reply.VolID && request.FileID == reply.FileID {
 		return true
 	}
@@ -65,11 +65,11 @@ func (p *Packet) fill(data []byte, size int) (canWrite int) {
 	return
 }
 
-func (p *Packet) isFull() bool {
-	return len(p.Data)-CFSBLOCKSIZE == 0
+func (p *Packet) isFullPacket() bool {
+	return p.Size-CFSBLOCKSIZE == 0
 }
 
-func (p *Packet) getDataLength() int {
+func (p *Packet) getPacketLength() int {
 	return len(p.Data)
 }
 
