@@ -1,11 +1,7 @@
 package metanode
 
 import (
-	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/raft"
-	"path"
-	"strings"
 	"sync"
 	"time"
 
@@ -16,40 +12,55 @@ import (
 )
 
 const (
-	defaultBTreeDegree = 32
-	dentryDataDirName  = "dentry"
-	inodeDataDirName   = "inode"
-	seqSeparator       = "*"
+	defaultBTreeDegree  = 32
+	dentryDataKeyPrefix = "dentry"
+	inodeDataKeyPrefix  = "inode"
+	raftRole            = "MetaRange"
 )
 
-type MetaRangeFsm struct {
-	// Props
-	metaRangeId string
-	dataPath    string
-	// Runtime
-	dentryMu     sync.RWMutex          // Mutex for dentry operation.
-	dentryTree   *btree.BTree          // B-Tree for dentry.
-	dentryStore  *raftopt.RocksDBStore // Repository for dentry.
-	inodeMu      sync.RWMutex          // Mutex for inode operation.
-	inodeTree    *btree.BTree          // B-Tree for inode.
-	inodeStore   *raftopt.RocksDBStore // Repository for inode.
-	raftStoreFsm *raftopt.RaftStoreFsm // Raft store.
+type CursorUpdateHandler func(inodeId uint64)
+
+// MetaRangeFsmConfig wraps necessary properties for MetaRangeFsm instantiation.
+type MetaRangeFsmConfig struct {
+	RaftId      uint64
+	RaftGroupId uint64
+	MetaDataDir string
+	RaftDataDir string
+	Raft        *raft.RaftServer
 }
 
-func NewMetaRangeFsm(id, groupId uint64, role, dataPath string, raft *raft.RaftServer) *MetaRangeFsm {
-	// Generate id
+// MetaRangeFsm responsible for sync data log with other meta range through Raft
+// and manage dentry and inode by B-Tree in memory.
+type MetaRangeFsm struct {
+	metaRangeId         string                // ID of this meta range.
+	metaDir             string                // Data file directory.
+	metaStore           *raftopt.RocksDBStore // Repository for meta include dentry and inode.
+	dentryMu            sync.RWMutex          // Mutex for dentry operation.
+	dentryTree          *btree.BTree          // B-Tree for dentry.
+	inodeMu             sync.RWMutex          // Mutex for inode operation.
+	inodeTree           *btree.BTree          // B-Tree for inode.
+	inodeStore          *raftopt.RocksDBStore // Repository for inode.
+	raftStoreFsm        *raftopt.RaftStoreFsm // Raft store.
+	cursorUpdateHandler CursorUpdateHandler   // Callback method for meta range cursor update.
+}
 
-	// Prepare path
-	dentryDataDir := path.Join(dataPath, dentryDataDirName)
-	inodeDataDir := path.Join(dataPath, inodeDataDirName)
+func NewMetaRangeFsm(cfg MetaRangeFsmConfig) *MetaRangeFsm {
 	return &MetaRangeFsm{
-		dataPath:     dataPath,
+		metaDir:      cfg.MetaDataDir,
+		metaStore:    raftopt.NewRocksDBStore(cfg.MetaDataDir),
 		dentryTree:   btree.New(defaultBTreeDegree),
-		dentryStore:  raftopt.NewRocksDBStore(dentryDataDir),
 		inodeTree:    btree.New(defaultBTreeDegree),
-		inodeStore:   raftopt.NewRocksDBStore(inodeDataDir),
-		raftStoreFsm: raftopt.NewRaftStoreFsm(id, groupId, role, dataPath, raft),
+		raftStoreFsm: raftopt.NewRaftStoreFsm(cfg.RaftId, cfg.RaftGroupId, raftRole, cfg.RaftDataDir, cfg.Raft),
 	}
+}
+
+func (mf *MetaRangeFsm) RegisterCursorUpdateHandler(handler CursorUpdateHandler) {
+	mf.cursorUpdateHandler = handler
+}
+
+// Restore load snapshot from disk and restore status.
+func (mf *MetaRangeFsm) Restore() {
+
 }
 
 // GetDentry query dentry from DentryTree with specified dentry info;
@@ -81,8 +92,12 @@ func (mf *MetaRangeFsm) GetInode(ino *Inode) (status uint8) {
 }
 
 // CreateDentry insert dentry into dentry tree.
+// Workflow:
+//  Step 1. Check dentry tree.
+//  Step 2. Commit to raft log with inited dentry data.
+//  Step 3. Wait for raft log applied.
 func (mf *MetaRangeFsm) CreateDentry(dentry *Dentry) (status uint8) {
-
+	// TODO: Implement it.
 	status = proto.OpOk
 	mf.dentryMu.Lock()
 	if mf.dentryTree.Has(dentry) {
@@ -92,15 +107,15 @@ func (mf *MetaRangeFsm) CreateDentry(dentry *Dentry) (status uint8) {
 	}
 	mf.dentryTree.ReplaceOrInsert(dentry)
 	mf.dentryMu.Unlock()
-	// TODO: Sync with rafe. If success then store to RocksDB.
-
 	return
 }
 
 // DeleteDentry delete dentry from dentry tree.
+// Workflow:
+//  Step 1. Commit delete operation to raft log.
+//  Step 2. Wait for raft log applied.
 func (mf *MetaRangeFsm) DeleteDentry(dentry *Dentry) (status uint8) {
-
-	// Delete dentry from memory.
+	// TODO: Implement it.
 	status = proto.OpOk
 	mf.dentryMu.Lock()
 	item := mf.dentryTree.Delete(dentry)
@@ -110,14 +125,16 @@ func (mf *MetaRangeFsm) DeleteDentry(dentry *Dentry) (status uint8) {
 		return
 	}
 	dentry = item.(*Dentry)
-	//TODO: raft sync
-
 	return
 }
 
 // CreateInode create inode to inode tree.
+// Workflow:
+//  Step 1. Check inode tree.
+//  Step 2. Commit to raft log with inited inode data.
+//  Step 3. Wait for raft log applied.
 func (mf *MetaRangeFsm) CreateInode(ino *Inode) (status uint8) {
-
+	// TODO: Implement it.
 	status = proto.OpOk
 	mf.inodeMu.Lock()
 	if mf.inodeTree.Has(ino) {
@@ -127,15 +144,15 @@ func (mf *MetaRangeFsm) CreateInode(ino *Inode) (status uint8) {
 	}
 	mf.inodeTree.ReplaceOrInsert(ino)
 	mf.inodeMu.Unlock()
-	//TODO: raft sync
-
 	return
 }
 
 // DeleteInode delete specified inode item from inode tree.
+// Workflow:
+//  Step 1. Commit delete operation to raft log.
+//  Step 2. Wait for raft log applied.
 func (mf *MetaRangeFsm) DeleteInode(ino *Inode) (status uint8) {
-
-	// Step 1. Delete inode item from inode tree.
+	// TODO: Implement it.
 	status = proto.OpOk
 	mf.inodeMu.Lock()
 	item := mf.inodeTree.Delete(ino)
@@ -145,8 +162,6 @@ func (mf *MetaRangeFsm) DeleteInode(ino *Inode) (status uint8) {
 		return
 	}
 	ino = item.(*Inode)
-	//TODO: raft sync
-
 	return
 }
 

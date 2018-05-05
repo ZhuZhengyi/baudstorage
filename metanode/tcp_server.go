@@ -1,10 +1,10 @@
 package metanode
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net"
+	"strconv"
 	"time"
 
 	"errors"
@@ -15,19 +15,20 @@ import (
 )
 
 // StartTcpService bind and listen specified port and accept tcp connections.
-func (m *MetaNode) startTcpService() (err error) {
+func (m *MetaNode) startTcpServer() (err error) {
 	// Init and start server.
-	ln, err := net.Listen("tcp", m.addr)
+	m.httpStopC = make(chan uint8)
+	ln, err := net.Listen("tcp", ":"+strconv.Itoa(m.listen))
 	if err != nil {
 		return
 	}
 	// Start goroutine for tcp accept handing.
-	go func(ctx context.Context) {
+	go func(stopC chan uint8) {
 		defer ln.Close()
 		for {
 			conn, err := ln.Accept()
 			select {
-			case <-ctx.Done():
+			case <-stopC:
 				return
 			default:
 			}
@@ -35,19 +36,30 @@ func (m *MetaNode) startTcpService() (err error) {
 				continue
 			}
 			// Start a goroutine for tcp connection handling.
-			go m.serveTcpConn(conn, ctx)
+			go m.serveTcpConn(conn, stopC)
 		}
-	}(m.ctx)
+	}(m.httpStopC)
 	return
+}
+
+func (m *MetaNode) stopTcpServer() {
+	if m.httpStopC != nil {
+		defer func() {
+			if r := recover(); r != nil {
+				log.LogError("action[StopTcpServer],err:%v", r)
+			}
+		}()
+		close(m.httpStopC)
+	}
 }
 
 // ServeTcpConn read data from specified tco connection until connection
 // closed by remote or tcp service have been shutdown.
-func (m *MetaNode) serveTcpConn(conn net.Conn, ctx context.Context) {
+func (m *MetaNode) serveTcpConn(conn net.Conn, stopC chan uint8) {
 	defer conn.Close()
 	for {
 		select {
-		case <-ctx.Done():
+		case <-stopC:
 			return
 		default:
 		}

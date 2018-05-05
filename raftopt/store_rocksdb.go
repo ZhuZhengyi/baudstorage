@@ -37,9 +37,13 @@ func (rs *RocksDBStore) Open() error {
 		return err
 	}
 	rs.db = db
-
 	return nil
+}
 
+func (rs *RocksDBStore) Close() {
+	if rs.db != nil {
+		rs.db.Close()
+	}
 }
 
 func (rs *RocksDBStore) Delete(key string) (interface{}, error) {
