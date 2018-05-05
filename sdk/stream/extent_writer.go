@@ -87,6 +87,7 @@ func (writer *ExtentWriter) signalFlushCond() {
 //when backEndlush func called,and sdk must wait
 func (writer *ExtentWriter) flushWait() {
 	start := time.Now().UnixNano()
+	writer.cond.L.Lock()
 	for !writer.isAllFlushed() {
 		if time.Now().UnixNano()-start > int64(time.Second*10) {
 			break
@@ -108,35 +109,48 @@ func (writer *ExtentWriter) write(data []byte, size int) (total int, err error) 
 		}
 	}()
 	for total < size && !writer.isFullExtent() {
-		if writer.getPacket() == nil {
+		writer.Lock()
+		if writer.currentPacket == nil {
 			writer.addSeqNo() //init a packet
-			writer.setPacket(NewWritePacket(writer.volGroup, writer.extentId, writer.getSeqNo(), writer.offset))
+			writer.currentPacket = NewWritePacket(writer.volGroup, writer.extentId, writer.getSeqNo(), writer.offset)
 		}
-		canWrite = writer.getPacket().fill(data[total:size], size-total) //fill this packet
-		if writer.getPacket().isFullPacket() || canWrite == 0 {
+		canWrite = writer.currentPacket.fill(data[total:size], size-total) //fill this packet
+		if writer.IsFullCurrentPacket() || canWrite == 0 {
+			writer.Unlock()
 			err = writer.sendCurrPacket()        //send packet to datanode
 			if err != nil && !writer.recover() { //if failed,recover it
 				break
 			}
 			err = nil
+		} else {
+			writer.Unlock()
 		}
 		total += canWrite
+
 	}
 
 	return
 }
 
+func (writer *ExtentWriter) IsFullCurrentPacket() bool {
+	return writer.currentPacket.isFullPacket()
+}
+
 func (writer *ExtentWriter) sendCurrPacket() (err error) {
-	if writer.getPacket() == nil {
+	writer.Lock()
+	if writer.currentPacket == nil {
+		writer.Unlock()
 		return
 	}
-	if writer.getPacket().Size == 0 {
+	if writer.currentPacket.getPacketLength() == 0 {
+		writer.Unlock()
 		return
 	}
-	packet := writer.getPacket()
+	packet := writer.currentPacket
 	writer.pushRequestToQueue(packet)
-	writer.setPacket(nil)
+	writer.currentPacket = nil
 	writer.offset += packet.getPacketLength()
+	writer.Unlock()
 	//fmt.Printf("packet[%v] pkgOffset[%v] pkgSize[%v] isfullpkg[%v]\n",packet.GetUniqLogId(),packet.Offset,packet.Size,
 	//	uint32(packet.Offset%CFSBLOCKSIZE)+packet.Size)
 	err = packet.writeTo(writer.connect) //if send packet,then signal recive goroutine for recive from connect

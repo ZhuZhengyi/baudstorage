@@ -66,7 +66,7 @@ func (p *Packet) fill(data []byte, size int) (canWrite int) {
 }
 
 func (p *Packet) isFullPacket() bool {
-	return len(p.Data)-CFSBLOCKSIZE == 0
+	return p.Size-CFSBLOCKSIZE == 0
 }
 
 func (p *Packet) getPacketLength() int {
