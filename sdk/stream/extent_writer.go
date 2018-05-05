@@ -46,8 +46,8 @@ type ExtentWriter struct {
 	handleCh         chan bool
 	recoverCnt       int
 
-	flushCond *sync.Cond
-	needFlush bool
+	cond       *sync.Cond
+	isFlushIng bool
 	sync.Mutex
 }
 
@@ -66,6 +66,32 @@ func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper
 	go writer.recive()
 
 	return
+}
+
+func (writer *ExtentWriter) initFlushCond() {
+	writer.cond = sync.NewCond(&sync.Mutex{})
+	writer.isFlushIng = true
+}
+
+func (writer *ExtentWriter) signalFlushCond() {
+	if writer.isAllFlushed() {
+		writer.cond.L.Lock()
+		writer.cond.Signal()
+		writer.isFlushIng = false
+		writer.cond.L.Unlock()
+	}
+}
+
+func (writer *ExtentWriter) flushWait() {
+	start := time.Now().UnixNano()
+	for !writer.isAllFlushed() {
+		if time.Now().UnixNano()-start > int64(time.Second*10) {
+			break
+		}
+		writer.cond.Wait()
+	}
+	writer.cond.L.Unlock()
+
 }
 
 func (writer *ExtentWriter) write(data []byte, size int) (total int, err error) {
@@ -226,17 +252,9 @@ func (writer *ExtentWriter) flush() (err error) {
 		err = nil
 		return
 	}
-	writer.flushCond = sync.NewCond(&sync.Mutex{})
-	writer.flushCond.L.Lock()
-	writer.needFlush = true
-	start := time.Now().UnixNano()
-	for !writer.isAllFlushed() {
-		if time.Now().UnixNano()-start > int64(time.Second*10) {
-			break
-		}
-		writer.flushCond.Wait()
-	}
-	writer.flushCond.L.Unlock()
+	writer.initFlushCond()
+	writer.flushWait()
+
 	if !writer.isAllFlushed() {
 		return errors.Annotatef(FlushErr, "cannot flush writer [%v]", writer.toString())
 	}
@@ -258,7 +276,7 @@ func (writer *ExtentWriter) close() {
 }
 
 func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet) (err error) {
-	if !IsEqual(request, reply) {
+	if !IsEqualPacket(request, reply) {
 		writer.connect.Close()
 		return errors.Annotatef(fmt.Errorf("processReply recive [%v] but actual recive [%v]",
 			request.GetUniqLogId(), reply.GetUniqLogId()), "writer[%v]", writer.toString())
@@ -271,12 +289,8 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 	writer.removeRquest(e)
 	writer.addByteAck(uint64(request.Size))
 	log.LogDebug(fmt.Sprintf("ActionProcessReply[%v] is recived", request.GetUniqLogId()))
-
-	if writer.needFlush && writer.isAllFlushed() {
-		writer.flushCond.L.Lock()
-		writer.flushCond.Signal()
-		writer.needFlush = false
-		writer.flushCond.L.Unlock()
+	if writer.isFlushIng {
+		writer.signalFlushCond()
 	}
 
 	return nil
@@ -380,7 +394,7 @@ func (writer *ExtentWriter) getQueueListLen() (length int) {
 	return writer.requestQueue.Len()
 }
 
-func (writer *ExtentWriter) getNeedRetrySendPacket() (sendList *list.List) {
+func (writer *ExtentWriter) getNeedRetrySendPackets() (sendList *list.List) {
 	writer.requestQueueLock.Lock()
 	sendList = writer.requestQueue
 	lastPacket := writer.currentPacket

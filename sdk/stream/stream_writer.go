@@ -156,7 +156,7 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 		}
 	}()
 
-	sendList := stream.getWriter().getNeedRetrySendPacket()
+	sendList := stream.getWriter().getNeedRetrySendPackets()
 	if err = stream.allocateNewExtentWriter(); err != nil {
 		return
 	}
