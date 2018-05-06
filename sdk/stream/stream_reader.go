@@ -10,7 +10,6 @@ import (
 type StreamReader struct {
 	inode     uint64
 	wraper    *sdk.VolGroupWraper
-	vol       *sdk.VolGroup
 	readers   []*ExtentReader
 	updateFn  func(inode uint64) (sk StreamKey, err error)
 	streamKey StreamKey
@@ -96,8 +95,17 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader) {
 	readers = make([]*ExtentReader, 0)
 	for _, r := range stream.readers {
-		//if r.inInodeOffset>offset &&
+		if r.startInodeOffset >offset && offset<r.endInodeOffset {
+			readers=append(readers,r)
+		}else if r.startInodeOffset >offset+size && r.endInodeOffset >offset+size{
+			readers=append(readers,r)
+		}
+		if len(readers)>=2{
+			break
+		}
 	}
 
 	return
 }
+
+
