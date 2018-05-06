@@ -19,6 +19,10 @@ type StreamKey struct {
 	Extents []ExtentKey
 }
 
+func (ek *ExtentKey) isEquare(k ExtentKey) (equare bool) {
+	return ek.VolId == k.VolId && ek.ExtentId == k.ExtentId && ek.Size == k.Size
+}
+
 func NewStreamKey(ino uint64) *StreamKey {
 	return &StreamKey{
 		Inode: ino,
@@ -46,6 +50,10 @@ func (sk *StreamKey) Size() (bytes uint64) {
 		bytes += uint64(okey.Size)
 	}
 	return
+}
+
+func (sk *StreamKey) GetExtentLen() int {
+	return len(sk.Extents)
 }
 
 // Range calls f sequentially for each key and value present in the extent key collection.
