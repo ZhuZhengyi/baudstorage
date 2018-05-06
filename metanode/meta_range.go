@@ -1,9 +1,18 @@
 package metanode
 
 import (
+	"encoding/binary"
 	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/raftopt"
+	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/raft"
+	"path"
+	"regexp"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk/stream"
@@ -14,39 +23,186 @@ var (
 	ErrInodeOutOfRange = errors.New("inode ID out of range.")
 )
 
-type MetaRange struct {
-	id          string // Consist with 'namespace_start_end'.
-	start       uint64
-	end         uint64
-	store       *MetaRangeFsm
-	cur         uint64 // Cur ID value of inode what have been already assigned.
-	peers       []string
-	raftGroupId uint64
-	status      int
+// Regexp
+var (
+	regexpRange, _ = regexp.Compile("(\\d)+_(\\d)+$")
+)
+
+const (
+	rangeIDPartSeparator   = "_"    // Separator for range parts.
+	rangePeerPartSeparator = ","    // Separator for range peers.
+	metaDataDirName        = "meta" // Directory name for meta data storage managed by RocksDB.
+	raftDataDirName        = "raft" // Directory name for raft data storage managed by RocksDB.
+	storeKeyRangeId        = "info_range_id"
+	storeKeyRangeStart     = "info_range_start"
+	storeKeyRangeEnd       = "info_range_end"
+	storeKeyRangeCursor    = "info_range_cursor"
+	storeKeyRangePeers     = "info_range_peers"
+	storeKeyRaftId         = "info_raft_id"
+	storeKeyRaftGroupId    = "info_raft_group_id"
+)
+
+// MetaRangeConfig warps necessary properties for MetaRange instantiation.
+type MetaRangeConfig struct {
+	RangeId     string
+	RangeStart  uint64
+	RangeEnd    uint64
+	RootDataDir string // Root data directory for this MetaRange.
+	Raft        *raft.RaftServer
+	Peers       []string
 }
 
-func NewMetaRange(id string, start, end uint64, peers []string) *MetaRange {
-	return &MetaRange{
-		id:    id,
-		start: start,
-		end:   end,
-		store: NewMetaRangeFsm(),
-		cur:   start,
-		peers: peers,
+// MetaRange manages necessary information of meta range, include ID, boundary of range and raft identity.
+// When a new inode is requested, MetaRange allocates the inode id for this inode is possible.
+// States:
+//  +-----+             +-------+
+//  | New | → Restore → | Ready |
+//  +-----+             +-------+
+type MetaRange struct {
+	id          string // Consist with 'namespace_start_end'. (Required when initialize)
+	start       uint64 // Start inode ID of this range. (Required when initialize)
+	end         uint64 // End inode ID of this range. (Required when initialize)
+	cursor      uint64 // Cursor ID value of inode what have been already assigned.
+	rootDataDir string // Root data directory of this meta range. (Required when initialize)
+	store       *MetaRangeFsm
+	peers       []string
+	raftId      uint64           // Identity for raft node.
+	raftGroupId uint64           // Identity for raft group. Raft nodes in same raft group must have same group ID.
+	raftServer  *raft.RaftServer // Raft server instance.
+	ready       bool
+}
+
+func NewMetaRange(rangeCfg MetaRangeConfig) *MetaRange {
+
+	rangeStart := rangeCfg.RangeStart
+	rangeEnd := rangeCfg.RangeEnd
+	if regexpRange.MatchString(rangeCfg.RangeId) {
+		rangeString := regexpRange.FindString(rangeCfg.RangeId)
+		rangeParts := strings.Split(rangeString, rangeIDPartSeparator)
+		if rangeStart == 0 {
+			rangeStart, _ = strconv.ParseUint(rangeParts[0], 10, 64)
+		}
+		if rangeEnd == 0 {
+			rangeEnd, _ = strconv.ParseUint(rangeParts[1], 10, 64)
+		}
 	}
+	return &MetaRange{
+		id:          rangeCfg.RangeId,
+		start:       rangeStart,
+		end:         rangeEnd,
+		rootDataDir: rangeCfg.RootDataDir,
+		raftServer:  rangeCfg.Raft,
+		peers:       rangeCfg.Peers,
+	}
+}
+
+// Restore range info through RocksDB.
+// Note that invoker goroutine will be block until restore operation complete.
+func (mr *MetaRange) Restore() {
+	db := raftopt.NewRocksDBStore(path.Join(mr.rootDataDir, metaDataDirName))
+	db.Open()
+	defer db.Close()
+	var err error
+	defer func() {
+		if err != nil {
+			log.LogError("action[MeteRange.Restore],err:%v", err)
+		}
+	}()
+	// Try recover and validate range ID.
+	rangeIdBytes, err := db.Get(storeKeyRangeId)
+	if err != nil {
+		return
+	}
+	if len(rangeIdBytes) != 0 {
+		if string(rangeIdBytes) != mr.id {
+			err = errors.New("broken data")
+			return
+		}
+		mr.id = string(rangeIdBytes)
+	}
+	// Try recover range start value.
+	rangeStartBytes, err := db.Get(storeKeyRangeStart)
+	if err != nil {
+		return
+	}
+	if len(rangeStartBytes) != 0 {
+		mr.start = binary.BigEndian.Uint64(rangeStartBytes)
+	}
+	// Try recover range end value.
+	rangeEndBytes, err := db.Get(storeKeyRangeEnd)
+	if err != nil {
+		return
+	}
+	if len(rangeEndBytes) != 0 {
+		mr.end = binary.BigEndian.Uint64(rangeEndBytes)
+	}
+	// Try recover range cursor.
+	rangeCursorBytes, err := db.Get(storeKeyRangeCursor)
+	if err != nil {
+		return
+	}
+	if len(rangeCursorBytes) != 0 {
+		mr.cursor = binary.BigEndian.Uint64(rangeCursorBytes)
+	}
+	// Try recover range peers
+	rangePeersBytes, err := db.Get(storeKeyRangePeers)
+	if err != nil {
+		return
+	}
+	if len(rangePeersBytes) != 0 {
+		mr.peers = strings.Split(string(rangePeersBytes), rangePeerPartSeparator)
+	}
+	// Try recover rage ID
+	raftIdBytes, err := db.Get(storeKeyRaftId)
+	if err != nil {
+		return
+	}
+	if len(raftIdBytes) != 0 {
+		mr.raftId = binary.BigEndian.Uint64(raftIdBytes)
+	}
+	// Try recover raft group ID
+	raftGroupIdBytes, err := db.Get(storeKeyRaftGroupId)
+	if err != nil {
+		return
+	}
+	if len(raftGroupIdBytes) != 0 {
+		mr.raftGroupId = binary.BigEndian.Uint64(raftGroupIdBytes)
+	}
+	// Init and recover FSM.
+	fsmConfig := MetaRangeFsmConfig{
+		RaftId:      mr.raftId,
+		RaftGroupId: mr.raftGroupId,
+		Raft:        mr.raftServer,
+		MetaDataDir: path.Join(mr.rootDataDir, metaDataDirName),
+		RaftDataDir: path.Join(mr.rootDataDir, raftDataDirName),
+	}
+	mr.store = NewMetaRangeFsm(fsmConfig)
+	mr.store.RegisterCursorUpdateHandler(func(inodeId uint64) {
+		if inodeId > atomic.LoadUint64(&mr.cursor) {
+			atomic.StoreUint64(&mr.cursor, inodeId)
+		}
+	})
+	go mr.store.Restore()
+	ready := true
+	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mr.ready)), unsafe.Pointer(&ready))
+}
+
+// UpdatePeers
+func (mr *MetaRange) UpdatePeers(peers []string) {
+	mr.peers = peers
 }
 
 // NextInodeId returns a new ID value of inode and update offset.
 // If inode ID is out of this MetaRange limit then return ErrInodeOutOfRange error.
-func (mr *MetaRange) nextInodeID() (newOffset uint64, err error) {
+func (mr *MetaRange) nextInodeID() (inodeId uint64, err error) {
 	for {
-		cur := mr.cur
+		cur := mr.cursor
 		end := mr.end
 		if cur >= end {
 			return 0, ErrInodeOutOfRange
 		}
 		newId := cur + 1
-		if atomic.CompareAndSwapUint64(&mr.cur, cur, newId) {
+		if atomic.CompareAndSwapUint64(&mr.cursor, cur, newId) {
 			return newId, nil
 		}
 	}

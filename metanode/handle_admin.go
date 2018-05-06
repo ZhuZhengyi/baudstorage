@@ -10,6 +10,11 @@ import (
 func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 	remoteAddr := conn.RemoteAddr()
 	m.masterAddr = net.ParseIP(remoteAddr.String()).String()
+	// Get task from packet.
+	adminTask := &proto.AdminTask{}
+	if err = json.Unmarshal(p.Data, adminTask); err != nil {
+		return
+	}
 	defer func() {
 		// Response task result to master.
 		resp := &proto.CreateMetaRangeResponse{}
@@ -17,18 +22,13 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 			// Operation failure.
 			resp.Status = proto.OpErr
 			resp.Result = err.Error()
-			m.replyToMaster(m.masterAddr, resp)
 		} else {
 			// Operation success.
 			resp.Status = proto.OpOk
-			m.replyToMaster(m.masterAddr, resp)
 		}
+		adminTask.Response = resp
+		m.replyToMaster(m.masterAddr, adminTask)
 	}()
-	// Get task from packet.
-	adminTask := &proto.AdminTask{}
-	if err = json.Unmarshal(p.Data, adminTask); err != nil {
-		return
-	}
 	// Marshal request body.
 	requestJson, err := json.Marshal(adminTask.Request)
 	if err != nil {
@@ -39,8 +39,7 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 	if err := json.Unmarshal(requestJson, request); err != nil {
 		return
 	}
-	mr := NewMetaRange(request.MetaId, request.Start, request.End, request.Members)
-	// Store MetaRange to group.
-	m.metaRangeGroup.StoreMetaRange(request.MetaId, mr)
+	// Create new  MetaRange.
+	m.metaRangeManager.CreateMetaRange(request.MetaId, request.Start, request.End, request.Members)
 	return
 }

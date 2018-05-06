@@ -1,26 +1,21 @@
 package metanode
 
 import (
-	"context"
 	"errors"
+	"github.com/tiglabs/baudstorage/raftopt"
+	"github.com/tiglabs/raft"
 	"sync"
 
-	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
 // Configuration keys
 const (
-	cfgNodeId   = "nodeId"
-	cfgListen   = "listen"
-	cfgDataPath = "dataPath"
-	cfgLogPath  = "logPath"
-)
-
-// Errors
-var (
-	ErrInvalidAddress = errors.New("invalid address")
+	cfgNodeId  = "nodeID"
+	cfgListen  = "listen"
+	cfgDataDir = "dataDir"
+	cfgLogDir  = "logDir"
 )
 
 // State type definition
@@ -36,27 +31,25 @@ const (
 // through the Raft algorithm and other MetaNodes in the RageGroup for reliable
 // data synchronization to maintain data consistency within the MetaGroup.
 type MetaNode struct {
-	// Configuration
-	nodeId         string
-	listen         int
-	dataPath       string
-	logPath        string
-	masterAddr     string
-	metaRangeGroup MetaRangeGroup
-
-	// Context
-	ctx           context.Context
-	ctxCancelFunc context.CancelFunc
-	masterReplyC  chan *proto.AdminTask
-
-	// Runtime
-	log        *log.Log
-	state      nodeState
-	stateMutex sync.RWMutex
-	wg         sync.WaitGroup
+	nodeId           string
+	listen           int
+	dataDir          string
+	logDir           string
+	masterAddr       string
+	metaRangeManager *MetaRangeManager
+	raftResolver     *raftopt.Resolver
+	raftServer       *raft.RaftServer
+	httpStopC        chan uint8
+	log              *log.Log
+	state            nodeState
+	stateMutex       sync.RWMutex
+	wg               sync.WaitGroup
 }
 
 // Start this MeteNode with specified configuration.
+//  1. Start tcp server and accept connection from master and clients.
+//  2. Restore each meta range from snapshot.
+//  3. Restore raft fsm of each meta range.
 func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	// Parallel safe.
 	m.stateMutex.Lock()
@@ -69,14 +62,16 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	if err = m.prepareConfig(cfg); err != nil {
 		return
 	}
-	// Init context
-	m.initNodeContext()
 	// Init logging
-	if m.log, err = log.NewLog(m.logPath, "MetaNode", log.DebugLevel); err != nil {
+	if m.log, err = log.NewLog(m.logDir, "MetaNode", log.DebugLevel); err != nil {
 		return
 	}
-	// Start TCP listen
-	if err = m.startTcpService(); err != nil {
+	// Start raft server
+	if err = m.startRaftServer(); err != nil {
+		return
+	}
+	// Start tcp server
+	if err = m.startTcpServer(); err != nil {
 		return
 	}
 	// Start reply
@@ -95,11 +90,8 @@ func (m *MetaNode) Shutdown() {
 		return
 	}
 	// Shutdown node and release resource.
-	if m.ctxCancelFunc != nil {
-		m.ctxCancelFunc()
-	}
-	close(m.masterReplyC)
-
+	m.stopTcpServer()
+	m.stopRaftServer()
 	m.state = sReady
 	m.wg.Done()
 }
@@ -116,15 +108,9 @@ func (m *MetaNode) prepareConfig(cfg *config.Config) (err error) {
 	}
 	m.nodeId = cfg.GetString(cfgNodeId)
 	m.listen = int(cfg.GetInt(cfgListen))
-	m.dataPath = cfg.GetString(cfgDataPath)
-	m.logPath = cfg.GetString(cfgLogPath)
+	m.dataDir = cfg.GetString(cfgDataDir)
+	m.logDir = cfg.GetString(cfgLogDir)
 	return
-}
-
-func (m *MetaNode) initNodeContext() {
-	// Init context
-	m.ctx, m.ctxCancelFunc = context.WithCancel(context.Background())
-	m.masterReplyC = make(chan *proto.AdminTask, 1024)
 }
 
 // NewServer create an new MetaNode instance.
