@@ -59,21 +59,23 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	newStreamKey, err = stream.updateFn(stream.inode)
 	if err == nil {
 		stream.streamKey = newStreamKey
-	}
-	var newOffSet int
-	for _, key := range stream.streamKey.Extents {
-		newOffSet += int(key.Size)
-		if stream.isExsitExtentReader(key) {
-			continue
+		var newOffSet int
+		for _, key := range stream.streamKey.Extents {
+			newOffSet += int(key.Size)
+			if stream.isExsitExtentReader(key) {
+				continue
+			}
+			stream.readers = append(stream.readers, NewExtentReader(newOffSet, key))
 		}
-		stream.readers = append(stream.readers, NewExtentReader(newOffSet, key))
+		stream.fileSize = stream.streamKey.Size()
 	}
-	stream.fileSize = stream.streamKey.Size()
+
 	if offset > int(stream.fileSize) {
 		return 0, fmt.Errorf("fileSize[%v] but read offset[%v]", stream.fileSize, offset)
 	}
 	if offset+size > int(stream.fileSize) {
-		return int(stream.fileSize) - (offset + size), io.EOF
+		return int(stream.fileSize) - (offset + size), fmt.Errorf("fileSize[%v] but read offset[%v] size[%v]",
+			stream.fileSize, offset, size)
 	}
 
 	return size, nil
