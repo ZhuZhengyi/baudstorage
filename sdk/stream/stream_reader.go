@@ -92,3 +92,12 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 
 	return
 }
+
+func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader) {
+	readers = make([]*ExtentReader, 0)
+	for _, r := range stream.readers {
+		//if r.inInodeOffset>offset &&
+	}
+
+	return
+}
