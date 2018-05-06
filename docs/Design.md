@@ -2,19 +2,19 @@
 
 ## Concepts
 
-single datacenter storage - by design
+Baudstorage is a single datacenter storage by design
 
-multi-tenancy - a Baudstorage cluster may host multiple filesystem instances. 
+multi-tenancy - a Baudstorage cluster usually hosts multiple filesystem instances. 
 
-a filesystem instance = a namespace + one or multiple blockgroups
+a filesystem instance = a namespace + one or multiple blockgroups (volumes)
 
 a namespace = one or multiple inode ranges
 
 an inode range = one inode table + one dentry BTree
 
-inode attributes: nlink, extentmap, size
+* single-writer-multi-reader
 
-extentmap: array of (offset, length, extentID)
+a file streaming has at most one writer client. 
 
 ## the Cluster Master
 
@@ -34,7 +34,7 @@ raft
 
 ## the Metadata Store
 
-* Free Ino Space Management
+### Free Ino Space Management
 
 Reclaiming or not? No. 
 
@@ -42,7 +42,7 @@ Reclaiming or not? No.
 
 2, bitmap etc. impact performance and bring engineering cost.
 
-* Partitioning by Inode Range
+### Partitioning by Inode Range
 
 Partitioning or not? Yes. 
 
@@ -52,26 +52,54 @@ say a namespace initially has one inode range [0, ++],
 
 when the memory usage of this range has reached to a threshold say 8GB, and the current maxinum ino is 2^20, then the Baudstorage Master creates a new range [2^21, ++] and seals the original one as [0, 2^21) -- note the first range still can allocate new inodes. 
 
+### Replication
 
-* Data structures
+inode ranges as the replication unit
+
+multi-raft
+
+### Data structures
 
 the in-memory dentry B+Tree, and the in-memory inode B+Tree, both implemented via the Google's btree pkg
 
 also written to the underlying key-value store
 
+* Inode
+
+nlink
+size
+exentMap: the list of extents (offset, length, exentID)
+generation: i.e. the version number, the times of updates, for compare-and-set
+
+* Directory entry
+
+(parentIno, name) -> (childIno, type)
+
 ## the Extent Volume
 
-TODO: No need to divide exent as blocks? 
+volumes as local directories, and extents as local files
 
-* persistence
+TODO: No need to divide exent as blocks? Or blocks as the checksumming unit
 
-extents as local files
 
-* replication protocol
+volumes work as the replication unit, and have two possible states: Active, or Sealed.
 
-TODO: review the dataflow in the normal case and exceptional cases. 
+a leader, one or two followers
+
+extents can only be appended and also have the two states: active or sealed, which is recorded in the corresponding inodes.
 
 ## Append
+
+Write-Lease or not? No. It is the upper-tier application that guarantees a file has a single writer. 
+
+the dataflow in the normal case and exceptional cases:
+
+* open a file in the append-only mode, fetch the inode information, particularly the 'generation' attribute
+
+* the first append operation will create a new extent and update the inode by CAS
+
+* the following appends just append to the extent if it does not reach the length limit. 
+
 
 1, consistency
 
@@ -96,6 +124,11 @@ optimization:
 * synchronously update the inode's extentmap and size when sealing the last extent and creating a new extent
 
 * update size when closing the file
+
+
+## Pub/Sub and Streaming Read
+
+Multiple reader clients need to read a file stream in real time. So they subscribe to the current extent and consume the newest changes without need to first read the inode. 
 
 
 
