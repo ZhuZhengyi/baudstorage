@@ -34,22 +34,21 @@ func NewWritePacket(vol *sdk.VolGroup, extentId, seqNo uint64, offset int) (p *P
 	p.Arg = ([]byte)(vol.GetAllAddrs())
 	p.Arglen = uint32(len(p.Arg))
 	p.ReqID = int64(seqNo)
-	p.Opcode=proto.OpWrite
+	p.Opcode = proto.OpWrite
 
 	return
 }
 
-func NewReadPacket(vol *sdk.VolGroup, key ExtentKey) (p *Packet) {
+func NewReadPacket(vol *sdk.VolGroup, key ExtentKey,bytesRecive int) (p *Packet) {
 	p = NewPacket(vol)
 	p.FileID = key.ExtentId
-	p.Offset = int64(0)
-	p.Size=key.Size
-	p.Opcode=proto.OpStreamRead
+	p.Offset = inbytesRecive
+	p.Size = key.Size
+	p.Opcode = proto.OpStreamRead
 	p.ReqID = proto.GetReqID()
 
 	return
 }
-
 
 func NewReply(reqId int64, volId uint32, extentId uint64) (p *Packet) {
 	p = new(Packet)

@@ -8,28 +8,28 @@ import (
 )
 
 type StreamReader struct {
-	inode     uint64
-	wraper    *sdk.VolGroupWraper
-	readers   []*ExtentReader
-	updateFn  func(inode uint64) (sk StreamKey, err error)
-	streamKey StreamKey
-	fileSize  uint64
+	inode    uint64
+	wraper   *sdk.VolGroupWraper
+	readers  []*ExtentReader
+	updateFn func(inode uint64) (sk StreamKey, err error)
+	extents  StreamKey
+	fileSize uint64
 	sync.Mutex
 }
 
 func NewStreamReader(inode uint64) (stream *StreamReader, err error) {
 	stream = new(StreamReader)
 	stream.inode = inode
-	stream.streamKey, err = stream.updateFn(inode)
+	stream.extents, err = stream.updateFn(inode)
 	if err != nil {
 		return
 	}
 	var offset int
-	for _, key := range stream.streamKey.Extents {
-		stream.readers = append(stream.readers, NewExtentReader(offset, key))
+	for _, key := range stream.extents.Extents {
+		stream.readers = append(stream.readers, NewExtentReader(offset, key, stream.wraper))
 		offset += int(key.Size)
 	}
-	stream.fileSize = stream.streamKey.Size()
+	stream.fileSize = stream.extents.Size()
 	return
 }
 
@@ -44,7 +44,7 @@ func (stream *StreamReader) isExsitExtentReader(k ExtentKey) (exsit bool) {
 }
 
 func (stream *StreamReader) toString() (m string) {
-	return fmt.Sprintf("inode[%v] fileSize[%v] streamKey[%v] ", stream.inode, stream.fileSize, stream.streamKey)
+	return fmt.Sprintf("inode[%v] fileSize[%v] extents[%v] ", stream.inode, stream.fileSize, stream.extents)
 }
 
 func (stream *StreamReader) initCheck(offset, size int) (canread int, err error) {
@@ -57,16 +57,16 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	var newStreamKey StreamKey
 	newStreamKey, err = stream.updateFn(stream.inode)
 	if err == nil {
-		stream.streamKey = newStreamKey
+		stream.extents = newStreamKey
 		var newOffSet int
-		for _, key := range stream.streamKey.Extents {
+		for _, key := range stream.extents.Extents {
 			newOffSet += int(key.Size)
 			if stream.isExsitExtentReader(key) {
 				continue
 			}
-			stream.readers = append(stream.readers, NewExtentReader(newOffSet, key))
+			stream.readers = append(stream.readers, NewExtentReader(newOffSet, key, stream.wraper))
 		}
-		stream.fileSize = stream.streamKey.Size()
+		stream.fileSize = stream.extents.Size()
 	}
 
 	if offset > int(stream.fileSize) {
@@ -95,17 +95,15 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader) {
 	readers = make([]*ExtentReader, 0)
 	for _, r := range stream.readers {
-		if r.startInodeOffset >offset && offset<r.endInodeOffset {
-			readers=append(readers,r)
-		}else if r.startInodeOffset >offset+size && r.endInodeOffset >offset+size{
-			readers=append(readers,r)
+		if r.startInodeOffset > offset && offset < r.endInodeOffset {
+			readers = append(readers, r)
+		} else if r.startInodeOffset > offset+size && r.endInodeOffset > offset+size {
+			readers = append(readers, r)
 		}
-		if len(readers)>=2{
+		if len(readers) >= 2 {
 			break
 		}
 	}
 
 	return
 }
-
-
