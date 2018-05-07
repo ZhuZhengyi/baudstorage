@@ -1,8 +1,14 @@
 package fs
 
 import (
+	"fmt"
 	"sync"
+	"syscall"
 	"time"
+
+	"bazil.org/fuse"
+
+	"github.com/tiglabs/baudstorage/proto"
 )
 
 type Inode struct {
@@ -14,7 +20,6 @@ type Inode struct {
 	blksize uint32
 
 	// Fields get from meta server
-	name     string
 	size     uint64
 	mode     uint32 //Inode Type
 	nlink    uint32
@@ -34,9 +39,28 @@ func InodeInit(inode *Inode, s *Super, ino uint64, p *Dir) {
 	inode.blksize = BLKSIZE_DEFAULT
 }
 
-func InodeGet(inode *Inode) error {
-	//TODO: get meta group according to ino
-	//TODO: send InodeGetRequest to the meta node
-	//TODO: fill inode according to InodeGetResponse
+func (s *Super) InodeGet(inode *Inode) error {
+	status, info, err := s.meta.InodeGet(inode.ino)
+	if err != nil {
+		fmt.Println(err)
+		return fuse.Errno(syscall.EAGAIN)
+	}
+	if status == int(proto.OpExistErr) {
+		return fuse.Errno(syscall.EEXIST)
+	} else if status != int(proto.OpOk) {
+		return fuse.Errno(syscall.EIO)
+	}
+
+	inodeFill(inode, info)
 	return nil
+}
+
+func inodeFill(inode *Inode, info *proto.InodeInfo) {
+	inode.mode = info.Type
+	inode.parentid = info.ParentID
+	inode.extents = info.Extents
+	inode.CreateTime = info.CreateTime
+	inode.AccessTime = info.AccessTime
+	inode.ModifyTime = info.ModifyTime
+	//TODO: fill more fields
 }
