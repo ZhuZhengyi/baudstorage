@@ -42,16 +42,6 @@ const (
 	storeKeyRaftGroupId    = "info_raft_group_id"
 )
 
-// MetaRangeConfig warps necessary properties for MetaRange instantiation.
-type MetaRangeConfig struct {
-	RangeId     string
-	RangeStart  uint64
-	RangeEnd    uint64
-	RootDataDir string // Root data directory for this MetaRange.
-	Raft        *raft.RaftServer
-	Peers       []string
-}
-
 // MetaRange manages necessary information of meta range, include ID, boundary of range and raft identity.
 // When a new inode is requested, MetaRange allocates the inode id for this inode is possible.
 // States:
@@ -72,27 +62,12 @@ type MetaRange struct {
 	ready       bool
 }
 
-func NewMetaRange(rangeCfg MetaRangeConfig) *MetaRange {
-
-	rangeStart := rangeCfg.RangeStart
-	rangeEnd := rangeCfg.RangeEnd
-	if regexpRange.MatchString(rangeCfg.RangeId) {
-		rangeString := regexpRange.FindString(rangeCfg.RangeId)
-		rangeParts := strings.Split(rangeString, rangeIDPartSeparator)
-		if rangeStart == 0 {
-			rangeStart, _ = strconv.ParseUint(rangeParts[0], 10, 64)
-		}
-		if rangeEnd == 0 {
-			rangeEnd, _ = strconv.ParseUint(rangeParts[1], 10, 64)
-		}
-	}
+func NewMetaRange(req *CreateMetaRangeReq) *MetaRange {
 	return &MetaRange{
-		id:          rangeCfg.RangeId,
-		start:       rangeStart,
-		end:         rangeEnd,
-		rootDataDir: rangeCfg.RootDataDir,
-		raftServer:  rangeCfg.Raft,
-		peers:       rangeCfg.Peers,
+		id:    req.MetaId,
+		start: req.Start,
+		end:   req.End,
+		peers: req.Members,
 	}
 }
 

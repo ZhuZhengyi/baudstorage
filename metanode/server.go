@@ -23,7 +23,7 @@ type nodeState uint8
 
 // State constants
 const (
-	sReady   nodeState = iota
+	sReady nodeState = iota
 	sRunning
 )
 
@@ -33,7 +33,7 @@ const (
 type MetaNode struct {
 	nodeId           string
 	listen           int
-	dataDir          string
+	metaDir          string //metaNode store root dir
 	logDir           string
 	masterAddr       string
 	metaRangeManager *MetaRangeManager
@@ -66,10 +66,16 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	if m.log, err = log.NewLog(m.logDir, "MetaNode", log.DebugLevel); err != nil {
 		return
 	}
+	// Load metaRanges relation from file
+
+	// Register metaRaftEngine
+
 	// Start raft server
 	if err = m.startRaftServer(); err != nil {
 		return
 	}
+	//start raft
+
 	// Start tcp server
 	if err = m.startTcpServer(); err != nil {
 		return
