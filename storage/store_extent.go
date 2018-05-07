@@ -144,7 +144,7 @@ func (s *ExtentStore) openExtentFromDisk(e *Extent) (err error) {
 	e.writelock()
 	defer e.writeUnlock()
 
-	if e.file, err = os.OpenFile(e.filePath, os.O_RDWR|os.O_EXCL, 0666); err != nil {
+	if e.file, err = os.OpenFile(e.filePath, os.O_RDWR, 0666); err != nil {
 		if strings.Contains(err.Error(), syscall.ENOENT.Error()) {
 			err = ErrorChunkNotFound
 		}
