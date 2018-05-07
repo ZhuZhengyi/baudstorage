@@ -51,11 +51,11 @@ func (s *Super) InodeGet(inode *Inode) error {
 		return fuse.Errno(syscall.EIO)
 	}
 
-	inodeFill(inode, info)
+	fillInode(inode, info)
 	return nil
 }
 
-func inodeFill(inode *Inode, info *proto.InodeInfo) {
+func fillInode(inode *Inode, info *proto.InodeInfo) {
 	inode.mode = info.Type
 	inode.parentid = info.ParentID
 	inode.extents = info.Extents
