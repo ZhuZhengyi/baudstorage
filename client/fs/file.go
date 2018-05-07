@@ -39,7 +39,11 @@ func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Inode = f.inode.ino
 	a.Mode = os.ModePerm
 	a.Size = f.inode.size
+	a.Blocks = a.Size >> 9 // In 512 bytes
 	a.Nlink = f.inode.nlink
+	a.Atime = f.inode.AccessTime
+	a.Ctime = f.inode.CreateTime
+	a.Mtime = f.inode.ModifyTime
 	return nil
 }
 
