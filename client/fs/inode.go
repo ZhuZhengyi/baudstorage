@@ -1,9 +1,7 @@
 package fs
 
 import (
-	"fmt"
 	"sync"
-	"syscall"
 	"time"
 
 	"bazil.org/fuse"
@@ -31,16 +29,10 @@ type Inode struct {
 
 func (s *Super) InodeGet(ino uint64, inode *Inode) error {
 	status, info, err := s.meta.InodeGet_ll(ino)
+	err = ParseResult(status, err)
 	if err != nil {
-		fmt.Println(err)
-		return fuse.Errno(syscall.EAGAIN)
+		return err
 	}
-	if status == int(proto.OpExistErr) {
-		return fuse.Errno(syscall.EEXIST)
-	} else if status != int(proto.OpOk) {
-		return fuse.Errno(syscall.EIO)
-	}
-
 	fillInode(inode, info)
 	return nil
 }

@@ -45,7 +45,19 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 }
 
 func (d *Dir) Create(ctx context.Context, req *fuse.CreateRequest, resp *fuse.CreateResponse) (fs.Node, fs.Handle, error) {
-	return nil, nil, fuse.EPERM
+	meta := d.super.meta
+	status, ino, err := meta.Create_ll(d.inode.ino, req.Name, ModeRegular)
+	err = ParseResult(status, err)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	child := NewFile(d.super, d)
+	err = d.super.InodeGet(ino, &child.inode)
+	if err != nil {
+		return nil, nil, err
+	}
+	return child, child, nil
 }
 
 func (d *Dir) Forget() {

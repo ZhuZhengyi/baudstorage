@@ -1,14 +1,52 @@
 package fs
 
 import (
+	"fmt"
+	"os"
+
+	"bazil.org/fuse"
+
 	"github.com/tiglabs/baudstorage/proto"
 )
 
 const (
 	ROOT_INO = proto.ROOT_INO
+)
 
-	BLKSIZE_DEFAULT = uint32(1) << 12
-
+const (
 	DIR_NLINK_DEFAULT     = 2
 	REGULAR_NLINK_DEFAULT = 1
 )
+
+const (
+	BLKSIZE_DEFAULT = uint32(1) << 12
+)
+
+const (
+	ModeRegular = uint32(0)
+	ModeDir     = uint32(os.ModeDir)
+)
+
+const (
+	StatusOK    = int(proto.OpOk)
+	StatusExist = int(proto.OpExistErr)
+)
+
+// TODO: log error
+func ParseResult(status int, err error) error {
+	if err != nil {
+		fmt.Println(err)
+		return fuse.EIO
+	}
+
+	var ret error
+	switch status {
+	case StatusOK:
+		ret = nil
+	case StatusExist:
+		ret = fuse.EEXIST
+	default:
+		ret = fuse.EPERM
+	}
+	return ret
+}
