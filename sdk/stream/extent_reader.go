@@ -21,9 +21,8 @@ type ExtentReader struct {
 	wraper           *sdk.VolGroupWraper
 	byteRecive       int
 	sync.Mutex
-	isReciving bool
-	exitCh     chan bool
-	updateCh   chan bool
+	exitCh   chan bool
+	updateCh chan bool
 }
 
 func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWraper) (reader *ExtentReader) {
@@ -35,13 +34,13 @@ func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWrape
 	reader.endInodeOffset = reader.startInodeOffset + reader.size
 	reader.wraper = wraper
 	reader.exitCh = make(chan bool, 2)
-	reader.updateCh = make(chan bool, 1)
+	reader.updateCh = make(chan bool, 10)
 	go reader.asyncRecivData()
 
 	return reader
 }
 
-func (reader *ExtentReader) streamRecivePacket(host string) error {
+func (reader *ExtentReader) sendAndReciveExtentData(host string) error {
 	reader.Lock()
 	p := NewReadPacket(reader.key, reader.byteRecive)
 	reader.Unlock()
@@ -59,18 +58,21 @@ func (reader *ExtentReader) streamRecivePacket(host string) error {
 		}
 	}()
 	if err = p.WriteToConn(conn); err != nil {
-		return errors.Annotatef(fmt.Errorf(reader.toString()+" cannot get connect from host[%v] err[%v]", host, err.Error()),
+		err = errors.Annotatef(fmt.Errorf(reader.toString()+" cannot get connect from host[%v] err[%v]", host, err.Error()),
 			"ReciveData Err")
+		return err
 	}
 	for {
 		err = p.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
-			return errors.Annotatef(fmt.Errorf(reader.toString()+" recive data from host[%v] err[%v]", host, err.Error()),
+			err = errors.Annotatef(fmt.Errorf(reader.toString()+" recive data from host[%v] err[%v]", host, err.Error()),
 				"ReciveData Err")
+			return err
 		}
 		if p.Opcode != proto.OpOk {
-			return errors.Annotatef(fmt.Errorf(reader.toString()+" packet[%v] from host [%v] opcode err[%v]",
+			err = errors.Annotatef(fmt.Errorf(reader.toString()+" packet[%v] from host [%v] opcode err[%v]",
 				p.GetUniqLogId(), host, string(p.Data[:p.Size])), "ReciveData Err")
+			return err
 		}
 		reader.Lock()
 		reader.data = append(reader.data, p.Data...)
@@ -91,9 +93,12 @@ func (reader *ExtentReader) toString() (m string) {
 }
 
 func (reader *ExtentReader) reciveData() error {
+	reader.Lock()
 	if reader.byteRecive == reader.size {
+		reader.Unlock()
 		return nil
 	}
+	reader.Unlock()
 	rand.Seed(time.Now().UnixNano())
 	vol, err := reader.wraper.GetVol(reader.key.VolId)
 	if err != nil {
@@ -104,13 +109,14 @@ func (reader *ExtentReader) reciveData() error {
 	}
 	index := rand.Intn(int(vol.Goal))
 	host := vol.Hosts[index]
-	if err = reader.streamRecivePacket(host); err != nil {
+	if err = reader.sendAndReciveExtentData(host); err != nil {
 		goto FORLOOP
 	}
+	return nil
 
 FORLOOP:
 	for _, host := range vol.Hosts {
-		err = reader.streamRecivePacket(host)
+		err = reader.sendAndReciveExtentData(host)
 		if err == nil {
 			return nil
 		}
@@ -120,7 +126,10 @@ FORLOOP:
 }
 
 func (reader *ExtentReader) asyncRecivData() {
-	reader.reciveData()
+	err := reader.reciveData()
+	if err != nil {
+		reader.updateCh <- true
+	}
 	for {
 		select {
 		case <-reader.exitCh:
@@ -136,7 +145,7 @@ func (reader *ExtentReader) asyncRecivData() {
 
 func (reader *ExtentReader) read(data []byte, offset, size int) {
 	reader.Lock()
-	if offset+size < reader.byteRecive {
+	if offset+size <= reader.byteRecive {
 		reader.Unlock()
 		copy(data, reader.data[offset:offset+size])
 		return
