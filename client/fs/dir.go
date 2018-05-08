@@ -1,8 +1,6 @@
 package fs
 
 import (
-	"os"
-
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"golang.org/x/net/context"
@@ -37,10 +35,7 @@ func NewDir(s *Super, p *Dir) *Dir {
 }
 
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
-	a.Nlink = d.nlink
-	a.BlockSize = d.blksize
-	a.Mode = os.ModeDir | os.ModePerm
-	fillAttr(a, &d.inode)
+	fillAttr(a, d)
 	return nil
 }
 
@@ -85,7 +80,31 @@ func (d *Dir) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
 }
 
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	return nil, fuse.ENOENT
+	status, ino, mode, err := d.super.meta.Lookup_ll(d.inode.ino, req.Name)
+	err = ParseResult(status, err)
+	if err != nil {
+		return nil, err
+	}
+
+	var child fs.Node
+	if mode == ModeRegular {
+		dir := NewDir(d.super, d)
+		err = d.super.InodeGet(ino, &dir.inode)
+		child = dir
+	} else if mode == ModeDir {
+		file := NewFile(d.super, d)
+		err = d.super.InodeGet(ino, &file.inode)
+		child = file
+	} else {
+		err = fuse.ENOTSUP
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	resp.Node = fuse.NodeID(ino)
+	fillAttr(&resp.Attr, child)
+	return child, nil
 }
 
 func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {

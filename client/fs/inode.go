@@ -2,10 +2,12 @@ package fs
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
 	"bazil.org/fuse"
+	"bazil.org/fuse/fs"
 
 	"github.com/tiglabs/baudstorage/proto"
 )
@@ -53,7 +55,26 @@ func fillInode(inode *Inode, info *proto.InodeInfo) {
 	//TODO: fill more fields
 }
 
-func fillAttr(attr *fuse.Attr, inode *Inode) {
+func fillAttr(attr *fuse.Attr, n fs.Node) {
+	var inode *Inode
+	switch v := n.(type) {
+	case *Dir:
+		inode = &v.inode
+		attr.Nlink = v.nlink
+		attr.BlockSize = v.blksize
+		attr.Mode = os.ModeDir | os.ModePerm
+	case *File:
+		inode = &v.inode
+		attr.Nlink = v.nlink
+		attr.BlockSize = v.blksize
+		attr.Mode = os.ModePerm
+	default:
+	}
+
+	if inode == nil {
+		return
+	}
+
 	attr.Inode = inode.ino
 	attr.Size = inode.size
 	attr.Blocks = attr.Size >> 9 // In 512 bytes

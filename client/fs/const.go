@@ -30,6 +30,7 @@ const (
 const (
 	StatusOK    = int(proto.OpOk)
 	StatusExist = int(proto.OpExistErr)
+	StatusNoEnt = int(proto.OpNotExistErr)
 )
 
 // TODO: log error
@@ -45,6 +46,8 @@ func ParseResult(status int, err error) error {
 		ret = nil
 	case StatusExist:
 		ret = fuse.EEXIST
+	case StatusNoEnt:
+		ret = fuse.ENOENT
 	default:
 		ret = fuse.EPERM
 	}
