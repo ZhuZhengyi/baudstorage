@@ -4,6 +4,10 @@ import (
 	"time"
 )
 
+const (
+	ROOT_INO = 1
+)
+
 type InodeInfo struct {
 	Inode      uint64    `json:"inode"`
 	Type       uint32    `json:"type"`
