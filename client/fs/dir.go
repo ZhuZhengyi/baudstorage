@@ -1,8 +1,6 @@
 package fs
 
 import (
-	"os"
-
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"golang.org/x/net/context"
@@ -37,26 +35,44 @@ func NewDir(s *Super, p *Dir) *Dir {
 }
 
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
-	a.Nlink = d.nlink
-	a.BlockSize = d.blksize
-	a.Mode = os.ModeDir | os.ModePerm
-	fillAttr(a, &d.inode)
+	fillAttr(a, d)
 	return nil
 }
 
 func (d *Dir) Create(ctx context.Context, req *fuse.CreateRequest, resp *fuse.CreateResponse) (fs.Node, fs.Handle, error) {
-	return nil, nil, fuse.EPERM
+	status, info, err := d.super.meta.Create_ll(d.inode.ino, req.Name, ModeRegular)
+	err = ParseResult(status, err)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	child := NewFile(d.super, d)
+	fillInode(&child.inode, info)
+	return child, child, nil
 }
 
 func (d *Dir) Forget() {
 }
 
 func (d *Dir) Mkdir(ctx context.Context, req *fuse.MkdirRequest) (fs.Node, error) {
-	return nil, fuse.EPERM
+	status, info, err := d.super.meta.Create_ll(d.inode.ino, req.Name, ModeDir)
+	err = ParseResult(status, err)
+	if err != nil {
+		return nil, err
+	}
+
+	child := NewDir(d.super, d)
+	fillInode(&child.inode, info)
+	return child, nil
 }
 
 func (d *Dir) Remove(ctx context.Context, req *fuse.RemoveRequest) error {
-	return fuse.EPERM
+	status, err := d.super.meta.Delete_ll(d.inode.ino, req.Name)
+	err = ParseResult(status, err)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (d *Dir) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
@@ -64,7 +80,31 @@ func (d *Dir) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
 }
 
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	return nil, fuse.ENOENT
+	status, ino, mode, err := d.super.meta.Lookup_ll(d.inode.ino, req.Name)
+	err = ParseResult(status, err)
+	if err != nil {
+		return nil, err
+	}
+
+	var child fs.Node
+	if mode == ModeRegular {
+		dir := NewDir(d.super, d)
+		err = d.super.InodeGet(ino, &dir.inode)
+		child = dir
+	} else if mode == ModeDir {
+		file := NewFile(d.super, d)
+		err = d.super.InodeGet(ino, &file.inode)
+		child = file
+	} else {
+		err = fuse.ENOTSUP
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	resp.Node = fuse.NodeID(ino)
+	fillAttr(&resp.Attr, child)
+	return child, nil
 }
 
 func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
