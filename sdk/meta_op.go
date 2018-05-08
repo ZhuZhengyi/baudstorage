@@ -33,6 +33,11 @@ type MetaPartition struct {
 	Members []string
 }
 
+type MetaConn struct {
+	conn net.Conn
+	gid  string
+}
+
 type NamespaceView struct {
 	Name           string
 	MetaPartitions []*MetaPartition
@@ -71,7 +76,7 @@ func NewMetaWrapper(namespace, masterHosts string) (*MetaWrapper, error) {
 	return mw, nil
 }
 
-func (mw *MetaWrapper) icreate(conn net.Conn, mode uint32) (status int, info *proto.InodeInfo, err error) {
+func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *proto.InodeInfo, err error) {
 	req := &proto.CreateInodeRequest{
 		Namespace: mw.namespace,
 		Mode:      mode,
@@ -83,7 +88,7 @@ func (mw *MetaWrapper) icreate(conn net.Conn, mode uint32) (status int, info *pr
 		return
 	}
 
-	packet, err = mw.send(conn, packet)
+	packet, err = mc.send(packet)
 	if err != nil {
 		return
 	}
@@ -96,7 +101,7 @@ func (mw *MetaWrapper) icreate(conn net.Conn, mode uint32) (status int, info *pr
 	return int(resp.Status), resp.Info, nil
 }
 
-func (mw *MetaWrapper) idelete(conn net.Conn, inode uint64) (status int, err error) {
+func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, err error) {
 	req := &proto.DeleteInodeRequest{
 		Namespace: mw.namespace,
 		Inode:     inode,
@@ -108,7 +113,7 @@ func (mw *MetaWrapper) idelete(conn net.Conn, inode uint64) (status int, err err
 		return
 	}
 
-	packet, err = mw.send(conn, packet)
+	packet, err = mc.send(packet)
 	if err != nil {
 		return
 	}
@@ -121,7 +126,7 @@ func (mw *MetaWrapper) idelete(conn net.Conn, inode uint64) (status int, err err
 	return int(resp.Status), nil
 }
 
-func (mw *MetaWrapper) dcreate(conn net.Conn, parentID uint64, name string, inode uint64, mode uint32) (status int, err error) {
+func (mw *MetaWrapper) dcreate(mc *MetaConn, parentID uint64, name string, inode uint64, mode uint32) (status int, err error) {
 	req := &proto.CreateDentryRequest{
 		Namespace: mw.namespace,
 		ParentID:  parentID,
@@ -136,7 +141,7 @@ func (mw *MetaWrapper) dcreate(conn net.Conn, parentID uint64, name string, inod
 		return
 	}
 
-	packet, err = mw.send(conn, packet)
+	packet, err = mc.send(packet)
 	if err != nil {
 		return
 	}
@@ -149,7 +154,7 @@ func (mw *MetaWrapper) dcreate(conn net.Conn, parentID uint64, name string, inod
 	return int(resp.Status), nil
 }
 
-func (mw *MetaWrapper) ddelete(conn net.Conn, parentID uint64, name string) (status int, inode uint64, err error) {
+func (mw *MetaWrapper) ddelete(mc *MetaConn, parentID uint64, name string) (status int, inode uint64, err error) {
 	req := &proto.DeleteDentryRequest{
 		Namespace: mw.namespace,
 		ParentID:  parentID,
@@ -162,7 +167,7 @@ func (mw *MetaWrapper) ddelete(conn net.Conn, parentID uint64, name string) (sta
 		return
 	}
 
-	packet, err = mw.send(conn, packet)
+	packet, err = mc.send(packet)
 	if err != nil {
 		return
 	}
@@ -175,7 +180,7 @@ func (mw *MetaWrapper) ddelete(conn net.Conn, parentID uint64, name string) (sta
 	return int(resp.Status), resp.Inode, nil
 }
 
-func (mw *MetaWrapper) lookup(conn net.Conn, parentID uint64, name string) (status int, inode uint64, mode uint32, err error) {
+func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (status int, inode uint64, mode uint32, err error) {
 	req := &proto.LookupRequest{
 		Namespace: mw.namespace,
 		ParentID:  parentID,
@@ -188,7 +193,7 @@ func (mw *MetaWrapper) lookup(conn net.Conn, parentID uint64, name string) (stat
 		return
 	}
 
-	packet, err = mw.send(conn, packet)
+	packet, err = mc.send(packet)
 	if err != nil {
 		return
 	}
@@ -201,7 +206,7 @@ func (mw *MetaWrapper) lookup(conn net.Conn, parentID uint64, name string) (stat
 	return int(resp.Status), resp.Inode, resp.Mode, nil
 }
 
-func (mw *MetaWrapper) iget(conn net.Conn, inode uint64) (status int, info *proto.InodeInfo, err error) {
+func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto.InodeInfo, err error) {
 	req := &proto.InodeGetRequest{
 		Namespace: mw.namespace,
 		Inode:     inode,
@@ -213,7 +218,7 @@ func (mw *MetaWrapper) iget(conn net.Conn, inode uint64) (status int, info *prot
 		return
 	}
 
-	packet, err = mw.send(conn, packet)
+	packet, err = mc.send(packet)
 	if err != nil {
 		return
 	}
@@ -226,7 +231,7 @@ func (mw *MetaWrapper) iget(conn net.Conn, inode uint64) (status int, info *prot
 	return int(resp.Status), resp.Info, nil
 }
 
-func (mw *MetaWrapper) readdir(conn net.Conn, parentID uint64) (children []proto.Dentry, err error) {
+func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (children []proto.Dentry, err error) {
 	req := &proto.ReadDirRequest{
 		Namespace: mw.namespace,
 		ParentID:  parentID,
@@ -238,7 +243,7 @@ func (mw *MetaWrapper) readdir(conn net.Conn, parentID uint64) (children []proto
 		return
 	}
 
-	packet, err = mw.send(conn, packet)
+	packet, err = mc.send(packet)
 	if err != nil {
 		return
 	}
@@ -358,39 +363,45 @@ func (mw *MetaWrapper) getNamespaceView() (*NamespaceView, error) {
 	return view, nil
 }
 
-func (mw *MetaWrapper) getConn(mp *MetaPartition) (net.Conn, error) {
+func (mw *MetaWrapper) getConn(mp *MetaPartition) (*MetaConn, error) {
 	addr := mp.Members[0]
 	//TODO: deal with member 0 is not leader
-	return mw.conns.Get(addr)
+	conn, err := mw.conns.Get(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	mc := &MetaConn{conn: conn, gid: mp.GroupID}
+	return mc, nil
 }
 
-func (mw *MetaWrapper) putConn(conn net.Conn, err error) {
+func (mw *MetaWrapper) putConn(mc *MetaConn, err error) {
 	if err != nil {
-		conn.Close()
+		mc.conn.Close()
 	} else {
-		mw.conns.Put(conn)
+		mw.conns.Put(mc.conn)
 	}
 }
 
-func (mw *MetaWrapper) connect(inode uint64) (*MetaPartition, net.Conn, error) {
+func (mw *MetaWrapper) connect(inode uint64) (*MetaConn, error) {
 	mp := mw.getMetaPartitionByInode(inode)
 	if mp == nil {
-		return nil, nil, errors.New("No such meta group")
+		return nil, errors.New("No such meta group")
 	}
-	conn, err := mw.getConn(mp)
+	mc, err := mw.getConn(mp)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return mp, conn, nil
+	return mc, nil
 }
 
-func (mw *MetaWrapper) send(conn net.Conn, req *proto.Packet) (*proto.Packet, error) {
-	err := req.WriteToConn(conn)
+func (mc *MetaConn) send(req *proto.Packet) (*proto.Packet, error) {
+	err := req.WriteToConn(mc.conn)
 	if err != nil {
 		return nil, err
 	}
 	resp := proto.NewPacket()
-	err = resp.ReadFromConn(conn, proto.ReadDeadlineTime)
+	err = resp.ReadFromConn(mc.conn, proto.ReadDeadlineTime)
 	if err != nil {
 		return nil, err
 	}

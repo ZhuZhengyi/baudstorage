@@ -1,7 +1,6 @@
 package sdk
 
 import (
-	"net"
 	"syscall"
 	"time"
 
@@ -13,13 +12,13 @@ import (
 // Low-level API, i.e. work with inode
 
 func (mw *MetaWrapper) Create_ll(parentID uint64, name string, mode uint32) (status int, info *proto.InodeInfo, err error) {
-	_, parentConn, err := mw.connect(parentID)
+	parentConn, err := mw.connect(parentID)
 	if err != nil {
 		return
 	}
 	defer mw.putConn(parentConn, err)
 
-	var inodeConn net.Conn
+	var inodeConn *MetaConn
 	var inodeCreated bool
 	// Create Inode
 	for {
@@ -63,29 +62,29 @@ func (mw *MetaWrapper) Create_ll(parentID uint64, name string, mode uint32) (sta
 }
 
 func (mw *MetaWrapper) Lookup_ll(parentID uint64, name string) (status int, inode uint64, mode uint32, err error) {
-	_, conn, err := mw.connect(parentID)
+	mc, err := mw.connect(parentID)
 	if err != nil {
 		return
 	}
-	defer mw.putConn(conn, err)
+	defer mw.putConn(mc, err)
 
-	status, inode, mode, err = mw.lookup(conn, parentID, name)
+	status, inode, mode, err = mw.lookup(mc, parentID, name)
 	return
 }
 
 func (mw *MetaWrapper) InodeGet_ll(inode uint64) (status int, info *proto.InodeInfo, err error) {
-	_, conn, err := mw.connect(inode)
+	mc, err := mw.connect(inode)
 	if err != nil {
 		return
 	}
-	defer mw.putConn(conn, err)
+	defer mw.putConn(mc, err)
 
-	status, info, err = mw.iget(conn, inode)
+	status, info, err = mw.iget(mc, inode)
 	return
 }
 
 func (mw *MetaWrapper) Delete_ll(parentID uint64, name string) (status int, err error) {
-	_, parentConn, err := mw.connect(parentID)
+	parentConn, err := mw.connect(parentID)
 	if err != nil {
 		return
 	}
@@ -96,7 +95,7 @@ func (mw *MetaWrapper) Delete_ll(parentID uint64, name string) (status int, err 
 		return
 	}
 
-	_, inodeConn, err := mw.connect(inode)
+	inodeConn, err := mw.connect(inode)
 	if err != nil {
 		return
 	}
@@ -107,12 +106,12 @@ func (mw *MetaWrapper) Delete_ll(parentID uint64, name string) (status int, err 
 }
 
 func (mw *MetaWrapper) Rename_ll(srcParentID uint64, srcName string, dstParentID uint64, dstName string) (status int, err error) {
-	_, srcParentConn, err := mw.connect(srcParentID)
+	srcParentConn, err := mw.connect(srcParentID)
 	if err != nil {
 		return
 	}
 	defer mw.putConn(srcParentConn, err)
-	_, dstParentConn, err := mw.connect(dstParentID)
+	dstParentConn, err := mw.connect(dstParentID)
 	if err != nil {
 		return
 	}
@@ -137,12 +136,12 @@ func (mw *MetaWrapper) Rename_ll(srcParentID uint64, srcName string, dstParentID
 }
 
 func (mw *MetaWrapper) ReadDir_ll(parentID uint64) (children []proto.Dentry, err error) {
-	_, conn, err := mw.connect(parentID)
+	mc, err := mw.connect(parentID)
 	if err != nil {
 		return
 	}
-	defer mw.putConn(conn, err)
+	defer mw.putConn(mc, err)
 
-	children, err = mw.readdir(conn, parentID)
+	children, err = mw.readdir(mc, parentID)
 	return
 }
