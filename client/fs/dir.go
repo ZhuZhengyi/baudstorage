@@ -72,7 +72,12 @@ func (d *Dir) Mkdir(ctx context.Context, req *fuse.MkdirRequest) (fs.Node, error
 }
 
 func (d *Dir) Remove(ctx context.Context, req *fuse.RemoveRequest) error {
-	return fuse.EPERM
+	status, err := d.super.meta.Delete_ll(d.inode.ino, req.Name)
+	err = ParseResult(status, err)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (d *Dir) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {

@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -34,6 +35,10 @@ func (s *Super) InodeGet(ino uint64, inode *Inode) error {
 		return err
 	}
 	fillInode(inode, info)
+	// sanity check
+	if ino != inode.ino {
+		panic(fmt.Sprintf("Request ino: %v , Response ino: %v ", ino, inode.ino))
+	}
 	return nil
 }
 
