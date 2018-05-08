@@ -16,7 +16,6 @@ type ExtentReader struct {
 	startInodeOffset int
 	endInodeOffset   int
 	data             []byte
-	size             int
 	key              ExtentKey
 	wraper           *sdk.VolGroupWraper
 	byteRecive       int
@@ -30,8 +29,7 @@ func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWrape
 	reader.data = make([]byte, 0)
 	reader.key = key
 	reader.startInodeOffset = inInodeOffset
-	reader.size = int(key.Size)
-	reader.endInodeOffset = reader.startInodeOffset + reader.size
+	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
 	reader.wraper = wraper
 	reader.exitCh = make(chan bool, 2)
 	reader.updateCh = make(chan bool, 10)
@@ -75,9 +73,9 @@ func (reader *ExtentReader) sendAndReciveExtentData(host string) error {
 			return err
 		}
 		reader.Lock()
-		reader.data = append(reader.data, p.Data...)
+		reader.data = append(reader.data, p.Data[:p.Size]...)
 		reader.byteRecive += int(p.Size)
-		if len(reader.data) == reader.size {
+		if len(reader.data) == int(reader.key.Size) {
 			reader.Unlock()
 			break
 		}
@@ -94,7 +92,7 @@ func (reader *ExtentReader) toString() (m string) {
 
 func (reader *ExtentReader) reciveData() error {
 	reader.Lock()
-	if reader.byteRecive == reader.size {
+	if reader.byteRecive == int(reader.key.Size)  {
 		reader.Unlock()
 		return nil
 	}
