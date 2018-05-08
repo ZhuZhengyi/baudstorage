@@ -1,16 +1,14 @@
 package stream
 
 import (
+	"fmt"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
+	"github.com/tiglabs/raft/logger"
 	"math/rand"
-	"net"
 	"sync"
 	"time"
-	"github.com/juju/errors"
-	"fmt"
-	"github.com/tiglabs/raft/logger"
-	"google.golang.org/grpc/naming"
 )
 
 type ExtentReader struct {
@@ -23,9 +21,9 @@ type ExtentReader struct {
 	wraper           *sdk.VolGroupWraper
 	byteRecive       int
 	sync.Mutex
-	isReciving       bool
-	exitCh        d     chan bool
-	updateCh           chan bool
+	isReciving bool
+	exitCh     chan bool
+	updateCh   chan bool
 }
 
 func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWraper) (reader *ExtentReader) {
@@ -36,137 +34,114 @@ func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWrape
 	reader.size = int(key.Size)
 	reader.endInodeOffset = reader.startInodeOffset + reader.size
 	reader.wraper = wraper
-	reader.exitCh=make(chan bool,2)
-	reader.updateCh=make(chan bool,1)
+	reader.exitCh = make(chan bool, 2)
+	reader.updateCh = make(chan bool, 1)
 	go reader.asyncRecivData()
 
 	return reader
 }
 
-func (reader *ExtentReader) streamRecivePacket(host string)(error){
+func (reader *ExtentReader) streamRecivePacket(host string) error {
+	reader.Lock()
+	p := NewReadPacket(reader.key, reader.byteRecive)
+	reader.Unlock()
 	conn, err := reader.wraper.GetConnect(host)
 	if err != nil {
-		err=errors.Annotatef(fmt.Errorf(reader.toString()+" vol[%v] not found",reader.key.VolId),
+		return errors.Annotatef(fmt.Errorf(reader.toString()+" vol[%v] not found", reader.key.VolId),
 			"ReciveData Err")
-		logger.Error(err.Error())
-
 
 	}
-	if err = 7yp.WriteToConn(conn); err != nil {
-		err=errors.Annotatef(fmt.Errorf(reader.toString()+" cannot get connect from host[%v] err[%v]",host,err.Error()),
+	defer func() {
+		if err != nil {
+			conn.Close()
+		} else {
+			reader.wraper.PutConnect(conn)
+		}
+	}()
+	if err = p.WriteToConn(conn); err != nil {
+		return errors.Annotatef(fmt.Errorf(reader.toString()+" cannot get connect from host[%v] err[%v]", host, err.Error()),
 			"ReciveData Err")
-		logger.Error(err.Error())
-		continue
-	}
-	err=reader.streamRecivePacket(p, conn)
-	if err!=nil {
-		continue
 	}
 	for {
 		err = p.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
-			break
+			return errors.Annotatef(fmt.Errorf(reader.toString()+" recive data from host[%v] err[%v]", host, err.Error()),
+				"ReciveData Err")
 		}
 		if p.Opcode != proto.OpOk {
-			err=errors.Annotatef(fmt.Errorf(reader.toString()+" packet[%v] opcode err[%v]",
-				p.GetUniqLogId(),string(p.Data[:p.Size])),"streamRecivePacket Err")
-			break
+			return errors.Annotatef(fmt.Errorf(reader.toString()+" packet[%v] from host [%v] opcode err[%v]",
+				p.GetUniqLogId(), host, string(p.Data[:p.Size])), "ReciveData Err")
 		}
 		reader.Lock()
 		reader.data = append(reader.data, p.Data...)
-		reader./+=int(p.Size)
+		reader.byteRecive += int(p.Size)
 		if len(reader.data) == reader.size {
 			reader.Unlock()
 			break
 		}
 		reader.Unlock()
 	}
-	if err!=nil {
-		conn.Close()
-	}else{
-		reader.wraper.PutConnect(conn)
-	}
-}
 
+	return err
+}
 
 func (reader *ExtentReader) toString() (m string) {
 	return fmt.Sprintf("inode[%v] extentKey[%v] bytesRecive[%v] ", reader.inode,
 		reader.key.Marshal(), reader.byteRecive)
 }
 
-func (reader *ExtentReader) reciveData()(err error) {
-	var (
-		vol *sdk.VolGroup
-		p *Packet
-		conn net.Conn
-	)
-	if reader.byteRecive==reader.size{
-		return
+func (reader *ExtentReader) reciveData() error {
+	if reader.byteRecive == reader.size {
+		return nil
 	}
 	rand.Seed(time.Now().UnixNano())
-	vol,err=reader.wraper.GetVol(reader.key.VolId)
-	if err!=nil {
-		err=errors.Annotatef(fmt.Errorf(reader.toString()+" vol[%v] not found",reader.key.VolId),
+	vol, err := reader.wraper.GetVol(reader.key.VolId)
+	if err != nil {
+		err = errors.Annotatef(fmt.Errorf(reader.toString()+" vol[%v] not found", reader.key.VolId),
 			"ReciveData Err")
 		logger.Error(err.Error())
 		return err
 	}
 	index := rand.Intn(int(vol.Goal))
-	p = NewReadPacket(vol, reader.key,reader.byteRecive)
 	host := vol.Hosts[index]
-	conn, err = reader.wraper.GetConnect(host)
-	if err != nil {
-		err=errors.Annotatef(fmt.Errorf(reader.toString()+" cannot get connect from host[%v] err[%v]",host,err.Error()),
-			"ReciveData Err")
-		logger.Error(err.Error())
+	if err = reader.streamRecivePacket(host); err != nil {
 		goto FORLOOP
-	}
-	if err = p.WriteToConn(conn); err != nil {
-		err=errors.Annotatef(fmt.Errorf(reader.toString()+" write to host[%v] err[%v]",host,err.Error()),
-			"ReciveData Err")
-		logger.Error(err.Error())
-		goto FORLOOP
-	}
-	err=reader.streamRecivePacket(p, conn)
-	if err==nil {
-		return
 	}
 
 FORLOOP:
 	for _, host := range vol.Hosts {
-
-
+		err = reader.streamRecivePacket(host)
+		if err == nil {
+			return nil
+		}
 	}
-	return
+
+	return err
 }
 
-
-func (reader *ExtentReader)asyncRecivData(){
+func (reader *ExtentReader) asyncRecivData() {
 	reader.reciveData()
 	for {
 		select {
-			case <-reader.exitCh:
-				return
-			case <-reader.updateCh:
-				err:=reader.reciveData()
-				if err!=nil {
-					reader.updateCh<-true
-				}
+		case <-reader.exitCh:
+			return
+		case <-reader.updateCh:
+			err := reader.reciveData()
+			if err != nil {
+				reader.updateCh <- true
+			}
 		}
 	}
 }
 
-func (reader *ExtentReader)read(data []byte,offset,size int){
+func (reader *ExtentReader) read(data []byte, offset, size int) {
 	reader.Lock()
-	if offset+size<reader.byteRecive{
+	if offset+size < reader.byteRecive {
 		reader.Unlock()
-		copy(data,reader.data[offset:offset+size])
+		copy(data, reader.data[offset:offset+size])
 		return
 	}
 	reader.Unlock()
-
-
-
 
 	return
 }
