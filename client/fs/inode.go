@@ -40,7 +40,7 @@ func InodeInit(inode *Inode, s *Super, ino uint64, p *Dir) {
 }
 
 func (s *Super) InodeGet(inode *Inode) error {
-	status, info, err := s.meta.InodeGet(inode.ino)
+	status, info, err := s.meta.InodeGet_ll(inode.ino)
 	if err != nil {
 		fmt.Println(err)
 		return fuse.Errno(syscall.EAGAIN)

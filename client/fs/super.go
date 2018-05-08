@@ -10,7 +10,7 @@ import (
 
 type Super struct {
 	name string
-	meta *sdk.MetaGroupWrapper
+	meta *sdk.MetaWrapper
 }
 
 //functions that Super needs to implement
@@ -21,7 +21,7 @@ var (
 
 func NewSuper(namespace, master string) (s *Super, err error) {
 	s = new(Super)
-	s.meta, err = sdk.NewMetaGroupWrapper(namespace, master)
+	s.meta, err = sdk.NewMetaWrapper(namespace, master)
 	if err != nil {
 		return nil, err
 	}
