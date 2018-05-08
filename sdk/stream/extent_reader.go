@@ -38,6 +38,16 @@ func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWrape
 	return reader
 }
 
+func (reader *ExtentReader) updateKey(key ExtentKey) {
+	if !(key.VolId == reader.key.VolId && key.ExtentId == reader.key.ExtentId && key.Size > reader.key.Size) {
+		return
+	}
+	reader.Lock()
+	reader.key = key
+	reader.endInodeOffset=reader.startInodeOffset+int(key.Size)
+	reader.Unlock()
+}
+
 func (reader *ExtentReader) sendAndReciveExtentData(host string) error {
 	reader.Lock()
 	p := NewReadPacket(reader.key, reader.byteRecive)
@@ -92,7 +102,7 @@ func (reader *ExtentReader) toString() (m string) {
 
 func (reader *ExtentReader) reciveData() error {
 	reader.Lock()
-	if reader.byteRecive == int(reader.key.Size)  {
+	if reader.byteRecive == int(reader.key.Size) {
 		reader.Unlock()
 		return nil
 	}
