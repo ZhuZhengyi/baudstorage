@@ -75,6 +75,10 @@ func (vg *VolGroup) volOffLine(offlineAddr string, sourceFunc string) {
 
 }
 
+func (vg *VolGroup) volOffLineInMem(addr string) {
+
+}
+
 func (vg *VolGroup) generateLoadVolTasks() (tasks []*proto.AdminTask) {
 
 	vg.Lock()
@@ -333,6 +337,75 @@ func (vg *VolGroup) getLiveVolsByPersistenceHosts(volTimeOutSec int64) (vols []*
 		if volLoc.IsLive(volTimeOutSec) == true {
 			vols = append(vols, volLoc)
 		}
+	}
+
+	return
+}
+
+func (vg *VolGroup) checkAndRemoveMissVol(addr string) {
+	if _, ok := vg.MissNodes[addr]; ok {
+		delete(vg.MissNodes, addr)
+	}
+}
+
+func (vg *VolGroup) LoadFile(dataNode *DataNode, resp *proto.LoadVolResponse) {
+	vg.Lock()
+	defer vg.Unlock()
+
+	index, err := vg.getVolLocationIndex(dataNode.HttpAddr)
+	if err != nil {
+		msg := fmt.Sprintf("LoadFile volID:%v  on Node:%v  don't report :%v ", vg.VolID, dataNode.HttpAddr, err)
+		log.LogWarn(msg)
+		return
+	}
+	volLoc := vg.locations[index]
+	volLoc.LoadVolIsResponse = true
+	for _, vf := range resp.VolSnapshot {
+		if vf == nil {
+			continue
+		}
+		fc, ok := vg.FileInCoreMap[vf.Name]
+		if !ok {
+			fc = NewFileInCore(vf.Name)
+			vg.FileInCoreMap[vf.Name] = fc
+		}
+		fc.updateFileInCore(vg.VolID, vf, volLoc, index)
+	}
+}
+
+func (vg *VolGroup) getVolLocationIndex(addr string) (volLocIndex int, err error) {
+	for volLocIndex = 0; volLocIndex < len(vg.locations); volLocIndex++ {
+		volLoc := vg.locations[volLocIndex]
+		if volLoc.addr == addr {
+			return
+		}
+	}
+	log.LogError(fmt.Sprintf("action[getVolLocationIndex],volID:%v,location:%v,err:%v",
+		vg.VolID, addr, VolLocationNotFound))
+	return -1, VolLocationNotFound
+}
+
+func (vg *VolGroup) DeleteFileOnNode(delAddr, FileID string) {
+	vg.Lock()
+	defer vg.Unlock()
+	fc, ok := vg.FileInCoreMap[FileID]
+	if !ok || fc.MarkDel == false {
+		return
+	}
+	volLoc, err := vg.getVolLocation(delAddr)
+	if err != nil {
+		return
+	}
+	fc.deleteFileInNode(vg.VolID, volLoc)
+
+	msg := fmt.Sprintf("vol:%v  File:%v  on node:%v  delete success",
+		vg.VolID, fc.Name, delAddr)
+	log.LogInfo(msg)
+
+	if len(fc.Metas) == 0 {
+		delete(vg.FileInCoreMap, fc.Name)
+		msg = fmt.Sprintf("vol:%v  File:%v  delete success on allNode", vg.VolID, fc.Name)
+		log.LogInfo(msg)
 	}
 
 	return

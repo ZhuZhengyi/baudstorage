@@ -131,28 +131,161 @@ func (c *Cluster) processLoadVol(v *VolGroup, isRecover bool) {
 	c.putDataNodeTasks(checkFileTasks)
 }
 
-func (c *Cluster) dealTaskResponsePack(nodeAddr string, taskResps []*proto.AdminTask) {
-	if taskResps == nil || len(taskResps) == 0 {
+func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTask) {
+	if task == nil {
 		return
 	}
-	for _, tr := range taskResps {
-		if tr == nil {
-			continue
-		}
-		log.LogDebug(fmt.Sprintf("action[%v],task:%v,nodeAddr:%v,response:%v", "dealTaskResponsePack", tr.ID, nodeAddr, nil))
-		dataNode, err := c.getDataNode(nodeAddr)
-		if err != nil {
-			continue
-		}
-		if t, ok := dataNode.sender.taskMap[tr.ID]; ok {
-			c.dealTaskResponse(tr, t)
-		}
+
+	metaNode, err := c.getMetaNode(nodeAddr)
+	if err != nil {
+		return
+	}
+	if _, ok := metaNode.sender.taskMap[task.ID]; !ok {
+		return
+	}
+	if err := UnmarshalTaskResponse(task); err != nil {
+		return
+	}
+
+	switch task.OpCode {
+	case OpCreateMetaGroup:
+		response := task.Response.(*proto.CreateMetaRangeResponse)
+		c.dealCreateMetaRange(task.OperatorAddr, response)
+	default:
+		log.LogError(fmt.Sprintf("unknown operate code %v", task.OpCode))
 	}
 
 	return
 }
 
-func (c *Cluster) dealTaskResponse(tr *proto.AdminTask, t *proto.AdminTask) {
-	log.LogDebug(fmt.Sprintf("action[%v],task:%v,response:%v", "dealTaskResponse", tr.ID, nil))
+func (c *Cluster) dealCreateMetaRange(nodeAddr string, resp *proto.CreateMetaRangeResponse) {
+	return
+}
+
+func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTask) {
+	if task == nil {
+		return
+	}
+
+	dataNode, err := c.getDataNode(nodeAddr)
+	if err != nil {
+		return
+	}
+	if _, ok := dataNode.sender.taskMap[task.ID]; !ok {
+		return
+	}
+	if err := UnmarshalTaskResponse(task); err != nil {
+		return
+	}
+
+	switch task.OpCode {
+	case OpCreateVol:
+		response := task.Response.(*proto.CreateVolResponse)
+		c.dealCreateVolResponse(task, response)
+	case OpDeleteVol:
+		response := task.Response.(*proto.DeleteVolResponse)
+		c.dealDeleteVolResponse(task.OperatorAddr, response)
+	case OpLoadVol:
+		response := task.Response.(*proto.LoadVolResponse)
+		c.dealLoadVolResponse(task.OperatorAddr, response)
+	case OpDeleteFile:
+		response := task.Response.(*proto.DeleteFileResponse)
+		c.dealDeleteFileResponse(task.OperatorAddr, response)
+	default:
+		log.LogError(fmt.Sprintf("unknown operate code %v", task.OpCode))
+	}
+
+	return
+}
+
+func (c *Cluster) dealCreateVolResponse(t *proto.AdminTask, resp *proto.CreateVolResponse) {
+	if resp.Status == proto.CmdSuccess {
+		c.createVolSuccessTriggerOperator(t.OperatorAddr, resp)
+	} else if resp.Status == proto.CmdFailed {
+		c.createVolFailTriggerOperator(t, resp)
+	}
+
+	return
+}
+
+func (c *Cluster) createVolSuccessTriggerOperator(nodeAddr string, resp *proto.CreateVolResponse) {
+	var (
+		dataNode *DataNode
+		vg       *VolGroup
+		err      error
+		vol      *Vol
+	)
+
+	if vg, err = c.getVolByVolID(resp.VolId); err != nil {
+		goto errDeal
+	}
+
+	if dataNode, err = c.getDataNode(nodeAddr); err != nil {
+		goto errDeal
+	}
+	vol = NewVol(dataNode)
+	vol.status = VolReadWrite
+	vg.addMember(vol)
+
+	vg.Lock()
+	vg.checkAndRemoveMissVol(vol.addr)
+	vg.Unlock()
+	return
+errDeal:
+	log.LogError(fmt.Sprintf("createVolSuccessTriggerOperatorErr %v", err))
+	return
+}
+
+func (c *Cluster) createVolFailTriggerOperator(t *proto.AdminTask, resp *proto.CreateVolResponse) (err error) {
+	msg := fmt.Sprintf("action[createVolFailTriggerOperator],taskID:%v, vol:%v on :%v  "+
+		"Fail And TrigerChangeOpAddr Fail:%v ", t.ID, resp.VolId, t.OperatorAddr, err)
+	log.LogWarn(msg)
+
+	return
+}
+
+func (c *Cluster) dealDeleteVolResponse(nodeAddr string, resp *proto.DeleteVolResponse) {
+	var (
+		vg  *VolGroup
+		err error
+	)
+	if resp.Status == proto.CmdSuccess {
+		if vg, err = c.getVolByVolID(resp.VolId); err != nil {
+			return
+		}
+		vg.Lock()
+		vg.volOffLineInMem(nodeAddr)
+		vg.Unlock()
+	}
+
+	return
+}
+
+func (c *Cluster) dealLoadVolResponse(nodeAddr string, resp *proto.LoadVolResponse) {
+	var dataNode *DataNode
+	vg, err := c.getVolByVolID(resp.VolId)
+	if err != nil || resp.Status == proto.CmdFailed || resp.VolSnapshot == nil {
+		return
+	}
+	if dataNode, err = c.getDataNode(nodeAddr); err != nil {
+		return
+	}
+	vg.LoadFile(dataNode, resp)
+
+	return
+}
+
+func (c *Cluster) dealDeleteFileResponse(nodeAddr string, resp *proto.DeleteFileResponse) {
+	var (
+		vg  *VolGroup
+		err error
+	)
+	if resp.Status == proto.CmdSuccess {
+		if vg, err = c.getVolByVolID(resp.VolId); err != nil {
+			return
+		}
+		vg.DeleteFileOnNode(nodeAddr, resp.Name)
+	}
+
 	return
 }

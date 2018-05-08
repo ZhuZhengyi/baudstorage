@@ -12,6 +12,14 @@ type Vol struct {
 	LoadVolIsResponse bool
 }
 
+func NewVol(dataNode *DataNode) (v *Vol) {
+	v = new(Vol)
+	v.dataNode = dataNode
+	v.addr = dataNode.HttpAddr
+	v.ReportTime = time.Now().Unix()
+	return
+}
+
 func (v *Vol) CheckVolMiss(volMissSec int64) (isMiss bool) {
 	if time.Now().Unix()-v.ReportTime > volMissSec {
 		isMiss = true

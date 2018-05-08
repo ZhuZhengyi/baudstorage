@@ -14,17 +14,6 @@ type VolReport struct {
 	Used      uint64 `json:"UsedSize"`
 }
 
-type File struct {
-	Name      string
-	Crc       uint32
-	CheckSum  uint32
-	Size      uint32
-	Modified  int64
-	MarkDel   bool
-	LastObjID uint64
-	NeedleCnt int
-}
-
 /*this struct define chunk file metadata on  dataNode */
 type FileMetaOnNode struct {
 	Crc       uint32
@@ -70,7 +59,7 @@ func NewFileInCore(name string) (fc *FileInCore) {
 
 /*use a File and volLocation update FileInCore,
 range all FileInCore.NodeInfos,update crc and reportTime*/
-func (fc *FileInCore) updateFileInCore(volID uint32, vf *File, volLoc *Vol, volLocIndex int) {
+func (fc *FileInCore) updateFileInCore(volID uint64, vf *proto.File, volLoc *Vol, volLocIndex int) {
 	if vf.MarkDel == true {
 		fc.MarkDel = true
 	}
