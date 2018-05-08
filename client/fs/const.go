@@ -1,7 +1,11 @@
 package fs
 
+import (
+	"github.com/tiglabs/baudstorage/proto"
+)
+
 const (
-	ROOT_INO = 1
+	ROOT_INO = proto.ROOT_INO
 
 	BLKSIZE_DEFAULT = uint32(1) << 12
 

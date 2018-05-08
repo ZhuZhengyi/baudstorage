@@ -295,7 +295,7 @@ func (writer *ExtentWriter) close() {
 }
 
 func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet) (err error) {
-	if !IsEqualPacket(request, reply) {
+	if !request.IsEqual(reply) {
 		writer.connect.Close()
 		return errors.Annotatef(fmt.Errorf("processReply recive [%v] but actual recive [%v]",
 			request.GetUniqLogId(), reply.GetUniqLogId()), "writer[%v]", writer.toString())
