@@ -55,8 +55,8 @@ func NewReply(reqId int64, volId uint32, extentId uint64) (p *Packet) {
 	return
 }
 
-func IsEqualPacket(request, reply *Packet) bool {
-	if request.ReqID == reply.ReqID && request.VolID == reply.VolID && request.FileID == reply.FileID {
+func (p *Packet) IsEqual(q *Packet) bool {
+	if p.ReqID == q.ReqID && p.VolID == q.VolID && p.FileID == q.FileID {
 		return true
 	}
 
