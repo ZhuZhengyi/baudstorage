@@ -49,7 +49,7 @@ func (stream *StreamReader) toString() (m string) {
 
 func (stream *StreamReader) initCheck(offset, size int) (canread int, err error) {
 	if size > CFSEXTENTSIZE {
-		return 0, fmt.Errorf("read size is So High")
+		return 0, fmt.Errorf("read endOffset is So High")
 	}
 	if offset < int(stream.fileSize) {
 		return size, nil
@@ -70,10 +70,10 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	}
 
 	if offset > int(stream.fileSize) {
-		return 0, fmt.Errorf("fileSize[%v] but read offset[%v]", stream.fileSize, offset)
+		return 0, fmt.Errorf("fileSize[%v] but read startOffset[%v]", stream.fileSize, offset)
 	}
 	if offset+size > int(stream.fileSize) {
-		return int(stream.fileSize) - (offset + size), fmt.Errorf("fileSize[%v] but read offset[%v] size[%v]",
+		return int(stream.fileSize) - (offset + size), fmt.Errorf("fileSize[%v] but read startOffset[%v] endOffset[%v]",
 			stream.fileSize, offset, size)
 	}
 

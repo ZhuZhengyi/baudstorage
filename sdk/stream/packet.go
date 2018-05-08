@@ -30,13 +30,13 @@ func NewWritePacket(vol *sdk.VolGroup, extentId, seqNo uint64, offset int) (p *P
 	return
 }
 
-func NewReadPacket(key ExtentKey, bytesRecive int) (p *Packet) {
+func NewReadPacket(key ExtentKey, offset, size int) (p *Packet) {
 	p = new(Packet)
 	p.FileID = key.ExtentId
 	p.VolID = key.VolId
 	p.Magic = proto.ProtoMagic
-	p.Offset = int64(bytesRecive)
-	p.Size = key.Size
+	p.Offset = int64(offset)
+	p.Size = uint32(size)
 	p.Opcode = proto.OpStreamRead
 	p.StoreType = proto.ExtentStoreMode
 	p.ReqID = proto.GetReqID()
