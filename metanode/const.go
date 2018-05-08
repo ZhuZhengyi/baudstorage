@@ -6,14 +6,18 @@ import (
 
 // Type alias.
 type (
+	// Master -> MetaNode  create metaRange request struct
+	CreateMetaRangeReq = proto.CreateMetaRangeRequest
+	// MetaNode -> Master create metaRange response struct
+	CreateMetaRangeResp = proto.CreateMetaRangeResponse
 	// Client -> MetaNode create inode request struct
 	CreateInoReq = proto.CreateInodeRequest
 	// MetaNode -> Client create inode response struct
 	CreateInoResp = proto.CreateInodeResponse
 	// Client -> MetaNode delete inode request struct
-	deleteInoReq = proto.DeleteInodeRequest
+	DeleteInoReq = proto.DeleteInodeRequest
 	// MetaNode -> Client delete inode response struct
-	deleteInoResp = proto.DeleteInodeResponse
+	DeleteInoResp = proto.DeleteInodeResponse
 	// Client -> MetaNode create dentry request struct
 	CreateDentryReq = proto.CreateDentryRequest
 	// MetaNode -> Client create dentry response struct

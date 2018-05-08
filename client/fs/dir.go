@@ -37,6 +37,10 @@ func NewDir(s *Super, ino uint64, p *Dir) *Dir {
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Inode = d.inode.ino
 	a.Mode = os.ModeDir | os.ModePerm
+	a.Nlink = d.inode.nlink
+	a.Atime = d.inode.AccessTime
+	a.Ctime = d.inode.CreateTime
+	a.Mtime = d.inode.ModifyTime
 	return nil
 }
 
