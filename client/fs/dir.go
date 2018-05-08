@@ -9,6 +9,7 @@ import (
 )
 
 type Dir struct {
+	InodeCommon
 	inode Inode
 }
 
@@ -26,21 +27,20 @@ var (
 	//TODO:NodeRenamer, NodeSymlinker
 )
 
-func NewDir(s *Super, ino uint64, p *Dir) *Dir {
+func NewDir(s *Super, p *Dir) *Dir {
 	dir := new(Dir)
-	inode := &dir.inode
-	InodeInit(inode, s, ino, p)
-	inode.nlink = DIR_NLINK_DEFAULT
+	dir.super = s
+	dir.parent = p
+	dir.blksize = BLKSIZE_DEFAULT
+	dir.nlink = DIR_NLINK_DEFAULT
 	return dir
 }
 
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
-	a.Inode = d.inode.ino
+	a.Nlink = d.nlink
+	a.BlockSize = d.blksize
 	a.Mode = os.ModeDir | os.ModePerm
-	a.Nlink = d.inode.nlink
-	a.Atime = d.inode.AccessTime
-	a.Ctime = d.inode.CreateTime
-	a.Mtime = d.inode.ModifyTime
+	fillAttr(a, &d.inode)
 	return nil
 }
 

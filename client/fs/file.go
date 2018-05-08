@@ -9,6 +9,7 @@ import (
 )
 
 type File struct {
+	InodeCommon
 	inode Inode
 }
 
@@ -27,23 +28,21 @@ var (
 	//TODO:HandleReadAller, NodeSetattrer
 )
 
-func NewFile(s *Super, ino uint64, p *Dir) *File {
+func NewFile(s *Super, p *Dir) *File {
 	file := new(File)
-	inode := &file.inode
-	InodeInit(inode, s, ino, p)
-	inode.nlink = REGULAR_NLINK_DEFAULT
+	file.super = s
+	file.parent = p
+	file.blksize = BLKSIZE_DEFAULT
+	file.nlink = REGULAR_NLINK_DEFAULT
 	return file
 }
 
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
-	a.Inode = f.inode.ino
-	a.Mode = os.ModePerm
-	a.Size = f.inode.size
+	a.Nlink = f.nlink
+	a.BlockSize = f.blksize
 	a.Blocks = a.Size >> 9 // In 512 bytes
-	a.Nlink = f.inode.nlink
-	a.Atime = f.inode.AccessTime
-	a.Ctime = f.inode.CreateTime
-	a.Mtime = f.inode.ModifyTime
+	a.Mode = os.ModePerm
+	fillAttr(a, &f.inode)
 	return nil
 }
 

@@ -10,7 +10,7 @@ import (
 
 type Super struct {
 	name string
-	meta *sdk.MetaGroupWrapper
+	meta *sdk.MetaWrapper
 }
 
 //functions that Super needs to implement
@@ -21,7 +21,7 @@ var (
 
 func NewSuper(namespace, master string) (s *Super, err error) {
 	s = new(Super)
-	s.meta, err = sdk.NewMetaGroupWrapper(namespace, master)
+	s.meta, err = sdk.NewMetaWrapper(namespace, master)
 	if err != nil {
 		return nil, err
 	}
@@ -30,10 +30,11 @@ func NewSuper(namespace, master string) (s *Super, err error) {
 }
 
 func (s *Super) Root() (fs.Node, error) {
-	root := NewDir(s, ROOT_INO, nil)
-	if err := s.InodeGet(&root.inode); err != nil {
+	root := NewDir(s, nil)
+	if err := s.InodeGet(ROOT_INO, &root.inode); err != nil {
 		return nil, err
 	}
+	root.parent = root
 	return root, nil
 }
 

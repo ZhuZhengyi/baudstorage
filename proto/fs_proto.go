@@ -4,10 +4,14 @@ import (
 	"time"
 )
 
+const (
+	ROOT_INO = 1
+)
+
 type InodeInfo struct {
 	Inode      uint64    `json:"inode"`
 	Type       uint32    `json:"type"`
-	ParentID   uint64    `json:"parentID"`
+	Size       uint64    `json:"size"`
 	ModifyTime time.Time `json:"modify_time"`
 	CreateTime time.Time `json:"create_time"`
 	AccessTime time.Time `json:"access_time"`
