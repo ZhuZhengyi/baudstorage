@@ -71,7 +71,7 @@ func NewMetaWrapper(namespace, masterHosts string) (*MetaWrapper, error) {
 	return mw, nil
 }
 
-func (mw *MetaWrapper) icreate(conn net.Conn, mode uint32) (status int, inode uint64, err error) {
+func (mw *MetaWrapper) icreate(conn net.Conn, mode uint32) (status int, info *proto.InodeInfo, err error) {
 	req := &proto.CreateInodeRequest{
 		Namespace: mw.namespace,
 		Mode:      mode,
@@ -93,7 +93,7 @@ func (mw *MetaWrapper) icreate(conn net.Conn, mode uint32) (status int, inode ui
 	if err != nil {
 		return
 	}
-	return int(resp.Status), resp.Inode, nil
+	return int(resp.Status), resp.Info, nil
 }
 
 func (mw *MetaWrapper) idelete(conn net.Conn, inode uint64) (status int, err error) {

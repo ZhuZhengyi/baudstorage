@@ -12,7 +12,7 @@ import (
 
 // Low-level API, i.e. work with inode
 
-func (mw *MetaWrapper) Create_ll(parentID uint64, name string, mode uint32) (status int, inode uint64, err error) {
+func (mw *MetaWrapper) Create_ll(parentID uint64, name string, mode uint32) (status int, info *proto.InodeInfo, err error) {
 	_, parentConn, err := mw.connect(parentID)
 	if err != nil {
 		return
@@ -38,7 +38,7 @@ func (mw *MetaWrapper) Create_ll(parentID uint64, name string, mode uint32) (sta
 			if err != nil {
 				continue
 			}
-			status, inode, err = mw.icreate(inodeConn, mode)
+			status, info, err = mw.icreate(inodeConn, mode)
 			if err == nil && status == int(proto.OpOk) {
 				// create inode is successful, and keep the connection
 				mw.allocMeta <- groupid
@@ -51,12 +51,12 @@ func (mw *MetaWrapper) Create_ll(parentID uint64, name string, mode uint32) (sta
 	}
 
 	if !inodeCreated {
-		return -1, 0, syscall.ENOMEM
+		return -1, nil, syscall.ENOMEM
 	}
 
-	status, err = mw.dcreate(parentConn, parentID, name, inode, mode)
+	status, err = mw.dcreate(parentConn, parentID, name, info.Inode, mode)
 	if err != nil || status != int(proto.OpOk) {
-		mw.idelete(inodeConn, inode) //TODO: deal with error
+		mw.idelete(inodeConn, info.Inode) //TODO: deal with error
 	}
 	mw.putConn(inodeConn, err)
 	return

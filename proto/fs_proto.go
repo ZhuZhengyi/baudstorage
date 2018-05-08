@@ -35,7 +35,7 @@ type CreateInodeRequest struct {
 
 type CreateInodeResponse struct {
 	OpResult
-	Inode uint64 `json:"inode"`
+	Info *InodeInfo
 }
 
 type DeleteInodeRequest struct {
