@@ -45,8 +45,7 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 }
 
 func (d *Dir) Create(ctx context.Context, req *fuse.CreateRequest, resp *fuse.CreateResponse) (fs.Node, fs.Handle, error) {
-	meta := d.super.meta
-	status, info, err := meta.Create_ll(d.inode.ino, req.Name, ModeRegular)
+	status, info, err := d.super.meta.Create_ll(d.inode.ino, req.Name, ModeRegular)
 	err = ParseResult(status, err)
 	if err != nil {
 		return nil, nil, err
@@ -61,7 +60,15 @@ func (d *Dir) Forget() {
 }
 
 func (d *Dir) Mkdir(ctx context.Context, req *fuse.MkdirRequest) (fs.Node, error) {
-	return nil, fuse.EPERM
+	status, info, err := d.super.meta.Create_ll(d.inode.ino, req.Name, ModeDir)
+	err = ParseResult(status, err)
+	if err != nil {
+		return nil, err
+	}
+
+	child := NewDir(d.super, d)
+	fillInode(&child.inode, info)
+	return child, nil
 }
 
 func (d *Dir) Remove(ctx context.Context, req *fuse.RemoveRequest) error {
