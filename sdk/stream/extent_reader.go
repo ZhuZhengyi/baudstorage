@@ -21,7 +21,6 @@ type ExtentReader struct {
 	wraper           *sdk.VolGroupWraper
 	exitCh           chan bool
 	updateCh         chan bool
-	appReadTime      int64
 	lastReadOffset   int
 }
 
@@ -49,7 +48,6 @@ func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWrape
 
 func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
 	if reader.getCacheStatus() == AvaliBuffer && offset+size <= reader.buffer.getBufferEndOffset() {
-		reader.appReadTime = time.Now().Unix()
 		reader.buffer.copyData(data, offset, size)
 		return
 	}
