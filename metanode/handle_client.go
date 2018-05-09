@@ -2,8 +2,9 @@ package metanode
 
 import (
 	"encoding/json"
-	"github.com/tiglabs/baudstorage/proto"
 	"net"
+
+	"github.com/tiglabs/baudstorage/proto"
 )
 
 // Handle OpCreate Inode
@@ -12,7 +13,7 @@ func (m *MetaNode) opCreateInode(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
 	if err != nil {
 		return
 	}
@@ -28,7 +29,7 @@ func (m *MetaNode) opCreateDentry(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
 	if err != nil {
 		return err
 	}
@@ -44,7 +45,7 @@ func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
 	if err != nil {
 		return
 	}
@@ -55,11 +56,11 @@ func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
 }
 
 func (m *MetaNode) opDeleteInode(conn net.Conn, p *Packet) (err error) {
-	req := &deleteInoReq{}
+	req := &DeleteInoReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
 	if err != nil {
 		return
 	}
@@ -74,7 +75,7 @@ func (m *MetaNode) opReadDir(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
 	if err != nil {
 		return
 	}
@@ -90,7 +91,7 @@ func (m *MetaNode) opOpen(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeGroup.LoadMetaRange(req.Namespace)
+	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
 	if err != nil {
 		return
 	}

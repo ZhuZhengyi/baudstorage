@@ -23,7 +23,7 @@ const (
 	NotRecive              = false
 	ExtentWriterRecoverCnt = 3
 
-	DefaultBufferSize = 1280 * util.KB
+	DefaultWriteBufferSize = 1280 * util.KB
 )
 
 var (
@@ -54,7 +54,7 @@ type ExtentWriter struct {
 func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper, extentId uint64) (writer *ExtentWriter, err error) {
 	writer = new(ExtentWriter)
 	writer.requestQueue = list.New()
-	writer.handleCh = make(chan bool, DefaultBufferSize/(64*util.KB))
+	writer.handleCh = make(chan bool, DefaultWriteBufferSize/(64*util.KB))
 	writer.extentId = extentId
 	writer.volGroup = vol
 	writer.inode = inode
