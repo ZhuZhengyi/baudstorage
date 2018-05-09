@@ -20,7 +20,7 @@ type ExtentReader struct {
 	key              ExtentKey
 	wraper           *sdk.VolGroupWraper
 	exitCh           chan bool
-	updateCh         chan bool
+	cacheReferCh     chan bool
 	lastReadOffset   int
 }
 
@@ -35,12 +35,13 @@ func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWrape
 		return
 	}
 	reader.key = key
-	reader.buffer = NewCacheBuffer(0, int(util.Min(uint64(DefaultReadBufferSize), uint64(key.Size))))
+	reader.buffer = NewCacheBuffer()
 	reader.startInodeOffset = inInodeOffset
 	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
 	reader.wraper = wraper
 	reader.exitCh = make(chan bool, 2)
-	reader.updateCh = make(chan bool, 10)
+	reader.cacheReferCh = make(chan bool, 10)
+	reader.cacheReferCh <- true
 	go reader.asyncFillCache()
 
 	return
@@ -56,7 +57,7 @@ func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
 	reader.setCacheToUnavali()
 	if err == nil {
 		select {
-		case reader.updateCh <- true:
+		case reader.cacheReferCh <- true:
 			reader.lastReadOffset = offset
 		default:
 			return
@@ -163,7 +164,7 @@ func (reader *ExtentReader) fillCache() error {
 func (reader *ExtentReader) asyncFillCache() {
 	for {
 		select {
-		case <-reader.updateCh:
+		case <-reader.cacheReferCh:
 			reader.fillCache()
 		}
 	}
@@ -179,15 +180,13 @@ type CacheBuffer struct {
 	startOffset int
 	endOffset   int
 	sync.Mutex
-	isFull      bool
-	status      int
+	isFull bool
+	status int
 }
 
-func NewCacheBuffer(offset, size int) (buffer *CacheBuffer) {
+func NewCacheBuffer() (buffer *CacheBuffer) {
 	buffer = new(CacheBuffer)
 	buffer.cache = make([]byte, 0)
-	buffer.endOffset = offset + size
-	buffer.startOffset = offset
 	return buffer
 }
 
@@ -197,6 +196,7 @@ func (buffer *CacheBuffer) UpdateCache(data []byte, offset, size int) {
 	buffer.cache = data
 	buffer.startOffset = offset
 	buffer.endOffset = offset + size
+	buffer.status = AvaliBuffer
 
 	return
 }
