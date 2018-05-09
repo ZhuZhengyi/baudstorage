@@ -2,6 +2,7 @@ package stream
 
 import (
 	"fmt"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/sdk"
 	"io"
 	"sync"
@@ -25,8 +26,12 @@ func NewStreamReader(inode uint64) (stream *StreamReader, err error) {
 		return
 	}
 	var offset int
+	var reader *ExtentReader
 	for _, key := range stream.extents.Extents {
-		stream.readers = append(stream.readers, NewExtentReader(offset, key, stream.wraper))
+		if reader, err = NewExtentReader(offset, key, stream.wraper); err != nil {
+			return nil, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", inode, key)
+		}
+		stream.readers = append(stream.readers, reader)
 		offset += int(key.Size)
 	}
 	stream.fileSize = stream.extents.Size()
@@ -59,12 +64,16 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	if err == nil {
 		stream.extents = newStreamKey
 		var newOffSet int
+		var reader *ExtentReader
 		for _, key := range stream.extents.Extents {
 			newOffSet += int(key.Size)
 			if stream.isExsitExtentReader(key) {
 				continue
 			}
-			stream.readers = append(stream.readers, NewExtentReader(newOffSet, key, stream.wraper))
+			if reader, err = NewExtentReader(offset, key, stream.wraper); err != nil {
+				return 0, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
+			}
+			stream.readers = append(stream.readers, reader)
 		}
 		stream.fileSize = stream.extents.Size()
 	}
@@ -81,17 +90,23 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 }
 
 func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int, err error) {
-	canRead, err = stream.initCheck(offset, size)
+	var keyCanRead int
+	keyCanRead, err = stream.initCheck(offset, size)
 	if err != nil {
 		err = io.EOF
 	}
-	if canRead == 0 {
+	if keyCanRead == 0 {
 		return
 	}
 	readers, readerOffset, readerSize := stream.getReader(offset, size)
+	data = make([]byte, size)
 	for index := 0; index <= len(readers); index++ {
 		reader := readers[index]
-
+		err = reader.read(data[canRead:canRead+readerSize[index]], readerOffset[index], readerSize[index])
+		if err != nil {
+			return
+		}
+		canRead += readerSize[index]
 	}
 
 	return
