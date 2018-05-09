@@ -13,7 +13,7 @@ import (
 
 const (
 	TestNamespace  = "metatest"
-	TestMasterAddr = "http://localhost"
+	TestMasterAddr = "localhost"
 	TestHttpPort   = "9900"
 )
 
@@ -81,16 +81,16 @@ func handleClientNS(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestGetNamespaceView(t *testing.T) {
-	resp, err := http.Get(TestMasterAddr + ":" + TestHttpPort + MetaPartitionViewURL + TestNamespace)
+	resp, err := http.Get("http://" + TestMasterAddr + ":" + TestHttpPort + MetaPartitionViewURL + TestNamespace)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	defer resp.Body.Close()
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp.Body.Close()
 
 	nv := &NamespaceView{}
 	err = json.Unmarshal(data, nv)
@@ -99,6 +99,19 @@ func TestGetNamespaceView(t *testing.T) {
 	}
 
 	for _, mp := range nv.MetaPartitions {
+		t.Logf("%v", *mp)
+	}
+}
+
+func TestMetaPartitionManagement(t *testing.T) {
+	mw, err := NewMetaWrapper(TestNamespace, TestMasterAddr+":"+TestHttpPort)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mw.RLock()
+	defer mw.RUnlock()
+	for _, mp := range mw.partitions {
 		t.Logf("%v", *mp)
 	}
 }

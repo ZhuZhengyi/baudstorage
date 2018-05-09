@@ -64,6 +64,7 @@ func (this *MetaPartition) Less(than btree.Item) bool {
 
 func NewMetaWrapper(namespace, masterHosts string) (*MetaWrapper, error) {
 	mw := new(MetaWrapper)
+	mw.namespace = namespace
 	mw.master = strings.Split(masterHosts, HostsSeparator)
 	mw.conns = pool.NewConnPool()
 	mw.partitions = make(map[string]*MetaPartition)
@@ -344,10 +345,17 @@ func (mw *MetaWrapper) getNamespaceView() (*NamespaceView, error) {
 	addr := mw.master[0]
 	resp, err := http.Get("http://" + addr + MetaPartitionViewURL + mw.namespace)
 	if err != nil {
-		//TODO: master would return the leader addr if it is a follower
 		return nil, err
 	}
+
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		//TODO: master would return the leader addr if it is a follower
+		err = errors.New("Get namespace view failed!")
+		return nil, err
+	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		//TODO: log
@@ -355,7 +363,7 @@ func (mw *MetaWrapper) getNamespaceView() (*NamespaceView, error) {
 	}
 
 	view := new(NamespaceView)
-	if err = json.Unmarshal(body, &view); err != nil {
+	if err = json.Unmarshal(body, view); err != nil {
 		//TODO: log
 		return nil, err
 	}
