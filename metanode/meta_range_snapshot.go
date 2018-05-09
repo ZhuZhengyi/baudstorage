@@ -7,9 +7,9 @@ import (
 )
 
 type MetaRangeSnapshot struct {
-	Op    string `json:"op"`
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	Op string `json:"op"`
+	K  string `json:"k"`
+	V  string `json:"v"`
 }
 
 func (s *MetaRangeSnapshot) Encode() ([]byte, error) {
@@ -22,9 +22,9 @@ func (s *MetaRangeSnapshot) Decode(data []byte) error {
 
 func NewMetaRangeSnapshot(op, key, value string) *MetaRangeSnapshot {
 	return &MetaRangeSnapshot{
-		Op:    op,
-		Key:   key,
-		Value: value,
+		Op: op,
+		K:  key,
+		V:  value,
 	}
 }
 
