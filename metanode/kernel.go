@@ -15,6 +15,7 @@ type Dentry struct {
 	Name     string // Name of current dentry.
 	Inode    uint64 // Id value of current inode.
 	Type     uint32 // Dentry type.
+	ApplyID  uint64 // Raft commit appyID
 }
 
 // Less tests whether the current dentry item is less than the given one.
@@ -47,7 +48,7 @@ func (d *Dentry) GetKeyBytes() (m []byte) {
 
 // GetValueString returns string value of this dentry which consists of Inode and Type properties.
 func (d *Dentry) GetValue() (m string) {
-	return fmt.Sprintf("%d*%d", d.Inode, d.Type)
+	return fmt.Sprintf("%d*%d*%d", d.Inode, d.Type, d.ApplyID)
 }
 
 // GetValueBytes is the bytes version of GetValue method which returns byte slice result.
@@ -63,6 +64,7 @@ type Inode struct {
 	AccessTime int64
 	ModifyTime int64
 	Stream     *stream.StreamKey
+	ApplyID    uint64
 }
 
 // NewInode returns a new inode instance pointer with specified inode ID, name and inode type code.
@@ -99,7 +101,7 @@ func (i *Inode) GetKeyBytes() (m []byte) {
 // GetValue returns string value of this Inode which consists of Name, Size, AccessTime and
 // ModifyTime properties and connected by '*'.
 func (i *Inode) GetValue() (m string) {
-	s := fmt.Sprintf("%d*%d*%d", i.Size, i.AccessTime, i.ModifyTime)
+	s := fmt.Sprintf("%d*%d*%d*%d", i.Size, i.AccessTime, i.ModifyTime, i.ApplyID)
 	i.Stream.Range(func(index int, extentKey stream.ExtentKey) bool {
 		if uint64(index) == i.Stream.Size() {
 			s += extentKey.Marshal()

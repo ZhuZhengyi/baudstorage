@@ -3,10 +3,10 @@ package metanode
 import (
 	"errors"
 	"io/ioutil"
+	"os"
+	"path"
 	"strings"
 	"sync"
-
-	"github.com/tiglabs/baudstorage/util/log"
 )
 
 const metaManagePrefix = "metaManager_"
@@ -18,24 +18,14 @@ type MetaRangeManager struct {
 }
 
 // StoreMeteRange try make mapping between meta range ID and MetaRange.
-func (m *MetaRangeManager) CreateMetaRange(id string, start, end uint64,
-	peers []string) (err error) {
-	if len(strings.TrimSpace(id)) > 0 {
-		m.mu.Lock()
-		defer m.mu.Unlock()
-		if _, ok := m.metaRangeMap[id]; ok {
-			err = errors.New("metaRange '" + id + "' is existed!")
-			log.LogError(err.Error())
-			return
-		}
-		metaRange := NewMetaRange(&CreateMetaRangeReq{
-			MetaId:  id,
-			Start:   start,
-			End:     end,
-			Members: peers,
-		})
-		m.metaRangeMap[id] = metaRange
+func (m *MetaRangeManager) SetMetaRange(mr *MetaRange) (err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.metaRangeMap[mr.ID]; ok {
+		err = errors.New("metaRange '" + mr.ID + "' is existed!")
+		return
 	}
+	m.metaRangeMap[mr.ID] = mr
 	return
 }
 
@@ -51,46 +41,81 @@ func (m *MetaRangeManager) LoadMetaRange(id string) (mr *MetaRange, err error) {
 	return
 }
 
-// Restore load meta manager snapshot from data file and restore all  meta range
-// into this meta range manager.
-func (m *MetaRangeManager) RestoreMetaManagers(metaDir string) {
-	// Scan data directory.
-	fileInfos, err := ioutil.ReadDir(metaDir)
-	if err != nil {
-		log.LogError("action[MetaRangeManager.Restore],err:%v", err)
-		return
-	}
-	for _, fileInfo := range fileInfos {
-		if fileInfo.IsDir() && strings.HasPrefix(fileInfo.Name(),
-			metaManagePrefix) {
-			metaRangeId := fileInfo.Name()[13:]
-			m.mu.Lock()
-			if _, ok := m.metaRangeMap[metaRangeId]; !ok {
-				m.CreateMetaRange(metaRangeId, 0, 0, []string{})
-			}
-			m.mu.Unlock()
+func (m *MetaRangeManager) Range(f func(id string, mr *MetaRange) bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for id, m := range m.metaRangeMap {
+		if !f(id, m) {
+			return
 		}
 	}
 }
 
-func (m *MetaRangeManager) RestoreRanges() {
+// Restore load meta manager snapshot from data file and restore all  meta range
+// into this meta range manager.
+func (m *MetaRangeManager) RestoreMetaManagers(metaDir string) (err error) {
+	// Check metaDir directory
+	fileInfo, err := os.Stat(metaDir)
+	if err != nil {
+		os.MkdirAll(metaDir, 0655)
+		err = nil
+		return
+	}
+	if !fileInfo.IsDir() {
+		err = errors.New("metaDir must be directory!")
+		return
+	}
+	// Scan data directory.
+	fileInfos, err := ioutil.ReadDir(metaDir)
+	if err != nil {
+		return
+	}
 	var wg sync.WaitGroup
-	for _, mr := range m.metaRangeMap {
-		wg.Add(1)
-		go func(mr *MetaRange, wg sync.WaitGroup) {
-			//read meta
-			//restore inode btree
-			//restore dentry btree
-			wg.Done()
-		}(mr, wg)
+	for _, fileInfo := range fileInfos {
+		if fileInfo.IsDir() && strings.HasPrefix(fileInfo.Name(),
+			metaManagePrefix) {
+			wg.Add(1)
+			metaRangeId := fileInfo.Name()[12:]
+			go func(metaID string, fileInfo os.FileInfo) {
+				/* Create MetaRange and add metaRangeManager */
+				// Create MetaRange
+				mr := NewMetaRange(MetaRangeConfig{
+					ID:        metaID,
+					rootDir:   path.Join(metaDir, fileInfo.Name()),
+					isRestore: true,
+				})
+				if err = mr.RestoreMeta(); err != nil {
+					// TODO: log
+					return
+				}
+				// Restore inode btree from inode file
+				if err = mr.RestoreInode(); err != nil {
+					//TODO: log
+					return
+				}
+				// Restore dentry btree from dentry
+				if err = mr.RestoreDentry(); err != nil {
+					// TODO: log
+					return
+				}
+				// Add MetaRangeManager
+				m.SetMetaRange(mr)
+				wg.Done()
+			}(metaRangeId, fileInfo)
+		}
 	}
 	wg.Wait()
+	return
 }
 
-func (m *MetaRangeManager) RestoreApplyIDFromRaft() {
-
+func (m *MetaRangeManager) DeleteMetaRange(id string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.metaRangeMap, id)
 }
 
 func NewMetaRangeManager() *MetaRangeManager {
-	return &MetaRangeManager{}
+	return &MetaRangeManager{
+		metaRangeMap: make(map[string]*MetaRange, 0),
+	}
 }
