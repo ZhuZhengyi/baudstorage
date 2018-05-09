@@ -155,7 +155,7 @@ func (reader *ExtentReader) fillCache() error {
 	if err != nil {
 		return err
 	}
-	reader.buffer.UpdateData(data, bufferOffset, bufferSize)
+	reader.buffer.UpdateCache(data, bufferOffset, bufferSize)
 
 	return nil
 }
@@ -175,26 +175,26 @@ const (
 )
 
 type CacheBuffer struct {
-	data        []byte
+	cache       []byte
 	startOffset int
 	endOffset   int
 	sync.Mutex
-	isFull bool
-	status int
+	isFull      bool
+	status      int
 }
 
 func NewCacheBuffer(offset, size int) (buffer *CacheBuffer) {
 	buffer = new(CacheBuffer)
-	buffer.data = make([]byte, 0)
+	buffer.cache = make([]byte, 0)
 	buffer.endOffset = offset + size
 	buffer.startOffset = offset
 	return buffer
 }
 
-func (buffer *CacheBuffer) UpdateData(data []byte, offset, size int) {
+func (buffer *CacheBuffer) UpdateCache(data []byte, offset, size int) {
 	buffer.Lock()
 	defer buffer.Unlock()
-	buffer.data = data
+	buffer.cache = data
 	buffer.startOffset = offset
 	buffer.endOffset = offset + size
 
@@ -204,7 +204,7 @@ func (buffer *CacheBuffer) UpdateData(data []byte, offset, size int) {
 func (buffer *CacheBuffer) copyData(dst []byte, offset, size int) {
 	buffer.Lock()
 	defer buffer.Unlock()
-	copy(dst, buffer.data[offset:offset+size])
+	copy(dst, buffer.cache[offset:offset+size])
 }
 
 func (buffer *CacheBuffer) getBufferEndOffset() int {
