@@ -225,7 +225,7 @@ func (s *ExtentStore) Read(extentId uint64, offset, size int64, nbuf []byte) (cr
 		return
 	}
 	blockNo := offset / BlockSize
-	if offsetInBlock == 0 {
+	if offsetInBlock == 0  && size==BlockSize{
 		crc = binary.BigEndian.Uint32(e.blocksCrc[blockNo*4 : (blockNo+1)*4])
 	} else {
 		crc = crc32.ChecksumIEEE(nbuf)

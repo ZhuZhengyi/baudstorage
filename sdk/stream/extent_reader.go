@@ -15,7 +15,7 @@ type ExtentReader struct {
 	inode            uint64
 	startInodeOffset int
 	endInodeOffset   int
-	buffer           *CacheBuffer
+	cache            *CacheBuffer
 	vol              *sdk.VolGroup
 	key              ExtentKey
 	wraper           *sdk.VolGroupWraper
@@ -35,7 +35,7 @@ func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWrape
 		return
 	}
 	reader.key = key
-	reader.buffer = NewCacheBuffer()
+	reader.cache = NewCacheBuffer()
 	reader.startInodeOffset = inInodeOffset
 	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
 	reader.wraper = wraper
@@ -48,8 +48,8 @@ func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWrape
 }
 
 func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
-	if reader.getCacheStatus() == AvaliBuffer && offset+size <= reader.buffer.getBufferEndOffset() {
-		reader.buffer.copyData(data, offset, size)
+	if reader.getCacheStatus() == AvaliBuffer && offset+size <= reader.cache.getBufferEndOffset() {
+		reader.cache.copyData(data, offset, size)
 		return
 	}
 	p := NewReadPacket(reader.key, offset, size)
@@ -145,7 +145,7 @@ func (reader *ExtentReader) toString() (m string) {
 }
 
 func (reader *ExtentReader) fillCache() error {
-	if reader.buffer.getBufferEndOffset() == int(reader.key.Size) {
+	if reader.cache.getBufferEndOffset() == int(reader.key.Size) {
 		return nil
 	}
 	reader.setCacheToUnavali()
@@ -156,7 +156,7 @@ func (reader *ExtentReader) fillCache() error {
 	if err != nil {
 		return err
 	}
-	reader.buffer.UpdateCache(data, bufferOffset, bufferSize)
+	reader.cache.UpdateCache(data, bufferOffset, bufferSize)
 
 	return nil
 }
@@ -166,6 +166,8 @@ func (reader *ExtentReader) asyncFillCache() {
 		select {
 		case <-reader.cacheReferCh:
 			reader.fillCache()
+		case <-reader.exitCh:
+			return
 		}
 	}
 }
@@ -214,19 +216,19 @@ func (buffer *CacheBuffer) getBufferEndOffset() int {
 }
 
 func (reader *ExtentReader) setCacheToUnavali() {
-	reader.buffer.Lock()
-	defer reader.buffer.Unlock()
-	reader.buffer.status = UnavaliBuffer
+	reader.cache.Lock()
+	defer reader.cache.Unlock()
+	reader.cache.status = UnavaliBuffer
 }
 
 func (reader *ExtentReader) setCacheToAvali() {
-	reader.buffer.Lock()
-	defer reader.buffer.Unlock()
-	reader.buffer.status = AvaliBuffer
+	reader.cache.Lock()
+	defer reader.cache.Unlock()
+	reader.cache.status = AvaliBuffer
 }
 
 func (reader *ExtentReader) getCacheStatus() int {
-	reader.buffer.Lock()
-	defer reader.buffer.Unlock()
-	return reader.buffer.status
+	reader.cache.Lock()
+	defer reader.cache.Unlock()
+	return reader.cache.status
 }

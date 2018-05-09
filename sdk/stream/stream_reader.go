@@ -2,31 +2,38 @@ package stream
 
 import (
 	"fmt"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/sdk"
 	"io"
 	"sync"
 )
 
 type StreamReader struct {
-	inode    uint64
-	wraper   *sdk.VolGroupWraper
-	readers  []*ExtentReader
-	updateFn func(inode uint64) (sk StreamKey, err error)
-	extents  StreamKey
-	fileSize uint64
+	inode          uint64
+	wraper         *sdk.VolGroupWraper
+	readers        []*ExtentReader
+	updateExtentFn func(inode uint64) (sk StreamKey, err error)
+	extents        StreamKey
+	fileSize       uint64
 	sync.Mutex
 }
 
-func NewStreamReader(inode uint64) (stream *StreamReader, err error) {
+func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, updateExtentFn func(inode uint64) (sk StreamKey, err error)) (stream *StreamReader, err error) {
 	stream = new(StreamReader)
 	stream.inode = inode
-	stream.extents, err = stream.updateFn(inode)
+	stream.wraper = wraper
+	stream.updateExtentFn = updateExtentFn
+	stream.extents, err = stream.updateExtentFn(inode)
 	if err != nil {
 		return
 	}
 	var offset int
+	var reader *ExtentReader
 	for _, key := range stream.extents.Extents {
-		stream.readers = append(stream.readers, NewExtentReader(offset, key, stream.wraper))
+		if reader, err = NewExtentReader(offset, key, stream.wraper); err != nil {
+			return nil, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", inode, key)
+		}
+		stream.readers = append(stream.readers, reader)
 		offset += int(key.Size)
 	}
 	stream.fileSize = stream.extents.Size()
@@ -55,16 +62,20 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 		return size, nil
 	}
 	var newStreamKey StreamKey
-	newStreamKey, err = stream.updateFn(stream.inode)
+	newStreamKey, err = stream.updateExtentFn(stream.inode)
 	if err == nil {
 		stream.extents = newStreamKey
 		var newOffSet int
+		var reader *ExtentReader
 		for _, key := range stream.extents.Extents {
 			newOffSet += int(key.Size)
 			if stream.isExsitExtentReader(key) {
 				continue
 			}
-			stream.readers = append(stream.readers, NewExtentReader(newOffSet, key, stream.wraper))
+			if reader, err = NewExtentReader(offset, key, stream.wraper); err != nil {
+				return 0, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
+			}
+			stream.readers = append(stream.readers, reader)
 		}
 		stream.fileSize = stream.extents.Size()
 	}
@@ -81,17 +92,23 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 }
 
 func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int, err error) {
-	canRead, err = stream.initCheck(offset, size)
+	var keyCanRead int
+	keyCanRead, err = stream.initCheck(offset, size)
 	if err != nil {
 		err = io.EOF
 	}
-	if canRead == 0 {
+	if keyCanRead == 0 {
 		return
 	}
 	readers, readerOffset, readerSize := stream.getReader(offset, size)
+	data = make([]byte, size)
 	for index := 0; index <= len(readers); index++ {
 		reader := readers[index]
-
+		err = reader.read(data[canRead:canRead+readerSize[index]], readerOffset[index], readerSize[index])
+		if err != nil {
+			return
+		}
+		canRead += readerSize[index]
 	}
 
 	return

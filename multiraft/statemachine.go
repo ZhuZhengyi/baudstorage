@@ -1,4 +1,4 @@
-package raftwrapper
+package multiraft
 
 import (
 	"errors"
@@ -20,25 +20,23 @@ type RaftPeerChangeHandler func(confChange *proto.ConfChange) (err error)
 
 // 实现raft.StateMachine接口
 type RaftStoreFsm struct {
-	id            uint64
-	applied       uint64 //封装成value，类型应该怎么定义？
-	maxVolId      uint32 //封装成value
-	groupID       uint64    //groupID是nodeId
-	server        *raft.RaftServer
-	store         *RocksDBStore
-	leaderChange  RaftLeaderChangeHandler
-	peerChange    RaftPeerChangeHandler
+	id           uint64
+	applied      uint64 //封装成value，类型应该怎么定义？
+	maxVolId     uint32 //封装成value
+	groupID      uint64 //groupID是nodeId
+	server       *raft.RaftServer
+	store        *RocksDBStore
+	leaderChange RaftLeaderChangeHandler
+	peerChange   RaftPeerChangeHandler
 }
 
 func NewRaftStateMachine(id, groupId uint64, dir, db string, raft *raft.RaftServer) *RaftStoreFsm {
 	var store *RocksDBStore
 
 	//后续可以扩展其他db
-	switch db{
+	switch db {
 	case RocksDBStorage:
 		store = NewRocksDBStore(dir)
-
-	//default is rocksdb
 	default:
 		store = NewRocksDBStore(dir)
 	}
@@ -92,6 +90,7 @@ func (rs *RaftStoreFsm) ApplyMemberChange(confChange *proto.ConfChange, index ui
 	}
 	return nil, nil
 }
+
 //将ApplyMemberChange提供给调用者？
 func (rs *RaftStoreFsm) RegisterPeerChangeHandler(handler RaftPeerChangeHandler) {
 	rs.peerChange = handler
@@ -154,7 +153,7 @@ func (rs *RaftStoreFsm) ApplySnapshot(peers []proto.Peer, iterator proto.SnapIte
 }
 
 // 来自raft的通知，该raft发生了不可恢复的故障
-func (s *RaftStoreFsm) HandleFatalEvent(err *raft.FatalError) {
+func (rs *RaftStoreFsm) HandleFatalEvent(err *raft.FatalError) {
 	panic(err.Err)
 }
 
@@ -223,52 +222,52 @@ func (ss *kvSnapshot) Close() {
 	return
 }
 
-func (rsf *RaftStoreFsm) Restore() {
+func (rs *RaftStoreFsm) Restore() {
 	//load applied and maxVolID to memory
-	rsf.restoreApplied()
-	rsf.restoreMaxVolID()
+	rs.restoreApplied()
+	rs.restoreMaxVolID()
 }
 
-func (rsf *RaftStoreFsm) GetApplied() uint64 {
-	return rsf.applied
+func (rs *RaftStoreFsm) GetApplied() uint64 {
+	return rs.applied
 }
 
-func (rsf *RaftStoreFsm) restoreApplied() {
+func (rs *RaftStoreFsm) restoreApplied() {
 
-	value, err := rsf.store.Get(Applied)
+	value, err := rs.store.Get(Applied)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to restore applied err:%v", err.Error()))
 	}
 
 	if len(value) == 0 {
-		rsf.applied = 0
+		rs.applied = 0
 		return
 	}
 	applied, err := strconv.ParseUint(string(value), 10, 64)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to restore applied,err:%v ", err.Error()))
 	}
-	rsf.applied = applied
+	rs.applied = applied
 }
 
-func (rsf *RaftStoreFsm) restoreMaxVolID() {
-	value, err := rsf.store.Get(MaxVolIDKey)
+func (rs *RaftStoreFsm) restoreMaxVolID() {
+	value, err := rs.store.Get(MaxVolIDKey)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to restore maxVolId,err:%v ", err.Error()))
 	}
 
 	if len(value) == 0 {
-		rsf.maxVolId = 0
+		rs.maxVolId = 0
 		return
 	}
 	maxVolId, err := strconv.ParseUint(string(value), 10, 32)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to restore maxVolId,err:%v ", err.Error()))
 	}
-	rsf.maxVolId = uint32(maxVolId)
+	rs.maxVolId = uint32(maxVolId)
 }
 
-func (rsf *RaftStoreFsm) buildContext(peerID uint64) (context []byte, err error) {
+func (rs *RaftStoreFsm) buildContext(peerID uint64) (context []byte, err error) {
 	address, ok := AddrDatabase[peerID]
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("action[buildContext] err. peer[%v] not exist", peerID))
@@ -281,12 +280,12 @@ func (rsf *RaftStoreFsm) buildContext(peerID uint64) (context []byte, err error)
 }
 
 //AddRaftNode...
-func (rsf *RaftStoreFsm) AddRaftNode(peer proto.Peer) (err error) {
+func (rs *RaftStoreFsm) AddRaftNode(peer proto.Peer) (err error) {
 	var context []byte
-	if context, err = rsf.buildContext(peer.ID); err != nil {
+	if context, err = rs.buildContext(peer.ID); err != nil {
 		return errors.New("action[KvsmAddNode] error" + err.Error())
 	}
-	resp := rsf.server.ChangeMember(GroupId, proto.ConfAddNode, peer, context)
+	resp := rs.server.ChangeMember(GroupId, proto.ConfAddNode, peer, context)
 	if _, err = resp.Response(); err != nil {
 		return errors.New("action[smAddRaftNode] error: " + err.Error())
 	}
@@ -294,8 +293,8 @@ func (rsf *RaftStoreFsm) AddRaftNode(peer proto.Peer) (err error) {
 }
 
 //RemoveNode ...
-func (rsf *RaftStoreFsm) RemoveRaftNode(peer proto.Peer) (err error) {
-	resp := rsf.server.ChangeMember(GroupId, proto.ConfRemoveNode, peer, nil)
+func (rs *RaftStoreFsm) RemoveRaftNode(peer proto.Peer) (err error) {
+	resp := rs.server.ChangeMember(GroupId, proto.ConfRemoveNode, peer, nil)
 	if _, err := resp.Response(); err != nil {
 		return errors.New("action[smRemoveRaftNode] error" + err.Error())
 	}

@@ -1,8 +1,7 @@
-package raftopt
+package multiraft
 
 import (
 	"fmt"
-
 	"github.com/tecbot/gorocksdb"
 )
 
@@ -37,13 +36,9 @@ func (rs *RocksDBStore) Open() error {
 		return err
 	}
 	rs.db = db
-	return nil
-}
 
-func (rs *RocksDBStore) Close() {
-	if rs.db != nil {
-		rs.db.Close()
-	}
+	return nil
+
 }
 
 func (rs *RocksDBStore) Delete(key string) (interface{}, error) {
