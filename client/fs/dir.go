@@ -110,5 +110,19 @@ func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 }
 
 func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
-	return []fuse.Dirent{}, nil
+	dirents := make([]fuse.Dirent, 0)
+	children, err := d.super.meta.ReadDir_ll(d.inode.ino)
+	if err != nil {
+		return dirents, err
+	}
+
+	for _, child := range children {
+		dentry := fuse.Dirent{
+			Inode: child.Inode,
+			Type:  fuse.DirentType(child.Type),
+			Name:  child.Name,
+		}
+		dirents = append(dirents, dentry)
+	}
+	return dirents, nil
 }
