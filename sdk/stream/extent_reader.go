@@ -203,11 +203,6 @@ func (buffer *CacheBuffer) UpdateData(data []byte, offset, size int) {
 	return
 }
 
-func (buffer *CacheBuffer) isFullCache() bool {
-	buffer.Lock()
-	defer buffer.Unlock()
-	return buffer.isFull
-}
 
 func (buffer *CacheBuffer) copyData(dst []byte, offset, size int) {
 	buffer.Lock()
