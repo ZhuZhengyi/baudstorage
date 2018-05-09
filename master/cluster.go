@@ -10,7 +10,6 @@ import (
 
 type Cluster struct {
 	Name              string
-	volGroups         *VolGroupMap
 	namespaces        map[string]*NameSpace
 	metaRangeReplicas uint8
 	dataNodes         sync.Map
@@ -23,7 +22,6 @@ type Cluster struct {
 func NewCluster(name string) (c *Cluster) {
 	c = new(Cluster)
 	c.Name = name
-	c.volGroups = NewVolMap()
 	c.cfg = NewClusterConfig()
 	c.startCheckVolGroups()
 	c.startCheckBackendLoadVolGroups()
@@ -35,8 +33,8 @@ func NewCluster(name string) (c *Cluster) {
 func (c *Cluster) startCheckVolGroups() {
 	go func() {
 		for {
-			if c.volGroups != nil {
-				c.checkVolGroups()
+			for _, ns := range c.namespaces {
+				c.checkVolGroups(ns)
 			}
 			time.Sleep(time.Second * time.Duration(c.cfg.CheckVolIntervalSeconds))
 		}
@@ -46,8 +44,9 @@ func (c *Cluster) startCheckVolGroups() {
 func (c *Cluster) startCheckBackendLoadVolGroups() {
 	go func() {
 		for {
-			if c.volGroups != nil {
-				c.backendLoadVolGroup(c.cfg.everyLoadVolCount, c.cfg.LoadVolFrequencyTime)
+
+			for _, ns := range c.namespaces {
+				c.backendLoadVolGroup(ns)
 			}
 			time.Sleep(time.Second)
 		}
@@ -57,8 +56,8 @@ func (c *Cluster) startCheckBackendLoadVolGroups() {
 func (c *Cluster) startCheckReleaseVolGroups() {
 	go func() {
 		for {
-			if c.volGroups != nil {
-				c.processReleaseVolAfterLoadVolGroup()
+			for _, ns := range c.namespaces {
+				c.processReleaseVolAfterLoadVolGroup(ns)
 			}
 			time.Sleep(time.Second * DefaultReleaseVolInternalSeconds)
 		}
@@ -130,24 +129,47 @@ errDeal:
 }
 
 func (c *Cluster) getVolsView() (body []byte, err error) {
-	body, err = c.volGroups.updateVolResponseCache(NoNeedUpdateVolResponse, 0)
+	body = make([]byte, 0)
+	for _, ns := range c.namespaces {
+		if partBody, err := ns.volGroups.updateVolResponseCache(NoNeedUpdateVolResponse, 0); err == nil {
+			body = append(body, partBody...)
+		} else {
+			log.LogError(fmt.Sprintf("getVolsView on namespace %v err:%v", ns.Name, err.Error()))
+		}
 
+	}
 	return
 }
 
-func (c *Cluster) getNamespace() (body []byte, err error) {
-	body, err = c.volGroups.updateVolResponseCache(NoNeedUpdateVolResponse, 0)
-
+func (c *Cluster) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error) {
+	for _, ns := range c.namespaces {
+		if vol, err = ns.getVolGroupByVolID(volID); err == nil {
+			return
+		}
+	}
 	return
 }
 
-func (c *Cluster) createVolGroup() (vg *VolGroup, err error) {
+func (c *Cluster) getNamespace(nsName string) (ns *NameSpace, err error) {
+	ns, ok := c.namespaces[nsName]
+	if !ok {
+		err = NamespaceNotFound
+	}
+	return
+}
+
+func (c *Cluster) createVolGroup(nsName string) (vg *VolGroup, err error) {
 	var (
+		ns    *NameSpace
 		volID uint64
 		tasks []*proto.AdminTask
 	)
 	c.createVolLock.Lock()
 	defer c.createVolLock.Unlock()
+	if ns, err = c.getNamespace(nsName); err != nil {
+		goto errDeal
+	}
+
 	if volID, err = c.getMaxVolID(); err != nil {
 		goto errDeal
 	}
@@ -159,7 +181,7 @@ func (c *Cluster) createVolGroup() (vg *VolGroup, err error) {
 	//todo sync and persistence hosts to other node in the cluster
 	tasks = vg.generateCreateVolGroupTasks()
 	c.putDataNodeTasks(tasks)
-	c.volGroups.putVol(vg)
+	ns.volGroups.putVol(vg)
 
 	return
 errDeal:
@@ -178,10 +200,6 @@ errDeal:
 	err = fmt.Errorf("action[getMaxVolID], Err:%v ", err.Error())
 	log.LogError(err.Error())
 	return
-}
-
-func (c *Cluster) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error) {
-	return c.volGroups.getVol(volID)
 }
 
 func (c *Cluster) getDataNode(addr string) (dataNode *DataNode, err error) {
@@ -205,12 +223,14 @@ func (c *Cluster) getMetaNode(addr string) (metaNode *MetaNode, err error) {
 func (c *Cluster) dataNodeOffLine(dataNode *DataNode) {
 	msg := fmt.Sprintf("action[dataNodeOffLine], Node[%v] OffLine", dataNode.HttpAddr)
 	log.LogWarn(msg)
-
-	for _, vg := range c.volGroups.volGroups {
-		c.volOffline(dataNode.HttpAddr, vg, DataNodeOfflineInfo)
+	for _, ns := range c.namespaces {
+		for _, vg := range ns.volGroups.volGroups {
+			c.volOffline(dataNode.HttpAddr, vg, DataNodeOfflineInfo)
+		}
+		ns.volGroups.dataNodeOffline(dataNode.HttpAddr)
+		c.dataNodes.Delete(dataNode.HttpAddr)
 	}
-	c.volGroups.dataNodeOffline(dataNode.HttpAddr)
-	c.dataNodes.Delete(dataNode.HttpAddr)
+
 }
 
 func (c *Cluster) volOffline(offlineAddr string, vg *VolGroup, errMsg string) {

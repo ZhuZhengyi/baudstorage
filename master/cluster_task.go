@@ -38,10 +38,10 @@ func (c *Cluster) putMetaNodeTasks(tasks []*proto.AdminTask) {
 	}
 }
 
-func (c *Cluster) checkVolGroups() {
-	c.volGroups.RLock()
+func (c *Cluster) checkVolGroups(ns *NameSpace) {
+	ns.volGroups.RLock()
 	newReadWriteVolGroups := 0
-	for _, vg := range c.volGroups.volGroupMap {
+	for _, vg := range ns.volGroups.volGroupMap {
 		vg.checkLocationStatus(c.cfg.VolTimeOutSec)
 		vg.checkStatus(true, c.cfg.VolTimeOutSec)
 		vg.checkVolGroupMiss(c.cfg.VolMissSec, c.cfg.VolWarnInterval)
@@ -58,21 +58,21 @@ func (c *Cluster) checkVolGroups() {
 		volTasks := vg.checkVolReplicationTask()
 		c.putDataNodeTasks(volTasks)
 	}
-	c.volGroups.readWriteVolGroups = newReadWriteVolGroups
-	c.volGroups.RUnlock()
-	c.volGroups.updateVolResponseCache(NeedUpdateVolResponse, 0)
-	msg := fmt.Sprintf("action[CheckVolInfo],can readwrite volGroups:%v  ", c.volGroups.readWriteVolGroups)
+	ns.volGroups.readWriteVolGroups = newReadWriteVolGroups
+	ns.volGroups.RUnlock()
+	ns.volGroups.updateVolResponseCache(NeedUpdateVolResponse, 0)
+	msg := fmt.Sprintf("action[CheckVolInfo],can readwrite volGroups:%v  ", ns.volGroups.readWriteVolGroups)
 	log.LogInfo(msg)
 }
 
-func (c *Cluster) backendLoadVolGroup(everyLoadVolCount int, loadVolFrequencyTime int64) {
-	needCheckVols := c.volGroups.getNeedCheckVolGroups(everyLoadVolCount, loadVolFrequencyTime)
+func (c *Cluster) backendLoadVolGroup(ns *NameSpace) {
+	needCheckVols := ns.volGroups.getNeedCheckVolGroups(c.cfg.everyLoadVolCount, c.cfg.LoadVolFrequencyTime)
 	if len(needCheckVols) == 0 {
 		return
 	}
 	c.waitLoadVolResponse(needCheckVols)
 	msg := fmt.Sprintf("action[BackendLoadVol] checkstart:%v everyCheckCount:%v",
-		needCheckVols[0].VolID, everyLoadVolCount)
+		needCheckVols[0].VolID, c.cfg.everyLoadVolCount)
 	log.LogInfo(msg)
 }
 
@@ -97,12 +97,12 @@ func (c *Cluster) waitLoadVolResponse(needCheckVols []*VolGroup) {
 	wg.Wait()
 }
 
-func (c *Cluster) processReleaseVolAfterLoadVolGroup() {
-	needReleaseVols := c.volGroups.getNeedReleaseVolGroups(c.cfg.everyReleaseVolCount, c.cfg.releaseVolAfterLoadVolSeconds)
+func (c *Cluster) processReleaseVolAfterLoadVolGroup(ns *NameSpace) {
+	needReleaseVols := ns.volGroups.getNeedReleaseVolGroups(c.cfg.everyReleaseVolCount, c.cfg.releaseVolAfterLoadVolSeconds)
 	if len(needReleaseVols) == 0 {
 		return
 	}
-	c.volGroups.releaseVolGroups(needReleaseVols)
+	ns.volGroups.releaseVolGroups(needReleaseVols)
 	msg := fmt.Sprintf("action[processReleaseVolAfterLoadVolGroup]  release vol start:%v everyReleaseVolCount:%v",
 		needReleaseVols[0].VolID, c.cfg.everyReleaseVolCount)
 	log.LogInfo(msg)

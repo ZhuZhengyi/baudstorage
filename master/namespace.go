@@ -6,11 +6,15 @@ type NameSpace struct {
 	Name       string
 	replicaNum uint8
 	MetaGroups map[string]*MetaGroup
+	volGroups  *VolGroupMap
 	sync.Mutex
 }
 
 func NewNameSpace(name string, replicaNum uint8) (ns *NameSpace) {
-	return &NameSpace{Name: name, MetaGroups: make(map[string]*MetaGroup, 0)}
+	ns = &NameSpace{Name: name, MetaGroups: make(map[string]*MetaGroup, 0)}
+	ns.volGroups = NewVolMap()
+	ns.replicaNum = replicaNum
+	return
 }
 
 func (ns *NameSpace) AddMetaGroup(mg *MetaGroup) {
@@ -33,4 +37,8 @@ func (ns *NameSpace) GetMetaGroup(inode uint64) (mg *MetaGroup) {
 	}
 
 	return nil
+}
+
+func (ns *NameSpace) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error) {
+	return ns.volGroups.getVol(volID)
 }
