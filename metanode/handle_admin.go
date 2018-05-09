@@ -2,8 +2,9 @@ package metanode
 
 import (
 	"encoding/json"
-	"github.com/tiglabs/baudstorage/proto"
 	"net"
+
+	"github.com/tiglabs/baudstorage/proto"
 )
 
 // Handle OpCreateMetaRange
@@ -35,11 +36,31 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	// Unmarshal request to entity
-	request := &proto.CreateMetaRangeRequest{}
-	if err := json.Unmarshal(requestJson, request); err != nil {
+	req := &proto.CreateMetaRangeRequest{}
+	if err := json.Unmarshal(requestJson, req); err != nil {
 		return
 	}
 	// Create new  MetaRange.
-	m.metaRangeManager.CreateMetaRange(request.MetaId, request.Start, request.End, request.Members)
+	mConf := MetaRangeConfig{
+		ID:          req.MetaId,
+		Start:       req.Start,
+		End:         req.End,
+		cursor:      req.Start,
+		RaftGroupId: req.GroupId,
+		Peers:       req.Members,
+	}
+	mr := NewMetaRange(mConf)
+	if err = m.metaRangeManager.SetMetaRange(mr); err != nil {
+		return
+	}
+	defer func() {
+		if err != nil {
+			m.metaRangeManager.DeleteMetaRange(mr.ID)
+		}
+	}()
+	//TODO: Write to File
+
+	//TODO: create Raft
+
 	return
 }
