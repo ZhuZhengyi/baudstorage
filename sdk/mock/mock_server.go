@@ -96,6 +96,28 @@ func (m *MockServer) operator(request *proto.Packet, connect net.Conn) {
 		}
 		request.PackOkReply()
 		request.WriteToConn(connect)
+	case proto.OpStreamRead:
+		needReplySize:=request.Size
+		offset:=request.Offset
+		for {
+			currReadSize:=uint32(util.Min(int(request.Size),storage.BlockSize))
+			request.Data=make([]byte,currReadSize)
+			request.Crc,err=m.storage.Read(request.FileID,offset,int64(currReadSize),request.Data)
+			if err!=nil {
+				m.packErrorBody(request,err)
+				request.WriteToConn(connect)
+				return
+			}
+			request.Size=currReadSize
+			if err=request.WriteToConn(connect);err!=nil {
+				return
+			}
+			needReplySize-=currReadSize
+			offset+=int64(currReadSize)
+			if needReplySize==0{
+				break
+			}
+		}
 
 	}
 

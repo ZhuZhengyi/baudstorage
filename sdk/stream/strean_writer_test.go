@@ -22,7 +22,7 @@ func TestExtentClient_Write(t *testing.T) {
 	}
 	var inode uint64
 	inode = 1
-	client.InitWrite(inode, &keysChan)
+	client.InitWriteStream(inode, &keysChan)
 	var sk *StreamKey
 	sk = new(StreamKey)
 	sk.Inode = inode

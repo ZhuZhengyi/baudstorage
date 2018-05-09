@@ -2,20 +2,19 @@ package metanode
 
 import (
 	"errors"
-	"github.com/tiglabs/baudstorage/raftopt"
-	"github.com/tiglabs/raft"
 	"sync"
 
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/raft"
 )
 
 // Configuration keys
 const (
 	cfgNodeId  = "nodeID"
 	cfgListen  = "listen"
-	cfgDataDir = "dataDir"
 	cfgLogDir  = "logDir"
+	cfgMetaDir = "metaDir"
 )
 
 // State type definition
@@ -37,7 +36,7 @@ type MetaNode struct {
 	logDir           string
 	masterAddr       string
 	metaRangeManager *MetaRangeManager
-	raftResolver     *raftopt.Resolver
+	raftResolver     *raft.SocketResolver
 	raftServer       *raft.RaftServer
 	httpStopC        chan uint8
 	log              *log.Log
@@ -66,15 +65,10 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	if m.log, err = log.NewLog(m.logDir, "MetaNode", log.DebugLevel); err != nil {
 		return
 	}
-	// Load metaRanges relation from file
-
-	// Register metaRaftEngine
-
-	// Start raft server
-	if err = m.startRaftServer(); err != nil {
+	// Load metaRanges relation from file and start raft
+	if err = m.Restore(); err != nil {
 		return
 	}
-	//start raft
 
 	// Start tcp server
 	if err = m.startTcpServer(); err != nil {
@@ -114,12 +108,41 @@ func (m *MetaNode) prepareConfig(cfg *config.Config) (err error) {
 	}
 	m.nodeId = cfg.GetString(cfgNodeId)
 	m.listen = int(cfg.GetInt(cfgListen))
-	m.dataDir = cfg.GetString(cfgDataDir)
 	m.logDir = cfg.GetString(cfgLogDir)
+	m.metaDir = cfg.GetString(cfgMetaDir)
 	return
+}
+
+func (m *MetaNode) Restore() (err error) {
+	// Restore metaRangeManager
+	err = m.metaRangeManager.RestoreMetaManagers(m.metaDir)
+	if err != nil {
+		return
+	}
+	//TODO:
+	// Register metaRaftEngine and raftServer
+	if err = m.startRaftServer(); err != nil {
+		return
+	}
+	// restore applyID from raft
+	m.RestoreApplyID()
+	return
+}
+
+func (m *MetaNode) RestoreApplyID() {
+	mrMap := make(map[string]*MetaRange)
+	m.metaRangeManager.Range(func(id string, mr *MetaRange) bool {
+		mrMap[id] = mr
+		return true
+	})
+	for _, mr := range mrMap {
+		mr.RestoreApplied()
+	}
 }
 
 // NewServer create an new MetaNode instance.
 func NewServer() *MetaNode {
-	return &MetaNode{}
+	return &MetaNode{
+		metaRangeManager: NewMetaRangeManager(),
+	}
 }

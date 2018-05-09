@@ -1,4 +1,4 @@
-package raftwrapper
+package multiraft
 
 import (
 	"errors"
@@ -9,16 +9,16 @@ import (
 )
 
 const (
-	OptApplied          = 20
-	OptAllocateVolID   = 30
+	OptApplied       = 20
+	OptAllocateVolID = 30
 )
 
 const (
 	Applied          = "applied"
-	MaxVolIDKey     =  "max_vol_id"   //如何定义？？
+	MaxVolIDKey      = "max_vol_id" //如何定义？？
 	TruncateInterval = 20000
 	GroupId          = 1
-	PartitionNum    = 5
+	PartitionNum     = 5
 )
 
 const (
@@ -32,12 +32,11 @@ const (
 const (
 	HeartbeatPort = 9901
 	ReplicatePort = 9902
-	GrpcPort      = 9903
+	GRpcPort      = 9903
 )
 
 const (
 	RocksDBStorage = "rocksdb"
-	//LevelDBStorage = "leveldb"
 )
 
 type Config struct {

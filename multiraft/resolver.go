@@ -1,11 +1,10 @@
-package raftopt
+package multiraft
 
 import (
 	"errors"
 	"fmt"
-	"sync"
-
 	"github.com/tiglabs/raft"
+	"sync"
 )
 
 //Resolver ...
@@ -14,8 +13,8 @@ type Resolver struct {
 	sync.Mutex
 }
 
-//NewResolver ...
-func NewResolver() *Resolver {
+//newResolver ...
+func newResolver() *Resolver {
 	return &Resolver{nodes: make(map[uint64]struct{})}
 }
 
@@ -43,7 +42,7 @@ func (r *Resolver) AllNodes() (all []uint64) {
 	return
 }
 
-//NodeAddress ...
+//实现raft.SocketResolver接口，用于raft获取节点的通信地址
 func (r *Resolver) NodeAddress(nodeID uint64, socketType raft.SocketType) (addr string, err error) {
 	raftAddr, ok := AddrDatabase[nodeID]
 	if !ok {

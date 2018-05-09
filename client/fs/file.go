@@ -1,8 +1,6 @@
 package fs
 
 import (
-	"os"
-
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"golang.org/x/net/context"
@@ -38,11 +36,7 @@ func NewFile(s *Super, p *Dir) *File {
 }
 
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
-	a.Nlink = f.nlink
-	a.BlockSize = f.blksize
-	a.Blocks = a.Size >> 9 // In 512 bytes
-	a.Mode = os.ModePerm
-	fillAttr(a, &f.inode)
+	fillAttr(a, f)
 	return nil
 }
 
@@ -50,7 +44,10 @@ func (f *File) Forget() {
 }
 
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
-	return nil, fuse.EPERM
+	if req.Dir {
+		return nil, fuse.EPERM
+	}
+	return f, nil
 }
 
 func (f *File) Release(ctx context.Context, req *fuse.ReleaseRequest) error {

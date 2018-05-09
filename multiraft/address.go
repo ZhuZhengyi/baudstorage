@@ -1,4 +1,4 @@
-package raftwrapper
+package multiraft
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ func AddrInit(peerAddress []string) (err error) {
 			Http:      fmt.Sprintf("%s:%d", ip, port),
 			Heartbeat: fmt.Sprintf("%s:%d", ip, HeartbeatPort),
 			Replicate: fmt.Sprintf("%s:%d", ip, ReplicatePort),
-			Grpc:      fmt.Sprintf("%s:%d", ip, GrpcPort),
+			Grpc:      fmt.Sprintf("%s:%d", ip, GRpcPort),
 		}
 		fmt.Println(AddrDatabase[id])
 	}
@@ -40,4 +40,3 @@ func AddrInit(peerAddress []string) (err error) {
 
 // 获取节点需要监听的地址
 //func (am *addressManager) GetReplicateListen(nodeID uint64) string {
-

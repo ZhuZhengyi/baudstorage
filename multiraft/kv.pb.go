@@ -10,7 +10,7 @@ It is generated from these files:
 It has these top-level messages:
 	Kv
 */
-package raftopt
+package multiraft
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"

@@ -1,21 +1,20 @@
 package metanode
 
 import (
-	"encoding/binary"
-	"github.com/juju/errors"
-	"github.com/tiglabs/baudstorage/raftopt"
-	"github.com/tiglabs/baudstorage/util/log"
-	"github.com/tiglabs/raft"
+	"bufio"
+	"encoding/json"
+	"errors"
+	"io"
+	"io/ioutil"
+	"os"
 	"path"
-	"regexp"
-	"strconv"
-	"strings"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk/stream"
+	"github.com/tiglabs/raft"
+	raftproto "github.com/tiglabs/raft/proto"
 )
 
 // Errors
@@ -23,24 +22,24 @@ var (
 	ErrInodeOutOfRange = errors.New("inode ID out of range.")
 )
 
-// Regexp
-var (
-	regexpRange, _ = regexp.Compile("(\\d)+_(\\d)+$")
-)
-
-const (
-	rangeIDPartSeparator   = "_"    // Separator for range parts.
-	rangePeerPartSeparator = ","    // Separator for range peers.
-	metaDataDirName        = "meta" // Directory name for meta data storage managed by RocksDB.
-	raftDataDirName        = "raft" // Directory name for raft data storage managed by RocksDB.
-	storeKeyRangeId        = "info_range_id"
-	storeKeyRangeStart     = "info_range_start"
-	storeKeyRangeEnd       = "info_range_end"
-	storeKeyRangeCursor    = "info_range_cursor"
-	storeKeyRangePeers     = "info_range_peers"
-	storeKeyRaftId         = "info_raft_id"
-	storeKeyRaftGroupId    = "info_raft_group_id"
-)
+type MetaRangeConfig struct {
+	// Consist with 'namespace_ID'. (Required when initialize)
+	ID string `json:"id"`
+	// Start inode ID of this range. (Required when initialize)
+	Start uint64 `json:"start"`
+	// End inode ID of this range. (Required when initialize)
+	End uint64 `json:"end"`
+	// Cursor ID value of inode what have been already assigned.
+	cursor  uint64
+	rootDir string
+	Peers   []string `json:"peers"`
+	// Identity for raft group. Raft nodes in same raft group must have same group ID.
+	RaftGroupID uint64 `json:"raftGroupID"`
+	// Raft server instance.
+	raftServer *raft.RaftServer
+	ApplyID    uint64 // for restore inode/dentry max applyID
+	isRestore  bool
+}
 
 // MetaRange manages necessary information of meta range, include ID, boundary of range and raft identity.
 // When a new inode is requested, MetaRange allocates the inode id for this inode is possible.
@@ -49,122 +48,121 @@ const (
 //  | New | → Restore → | Ready |
 //  +-----+             +-------+
 type MetaRange struct {
-	id          string // Consist with 'namespace_start_end'. (Required when initialize)
-	start       uint64 // Start inode ID of this range. (Required when initialize)
-	end         uint64 // End inode ID of this range. (Required when initialize)
-	cursor      uint64 // Cursor ID value of inode what have been already assigned.
-	rootDataDir string // Root data directory of this meta range. (Required when initialize)
-	store       *MetaRangeFsm
-	peers       []string
-	raftId      uint64           // Identity for raft node.
-	raftGroupId uint64           // Identity for raft group. Raft nodes in same raft group must have same group ID.
-	raftServer  *raft.RaftServer // Raft server instance.
-	ready       bool
+	MetaRangeConfig
+	store *MetaRangeFsm
 }
 
-func NewMetaRange(req *CreateMetaRangeReq) *MetaRange {
-	return &MetaRange{
-		id:    req.MetaId,
-		start: req.Start,
-		end:   req.End,
-		peers: req.Members,
+func NewMetaRange(conf MetaRangeConfig) *MetaRange {
+	mr := &MetaRange{
+		MetaRangeConfig: conf,
 	}
+	mr.store = NewMetaRangeFsm(mr)
+	return mr
 }
 
-// Restore range info through RocksDB.
-// Note that invoker goroutine will be block until restore operation complete.
-func (mr *MetaRange) Restore() {
-	db := raftopt.NewRocksDBStore(path.Join(mr.rootDataDir, metaDataDirName))
-	db.Open()
-	defer db.Close()
-	var err error
-	defer func() {
-		if err != nil {
-			log.LogError("action[MeteRange.Restore],err:%v", err)
-		}
-	}()
-	// Try recover and validate range ID.
-	rangeIdBytes, err := db.Get(storeKeyRangeId)
+// Restore range meta from meta snapshot file.
+func (mr *MetaRange) RestoreMeta() (err error) {
+	// Restore struct from meta
+	metaFile := path.Join(mr.rootDir, "meta")
+	fp, err := os.OpenFile(metaFile, os.O_RDONLY, 0655)
 	if err != nil {
 		return
 	}
-	if len(rangeIdBytes) != 0 {
-		if string(rangeIdBytes) != mr.id {
-			err = errors.New("broken data")
+	defer fp.Close()
+	data, err := ioutil.ReadAll(fp)
+	if err != nil || len(data) == 0 {
+		return
+	}
+	if err = json.Unmarshal(data, &mr); err != nil {
+		return
+	}
+	//TODO:  Check Valid
+
+	return
+}
+
+// Restore range inode from inode snapshot file
+func (mf *MetaRange) RestoreInode() (err error) {
+	// Restore btree from ino file
+	inoFile := path.Join(mf.rootDir, "inode")
+	fp, err := os.OpenFile(inoFile, os.O_RDONLY, 0644)
+	if err != nil {
+		return
+	}
+	defer fp.Close()
+	reader := bufio.NewReader(fp)
+	for {
+		var (
+			line []byte
+			ino  = &Inode{}
+		)
+		line, _, err = reader.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+				return
+			}
 			return
 		}
-		mr.id = string(rangeIdBytes)
-	}
-	// Try recover range start value.
-	rangeStartBytes, err := db.Get(storeKeyRangeStart)
-	if err != nil {
-		return
-	}
-	if len(rangeStartBytes) != 0 {
-		mr.start = binary.BigEndian.Uint64(rangeStartBytes)
-	}
-	// Try recover range end value.
-	rangeEndBytes, err := db.Get(storeKeyRangeEnd)
-	if err != nil {
-		return
-	}
-	if len(rangeEndBytes) != 0 {
-		mr.end = binary.BigEndian.Uint64(rangeEndBytes)
-	}
-	// Try recover range cursor.
-	rangeCursorBytes, err := db.Get(storeKeyRangeCursor)
-	if err != nil {
-		return
-	}
-	if len(rangeCursorBytes) != 0 {
-		mr.cursor = binary.BigEndian.Uint64(rangeCursorBytes)
-	}
-	// Try recover range peers
-	rangePeersBytes, err := db.Get(storeKeyRangePeers)
-	if err != nil {
-		return
-	}
-	if len(rangePeersBytes) != 0 {
-		mr.peers = strings.Split(string(rangePeersBytes), rangePeerPartSeparator)
-	}
-	// Try recover rage ID
-	raftIdBytes, err := db.Get(storeKeyRaftId)
-	if err != nil {
-		return
-	}
-	if len(raftIdBytes) != 0 {
-		mr.raftId = binary.BigEndian.Uint64(raftIdBytes)
-	}
-	// Try recover raft group ID
-	raftGroupIdBytes, err := db.Get(storeKeyRaftGroupId)
-	if err != nil {
-		return
-	}
-	if len(raftGroupIdBytes) != 0 {
-		mr.raftGroupId = binary.BigEndian.Uint64(raftGroupIdBytes)
-	}
-	// Init and recover FSM.
-	fsmConfig := MetaRangeFsmConfig{
-		RaftId:      mr.raftId,
-		RaftGroupId: mr.raftGroupId,
-		Raft:        mr.raftServer,
-		MetaDataDir: path.Join(mr.rootDataDir, metaDataDirName),
-		RaftDataDir: path.Join(mr.rootDataDir, raftDataDirName),
-	}
-	mr.store = NewMetaRangeFsm(fsmConfig)
-	mr.store.RegisterCursorUpdateHandler(func(inodeId uint64) {
-		if inodeId > atomic.LoadUint64(&mr.cursor) {
-			atomic.StoreUint64(&mr.cursor, inodeId)
+		//TODO: ignore error
+		if err = json.Unmarshal(line, ino); err != nil {
+			continue
 		}
-	})
-	go mr.store.Restore()
-	ready := true
-	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mr.ready)), unsafe.Pointer(&ready))
+		//TODO: check valid
+
+		mf.store.CreateInode(ino)
+	}
+	return
+}
+
+// Restore range dentry from dentry snapshot file
+func (mf *MetaRange) RestoreDentry() (err error) {
+	// Restore dentry from dentry file
+	dentryFile := path.Join(mf.rootDir, "dentry")
+	fp, err := os.OpenFile(dentryFile, os.O_RDONLY, 0644)
+	if err != nil {
+		return
+	}
+	defer fp.Close()
+	reader := bufio.NewReader(fp)
+	for {
+		var (
+			line   []byte
+			dentry = &Dentry{}
+		)
+		line, _, err = reader.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+				return
+			}
+			return
+		}
+		//TODO: ignore error
+		if err = json.Unmarshal(line, dentry); err != nil {
+			continue
+		}
+		// TODO: check valid
+
+		mf.store.CreateDentry(dentry)
+	}
+	return
 }
 
 // UpdatePeers
 func (mr *MetaRange) UpdatePeers(peers []string) {
-	mr.peers = peers
+	mr.Peers = peers
+}
+
+func (mr *MetaRange) RestoreApplied() {
+	// Restore from applyID to current now
+
+	item := mr.store.GetInodeTree().Max()
+	if item != nil {
+		ino := item.(*Inode)
+		mr.cursor = ino.Inode
+	}
+	mr.isRestore = false
 }
 
 // NextInodeId returns a new ID value of inode and update offset.
@@ -172,7 +170,7 @@ func (mr *MetaRange) UpdatePeers(peers []string) {
 func (mr *MetaRange) nextInodeID() (inodeId uint64, err error) {
 	for {
 		cur := mr.cursor
-		end := mr.end
+		end := mr.End
 		if cur >= end {
 			return 0, ErrInodeOutOfRange
 		}
@@ -208,24 +206,24 @@ func (mr *MetaRange) DeleteDentry(req *DeleteDentryReq) (resp *DeleteDentryResp)
 
 func (mr *MetaRange) CreateInode(req *CreateInoReq) (resp *CreateInoResp) {
 	var err error
-	resp.Inode, err = mr.nextInodeID()
+	resp.Info.Inode, err = mr.nextInodeID()
 	if err != nil {
 		resp.Status = proto.OpInodeFullErr
 		return
 	}
 	ts := time.Now().Unix()
 	ino := &Inode{
-		Inode:      resp.Inode,
+		Inode:      resp.Info.Inode,
 		Type:       req.Mode,
 		AccessTime: ts,
 		ModifyTime: ts,
-		Stream:     stream.NewStreamKey(resp.Inode),
+		Stream:     stream.NewStreamKey(resp.Info.Inode),
 	}
 	resp.Status = mr.store.CreateInode(ino)
 	return
 }
 
-func (mr *MetaRange) DeleteInode(req *deleteInoReq) (resp *deleteInoResp) {
+func (mr *MetaRange) DeleteInode(req *DeleteInoReq) (resp *DeleteInoResp) {
 	ino := &Inode{
 		Inode: req.Inode,
 	}
@@ -247,4 +245,55 @@ func (mr *MetaRange) Open(req *OpenReq) (resp *OpenResp) {
 	// TODO: Implement open operation.
 	resp = mr.store.OpenFile(req)
 	return
+}
+
+// Implement raft StateMachine interface
+func (mf *MetaRange) Apply(command []byte, index uint64) (interface{}, error) {
+	return nil, nil
+}
+
+func (mf *MetaRange) ApplyMemeberChange(confChange *raftproto.ConfChange, index uint64) (interface{}, error) {
+	return nil, nil
+}
+
+func (mf *MetaRange) Snapshot() (raftproto.Snapshot, error) {
+	ino, dentry, appID := mf.store.GetAllTree()
+	snapIter := NewSnapshotIterator(appID, ino, dentry)
+	return snapIter, nil
+}
+
+func (mf *MetaRange) ApplySnapshot(peers []raftproto.Peer, iter raftproto.SnapIterator) error {
+	for {
+		data, err := iter.Next()
+		if err != nil {
+			return err
+		}
+		snap := NewMetaRangeSnapshot("", "", "")
+		if err = snap.Decode(data); err != nil {
+			return err
+		}
+		switch snap.Op {
+		case "inode":
+			var ino = &Inode{}
+			ino.ParseKey(snap.Key)
+			ino.ParseValue(snap.Value)
+			mf.store.CreateInode(ino)
+		case "dentry":
+			dentry := &Dentry{}
+			dentry.ParseKey(snap.Key)
+			dentry.ParseValue(snap.Value)
+			mf.store.CreateDentry(dentry)
+		default:
+			return errors.New("unknow op=" + snap.Op)
+		}
+	}
+	return nil
+}
+
+func (mf *MetaRange) HandleFatalEvent(err *raft.FatalError) {
+
+}
+
+func (mf *MetaRange) HandleLeaderChange(leader uint64) {
+
 }

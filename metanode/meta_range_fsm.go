@@ -1,66 +1,33 @@
 package metanode
 
 import (
-	"github.com/tiglabs/raft"
 	"sync"
 	"time"
 
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/raftopt"
 	"github.com/tiglabs/baudstorage/sdk/stream"
 )
 
-const (
-	defaultBTreeDegree  = 32
-	dentryDataKeyPrefix = "dentry"
-	inodeDataKeyPrefix  = "inode"
-	raftRole            = "MetaRange"
-)
-
-type CursorUpdateHandler func(inodeId uint64)
-
-// MetaRangeFsmConfig wraps necessary properties for MetaRangeFsm instantiation.
-type MetaRangeFsmConfig struct {
-	RaftId      uint64
-	RaftGroupId uint64
-	MetaDataDir string
-	RaftDataDir string
-	Raft        *raft.RaftServer
-}
+const defaultBTreeDegree = 32
 
 // MetaRangeFsm responsible for sync data log with other meta range through Raft
 // and manage dentry and inode by B-Tree in memory.
 type MetaRangeFsm struct {
-	metaRangeId         string                // ID of this meta range.
-	metaDir             string                // Data file directory.
-	metaStore           *raftopt.RocksDBStore // Repository for meta include dentry and inode.
-	dentryMu            sync.RWMutex          // Mutex for dentry operation.
-	dentryTree          *btree.BTree          // B-Tree for dentry.
-	inodeMu             sync.RWMutex          // Mutex for inode operation.
-	inodeTree           *btree.BTree          // B-Tree for inode.
-	inodeStore          *raftopt.RocksDBStore // Repository for inode.
-	raftStoreFsm        *raftopt.RaftStoreFsm // Raft store.
-	cursorUpdateHandler CursorUpdateHandler   // Callback method for meta range cursor update.
+	metaRange  *MetaRange
+	mu         sync.RWMutex // Mutex for whole fsm
+	dentryMu   sync.RWMutex // Mutex for dentry operation.
+	dentryTree *btree.BTree // B-Tree for dentry.
+	inodeMu    sync.RWMutex // Mutex for inode operation.
+	inodeTree  *btree.BTree // B-Tree for inode.
 }
 
-func NewMetaRangeFsm(cfg MetaRangeFsmConfig) *MetaRangeFsm {
+func NewMetaRangeFsm(mr *MetaRange) *MetaRangeFsm {
 	return &MetaRangeFsm{
-		metaDir:      cfg.MetaDataDir,
-		metaStore:    raftopt.NewRocksDBStore(cfg.MetaDataDir),
-		dentryTree:   btree.New(defaultBTreeDegree),
-		inodeTree:    btree.New(defaultBTreeDegree),
-		raftStoreFsm: raftopt.NewRaftStoreFsm(cfg.RaftId, cfg.RaftGroupId, raftRole, cfg.RaftDataDir, cfg.Raft),
+		metaRange:  mr,
+		dentryTree: btree.New(defaultBTreeDegree),
+		inodeTree:  btree.New(defaultBTreeDegree),
 	}
-}
-
-func (mf *MetaRangeFsm) RegisterCursorUpdateHandler(handler CursorUpdateHandler) {
-	mf.cursorUpdateHandler = handler
-}
-
-// Restore load snapshot from disk and restore status.
-func (mf *MetaRangeFsm) Restore() {
-
 }
 
 // GetDentry query dentry from DentryTree with specified dentry info;
@@ -136,14 +103,17 @@ func (mf *MetaRangeFsm) DeleteDentry(dentry *Dentry) (status uint8) {
 func (mf *MetaRangeFsm) CreateInode(ino *Inode) (status uint8) {
 	// TODO: Implement it.
 	status = proto.OpOk
+	mf.mu.RLock()
 	mf.inodeMu.Lock()
 	if mf.inodeTree.Has(ino) {
 		mf.inodeMu.Unlock()
+		mf.mu.RUnlock()
 		status = proto.OpExistErr
 		return
 	}
 	mf.inodeTree.ReplaceOrInsert(ino)
 	mf.inodeMu.Unlock()
+	mf.mu.RUnlock()
 	return
 }
 
@@ -154,9 +124,11 @@ func (mf *MetaRangeFsm) CreateInode(ino *Inode) (status uint8) {
 func (mf *MetaRangeFsm) DeleteInode(ino *Inode) (status uint8) {
 	// TODO: Implement it.
 	status = proto.OpOk
+	mf.mu.RLock()
 	mf.inodeMu.Lock()
 	item := mf.inodeTree.Delete(ino)
 	mf.inodeMu.Unlock()
+	mf.mu.RUnlock()
 	if item == nil {
 		status = proto.OpNotExistErr
 		return
@@ -208,5 +180,39 @@ func (mf *MetaRangeFsm) PutStreamKey(ino *Inode, k stream.ExtentKey) (status uin
 	}
 	ino = item.(*Inode)
 	ino.Stream.Put(k)
+	return
+}
+
+func (mf *MetaRangeFsm) SetInodeTree(inoTree *btree.BTree) {
+	mf.mu.RLock()
+	mf.inodeMu.Lock()
+	defer mf.inodeMu.Unlock()
+	defer mf.mu.RUnlock()
+	mf.inodeTree = inoTree
+}
+
+func (mf *MetaRangeFsm) GetInodeTree() *btree.BTree {
+	return mf.inodeTree
+}
+
+func (mf *MetaRangeFsm) SetDentryTree(denTree *btree.BTree) {
+	mf.mu.RUnlock()
+	mf.dentryMu.Lock()
+	defer mf.dentryMu.Unlock()
+	defer mf.mu.RUnlock()
+	mf.dentryTree = denTree
+}
+
+func (mf *MetaRangeFsm) GetDentryTree() *btree.BTree {
+	return mf.dentryTree
+}
+
+func (mf *MetaRangeFsm) GetAllTree() (ino *btree.BTree, dentry *btree.BTree,
+	applyID uint64) {
+	mf.mu.Lock()
+	defer mf.mu.Unlock()
+	ino = mf.inodeTree
+	dentry = mf.dentryTree
+	applyID = mf.metaRange.ApplyID
 	return
 }

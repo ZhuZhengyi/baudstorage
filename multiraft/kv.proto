@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package protos;
+package multiraft;
 
 message kv {
     uint32 opt = 1;

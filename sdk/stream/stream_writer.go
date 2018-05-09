@@ -20,22 +20,22 @@ const (
 
 type StreamWriter struct {
 	sync.Mutex
-	wraper          *sdk.VolGroupWraper
-	keys            *chan ExtentKey
-	currentWriter   *ExtentWriter //current ExtentWriter
-	errCount        int           //error count
-	excludeVols     []uint32      //exclude Vols
-	currentVolId    uint32        //current VolId
-	currentExtentId uint64        //current ExtentId
-	currentInode    uint64        //inode
-	flushLock       sync.Mutex
+	wraper            *sdk.VolGroupWraper
+	currentWriter     *ExtentWriter //current ExtentWriter
+	errCount          int           //error count
+	excludeVols       []uint32      //exclude Vols
+	currentVolId      uint32        //current VolId
+	currentExtentId   uint64        //current ExtentId
+	currentInode      uint64        //inode
+	flushLock         sync.Mutex
+	updateExtentKeyFn func(inode uint64, key ExtentKey) (err error)
 }
 
-func NewStreamWriter(wraper *sdk.VolGroupWraper, inode uint64, keys *chan ExtentKey) (stream *StreamWriter) {
+func NewStreamWriter(wraper *sdk.VolGroupWraper, inode uint64, updateExtentKeyFn func(inode uint64, key ExtentKey) (err error)) (stream *StreamWriter) {
 	stream = new(StreamWriter)
 	stream.excludeVols = make([]uint32, 0)
-	stream.keys = keys
 	stream.wraper = wraper
+	stream.updateExtentKeyFn = updateExtentKeyFn
 	stream.currentInode = inode
 	go stream.autoFlushThread()
 
@@ -142,7 +142,9 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 	if err != nil {
 		return
 	}
-	*stream.keys <- writer.toKey()
+	if err = stream.updateExtentKeyFn(writer.toKey()); err != nil {
+		return
+	}
 	if writer.isFullExtent() {
 		stream.setWriterToNull()
 	}
@@ -163,7 +165,9 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 	if err = stream.allocateNewExtentWriter(); err != nil {
 		return
 	}
-	*stream.keys <- stream.getWriter().toKey()
+	if err = stream.updateExtentKeyFn(stream.getWriter().toKey()); err != nil {
+		return
+	}
 	for e := sendList.Front(); e != nil; e = e.Next() {
 		p := e.Value.(*Packet)
 		_, err = stream.getWriter().write(p.Data, int(p.Size))
@@ -220,12 +224,7 @@ func (stream *StreamWriter) createExtent(vol *sdk.VolGroup) (extentId uint64, er
 			connect.Close()
 		}
 	}()
-	p := NewPacket(vol)
-	p.Opcode = proto.OpCreateFile
-	p.VolID = vol.VolId
-	p.Arg = ([]byte)(vol.GetAllAddrs())
-	p.Arglen = uint32(len(p.Arg))
-
+	p := NewCreateExtentPacket(vol)
 	if err = p.WriteToConn(connect); err != nil {
 		return
 	}
