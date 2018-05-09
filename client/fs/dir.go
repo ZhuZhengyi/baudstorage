@@ -48,6 +48,8 @@ func (d *Dir) Create(ctx context.Context, req *fuse.CreateRequest, resp *fuse.Cr
 
 	child := NewFile(d.super, d)
 	fillInode(&child.inode, info)
+	resp.Node = fuse.NodeID(child.inode.ino)
+	fillAttr(&resp.Attr, child)
 	return child, child, nil
 }
 
@@ -108,5 +110,19 @@ func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 }
 
 func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
-	return []fuse.Dirent{}, nil
+	dirents := make([]fuse.Dirent, 0)
+	children, err := d.super.meta.ReadDir_ll(d.inode.ino)
+	if err != nil {
+		return dirents, err
+	}
+
+	for _, child := range children {
+		dentry := fuse.Dirent{
+			Inode: child.Inode,
+			Type:  fuse.DirentType(child.Type),
+			Name:  child.Name,
+		}
+		dirents = append(dirents, dentry)
+	}
+	return dirents, nil
 }
