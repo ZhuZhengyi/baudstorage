@@ -77,6 +77,7 @@ func (client *ExtentClient) getStreamReader(inode uint64) (stream *StreamReader,
 	if stream == nil {
 		stream, err = client.InitReadStream(inode)
 	}
+	return
 }
 
 func (client *ExtentClient) Write(inode uint64, data []byte) (write int, err error) {
