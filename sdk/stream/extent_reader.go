@@ -30,8 +30,12 @@ const (
 	DefaultReadBufferSize = 10 * util.MB
 )
 
-func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWraper) (reader *ExtentReader) {
+func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWraper) (reader *ExtentReader, err error) {
 	reader = new(ExtentReader)
+	reader.vol, err = wraper.GetVol(key.VolId)
+	if err != nil {
+		return
+	}
 	reader.key = key
 	reader.buffer = NewCacheBuffer(0, int(util.Min(uint64(DefaultReadBufferSize), uint64(key.Size))), key)
 	reader.startInodeOffset = inInodeOffset
@@ -41,7 +45,7 @@ func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWrape
 	reader.updateCh = make(chan bool, 10)
 	go reader.asyncFillCache()
 
-	return reader
+	return
 }
 
 func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
@@ -144,11 +148,20 @@ func (reader *ExtentReader) toString() (m string) {
 }
 
 func (reader *ExtentReader) fillCache() error {
-	if reader.buffer.getBufferEndOffset() == int(reader.key.Size) || reader.buffer.isFullCache() {
+	if reader.buffer.getBufferEndOffset() == int(reader.key.Size) {
 		return nil
 	}
+	reader.setCacheToUnavali()
+	bufferSize := int(util.Min(uint64(int(reader.key.Size)-reader.lastReadOffset), uint64(DefaultReadBufferSize)))
+	bufferOffset := reader.lastReadOffset
+	p := NewReadPacket(reader.key, bufferOffset, bufferSize)
+	data, err := reader.readDataFromVol(p)
+	if err != nil {
+		return err
+	}
+	reader.buffer.UpdateData(data, bufferOffset, bufferSize)
 
-	return
+	return nil
 }
 
 func (reader *ExtentReader) asyncFillCache() {
@@ -198,14 +211,13 @@ func (buffer *CacheBuffer) NewReadPacket() (p *Packet) {
 	return p
 }
 
-func (buffer *CacheBuffer) UpdateData(p *Packet) {
+func (buffer *CacheBuffer) UpdateData(data []byte, offset, size int) {
 	buffer.Lock()
 	defer buffer.Unlock()
-	buffer.data = append(buffer.data, p.Data[:p.Size]...)
-	buffer.bytesRecive += int(p.Size)
-	if len(buffer.data) > DefaultReadBufferSize {
-		buffer.isFull = true
-	}
+	buffer.data = data
+	buffer.startOffset = offset
+	buffer.endOffset = offset + size
+
 	return
 }
 
@@ -224,7 +236,7 @@ func (buffer *CacheBuffer) copyData(dst []byte, offset, size int) {
 func (buffer *CacheBuffer) getBufferEndOffset() int {
 	buffer.Lock()
 	defer buffer.Unlock()
-	return buffer.startOffset + buffer.endOffset
+	return buffer.endOffset
 }
 
 func (reader *ExtentReader) setCacheToUnavali() {
