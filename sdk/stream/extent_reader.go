@@ -26,7 +26,6 @@ type ExtentReader struct {
 }
 
 const (
-	FailureTime           = 300
 	DefaultReadBufferSize = 10 * util.MB
 )
 
@@ -37,7 +36,7 @@ func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWrape
 		return
 	}
 	reader.key = key
-	reader.buffer = NewCacheBuffer(0, int(util.Min(uint64(DefaultReadBufferSize), uint64(key.Size))), key)
+	reader.buffer = NewCacheBuffer(0, int(util.Min(uint64(DefaultReadBufferSize), uint64(key.Size))))
 	reader.startInodeOffset = inInodeOffset
 	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
 	reader.wraper = wraper
@@ -139,7 +138,6 @@ func (reader *ExtentReader) updateKey(key ExtentKey) {
 	}
 	reader.key = key
 	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
-	reader.buffer.key = key
 }
 
 func (reader *ExtentReader) toString() (m string) {
@@ -182,33 +180,17 @@ type CacheBuffer struct {
 	data        []byte
 	startOffset int
 	endOffset   int
-	bytesRecive int
-	key         ExtentKey
 	sync.Mutex
 	isFull bool
 	status int
 }
 
-func NewCacheBuffer(offset, size int, key ExtentKey) (buffer *CacheBuffer) {
+func NewCacheBuffer(offset, size int) (buffer *CacheBuffer) {
 	buffer = new(CacheBuffer)
 	buffer.data = make([]byte, 0)
 	buffer.endOffset = offset + size
 	buffer.startOffset = offset
-	buffer.key = key
 	return buffer
-}
-
-func (buffer *CacheBuffer) getBytesRecive() int {
-	buffer.Lock()
-	defer buffer.Unlock()
-	return buffer.bytesRecive
-}
-
-func (buffer *CacheBuffer) NewReadPacket() (p *Packet) {
-	buffer.Lock()
-	defer buffer.Unlock()
-	p = NewReadPacket(buffer.key, buffer.bytesRecive+buffer.startOffset, DefaultReadBufferSize)
-	return p
 }
 
 func (buffer *CacheBuffer) UpdateData(data []byte, offset, size int) {
