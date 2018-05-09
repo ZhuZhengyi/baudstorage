@@ -8,7 +8,7 @@ import (
 )
 
 type VolReport struct {
-	VolID     uint32
+	VolID     uint64
 	VolStatus int
 	Total     uint64 `json:"TotalSize"`
 	Used      uint64 `json:"UsedSize"`

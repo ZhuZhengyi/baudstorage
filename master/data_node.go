@@ -24,10 +24,12 @@ type DataNode struct {
 	reportTime time.Time
 	isActive   bool
 	sync.Mutex
-	ratio       float64
-	selectCount uint64
-	carry       float64
-	sender      *AdminTaskSender
+	ratio        float64
+	selectCount  uint64
+	carry        float64
+	sender       *AdminTaskSender
+	VolInfo      []*VolReport
+	VolInfoCount int
 }
 
 func NewDataNode(addr string) (dataNode *DataNode) {
@@ -114,29 +116,10 @@ func (dataNode *DataNode) clean() {
 	dataNode.sender.exitCh <- struct{}{}
 }
 
-func (dataNode *DataNode) dealTaskResponse(nodeAddr string, task *proto.AdminTask) {
-	if task == nil {
-		return
+func (dataNode *DataNode) generateHeartbeatTask() (task *proto.AdminTask) {
+	request := &proto.HeartBeatRequest{
+		CurrTime: time.Now().Unix(),
 	}
-	if _, ok := dataNode.sender.taskMap[task.ID]; !ok {
-		return
-	}
-	if err := UnmarshalTaskResponse(task); err != nil {
-		return
-	}
-
-	switch task.OpCode {
-	case OpCreateVol:
-		dataNode.dealCreateVolResponse(task)
-	case OpDeleteVol:
-	case OpLoadVol:
-	default:
-
-	}
-
+	task = proto.NewAdminTask(OpDataNodeHeartbeat, dataNode.HttpAddr, request)
 	return
-}
-
-func (dataNode *DataNode) dealCreateVolResponse(task *proto.AdminTask) {
-
 }

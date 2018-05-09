@@ -28,6 +28,7 @@ func NewCluster(name string) (c *Cluster) {
 	c.startCheckVolGroups()
 	c.startCheckBackendLoadVolGroups()
 	c.startCheckReleaseVolGroups()
+	c.startCheckHearBeat()
 	return
 }
 
@@ -60,6 +61,36 @@ func (c *Cluster) startCheckReleaseVolGroups() {
 				c.processReleaseVolAfterLoadVolGroup()
 			}
 			time.Sleep(time.Second * DefaultReleaseVolInternalSeconds)
+		}
+	}()
+}
+
+func (c *Cluster) startCheckHearBeat() {
+	go func() {
+		for {
+			tasks := make([]*proto.AdminTask, 0)
+			c.dataNodes.Range(func(addr, dataNode interface{}) bool {
+				node := dataNode.(*DataNode)
+				task := node.generateHeartbeatTask()
+				tasks = append(tasks, task)
+				return true
+			})
+			c.putDataNodeTasks(tasks)
+			time.Sleep(time.Second * DefaultCheckHeartBeatIntervalSeconds)
+		}
+	}()
+
+	go func() {
+		for {
+			tasks := make([]*proto.AdminTask, 0)
+			c.metaNodes.Range(func(addr, metaNode interface{}) bool {
+				node := metaNode.(*MetaNode)
+				task := node.generateHeartbeatTask()
+				tasks = append(tasks, task)
+				return true
+			})
+			c.putMetaNodeTasks(tasks)
+			time.Sleep(time.Second * DefaultCheckHeartBeatIntervalSeconds)
 		}
 	}()
 }
@@ -149,7 +180,7 @@ errDeal:
 	return
 }
 
-func (c *Cluster) getVolByVolID(volID uint64) (vol *VolGroup, err error) {
+func (c *Cluster) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error) {
 	return c.volGroups.getVol(volID)
 }
 
@@ -174,15 +205,66 @@ func (c *Cluster) getMetaNode(addr string) (metaNode *MetaNode, err error) {
 func (c *Cluster) dataNodeOffLine(dataNode *DataNode) {
 	msg := fmt.Sprintf("action[dataNodeOffLine], Node[%v] OffLine", dataNode.HttpAddr)
 	log.LogWarn(msg)
+
+	for _, vg := range c.volGroups.volGroups {
+		c.volOffline(dataNode.HttpAddr, vg, DataNodeOfflineInfo)
+	}
 	c.volGroups.dataNodeOffline(dataNode.HttpAddr)
 	c.dataNodes.Delete(dataNode.HttpAddr)
+}
+
+func (c *Cluster) volOffline(offlineAddr string, vg *VolGroup, errMsg string) {
+	var (
+		newHosts []string
+		newAddr  string
+		msg      string
+		tasks    []*proto.AdminTask
+		task     *proto.AdminTask
+		err      error
+	)
+	vg.Lock()
+	defer vg.Unlock()
+	if ok := vg.isInPersistenceHosts(offlineAddr); !ok {
+		return
+	}
+
+	if err = vg.hasMissOne(); err != nil {
+		goto errDeal
+	}
+	if err = vg.canOffLine(offlineAddr); err != nil {
+		goto errDeal
+	}
+	vg.generatorVolOffLineLog(offlineAddr)
+
+	if newHosts, err = c.getAvailDataNodeHosts(vg.PersistenceHosts, 1); err != nil {
+		goto errDeal
+	}
+	if err = vg.removeVolHosts(offlineAddr); err != nil {
+		goto errDeal
+	}
+	newAddr = newHosts[0]
+	if err = vg.addVolHosts(newAddr); err != nil {
+		goto errDeal
+	}
+	vg.volOffLineInMem(offlineAddr)
+	vg.checkAndRemoveMissVol(offlineAddr)
+	task = proto.NewAdminTask(OpCreateVol, offlineAddr, newCreateVolRequest(vg.volType, vg.VolID))
+	tasks = make([]*proto.AdminTask, 0)
+	tasks = append(tasks, task)
+	c.putDataNodeTasks(tasks)
+	goto errDeal
+errDeal:
+	msg = fmt.Sprintf(errMsg+" vol:%v  on Node:%v  "+
+		"DiskError  TimeOut Report Then Fix It on newHost:%v   Err:%v , PersistenceHosts:%v  ",
+		vg.VolID, offlineAddr, newAddr, err, vg.PersistenceHosts)
+	log.LogWarn(msg)
 }
 
 func (c *Cluster) metaNodeOffLine(metaNode *MetaNode) {
 
 }
 
-func (c *Cluster) createNamespace(name string) (err error) {
+func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {
 	var (
 		ns *NameSpace
 		mg *MetaGroup
@@ -191,7 +273,7 @@ func (c *Cluster) createNamespace(name string) (err error) {
 		err = hasExist(name)
 		goto errDeal
 	}
-	ns = NewNameSpace(name)
+	ns = NewNameSpace(name, replicaNum)
 	mg = NewMetaGroup(0, DefaultMetaTabletRange-1)
 	if err = mg.ChooseTargetHosts(c); err != nil {
 		goto errDeal
