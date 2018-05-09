@@ -249,10 +249,30 @@ func (mr *MetaRange) Open(req *OpenReq) (resp *OpenResp) {
 
 // Implement raft StateMachine interface
 func (mf *MetaRange) Apply(command []byte, index uint64) (interface{}, error) {
+	m := &MetaRangeSnapshot{}
+	err := m.Decode(command)
+	if err != nil {
+		return nil, err
+	}
+	//TODO
+	switch m.Op {
+	}
+	mf.ApplyID = index
 	return nil, nil
 }
 
 func (mf *MetaRange) ApplyMemeberChange(confChange *raftproto.ConfChange, index uint64) (interface{}, error) {
+	switch confChange.Type {
+	case raftproto.ConfAddNode:
+		//TODO
+	case raftproto.ConfRemoveNode:
+		//TODO
+	case raftproto.ConfUpdateNode:
+		//TODO
+
+	}
+
+	mf.ApplyID = index
 	return nil, nil
 }
 
@@ -275,18 +295,19 @@ func (mf *MetaRange) ApplySnapshot(peers []raftproto.Peer, iter raftproto.SnapIt
 		switch snap.Op {
 		case "inode":
 			var ino = &Inode{}
-			ino.ParseKey(snap.Key)
-			ino.ParseValue(snap.Value)
+			ino.ParseKey(snap.K)
+			ino.ParseValue(snap.V)
 			mf.store.CreateInode(ino)
 		case "dentry":
 			dentry := &Dentry{}
-			dentry.ParseKey(snap.Key)
-			dentry.ParseValue(snap.Value)
+			dentry.ParseKey(snap.K)
+			dentry.ParseValue(snap.V)
 			mf.store.CreateDentry(dentry)
 		default:
 			return errors.New("unknow op=" + snap.Op)
 		}
 	}
+	mf.ApplyID = mf.raftServer.AppliedIndex(mf.RaftGroupID)
 	return nil
 }
 
