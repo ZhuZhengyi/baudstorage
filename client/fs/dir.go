@@ -48,6 +48,8 @@ func (d *Dir) Create(ctx context.Context, req *fuse.CreateRequest, resp *fuse.Cr
 
 	child := NewFile(d.super, d)
 	fillInode(&child.inode, info)
+	resp.Node = fuse.NodeID(child.inode.ino)
+	fillAttr(&resp.Attr, child)
 	return child, child, nil
 }
 
