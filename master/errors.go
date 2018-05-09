@@ -16,7 +16,6 @@ var (
 	VolLocationNotFound = errors.New("volume server not found")
 	UnMatchPara         = errors.New("para not unmatched")
 
-	NoZoneForCreateVol           = errors.New("no zone from create vol")
 	DisOrderArrayErr             = errors.New("dis order array is nil")
 	VolReplicationExcessError    = errors.New("vol Replication Excess error")
 	VolReplicationLackError      = errors.New("vol Replication Lack error")
@@ -26,10 +25,6 @@ var (
 
 func paraNotFound(name string) (err error) {
 	return errors.New(fmt.Sprintf("parameter %v not found", name))
-}
-
-func elementNotFound(name string) (err error) {
-	return errors.New(fmt.Sprintf("%v not found", name))
 }
 
 func hasExist(name string) (err error) {

@@ -49,7 +49,7 @@ func (stream *StreamReader) toString() (m string) {
 
 func (stream *StreamReader) initCheck(offset, size int) (canread int, err error) {
 	if size > CFSEXTENTSIZE {
-		return 0, fmt.Errorf("read size is So High")
+		return 0, fmt.Errorf("read endOffset is So High")
 	}
 	if offset < int(stream.fileSize) {
 		return size, nil
@@ -70,10 +70,10 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	}
 
 	if offset > int(stream.fileSize) {
-		return 0, fmt.Errorf("fileSize[%v] but read offset[%v]", stream.fileSize, offset)
+		return 0, fmt.Errorf("fileSize[%v] but read startOffset[%v]", stream.fileSize, offset)
 	}
 	if offset+size > int(stream.fileSize) {
-		return int(stream.fileSize) - (offset + size), fmt.Errorf("fileSize[%v] but read offset[%v] size[%v]",
+		return int(stream.fileSize) - (offset + size), fmt.Errorf("fileSize[%v] but read startOffset[%v] endOffset[%v]",
 			stream.fileSize, offset, size)
 	}
 
@@ -88,19 +88,38 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 	if canRead == 0 {
 		return
 	}
+	readers, readerOffset, readerSize := stream.getReader(offset, size)
+	for index := 0; index <= len(readers); index++ {
+		reader := readers[index]
+
+	}
 
 	return
 }
 
-func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader) {
+func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader, readerOffset []int, readerSize []int) {
 	readers = make([]*ExtentReader, 0)
+	readerOffset = make([]int, 0)
+	readerSize = make([]int, 0)
 	for _, r := range stream.readers {
-		if r.startInodeOffset > offset && offset < r.endInodeOffset {
+		if r.startInodeOffset <= offset && r.endInodeOffset >= offset+size {
 			readers = append(readers, r)
-		} else if r.startInodeOffset > offset+size && r.endInodeOffset > offset+size {
-			readers = append(readers, r)
+			currReaderOffset := offset - r.startInodeOffset
+			currReaderSize := size
+			readerOffset = append(readerOffset, currReaderOffset)
+			readerSize = append(readerSize, currReaderSize)
+			size -= currReaderSize
 		}
-		if len(readers) >= 2 {
+		if r.startInodeOffset <= offset && r.endInodeOffset <= offset+size {
+			readers = append(readers, r)
+			currReaderOffset := offset - r.startInodeOffset
+			readerOffset = append(readerOffset, currReaderOffset)
+			currReaderSize := (int(r.key.Size) - currReaderOffset)
+			readerSize = append(readerSize, currReaderSize)
+			offset += currReaderSize
+			size -= currReaderSize
+		}
+		if size <= 0 {
 			break
 		}
 	}

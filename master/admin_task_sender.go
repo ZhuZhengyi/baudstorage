@@ -5,13 +5,16 @@ import (
 	"sync"
 	"time"
 
+	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/baudstorage/util/pool"
 	"net"
 )
 
 const (
-	TaskSendCount = 5
-	TaskSendUrl   = "/node/task"
+	TaskSendCount           = 5
+	TaskWaitResponseTimeOut = time.Second * time.Duration(3)
 )
 
 /*
@@ -21,12 +24,38 @@ and do nothing..then the metaNode or  dataNode send a new http request to reply 
 to master
 
 */
+type CommandRequest struct {
+	head []byte
+	body []byte
+}
+
+func NewCommandRequest() (req *CommandRequest) {
+	req = &CommandRequest{
+		head: make([]byte, proto.HeaderSize),
+		body: make([]byte, 0),
+	}
+	return
+}
+
+func (cr *CommandRequest) setHeadAndBody(task *proto.AdminTask) (err error) {
+	packet := proto.NewPacket()
+	packet.Opcode = task.OpCode
+	body, err := json.Marshal(task)
+	if err != nil {
+		return
+	}
+	packet.Size = uint32(len(body))
+	packet.MarshalHeader(cr.head)
+	cr.body = body
+	return
+}
+
 type AdminTaskSender struct {
 	targetAddr string
 	taskMap    map[string]*proto.AdminTask
 	sync.Mutex
-	exitCh chan struct{}
-	conn   *net.TCPConn
+	exitCh   chan struct{}
+	connPool *pool.ConnPool
 }
 
 func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
@@ -35,6 +64,7 @@ func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
 		targetAddr: targetAddr,
 		taskMap:    make(map[string]*proto.AdminTask),
 		exitCh:     make(chan struct{}),
+		connPool:   pool.NewConnPool(),
 	}
 	go sender.process()
 
@@ -62,49 +92,42 @@ func (sender *AdminTaskSender) process() {
 
 }
 
-//todo suggest to define a new packet protocol for send control command
-func (sender *AdminTaskSender) sendTasks(tasks []*proto.AdminTask) (err error) {
-	//requestBody, err := json.Marshal(tasks)
-	//if err != nil {
-	//	return err
-	//}
-	//addr := sender.targetAddr
-	//_, err = util.PostToNode(requestBody, addr+TaskSendUrl)
-	conn, err := net.DialTimeout("tcp", sender.targetAddr, ConnectionTimeout*time.Second)
-	if err != nil {
-		return
-	}
+func (sender *AdminTaskSender) sendTasks(tasks []*proto.AdminTask) {
 
-	if sender.conn == nil {
-		sender.conn = conn.(*net.TCPConn)
-		sender.conn.SetNoDelay(true)
-	}
 	for _, task := range tasks {
-		if err = sender.singleSend(task); err != nil {
-			break
+		conn, err := sender.connPool.Get(sender.targetAddr)
+		if err != nil {
+			log.LogError(fmt.Sprintf("get connection to %v,err,%v", sender.targetAddr, err.Error()))
+			continue
+		}
+		if err = sender.singleSend(task, conn); err != nil {
+			log.LogError(fmt.Sprintf("send task %v to %v,err,%v", task.ToString(), sender.targetAddr, err.Error()))
+			continue
 		}
 	}
-	sender.conn.Close()
-	sender.conn = nil
-	return err
+
 }
 
-func (sender *AdminTaskSender) singleSend(task *proto.AdminTask) (err error) {
-	packet := proto.NewPacket()
-	packet.Opcode = task.OpCode
-	body, err := json.Marshal(task)
-	if err != nil {
+func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) (err error) {
+	cr := NewCommandRequest()
+	if err = cr.setHeadAndBody(task); err != nil {
 		return
 	}
-	packet.Size = uint32(len(body))
-	head := make([]byte, proto.HeaderSize)
-	packet.MarshalHeader(head)
-	sender.conn.Write(head)
-	sender.conn.Write(body)
-	return
-}
+	if _, err = conn.Write(cr.head); err != nil {
+		return
+	}
 
-func (sender *AdminTaskSender) batchSend(tasks []*proto.AdminTask) (err error) {
+	if _, err = conn.Write(cr.body); err != nil {
+		return
+	}
+	response := proto.NewPacket()
+	if err = response.ReadFromConn(conn, TaskWaitResponseTimeOut); err != nil {
+		return
+	}
+	if response.Opcode == proto.OpOk {
+		task.SendTime = time.Now().Unix()
+		task.SendCount++
+	}
 	return
 }
 

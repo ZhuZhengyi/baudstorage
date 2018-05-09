@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"
 )
 
@@ -111,4 +112,31 @@ func (dataNode *DataNode) SelectNodeForWrite() {
 
 func (dataNode *DataNode) clean() {
 	dataNode.sender.exitCh <- struct{}{}
+}
+
+func (dataNode *DataNode) dealTaskResponse(nodeAddr string, task *proto.AdminTask) {
+	if task == nil {
+		return
+	}
+	if _, ok := dataNode.sender.taskMap[task.ID]; !ok {
+		return
+	}
+	if err := UnmarshalTaskResponse(task); err != nil {
+		return
+	}
+
+	switch task.OpCode {
+	case OpCreateVol:
+		dataNode.dealCreateVolResponse(task)
+	case OpDeleteVol:
+	case OpLoadVol:
+	default:
+
+	}
+
+	return
+}
+
+func (dataNode *DataNode) dealCreateVolResponse(task *proto.AdminTask) {
+
 }

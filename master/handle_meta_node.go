@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
@@ -89,7 +90,32 @@ errDeal:
 }
 
 func (m *Master) metaNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
+	var (
+		metaNode *MetaNode
+		code     = http.StatusOK
+		tr       *proto.AdminTask
+		err      error
+	)
 
+	if tr, err = parseTaskResponse(r); err != nil {
+		code = http.StatusBadRequest
+		goto errDeal
+	}
+
+	if metaNode, err = m.cluster.getMetaNode(tr.OperatorAddr); err != nil {
+		code = http.StatusInternalServerError
+		goto errDeal
+	}
+
+	m.cluster.dealMetaNodeTaskResponse(metaNode.Addr, tr)
+
+	return
+
+errDeal:
+	logMsg := getReturnMessage("dataNodeTaskResponse", r.RemoteAddr, err.Error(),
+		http.StatusBadRequest)
+	HandleError(logMsg, code, w)
+	return
 }
 
 func parseGetMetaNodePara(r *http.Request) (nodeAddr string, err error) {

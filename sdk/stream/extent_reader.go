@@ -1,89 +1,232 @@
 package stream
 
 import (
+	"fmt"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
+	"github.com/tiglabs/raft/util"
 	"math/rand"
-	"net"
 	"sync"
 	"time"
 )
 
 type ExtentReader struct {
+	inode            uint64
 	startInodeOffset int
 	endInodeOffset   int
-	data             []byte
-	size             int
+	buffer           *CacheBuffer
+	vol              *sdk.VolGroup
 	key              ExtentKey
 	wraper           *sdk.VolGroupWraper
-	byteRecive       int
-	sync.Mutex
+	exitCh           chan bool
+	cacheReferCh     chan bool
+	lastReadOffset   int
 }
 
-func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWraper) (reader *ExtentReader) {
+const (
+	DefaultReadBufferSize = 10 * util.MB
+)
+
+func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWraper) (reader *ExtentReader, err error) {
 	reader = new(ExtentReader)
-	reader.data = make([]byte, 0)
+	reader.vol, err = wraper.GetVol(key.VolId)
+	if err != nil {
+		return
+	}
 	reader.key = key
+	reader.buffer = NewCacheBuffer()
 	reader.startInodeOffset = inInodeOffset
-	reader.size = int(key.Size)
-	reader.endInodeOffset = reader.startInodeOffset + reader.size
+	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
 	reader.wraper = wraper
+	reader.exitCh = make(chan bool, 2)
+	reader.cacheReferCh = make(chan bool, 10)
+	reader.cacheReferCh <- true
+	go reader.asyncFillCache()
 
-	return reader
+	return
 }
 
-func (reader *ExtentReader) streamRecivePacket(p *Packet, conn net.Conn){
-	reader.Lock()
-	reader.data = make([]byte, 0)
-	reader.Unlock()
-	var err error
+func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
+	if reader.getCacheStatus() == AvaliBuffer && offset+size <= reader.buffer.getBufferEndOffset() {
+		reader.buffer.copyData(data, offset, size)
+		return
+	}
+	p := NewReadPacket(reader.key, offset, size)
+	data, err = reader.readDataFromVol(p)
+	reader.setCacheToUnavali()
+	if err == nil {
+		select {
+		case reader.cacheReferCh <- true:
+			reader.lastReadOffset = offset
+		default:
+			return
+		}
+
+	}
+
+	return
+}
+
+func (reader *ExtentReader) readDataFromVol(p *Packet) (data []byte, err error) {
+	rand.Seed(time.Now().UnixNano())
+	index := rand.Intn(int(reader.vol.Goal))
+	data = make([]byte, p.Size)
+	host := reader.vol.Hosts[index]
+	if _, err = reader.readDataFromHost(p, host, data); err != nil {
+		goto FORLOOP
+	}
+	return
+
+FORLOOP:
+	for _, host := range reader.vol.Hosts {
+		_, err = reader.readDataFromHost(p, host, data)
+		if err == nil {
+			return
+		}
+	}
+
+	return
+}
+
+func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte) (acatualReadSize int, err error) {
+	expectReadSize := int(p.Size)
+	conn, err := reader.wraper.GetConnect(host)
+	if err != nil {
+		return 0, errors.Annotatef(fmt.Errorf(reader.toString()+" vol[%v] not found", reader.key.VolId),
+			"ReciveData Err")
+
+	}
+	defer func() {
+		if err != nil {
+			conn.Close()
+		} else {
+			reader.wraper.PutConnect(conn)
+		}
+	}()
+	if err = p.WriteToConn(conn); err != nil {
+		err = errors.Annotatef(fmt.Errorf(reader.toString()+" cannot get connect from host[%v] err[%v]", host, err.Error()),
+			"ReciveData Err")
+		return 0, err
+	}
 	for {
 		err = p.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
-			break
+			err = errors.Annotatef(fmt.Errorf(reader.toString()+" recive dataCache from host[%v] err[%v]", host, err.Error()),
+				"ReciveData Err")
+			return
 		}
 		if p.Opcode != proto.OpOk {
-			break
+			err = errors.Annotatef(fmt.Errorf(reader.toString()+" packet[%v] from host [%v] opcode err[%v]",
+				p.GetUniqLogId(), host, string(p.Data[:p.Size])), "ReciveData Err")
+			return
 		}
-		reader.Lock()
-		reader.byteRecive+=int(p.Size)
-		reader.data = append(reader.data, p.Data...)
-		if len(reader.data) == reader.size {
-			reader.Unlock()
-			break
+		acatualReadSize += int(p.Size)
+		copy(data[acatualReadSize:acatualReadSize+int(p.Size)], p.Data[:p.Size])
+		if acatualReadSize >= expectReadSize {
+			return
 		}
-		reader.Unlock()
 	}
-	if err!=nil {
-		conn.Close()
+
+	return
+}
+
+func (reader *ExtentReader) updateKey(key ExtentKey) {
+	if !(key.VolId == reader.key.VolId && key.ExtentId == reader.key.ExtentId && key.Size > reader.key.Size) {
+		return
+	}
+	reader.key = key
+	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
+}
+
+func (reader *ExtentReader) toString() (m string) {
+	return fmt.Sprintf("inode[%v] extentKey[%v] ", reader.inode,
+		reader.key.Marshal())
+}
+
+func (reader *ExtentReader) fillCache() error {
+	if reader.buffer.getBufferEndOffset() == int(reader.key.Size) {
+		return nil
+	}
+	reader.setCacheToUnavali()
+	bufferSize := int(util.Min(uint64(int(reader.key.Size)-reader.lastReadOffset), uint64(DefaultReadBufferSize)))
+	bufferOffset := reader.lastReadOffset
+	p := NewReadPacket(reader.key, bufferOffset, bufferSize)
+	data, err := reader.readDataFromVol(p)
+	if err != nil {
+		return err
+	}
+	reader.buffer.UpdateCache(data, bufferOffset, bufferSize)
+
+	return nil
+}
+
+func (reader *ExtentReader) asyncFillCache() {
+	for {
+		select {
+		case <-reader.cacheReferCh:
+			reader.fillCache()
+		}
 	}
 }
 
-func (reader *ExtentReader) reciveData(vol *sdk.VolGroup) {
-	rand.Seed(time.Now().UnixNano())
-	index := rand.Intn(int(vol.Goal))
-	p := NewReadPacket(vol, reader.key)
-	host := vol.Hosts[index]
-	conn, err := reader.wraper.GetConnect(host)
-	if err != nil {
-		goto FORLOOP
-	}
-	if err = p.WriteToConn(conn); err != nil {
-		goto FORLOOP
-	}
-	go reader.streamRecivePacket(p, conn)
+const (
+	UnavaliBuffer = 1
+	AvaliBuffer   = 2
+)
 
-FORLOOP:
-	for _, host := range vol.Hosts {
-		conn, err := reader.wraper.GetConnect(host)
-		if err != nil {
-			continue
-		}
-		if err = p.WriteToConn(conn); err != nil {
-			continue
-		}
-		go reader.streamRecivePacket(p, conn)
-		break
+type CacheBuffer struct {
+	cache       []byte
+	startOffset int
+	endOffset   int
+	sync.Mutex
+	isFull bool
+	status int
+}
 
-	}
+func NewCacheBuffer() (buffer *CacheBuffer) {
+	buffer = new(CacheBuffer)
+	buffer.cache = make([]byte, 0)
+	return buffer
+}
+
+func (buffer *CacheBuffer) UpdateCache(data []byte, offset, size int) {
+	buffer.Lock()
+	defer buffer.Unlock()
+	buffer.cache = data
+	buffer.startOffset = offset
+	buffer.endOffset = offset + size
+	buffer.status = AvaliBuffer
+
+	return
+}
+
+func (buffer *CacheBuffer) copyData(dst []byte, offset, size int) {
+	buffer.Lock()
+	defer buffer.Unlock()
+	copy(dst, buffer.cache[offset:offset+size])
+}
+
+func (buffer *CacheBuffer) getBufferEndOffset() int {
+	buffer.Lock()
+	defer buffer.Unlock()
+	return buffer.endOffset
+}
+
+func (reader *ExtentReader) setCacheToUnavali() {
+	reader.buffer.Lock()
+	defer reader.buffer.Unlock()
+	reader.buffer.status = UnavaliBuffer
+}
+
+func (reader *ExtentReader) setCacheToAvali() {
+	reader.buffer.Lock()
+	defer reader.buffer.Unlock()
+	reader.buffer.status = AvaliBuffer
+}
+
+func (reader *ExtentReader) getCacheStatus() int {
+	reader.buffer.Lock()
+	defer reader.buffer.Unlock()
+	return reader.buffer.status
 }

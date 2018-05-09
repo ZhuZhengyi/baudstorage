@@ -14,21 +14,12 @@ type Packet struct {
 	fillBytes uint32
 }
 
-func NewPacket(vol *sdk.VolGroup) (p *Packet) {
+func NewWritePacket(vol *sdk.VolGroup, extentId, seqNo uint64, offset int) (p *Packet) {
 	p = new(Packet)
 	p.VolID = vol.VolId
 	p.Magic = proto.ProtoMagic
 	p.Data = make([]byte, 0)
-	p.Opcode = proto.OpWrite
-	p.Size = 0
 	p.StoreType = proto.ExtentStoreMode
-	p.ReqID = proto.GetReqID()
-
-	return
-}
-
-func NewWritePacket(vol *sdk.VolGroup, extentId, seqNo uint64, offset int) (p *Packet) {
-	p = NewPacket(vol)
 	p.FileID = extentId
 	p.Offset = int64(offset)
 	p.Arg = ([]byte)(vol.GetAllAddrs())
@@ -39,12 +30,15 @@ func NewWritePacket(vol *sdk.VolGroup, extentId, seqNo uint64, offset int) (p *P
 	return
 }
 
-func NewReadPacket(vol *sdk.VolGroup, key ExtentKey,bytesRecive int) (p *Packet) {
-	p = NewPacket(vol)
+func NewReadPacket(key ExtentKey, offset, size int) (p *Packet) {
+	p = new(Packet)
 	p.FileID = key.ExtentId
-	p.Offset = inbytesRecive
-	p.Size = key.Size
+	p.VolID = key.VolId
+	p.Magic = proto.ProtoMagic
+	p.Offset = int64(offset)
+	p.Size = uint32(size)
 	p.Opcode = proto.OpStreamRead
+	p.StoreType = proto.ExtentStoreMode
 	p.ReqID = proto.GetReqID()
 
 	return
@@ -55,12 +49,14 @@ func NewReply(reqId int64, volId uint32, extentId uint64) (p *Packet) {
 	p.ReqID = reqId
 	p.VolID = volId
 	p.FileID = extentId
+	p.Magic = proto.ProtoMagic
+	p.StoreType = proto.ExtentStoreMode
 
 	return
 }
 
-func IsEqualPacket(request, reply *Packet) bool {
-	if request.ReqID == reply.ReqID && request.VolID == reply.VolID && request.FileID == reply.FileID {
+func (p *Packet) IsEqual(q *Packet) bool {
+	if p.ReqID == q.ReqID && p.VolID == q.VolID && p.FileID == q.FileID {
 		return true
 	}
 

@@ -4,10 +4,14 @@ import (
 	"time"
 )
 
+const (
+	ROOT_INO = 1
+)
+
 type InodeInfo struct {
 	Inode      uint64    `json:"inode"`
 	Type       uint32    `json:"type"`
-	ParentID   uint64    `json:"parentID"`
+	Size       uint64    `json:"size"`
 	ModifyTime time.Time `json:"modify_time"`
 	CreateTime time.Time `json:"create_time"`
 	AccessTime time.Time `json:"access_time"`
@@ -26,16 +30,18 @@ type OpResult struct {
 
 type CreateInodeRequest struct {
 	Namespace string `json:"namespace"`
+	GroupID   string
 	Mode      uint32 `json:"mode"`
 }
 
 type CreateInodeResponse struct {
 	OpResult
-	Inode uint64 `json:"inode"`
+	Info *InodeInfo
 }
 
 type DeleteInodeRequest struct {
 	Namespace string `json:"namespace"`
+	GroupID   string
 	Inode     uint64 `json:"inode"`
 }
 
@@ -45,6 +51,7 @@ type DeleteInodeResponse struct {
 
 type CreateDentryRequest struct {
 	Namespace string `json:"namespace"`
+	GroupID   string
 	ParentID  uint64 `json:"parentID"`
 	Inode     uint64 `json:"inode"`
 	Name      string `json:"name"`
@@ -57,6 +64,7 @@ type CreateDentryResponse struct {
 
 type DeleteDentryRequest struct {
 	Namespace string `json:"namespace"`
+	GroupID   string
 	ParentID  uint64 `json:"parentID"`
 	Name      string `json:"name"`
 }
@@ -68,6 +76,7 @@ type DeleteDentryResponse struct {
 
 type OpenRequest struct {
 	Namespace string `json:"namespace"`
+	GroupID   string
 	Inode     uint64 `json:"inode"`
 }
 
@@ -77,6 +86,7 @@ type OpenResponse struct {
 
 type LookupRequest struct {
 	Namespace string `json:"namespace"`
+	GroupID   string
 	ParentID  uint64 `json:"parentID"`
 	Name      string `json:"name"`
 }
@@ -89,6 +99,7 @@ type LookupResponse struct {
 
 type InodeGetRequest struct {
 	Namespace string `json:"namespace"`
+	GroupID   string
 	Inode     uint64 `json:"inode"`
 }
 
@@ -99,6 +110,7 @@ type InodeGetResponse struct {
 
 type ReadDirRequest struct {
 	Namespace string `json:"namespace"`
+	GroupID   string
 	ParentID  uint64 `json:"parentID"`
 }
 

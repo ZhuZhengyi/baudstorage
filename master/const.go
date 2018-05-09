@@ -19,7 +19,6 @@ const (
 	CheckVolDiskErrorErr        = "CheckVolDiskErrorErr  "
 	GetAvailDataNodeHostsErr    = "GetAvailDataNodeHostsErr "
 	GetLackFileNodeTaskErr      = "GetLackFileNodeTaskErr "
-	GetReplicateFileTaskErr     = "GetReplicateFileTaskErr "
 	DeleteFileInCoreInfo        = "DeleteFileInCoreInfo "
 	GetVolLocationFileCountInfo = "GetVolLocationFileCountInfo "
 )
@@ -46,7 +45,6 @@ const (
 const (
 	DefaultMetaTabletRange = 1 << 34
 	RuntimeStackBufSize    = 4096
-	ConnectionTimeout      = 5
 )
 
 //OpCode
@@ -57,14 +55,6 @@ const (
 	OpDeleteFile      = 0x04
 	OpLoadVol         = 0x05
 	OpCreateMetaGroup = 0x06
-)
-
-const (
-	ClusterGroupID = 1
-)
-
-const (
-	OptSetNamespace = 1
 )
 
 const (

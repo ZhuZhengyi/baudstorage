@@ -85,7 +85,6 @@ errDeal:
 func (m *Master) dataNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
 	var (
 		dataNode *DataNode
-		trp      []*proto.AdminTask
 		code     = http.StatusOK
 		tr       *proto.AdminTask
 		err      error
@@ -101,9 +100,7 @@ func (m *Master) dataNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
 		goto errDeal
 	}
 
-	trp = make([]*proto.AdminTask, 0)
-	trp = append(trp, tr)
-	m.cluster.dealTaskResponsePack(dataNode.HttpAddr, trp[:])
+	m.cluster.dealDataNodeTaskResponse(dataNode.HttpAddr, tr)
 
 	return
 

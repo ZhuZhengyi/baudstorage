@@ -23,7 +23,7 @@ const (
 	NotRecive              = false
 	ExtentWriterRecoverCnt = 3
 
-	DefaultBufferSize = 1280 * util.KB
+	DefaultWriteBufferSize = 1280 * util.KB
 )
 
 var (
@@ -54,7 +54,7 @@ type ExtentWriter struct {
 func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper, extentId uint64) (writer *ExtentWriter, err error) {
 	writer = new(ExtentWriter)
 	writer.requestQueue = list.New()
-	writer.handleCh = make(chan bool, DefaultBufferSize/(64*util.KB))
+	writer.handleCh = make(chan bool, DefaultWriteBufferSize/(64*util.KB))
 	writer.extentId = extentId
 	writer.volGroup = vol
 	writer.inode = inode
@@ -295,7 +295,7 @@ func (writer *ExtentWriter) close() {
 }
 
 func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet) (err error) {
-	if !IsEqualPacket(request, reply) {
+	if !request.IsEqual(reply) {
 		writer.connect.Close()
 		return errors.Annotatef(fmt.Errorf("processReply recive [%v] but actual recive [%v]",
 			request.GetUniqLogId(), reply.GetUniqLogId()), "writer[%v]", writer.toString())
