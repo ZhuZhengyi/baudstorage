@@ -203,7 +203,6 @@ func (buffer *CacheBuffer) UpdateData(data []byte, offset, size int) {
 	return
 }
 
-
 func (buffer *CacheBuffer) copyData(dst []byte, offset, size int) {
 	buffer.Lock()
 	defer buffer.Unlock()
