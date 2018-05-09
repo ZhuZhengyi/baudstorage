@@ -10,14 +10,17 @@ import (
 )
 
 type ExtentClient struct {
-	wrapper    *sdk.VolGroupWraper
-	writers    map[uint64]*StreamWriter
-	writerLock sync.RWMutex
-	readers    map[uint64]*StreamReader
-	readerLock sync.Mutex
+	wrapper           *sdk.VolGroupWraper
+	writers           map[uint64]*StreamWriter
+	writerLock        sync.RWMutex
+	readers           map[uint64]*StreamReader
+	readerLock        sync.RWMutex
+	saveExtentKeyFn   func(inode uint64, key ExtentKey) (err error)
+	updateExtentKeyFn func(inode uint64) (streamKey StreamKey, err error)
 }
 
-func NewExtentClient(logdir string, master string) (client *ExtentClient, err error) {
+func NewExtentClient(logdir string, master string, saveExtentKeyFn func(inode uint64, key ExtentKey) (err error),
+	updateExtentKeyFn func(inode uint64) (streamKey StreamKey, err error)) (client *ExtentClient, err error) {
 	client = new(ExtentClient)
 	_, err = log.NewLog(logdir, "extentclient", log.DebugLevel)
 	if err != nil {
@@ -29,15 +32,29 @@ func NewExtentClient(logdir string, master string) (client *ExtentClient, err er
 	}
 	client.writers = make(map[uint64]*StreamWriter)
 	client.readers = make(map[uint64]*StreamReader)
+	client.saveExtentKeyFn = saveExtentKeyFn
+	client.updateExtentKeyFn = updateExtentKeyFn
 
 	return
 }
 
-func (client *ExtentClient) InitWrite(inode uint64, keyCh *chan ExtentKey) {
-	stream := NewStreamWriter(client.wrapper, inode, keyCh)
+func (client *ExtentClient) InitWriteStream(inode uint64) (stream *StreamWriter) {
+	stream = NewStreamWriter(client.wrapper, inode, client.saveExtentKeyFn)
 	client.writerLock.Lock()
 	client.writers[inode] = stream
 	client.writerLock.Unlock()
+
+	return
+}
+
+func (client *ExtentClient) InitReadStream(inode uint64) (stream *StreamReader, err error) {
+	stream, err = NewStreamReader(inode, client.wrapper, client.updateExtentKeyFn)
+	if err != nil {
+		return
+	}
+	client.readerLock.Lock()
+	client.readers[inode] = stream
+	client.readerLock.Unlock()
 
 	return
 }
@@ -46,8 +63,20 @@ func (client *ExtentClient) getStreamWriter(inode uint64) (stream *StreamWriter)
 	client.writerLock.RLock()
 	stream = client.writers[inode]
 	client.writerLock.RUnlock()
+	if stream == nil {
+		stream = client.InitWriteStream(inode)
+	}
 
 	return
+}
+
+func (client *ExtentClient) getStreamReader(inode uint64) (stream *StreamReader, err error) {
+	client.readerLock.RLock()
+	stream = client.readers[inode]
+	client.readerLock.RUnlock()
+	if stream == nil {
+		stream, err = client.InitReadStream(inode)
+	}
 }
 
 func (client *ExtentClient) Write(inode uint64, data []byte) (write int, err error) {
@@ -58,9 +87,13 @@ func (client *ExtentClient) Write(inode uint64, data []byte) (write int, err err
 	return stream.write(data, len(data))
 }
 
-func (client *ExtentClient) Read(inode uint64, offset uint64, size uint32) (read int, data []byte, err error) {
+func (client *ExtentClient) Read(inode uint64, data []byte, offset int, size int) (read int, err error) {
+	var stream *StreamReader
+	if stream, err = client.getStreamReader(inode); err != nil {
+		return
+	}
 
-	return
+	return stream.read(data, offset, size)
 }
 
 func (client *ExtentClient) Delete(keys []ExtentKey) (err error) {
@@ -87,20 +120,13 @@ func (client *ExtentClient) delete(vol *sdk.VolGroup, extentId uint64) (err erro
 			connect.Close()
 		}
 	}()
-	p := NewPacket(vol)
-	p.Opcode = proto.OpMarkDelete
-	p.VolID = vol.VolId
-	p.FileID = extentId
-	p.Arg = ([]byte)(vol.GetAllAddrs())
-	p.Arglen = uint32(len(p.Arg))
-
+	p := NewDeleteExtentPacket(vol, extentId)
 	if err = p.WriteToConn(connect); err != nil {
 		return
 	}
 	if err = p.ReadFromConn(connect, proto.ReadDeadlineTime); err != nil {
 		return
 	}
-	extentId = p.FileID
 
 	return
 }

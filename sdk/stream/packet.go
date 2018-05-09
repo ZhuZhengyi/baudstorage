@@ -44,6 +44,30 @@ func NewReadPacket(key ExtentKey, offset, size int) (p *Packet) {
 	return
 }
 
+func NewCreateExtentPacket(vol *sdk.VolGroup) (p *Packet) {
+	p = new(Packet)
+	p.Magic = proto.ProtoMagic
+	p.Opcode = proto.OpCreateFile
+	p.VolID = vol.VolId
+	p.StoreType = proto.ExtentStoreMode
+	p.ReqID = proto.GetReqID()
+	p.Arg = ([]byte)(vol.GetAllAddrs())
+	p.Arglen = uint32(len(p.Arg))
+	return p
+}
+
+func NewDeleteExtentPacket(vol *sdk.VolGroup, extentId uint64) (p *Packet) {
+	p = new(Packet)
+	p.Magic = proto.ProtoMagic
+	p.Opcode = proto.OpMarkDelete
+	p.StoreType = proto.ExtentStoreMode
+	p.VolID = vol.VolId
+	p.FileID = extentId
+	p.Arg = ([]byte)(vol.GetAllAddrs())
+	p.Arglen = uint32(len(p.Arg))
+	return p
+}
+
 func NewReply(reqId int64, volId uint32, extentId uint64) (p *Packet) {
 	p = new(Packet)
 	p.ReqID = reqId
