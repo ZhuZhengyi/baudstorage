@@ -5,6 +5,7 @@ const (
 	ParaName     = "name"
 	ParaId       = "id"
 	ParaCount    = "count"
+	ParaReplicas = "replicas"
 	ParaVolGroup = "vg"
 )
 
@@ -21,6 +22,7 @@ const (
 	GetLackFileNodeTaskErr      = "GetLackFileNodeTaskErr "
 	DeleteFileInCoreInfo        = "DeleteFileInCoreInfo "
 	GetVolLocationFileCountInfo = "GetVolLocationFileCountInfo "
+	DataNodeOfflineInfo         = "dataNodeOfflineInfo"
 )
 
 const (
@@ -49,12 +51,14 @@ const (
 
 //OpCode
 const (
-	OpCreateVol       = 0x01
-	OpDeleteVol       = 0x02
-	OpReplicateFile   = 0x03
-	OpDeleteFile      = 0x04
-	OpLoadVol         = 0x05
-	OpCreateMetaGroup = 0x06
+	OpCreateVol         = 0x01
+	OpDeleteVol         = 0x02
+	OpReplicateFile     = 0x03
+	OpDeleteFile        = 0x04
+	OpLoadVol           = 0x05
+	OpCreateMetaGroup   = 0x06
+	OpDataNodeHeartbeat = 0x07
+	OpMetaNodeHeartbeat = 0x08
 )
 
 const (

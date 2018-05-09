@@ -19,7 +19,6 @@ func (c *Cluster) putDataNodeTasks(tasks []*proto.AdminTask) {
 			log.LogWarn(fmt.Sprintf("action[putTasks],nodeAddr:%v,taskID:%v,err:%v", node.HttpAddr, t.ID, err.Error()))
 		} else {
 			node.sender.PutTask(t)
-
 		}
 	}
 }
@@ -42,22 +41,27 @@ func (c *Cluster) putMetaNodeTasks(tasks []*proto.AdminTask) {
 func (c *Cluster) checkVolGroups() {
 	c.volGroups.RLock()
 	newReadWriteVolGroups := 0
-	for _, vol := range c.volGroups.volGroupMap {
-		vol.checkLocationStatus(c.cfg.VolTimeOutSec)
-		vol.checkStatus(true, c.cfg.VolTimeOutSec)
-		vol.checkVolGroupMiss(c.cfg.VolMissSec, c.cfg.VolWarnInterval)
-		vol.checkReplicaNum()
-		if vol.status == VolReadWrite {
+	for _, vg := range c.volGroups.volGroupMap {
+		vg.checkLocationStatus(c.cfg.VolTimeOutSec)
+		vg.checkStatus(true, c.cfg.VolTimeOutSec)
+		vg.checkVolGroupMiss(c.cfg.VolMissSec, c.cfg.VolWarnInterval)
+		vg.checkReplicaNum()
+		if vg.status == VolReadWrite {
 			newReadWriteVolGroups++
 		}
-		vol.checkVolDiskError()
-		volTasks := vol.checkVolReplicationTask()
+		volDiskErrorAddrs := vg.checkVolDiskError()
+		if volDiskErrorAddrs != nil {
+			for _, addr := range volDiskErrorAddrs {
+				c.volOffline(addr, vg, CheckVolDiskErrorErr)
+			}
+		}
+		volTasks := vg.checkVolReplicationTask()
 		c.putDataNodeTasks(volTasks)
 	}
 	c.volGroups.readWriteVolGroups = newReadWriteVolGroups
 	c.volGroups.RUnlock()
 	c.volGroups.updateVolResponseCache(NeedUpdateVolResponse, 0)
-	msg := fmt.Sprintf("action[CheckVolInfo],can readwrite vol:%v  ", c.volGroups.readWriteVolGroups)
+	msg := fmt.Sprintf("action[CheckVolInfo],can readwrite volGroups:%v  ", c.volGroups.readWriteVolGroups)
 	log.LogInfo(msg)
 }
 
@@ -151,6 +155,9 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	case OpCreateMetaGroup:
 		response := task.Response.(*proto.CreateMetaRangeResponse)
 		c.dealCreateMetaRange(task.OperatorAddr, response)
+	case OpMetaNodeHeartbeat:
+		response := task.Response.(*proto.MetaNodeHeartbeatResponse)
+		c.dealMetaNodeHeartbeat(task.OperatorAddr, response)
 	default:
 		log.LogError(fmt.Sprintf("unknown operate code %v", task.OpCode))
 	}
@@ -159,6 +166,10 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 }
 
 func (c *Cluster) dealCreateMetaRange(nodeAddr string, resp *proto.CreateMetaRangeResponse) {
+	return
+}
+
+func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHeartbeatResponse) {
 	return
 }
 
@@ -177,7 +188,6 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	if err := UnmarshalTaskResponse(task); err != nil {
 		return
 	}
-
 	switch task.OpCode {
 	case OpCreateVol:
 		response := task.Response.(*proto.CreateVolResponse)
@@ -191,6 +201,9 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	case OpDeleteFile:
 		response := task.Response.(*proto.DeleteFileResponse)
 		c.dealDeleteFileResponse(task.OperatorAddr, response)
+	case OpDataNodeHeartbeat:
+		response := task.Response.(*proto.DataNodeHeartBeatResponse)
+		c.dealDataNodeHeartbeat(task.OperatorAddr, response)
 	default:
 		log.LogError(fmt.Sprintf("unknown operate code %v", task.OpCode))
 	}
@@ -216,7 +229,7 @@ func (c *Cluster) createVolSuccessTriggerOperator(nodeAddr string, resp *proto.C
 		vol      *Vol
 	)
 
-	if vg, err = c.getVolByVolID(resp.VolId); err != nil {
+	if vg, err = c.getVolGroupByVolID(resp.VolId); err != nil {
 		goto errDeal
 	}
 
@@ -250,7 +263,7 @@ func (c *Cluster) dealDeleteVolResponse(nodeAddr string, resp *proto.DeleteVolRe
 		err error
 	)
 	if resp.Status == proto.CmdSuccess {
-		if vg, err = c.getVolByVolID(resp.VolId); err != nil {
+		if vg, err = c.getVolGroupByVolID(resp.VolId); err != nil {
 			return
 		}
 		vg.Lock()
@@ -263,7 +276,7 @@ func (c *Cluster) dealDeleteVolResponse(nodeAddr string, resp *proto.DeleteVolRe
 
 func (c *Cluster) dealLoadVolResponse(nodeAddr string, resp *proto.LoadVolResponse) {
 	var dataNode *DataNode
-	vg, err := c.getVolByVolID(resp.VolId)
+	vg, err := c.getVolGroupByVolID(resp.VolId)
 	if err != nil || resp.Status == proto.CmdFailed || resp.VolSnapshot == nil {
 		return
 	}
@@ -281,11 +294,49 @@ func (c *Cluster) dealDeleteFileResponse(nodeAddr string, resp *proto.DeleteFile
 		err error
 	)
 	if resp.Status == proto.CmdSuccess {
-		if vg, err = c.getVolByVolID(resp.VolId); err != nil {
+		if vg, err = c.getVolGroupByVolID(resp.VolId); err != nil {
 			return
 		}
 		vg.DeleteFileOnNode(nodeAddr, resp.Name)
 	}
 
 	return
+}
+
+func (c *Cluster) dealDataNodeHeartbeat(nodeAddr string, resp *proto.DataNodeHeartBeatResponse) {
+
+	var (
+		dataNode *DataNode
+		err      error
+		logMsg   string
+	)
+
+	if dataNode, err = c.getDataNode(nodeAddr); err != nil {
+		goto errDeal
+	}
+
+	logMsg = fmt.Sprintf("action[dealDataNodeHeartbeat],dataNode:%v ReportTime:%v  success", dataNode.HttpAddr, time.Now().Unix())
+	log.LogDebug(logMsg)
+	dataNode.setNodeAlive()
+	c.UpdateDataNode(dataNode)
+	dataNode.VolInfoCount = len(dataNode.VolInfo)
+	dataNode.VolInfo = nil
+
+	return
+errDeal:
+	logMsg = fmt.Sprintf("nodeAddr %v hearbeat error :%v", nodeAddr, err.Error())
+	log.LogError(logMsg)
+	return
+}
+
+/*if node report volInfo,so range volInfo,then update volInfo*/
+func (c *Cluster) UpdateDataNode(dataNode *DataNode) {
+	for _, vr := range dataNode.VolInfo {
+		if vr == nil {
+			continue
+		}
+		if vol, err := c.getVolGroupByVolID(vr.VolID); err == nil {
+			vol.UpdateVol(vr, dataNode)
+		}
+	}
 }

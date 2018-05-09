@@ -101,8 +101,8 @@ func (vg *VolGroup) missVol(addr string) (isMiss bool) {
 	return
 }
 
-func (vg *VolGroup) checkVolDiskError() {
-	volDiskErrorAddrs := make([]string, 0)
+func (vg *VolGroup) checkVolDiskError() (volDiskErrorAddrs []string) {
+	volDiskErrorAddrs = make([]string, 0)
 	vg.Lock()
 	for _, addr := range vg.PersistenceHosts {
 		volLoc, ok := vg.IsInVolLocs(addr)
@@ -122,7 +122,6 @@ func (vg *VolGroup) checkVolDiskError() {
 	for _, diskAddr := range volDiskErrorAddrs {
 		msg := fmt.Sprintf("action[%v],vol:%v  On :%v  Disk Error,So Remove it From RocksDBHost", CheckVolDiskErrorErr, vg.VolID, diskAddr)
 		log.LogError(msg)
-		vg.volOffLine(diskAddr, CheckVolDiskErrorErr)
 	}
 
 	return

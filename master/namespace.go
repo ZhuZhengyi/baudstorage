@@ -4,11 +4,12 @@ import "sync"
 
 type NameSpace struct {
 	Name       string
+	replicaNum uint8
 	MetaGroups map[string]*MetaGroup
 	sync.Mutex
 }
 
-func NewNameSpace(name string) (ns *NameSpace) {
+func NewNameSpace(name string, replicaNum uint8) (ns *NameSpace) {
 	return &NameSpace{Name: name, MetaGroups: make(map[string]*MetaGroup, 0)}
 }
 
