@@ -14,6 +14,7 @@ const defaultBTreeDegree = 32
 // MetaRangeFsm responsible for sync data log with other meta range through Raft
 // and manage dentry and inode by B-Tree in memory.
 type MetaRangeFsm struct {
+	metaRange  *MetaRange
 	mu         sync.RWMutex // Mutex for whole fsm
 	dentryMu   sync.RWMutex // Mutex for dentry operation.
 	dentryTree *btree.BTree // B-Tree for dentry.
@@ -21,8 +22,9 @@ type MetaRangeFsm struct {
 	inodeTree  *btree.BTree // B-Tree for inode.
 }
 
-func NewMetaRangeFsm() *MetaRangeFsm {
+func NewMetaRangeFsm(mr *MetaRange) *MetaRangeFsm {
 	return &MetaRangeFsm{
+		metaRange:  mr,
 		dentryTree: btree.New(defaultBTreeDegree),
 		inodeTree:  btree.New(defaultBTreeDegree),
 	}
@@ -205,10 +207,12 @@ func (mf *MetaRangeFsm) GetDentryTree() *btree.BTree {
 	return mf.dentryTree
 }
 
-func (mf *MetaRangeFsm) GetAllTree() (ino *btree.BTree, dentry *btree.BTree) {
+func (mf *MetaRangeFsm) GetAllTree() (ino *btree.BTree, dentry *btree.BTree,
+	applyID uint64) {
 	mf.mu.Lock()
 	defer mf.mu.Unlock()
 	ino = mf.inodeTree
 	dentry = mf.dentryTree
+	applyID = mf.metaRange.ApplyID
 	return
 }

@@ -23,15 +23,22 @@ var (
 )
 
 type MetaRangeConfig struct {
-	ID          string `json:"id"`    // Consist with 'namespace_start_end'. (Required when initialize)
-	Start       uint64 `json:"start"` // Start inode ID of this range. (Required when initialize)
-	End         uint64 `json:"end"`   // End inode ID of this range. (Required when initialize)
-	cursor      uint64 // Cursor ID value of inode what have been already assigned.
-	rootDir     string
-	Peers       []string         `json:"peers"`
-	RaftGroupId uint64           `json:"raftGroupID"` // Identity for raft group. Raft nodes in same raft group must have same group ID.
-	raftServer  *raft.RaftServer // Raft server instance.
-	isRestore   bool
+	// Consist with 'namespace_ID'. (Required when initialize)
+	ID string `json:"id"`
+	// Start inode ID of this range. (Required when initialize)
+	Start uint64 `json:"start"`
+	// End inode ID of this range. (Required when initialize)
+	End uint64 `json:"end"`
+	// Cursor ID value of inode what have been already assigned.
+	cursor  uint64
+	rootDir string
+	Peers   []string `json:"peers"`
+	// Identity for raft group. Raft nodes in same raft group must have same group ID.
+	RaftGroupID uint64 `json:"raftGroupID"`
+	// Raft server instance.
+	raftServer *raft.RaftServer
+	ApplyID    uint64 // for restore inode/dentry max applyID
+	isRestore  bool
 }
 
 // MetaRange manages necessary information of meta range, include ID, boundary of range and raft identity.
@@ -42,15 +49,14 @@ type MetaRangeConfig struct {
 //  +-----+             +-------+
 type MetaRange struct {
 	MetaRangeConfig
-	store          *MetaRangeFsm
-	restoreApplyID uint64 // for restore inode/dentry max applyID
+	store *MetaRangeFsm
 }
 
 func NewMetaRange(conf MetaRangeConfig) *MetaRange {
 	mr := &MetaRange{
 		MetaRangeConfig: conf,
 	}
-	mr.store = NewMetaRangeFsm()
+	mr.store = NewMetaRangeFsm(mr)
 	return mr
 }
 
@@ -104,11 +110,7 @@ func (mf *MetaRange) RestoreInode() (err error) {
 		}
 		//TODO: check valid
 
-		if mf.store.CreateInode(ino) == proto.OpOk {
-			if mf.restoreApplyID < ino.ApplyID {
-				mf.restoreApplyID = ino.ApplyID
-			}
-		}
+		mf.store.CreateInode(ino)
 	}
 	return
 }
@@ -204,18 +206,18 @@ func (mr *MetaRange) DeleteDentry(req *DeleteDentryReq) (resp *DeleteDentryResp)
 
 func (mr *MetaRange) CreateInode(req *CreateInoReq) (resp *CreateInoResp) {
 	var err error
-	resp.Inode, err = mr.nextInodeID()
+	resp.Info.Inode, err = mr.nextInodeID()
 	if err != nil {
 		resp.Status = proto.OpInodeFullErr
 		return
 	}
 	ts := time.Now().Unix()
 	ino := &Inode{
-		Inode:      resp.Inode,
+		Inode:      resp.Info.Inode,
 		Type:       req.Mode,
 		AccessTime: ts,
 		ModifyTime: ts,
-		Stream:     stream.NewStreamKey(resp.Inode),
+		Stream:     stream.NewStreamKey(resp.Info.Inode),
 	}
 	resp.Status = mr.store.CreateInode(ino)
 	return
@@ -255,10 +257,36 @@ func (mf *MetaRange) ApplyMemeberChange(confChange *raftproto.ConfChange, index 
 }
 
 func (mf *MetaRange) Snapshot() (raftproto.Snapshot, error) {
-	return nil, nil
+	ino, dentry, appID := mf.store.GetAllTree()
+	snapIter := NewSnapshotIterator(appID, ino, dentry)
+	return snapIter, nil
 }
 
 func (mf *MetaRange) ApplySnapshot(peers []raftproto.Peer, iter raftproto.SnapIterator) error {
+	for {
+		data, err := iter.Next()
+		if err != nil {
+			return err
+		}
+		snap := NewMetaRangeSnapshot("", "", "")
+		if err = snap.Decode(data); err != nil {
+			return err
+		}
+		switch snap.Op {
+		case "inode":
+			var ino = &Inode{}
+			ino.ParseKey(snap.Key)
+			ino.ParseValue(snap.Value)
+			mf.store.CreateInode(ino)
+		case "dentry":
+			dentry := &Dentry{}
+			dentry.ParseKey(snap.Key)
+			dentry.ParseValue(snap.Value)
+			mf.store.CreateDentry(dentry)
+		default:
+			return errors.New("unknow op=" + snap.Op)
+		}
+	}
 	return nil
 }
 

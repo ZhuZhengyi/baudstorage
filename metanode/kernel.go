@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/sdk/stream"
+	"strconv"
 )
 
 // Dentry wraps necessary properties of `dentry` information in file system.
@@ -15,7 +16,6 @@ type Dentry struct {
 	Name     string // Name of current dentry.
 	Inode    uint64 // Id value of current inode.
 	Type     uint32 // Dentry type.
-	ApplyID  uint64 // Raft commit appyID
 }
 
 // Less tests whether the current dentry item is less than the given one.
@@ -41,6 +41,11 @@ func (d *Dentry) GetKey() (m string) {
 	return fmt.Sprintf("%10d*%s", d.ParentId, d.Name)
 }
 
+func (d *Dentry) ParseKey(key string) (err error) {
+	_, err = fmt.Sscanf(key, "%d*%s", &d.ParentId, d.Name)
+	return
+}
+
 // GetKeyBytes is the bytes version of GetKey method which returns byte slice result.
 func (d *Dentry) GetKeyBytes() (m []byte) {
 	return []byte(d.GetKey())
@@ -48,7 +53,12 @@ func (d *Dentry) GetKeyBytes() (m []byte) {
 
 // GetValueString returns string value of this dentry which consists of Inode and Type properties.
 func (d *Dentry) GetValue() (m string) {
-	return fmt.Sprintf("%d*%d*%d", d.Inode, d.Type, d.ApplyID)
+	return fmt.Sprintf("%d*%d", d.Inode, d.Type)
+}
+
+func (d *Dentry) ParseValue(value string) (err error) {
+	_, err = fmt.Sscanf(value, "%d*%d", &d.Inode, &d.Type)
+	return
 }
 
 // GetValueBytes is the bytes version of GetValue method which returns byte slice result.
@@ -64,7 +74,6 @@ type Inode struct {
 	AccessTime int64
 	ModifyTime int64
 	Stream     *stream.StreamKey
-	ApplyID    uint64
 }
 
 // NewInode returns a new inode instance pointer with specified inode ID, name and inode type code.
@@ -92,6 +101,15 @@ func (i *Inode) GetKey() (m string) {
 	return fmt.Sprintf("%d", i.Inode)
 }
 
+func (i *Inode) ParseKey(key string) (err error) {
+	inodeID, err := strconv.ParseUint(key, 10, 64)
+	if err != nil {
+		return
+	}
+	i.Inode = inodeID
+	return
+}
+
 // GetKeyBytes is the bytes version of GetKey method which returns byte slice result.
 func (i *Inode) GetKeyBytes() (m []byte) {
 
@@ -101,7 +119,7 @@ func (i *Inode) GetKeyBytes() (m []byte) {
 // GetValue returns string value of this Inode which consists of Name, Size, AccessTime and
 // ModifyTime properties and connected by '*'.
 func (i *Inode) GetValue() (m string) {
-	s := fmt.Sprintf("%d*%d*%d*%d", i.Size, i.AccessTime, i.ModifyTime, i.ApplyID)
+	s := fmt.Sprintf("%d*%d*%d*%d", i.Type, i.Size, i.AccessTime, i.ModifyTime)
 	i.Stream.Range(func(index int, extentKey stream.ExtentKey) bool {
 		if uint64(index) == i.Stream.Size() {
 			s += extentKey.Marshal()
@@ -112,6 +130,11 @@ func (i *Inode) GetValue() (m string) {
 		return true
 	})
 	return s
+}
+
+func (i *Inode) ParseValue(value string) (err error) {
+	_, err = fmt.Sscanf(value, "%d*%d*%d*%d", &i.Type, &i.Size, &i.AccessTime, &i.ModifyTime)
+	return
 }
 
 // GetValueBytes is the bytes version of GetValue method which returns byte slice result.
