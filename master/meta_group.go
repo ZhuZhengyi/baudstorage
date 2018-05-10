@@ -1,7 +1,6 @@
 package master
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/tiglabs/baudstorage/proto"
@@ -14,7 +13,7 @@ type MetaRange struct {
 }
 
 type MetaGroup struct {
-	GroupID          string
+	GroupID          uint64
 	Start            uint64
 	End              uint64
 	Members          []*MetaRange
@@ -29,9 +28,8 @@ func NewMetaRange(start, end uint64, addr string) (mr *MetaRange) {
 	return
 }
 
-func NewMetaGroup(start, end uint64) (mg *MetaGroup) {
-	groupID := fmt.Sprintf("%v_%v", start, end)
-	mg = &MetaGroup{GroupID: groupID, Start: start, End: end, Members: make([]*MetaRange, 0)}
+func NewMetaGroup(groupId, start, end uint64) (mg *MetaGroup) {
+	mg = &MetaGroup{GroupID: groupId, Start: start, End: end, Members: make([]*MetaRange, 0)}
 	return
 }
 

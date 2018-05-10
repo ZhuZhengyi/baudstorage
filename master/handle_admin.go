@@ -7,22 +7,32 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
+	"io/ioutil"
 )
 
 func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 	var (
 		rstMsg string
-		name   string
+		nsName string
+		ns     *NameSpace
 		count  int
 		err    error
 	)
 
-	if count, name, err = parseCreateVolPara(r); err != nil {
+	if count, nsName, err = parseCreateVolPara(r); err != nil {
+		goto errDeal
+	}
+
+	if ns, err = m.cluster.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
 	for i := 0; i < count; i++ {
-		if _, err = m.cluster.createVolGroup(name); err != nil {
+		if count < len(ns.volGroups.volGroups) {
+			break
+		}
+		if _, err = m.cluster.createVolGroup(nsName); err != nil {
 			goto errDeal
 		}
 	}
@@ -38,19 +48,19 @@ errDeal:
 
 func (m *Master) getVol(w http.ResponseWriter, r *http.Request) {
 	var (
-		name  string
-		ns    *NameSpace
-		body  []byte
-		vol   *VolGroup
-		vr    *VolResponse
-		volID uint64
-		err   error
+		nsName string
+		ns     *NameSpace
+		body   []byte
+		vol    *VolGroup
+		vr     *VolResponse
+		volID  uint64
+		err    error
 	)
-	if volID, name, err = parseVolIDAndNamespace(r); err != nil {
+	if volID, nsName, err = parseVolIDAndNamespace(r); err != nil {
 		goto errDeal
 	}
 
-	if ns, err = m.cluster.getNamespace(name); err != nil {
+	if ns, err = m.cluster.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
 	if vol, err = ns.getVolGroupByVolID(volID); err != nil {
@@ -71,19 +81,19 @@ errDeal:
 
 func (m *Master) loadVol(w http.ResponseWriter, r *http.Request) {
 	var (
-		name  string
-		ns    *NameSpace
-		msg   string
-		v     *VolGroup
-		volID uint64
-		err   error
+		nsName string
+		ns     *NameSpace
+		msg    string
+		v      *VolGroup
+		volID  uint64
+		err    error
 	)
 
-	if volID, name, err = parseVolIDAndNamespace(r); err != nil {
+	if volID, nsName, err = parseVolIDAndNamespace(r); err != nil {
 		goto errDeal
 	}
 
-	if ns, err = m.cluster.getNamespace(name); err != nil {
+	if ns, err = m.cluster.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
 	if v, err = ns.getVolGroupByVolID(volID); err != nil {
@@ -104,7 +114,7 @@ errDeal:
 
 func (m *Master) volOffline(w http.ResponseWriter, r *http.Request) {
 	var (
-		name   string
+		nsName string
 		ns     *NameSpace
 		rstMsg string
 		vg     *VolGroup
@@ -113,10 +123,10 @@ func (m *Master) volOffline(w http.ResponseWriter, r *http.Request) {
 		err    error
 	)
 
-	if addr, volID, name, err = parseVolOfflinePara(r); err != nil {
+	if addr, volID, nsName, err = parseVolOfflinePara(r); err != nil {
 		goto errDeal
 	}
-	if ns, err = m.cluster.getNamespace(name); err != nil {
+	if ns, err = m.cluster.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
 	if vg, err = ns.getVolGroupByVolID(volID); err != nil {
@@ -158,6 +168,242 @@ errDeal:
 	return
 }
 
+func (m *Master) addDataNode(w http.ResponseWriter, r *http.Request) {
+	var (
+		nodeAddr string
+		err      error
+	)
+	if nodeAddr, err = parseAddMetaNodePara(r); err != nil {
+		goto errDeal
+	}
+
+	if err = m.cluster.addDataNode(nodeAddr); err != nil {
+		goto errDeal
+	}
+	io.WriteString(w, fmt.Sprintf("addDataNode %v successed\n", nodeAddr))
+	return
+errDeal:
+	logMsg := getReturnMessage("addDataNode", r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	HandleError(logMsg, http.StatusBadRequest, w)
+	return
+}
+
+func (m *Master) getDataNode(w http.ResponseWriter, r *http.Request) {
+	var (
+		nodeAddr string
+		dataNode *DataNode
+		body     []byte
+		err      error
+	)
+	if nodeAddr, err = parseGetDataNodePara(r); err != nil {
+		goto errDeal
+	}
+
+	if dataNode, err = m.cluster.getDataNode(nodeAddr); err != nil {
+		goto errDeal
+	}
+	if body, err = json.Marshal(dataNode); err != nil {
+		goto errDeal
+	}
+	io.WriteString(w, string(body))
+
+	return
+errDeal:
+	logMsg := getReturnMessage("getDataNode", r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	HandleError(logMsg, http.StatusBadRequest, w)
+	return
+}
+
+func (m *Master) dataNodeOffline(w http.ResponseWriter, r *http.Request) {
+	var (
+		node        *DataNode
+		rstMsg      string
+		offLineAddr string
+		err         error
+	)
+
+	if offLineAddr, err = parseDataNodeOfflinePara(r); err != nil {
+		goto errDeal
+	}
+
+	if node, err = m.cluster.getDataNode(offLineAddr); err != nil {
+		goto errDeal
+	}
+	m.cluster.dataNodeOffLine(node)
+	rstMsg = fmt.Sprintf("dataNodeOffline node [%v] has offline SUCCESS", offLineAddr)
+	io.WriteString(w, rstMsg)
+	log.LogWarn(rstMsg)
+	return
+errDeal:
+	logMsg := getReturnMessage("dataNodeOffline", r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	HandleError(logMsg, http.StatusBadRequest, w)
+	return
+}
+
+func (m *Master) dataNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
+	var (
+		dataNode *DataNode
+		code     = http.StatusOK
+		tr       *proto.AdminTask
+		err      error
+	)
+
+	if tr, err = parseTaskResponse(r); err != nil {
+		code = http.StatusBadRequest
+		goto errDeal
+	}
+
+	if dataNode, err = m.cluster.getDataNode(tr.OperatorAddr); err != nil {
+		code = http.StatusInternalServerError
+		goto errDeal
+	}
+
+	m.cluster.dealDataNodeTaskResponse(dataNode.HttpAddr, tr)
+
+	return
+
+errDeal:
+	logMsg := getReturnMessage("dataNodeTaskResponse", r.RemoteAddr, err.Error(),
+		http.StatusBadRequest)
+	HandleError(logMsg, code, w)
+	return
+}
+
+func (m *Master) addMetaNode(w http.ResponseWriter, r *http.Request) {
+	var (
+		nodeAddr string
+		err      error
+	)
+	if nodeAddr, err = parseAddMetaNodePara(r); err != nil {
+		goto errDeal
+	}
+
+	if err = m.cluster.addMetaNode(nodeAddr); err != nil {
+		goto errDeal
+	}
+	io.WriteString(w, fmt.Sprintf("addMetaNode %v successed\n", nodeAddr))
+	return
+errDeal:
+	logMsg := getReturnMessage("addMetaNode", r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	HandleError(logMsg, http.StatusBadRequest, w)
+	return
+}
+
+func parseAddMetaNodePara(r *http.Request) (nodeAddr string, err error) {
+	r.ParseForm()
+	if nodeAddr = r.FormValue(ParaNodeAddr); nodeAddr == "" {
+		err = paraNotFound(ParaNodeAddr)
+	}
+	return
+}
+
+func (m *Master) getMetaNode(w http.ResponseWriter, r *http.Request) {
+	var (
+		nodeAddr string
+		metaNode *MetaNode
+		body     []byte
+		err      error
+	)
+	if nodeAddr, err = parseGetMetaNodePara(r); err != nil {
+		goto errDeal
+	}
+
+	if metaNode, err = m.cluster.getMetaNode(nodeAddr); err != nil {
+		goto errDeal
+	}
+	if body, err = json.Marshal(metaNode); err != nil {
+		goto errDeal
+	}
+	io.WriteString(w, string(body))
+	return
+errDeal:
+	logMsg := getReturnMessage("getDataNode", r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	HandleError(logMsg, http.StatusBadRequest, w)
+	return
+}
+
+func (m *Master) metaNodeOffline(w http.ResponseWriter, r *http.Request) {
+	var (
+		metaNode    *MetaNode
+		rstMsg      string
+		offLineAddr string
+		err         error
+	)
+
+	if offLineAddr, err = parseDataNodeOfflinePara(r); err != nil {
+		goto errDeal
+	}
+
+	if metaNode, err = m.cluster.getMetaNode(offLineAddr); err != nil {
+		goto errDeal
+	}
+	m.cluster.metaNodeOffLine(metaNode)
+	rstMsg = fmt.Sprintf("metaNodeOffline metaNode [%v] has offline SUCCESS", offLineAddr)
+	io.WriteString(w, rstMsg)
+	log.LogWarn(rstMsg)
+	return
+errDeal:
+	logMsg := getReturnMessage("metaNodeOffline", r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	HandleError(logMsg, http.StatusBadRequest, w)
+	return
+}
+
+func (m *Master) metaNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
+	var (
+		metaNode *MetaNode
+		code     = http.StatusOK
+		tr       *proto.AdminTask
+		err      error
+	)
+
+	if tr, err = parseTaskResponse(r); err != nil {
+		code = http.StatusBadRequest
+		goto errDeal
+	}
+
+	if metaNode, err = m.cluster.getMetaNode(tr.OperatorAddr); err != nil {
+		code = http.StatusInternalServerError
+		goto errDeal
+	}
+
+	m.cluster.dealMetaNodeTaskResponse(metaNode.Addr, tr)
+
+	return
+
+errDeal:
+	logMsg := getReturnMessage("dataNodeTaskResponse", r.RemoteAddr, err.Error(),
+		http.StatusBadRequest)
+	HandleError(logMsg, code, w)
+	return
+}
+
+func parseGetMetaNodePara(r *http.Request) (nodeAddr string, err error) {
+	r.ParseForm()
+	return checkNodeAddr(r)
+}
+
+func parseGetDataNodePara(r *http.Request) (nodeAddr string, err error) {
+	r.ParseForm()
+	return checkNodeAddr(r)
+}
+
+func parseDataNodeOfflinePara(r *http.Request) (nodeAddr string, err error) {
+	r.ParseForm()
+	return checkNodeAddr(r)
+}
+
+func parseTaskResponse(r *http.Request) (tr *proto.AdminTask, err error) {
+	var body []byte
+	r.ParseForm()
+
+	if body, err = ioutil.ReadAll(r.Body); err != nil {
+		return
+	}
+	tr = &proto.AdminTask{}
+	err = json.Unmarshal(body, tr)
+	return
+}
+
 func parseCreateNamespacePara(r *http.Request) (name string, replicaNum int, err error) {
 	r.ParseForm()
 	if name, err = checkNamespace(r); err != nil {
@@ -166,7 +412,7 @@ func parseCreateNamespacePara(r *http.Request) (name string, replicaNum int, err
 	if replicaStr := r.FormValue(ParaReplicas); replicaStr == "" {
 		err = paraNotFound(ParaReplicas)
 		return
-	} else if replicaNum, err = strconv.Atoi(replicaStr); err != nil || replicaNum == 0 {
+	} else if replicaNum, err = strconv.Atoi(replicaStr); err != nil || replicaNum < 2 {
 		err = UnMatchPara
 	}
 	return
