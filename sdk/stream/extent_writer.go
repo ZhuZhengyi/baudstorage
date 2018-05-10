@@ -79,7 +79,7 @@ func (writer *ExtentWriter) flushWait() {
 		writer.cond.L.Lock()
 		start := time.Now().UnixNano()
 		for {
-			if writer.isAllFlushed() || time.Now().UnixNano()-start > int64(time.Second*5) {
+			if writer.isAllFlushed() || time.Now().UnixNano()-start > int64(time.Second) {
 				writer.cond.Signal()
 				break
 			}
@@ -255,24 +255,25 @@ func (writer *ExtentWriter) flush() (err error) {
 	}()
 	if writer.isAllFlushed() {
 		err = nil
-		return
+		return err
 	}
 	if writer.getPacket() != nil {
 		err = writer.sendCurrPacket()
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	if writer.isAllFlushed() {
 		err = nil
-		return
+		return err
 	}
 	writer.initFlushCond()
 	writer.flushWait()
 
 	if !writer.isAllFlushed() {
-		return errors.Annotatef(FlushErr, "cannot backEndlush writer [%v]", writer.toString())
+		err = errors.Annotatef(FlushErr, "cannot backEndlush writer [%v]", writer.toString())
+		return err
 	}
 	err = nil
 
