@@ -6,13 +6,13 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
+	"time"
 )
 
 const (
@@ -47,7 +47,7 @@ type ExtentWriter struct {
 	recoverCnt       int       //if failed,then recover contine,this is recover count
 
 	cond       *sync.Cond //flushCond use for backEndlush func
-	isFlushIng bool       //isFlushIng
+	isFlushIng uint64     //isFlushIng
 	sync.Mutex
 }
 
@@ -71,29 +71,23 @@ func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper
 //InitFlushCond   when user call backEndlush func
 func (writer *ExtentWriter) initFlushCond() {
 	writer.cond = sync.NewCond(&sync.Mutex{})
-	writer.isFlushIng = true
-}
-
-//when all packet has ack ,then signal send goroutine
-func (writer *ExtentWriter) signalFlushCond() {
-	if writer.isAllFlushed() {
-		writer.cond.L.Lock()
-		writer.cond.Signal()
-		writer.isFlushIng = false
-		writer.cond.L.Unlock()
-	}
 }
 
 //when backEndlush func called,and sdk must wait
 func (writer *ExtentWriter) flushWait() {
-	start := time.Now().UnixNano()
-	writer.cond.L.Lock()
-	for !writer.isAllFlushed() {
-		if time.Now().UnixNano()-start > int64(time.Second*10) {
-			break
+	go func() {
+		writer.cond.L.Lock()
+		start := time.Now().UnixNano()
+		for {
+			if writer.isAllFlushed() || time.Now().UnixNano()-start > int64(time.Second*5) {
+				writer.cond.Signal()
+				break
+			}
 		}
-		writer.cond.Wait()
-	}
+		writer.cond.L.Unlock()
+	}()
+	writer.cond.L.Lock()
+	writer.cond.Wait()
 	writer.cond.L.Unlock()
 
 }
@@ -111,8 +105,8 @@ func (writer *ExtentWriter) write(data []byte, size int) (total int, err error) 
 	for total < size && !writer.isFullExtent() {
 		writer.Lock()
 		if writer.currentPacket == nil {
-			writer.addSeqNo() //init a packet
 			writer.currentPacket = NewWritePacket(writer.volGroup, writer.extentId, writer.getSeqNo(), writer.offset)
+			writer.addSeqNo() //init a packet
 		}
 		canWrite = writer.currentPacket.fill(data[total:size], size-total) //fill this packet
 		if writer.IsFullCurrentPacket() || canWrite == 0 {
@@ -151,8 +145,6 @@ func (writer *ExtentWriter) sendCurrPacket() (err error) {
 	writer.currentPacket = nil
 	writer.offset += packet.getPacketLength()
 	writer.Unlock()
-	//fmt.Printf("packet[%v] pkgOffset[%v] pkgSize[%v] isfullpkg[%v]\n",packet.GetUniqLogId(),packet.Offset,packet.Size,
-	//	uint32(packet.Offset%CFSBLOCKSIZE)+packet.Size)
 	err = packet.writeTo(writer.connect) //if send packet,then signal recive goroutine for recive from connect
 	if err == nil {
 		writer.handleCh <- ContinueRecive
@@ -225,7 +217,9 @@ func (writer *ExtentWriter) isFullExtent() bool {
 
 //check allPacket has Ack
 func (writer *ExtentWriter) isAllFlushed() bool {
-	return !(writer.getQueueListLen() > 0 || writer.getPacket() != nil)
+	writer.Lock()
+	defer writer.Unlock()
+	return !(writer.getQueueListLen() > 0 || writer.currentPacket != nil)
 }
 
 func (writer *ExtentWriter) toString() string {
@@ -308,9 +302,6 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 	writer.removeRquest(e)
 	writer.addByteAck(uint64(request.Size))
 	log.LogDebug(fmt.Sprintf("ActionProcessReply[%v] is recived", request.GetUniqLogId()))
-	if writer.isFlushIng {
-		writer.signalFlushCond()
-	}
 
 	return nil
 }

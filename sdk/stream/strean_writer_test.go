@@ -2,7 +2,10 @@ package stream
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"testing"
@@ -58,6 +61,9 @@ func prepare(inode uint64, t *testing.T, data []byte) {
 
 func TestExtentClient_Write(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 	allKeys = make(map[uint64]*StreamKey)
 	client := initClient(t)
 	var (
@@ -82,13 +88,9 @@ func TestExtentClient_Write(t *testing.T) {
 			t.FailNow()
 		}
 		writebytes += write
-		_, err = localFpWrite.Write(ndata)
-		if err != nil {
-			fmt.Println(err)
-			t.FailNow()
-		}
-		localFpWrite.Sync()
+		localFpWrite.Write(ndata)
 	}
+	client.Flush(inode)
 	client.Close(inode)
 	fmt.Println("sum write bytes:", writebytes)
 	localFpWrite.Close()
