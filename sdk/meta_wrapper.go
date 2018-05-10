@@ -70,7 +70,7 @@ func NewMetaWrapper(namespace, masterHosts string) (*MetaWrapper, error) {
 	mw.partitions = make(map[string]*MetaPartition)
 	mw.ranges = btree.New(32)
 	mw.allocMeta = make(chan string, MetaAllocBufSize)
-	if err := mw.update(); err != nil {
+	if err := mw.Update(); err != nil {
 		return nil, err
 	}
 	go mw.refresh()
@@ -80,7 +80,7 @@ func NewMetaWrapper(namespace, masterHosts string) (*MetaWrapper, error) {
 // Namespace view managements
 //
 
-func (mw *MetaWrapper) getNamespaceView() (*NamespaceView, error) {
+func (mw *MetaWrapper) PullNamespaceView() (*NamespaceView, error) {
 	addr := mw.master[0]
 	resp, err := http.Get("http://" + addr + MetaPartitionViewURL + mw.namespace)
 	if err != nil {
@@ -110,14 +110,14 @@ func (mw *MetaWrapper) getNamespaceView() (*NamespaceView, error) {
 	return view, nil
 }
 
-func (mw *MetaWrapper) update() error {
-	nv, err := mw.getNamespaceView()
+func (mw *MetaWrapper) Update() error {
+	nv, err := mw.PullNamespaceView()
 	if err != nil {
 		return err
 	}
 
 	for _, mp := range nv.MetaPartitions {
-		mw.replaceOrInsertMetaPartition(mp)
+		mw.replaceOrInsertPartition(mp)
 		//TODO: if the meta group is full, do not put into the channel
 		select {
 		case mw.allocMeta <- mp.GroupID:
@@ -133,7 +133,7 @@ func (mw *MetaWrapper) refresh() {
 	for {
 		select {
 		case <-t.C:
-			if err := mw.update(); err != nil {
+			if err := mw.Update(); err != nil {
 				//TODO: log error
 			}
 		}
@@ -143,30 +143,30 @@ func (mw *MetaWrapper) refresh() {
 // Meta partition managements
 //
 
-func (mw *MetaWrapper) addMetaPartition(mp *MetaPartition) {
+func (mw *MetaWrapper) addPartition(mp *MetaPartition) {
 	mw.partitions[mp.GroupID] = mp
 	mw.ranges.ReplaceOrInsert(mp)
 }
 
-func (mw *MetaWrapper) deleteMetaPartition(mp *MetaPartition) {
+func (mw *MetaWrapper) deletePartition(mp *MetaPartition) {
 	delete(mw.partitions, mp.GroupID)
 	mw.ranges.Delete(mp)
 }
 
-func (mw *MetaWrapper) replaceOrInsertMetaPartition(mp *MetaPartition) {
+func (mw *MetaWrapper) replaceOrInsertPartition(mp *MetaPartition) {
 	mw.Lock()
 	defer mw.Unlock()
 
 	found, ok := mw.partitions[mp.GroupID]
 	if ok {
-		mw.deleteMetaPartition(found)
+		mw.deletePartition(found)
 	}
 
-	mw.addMetaPartition(mp)
+	mw.addPartition(mp)
 	return
 }
 
-func (mw *MetaWrapper) getMetaPartitionByID(id string) *MetaPartition {
+func (mw *MetaWrapper) getPartitionByID(id string) *MetaPartition {
 	mw.RLock()
 	defer mw.RUnlock()
 	mp, ok := mw.partitions[id]
@@ -176,7 +176,7 @@ func (mw *MetaWrapper) getMetaPartitionByID(id string) *MetaPartition {
 	return mp
 }
 
-func (mw *MetaWrapper) getMetaPartitionByInode(ino uint64) *MetaPartition {
+func (mw *MetaWrapper) getPartitionByInode(ino uint64) *MetaPartition {
 	var mp *MetaPartition
 	mw.RLock()
 	defer mw.RUnlock()
@@ -220,7 +220,7 @@ func (mw *MetaWrapper) putConn(mc *MetaConn, err error) {
 }
 
 func (mw *MetaWrapper) connect(inode uint64) (*MetaConn, error) {
-	mp := mw.getMetaPartitionByInode(inode)
+	mp := mw.getPartitionByInode(inode)
 	if mp == nil {
 		return nil, errors.New("No such meta group")
 	}

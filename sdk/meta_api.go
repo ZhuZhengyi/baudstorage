@@ -28,7 +28,7 @@ func (mw *MetaWrapper) Create_ll(parentID uint64, name string, mode uint32) (sta
 		case <-t.C:
 			break
 		case groupid := <-mw.allocMeta:
-			mp := mw.getMetaPartitionByID(groupid)
+			mp := mw.getPartitionByID(groupid)
 			if mp == nil {
 				continue
 			}

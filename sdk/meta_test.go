@@ -176,7 +176,7 @@ func TestMetaPartitionUpdate(t *testing.T) {
 	}
 
 	globalNV.update(extraMP)
-	err = mw.update()
+	err = mw.Update()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,7 +192,7 @@ func TestMetaPartitionUpdate(t *testing.T) {
 
 func doTest(t *testing.T, mw *MetaWrapper, tests []testcase) {
 	for _, tc := range tests {
-		mp := mw.getMetaPartitionByInode(tc.inode)
+		mp := mw.getPartitionByInode(tc.inode)
 		if checkResult(mp, tc.result) != 0 {
 			t.Fatal(mp)
 		}
