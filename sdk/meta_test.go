@@ -48,8 +48,30 @@ var globalTests = []testcase{
 	{500, ""},
 }
 
+var extraMP = []MetaPartition{
+	{"mp004", 320, 390, nil},
+	{"mp006", 600, 700, nil},
+}
+var extraTests = []testcase{
+	{301, ""},
+	{319, ""},
+	{320, "mp004"},
+	{390, "mp004"},
+	{391, ""},
+	{400, ""},
+	{599, ""},
+	{600, "mp006"},
+	{700, "mp006"},
+	{701, ""},
+}
+
 func init() {
-	globalNV = newNamespaceView(TestNamespace, globalMP)
+	globalNV = &NamespaceView{
+		Name:           TestNamespace,
+		MetaPartitions: make([]*MetaPartition, 0),
+	}
+
+	globalNV.update(globalMP)
 
 	go func() {
 		http.HandleFunc("/client/namespace", handleClientNS)
@@ -62,18 +84,11 @@ func init() {
 	}()
 }
 
-func newNamespaceView(name string, partitions []MetaPartition) *NamespaceView {
-	nv := &NamespaceView{
-		Name: name,
-	}
-	nv.MetaPartitions = make([]*MetaPartition, 0)
-
+func (nv *NamespaceView) update(partitions []MetaPartition) {
 	for _, p := range partitions {
 		mp := newMetaPartition(p.GroupID, p.Start, p.End)
 		nv.MetaPartitions = append(nv.MetaPartitions, mp)
 	}
-
-	return nv
 }
 
 func newMetaPartition(gid string, start, end uint64) *MetaPartition {
@@ -140,12 +155,43 @@ func TestMetaPartitionCreate(t *testing.T) {
 	}
 
 	mw.RLock()
-	defer mw.RUnlock()
 	for _, mp := range mw.partitions {
 		t.Logf("%v", *mp)
 	}
+	mw.RUnlock()
+}
 
-	for _, tc := range globalTests {
+func TestMetaPartitionFind(t *testing.T) {
+	mw, err := NewMetaWrapper(TestNamespace, TestMasterAddr+":"+TestHttpPort)
+	if err != nil {
+		t.Fatal(err)
+	}
+	doTest(t, mw, globalTests)
+}
+
+func TestMetaPartitionUpdate(t *testing.T) {
+	mw, err := NewMetaWrapper(TestNamespace, TestMasterAddr+":"+TestHttpPort)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	globalNV.update(extraMP)
+	err = mw.update()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mw.RLock()
+	for _, mp := range mw.partitions {
+		t.Logf("%v", *mp)
+	}
+	mw.RUnlock()
+
+	doTest(t, mw, extraTests)
+}
+
+func doTest(t *testing.T, mw *MetaWrapper, tests []testcase) {
+	for _, tc := range tests {
 		mp := mw.getMetaPartitionByInode(tc.inode)
 		if checkResult(mp, tc.result) != 0 {
 			t.Fatal(mp)
