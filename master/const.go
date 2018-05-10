@@ -19,6 +19,7 @@ const (
 	AddLackReplicationErr       = "AddLackReplicationErr "
 	CheckVolDiskErrorErr        = "CheckVolDiskErrorErr  "
 	GetAvailDataNodeHostsErr    = "GetAvailDataNodeHostsErr "
+	GetAvailMetaNodeHostsErr    = "GetAvailMetaNodeHostsErr "
 	GetLackFileNodeTaskErr      = "GetLackFileNodeTaskErr "
 	DeleteFileInCoreInfo        = "DeleteFileInCoreInfo "
 	GetVolLocationFileCountInfo = "GetVolLocationFileCountInfo "
@@ -45,8 +46,9 @@ const (
 )
 
 const (
-	DefaultMetaTabletRange = 1 << 34
-	RuntimeStackBufSize    = 4096
+	DefaultMaxMetaTabletRange = 1<<64 - 1
+	DefaultMinMetaRangeSize   = 1 << 34
+	RuntimeStackBufSize       = 4096
 )
 
 //OpCode

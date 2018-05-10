@@ -104,9 +104,14 @@ func (client *ExtentClient) Close(inode uint64) (err error) {
 	client.writerLock.Lock()
 	delete(client.writers, inode)
 	client.writerLock.Unlock()
-	streamReader, err = client.getStreamReader(inode)
 	if err != nil {
 		return
+	}
+	client.readerLock.RLock()
+	streamReader = client.readers[inode]
+	client.readerLock.RUnlock()
+	if streamReader == nil {
+		return nil
 	}
 	for _, reader := range streamReader.readers {
 		reader.exitCh <- true

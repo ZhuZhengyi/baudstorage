@@ -18,7 +18,7 @@ type DataNode struct {
 	MaxDiskAvailWeight uint64 `json:"MaxDiskAvailWeight"`
 	Total              uint64 `json:"TotalWeight"`
 	Used               uint64 `json:"UsedWeight"`
-	ZoneName           string `json:"Zone"`
+	RackName           string `json:"Rack"`
 	HttpAddr           string
 
 	reportTime time.Time
@@ -74,7 +74,7 @@ func (dataNode *DataNode) UpdateNodeMetric(sourceNode *DataNode) {
 	dataNode.MaxDiskAvailWeight = sourceNode.MaxDiskAvailWeight
 	dataNode.Total = sourceNode.Total
 	dataNode.Used = sourceNode.Used
-	dataNode.ZoneName = sourceNode.ZoneName
+	dataNode.RackName = sourceNode.RackName
 	dataNode.ratio = (float64)(dataNode.Used) / (float64)(dataNode.Total)
 }
 

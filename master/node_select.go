@@ -8,10 +8,29 @@ import (
 	"time"
 )
 
+func contains(arr []string, element string) (ok bool) {
+	if arr == nil || len(arr) == 0 {
+		return
+	}
+
+	for _, e := range arr {
+		if e == element {
+			ok = true
+			break
+		}
+	}
+	return
+}
+
 type NodeTab struct {
 	Carry  float64
 	Weight float64
-	Ptr    *DataNode
+	Ptr    Node
+}
+
+type Node interface {
+	SetCarry(carry float64)
+	SelectNodeForWrite()
 }
 
 type NodeTabArrSorterByCarry []*NodeTab
@@ -28,11 +47,11 @@ func (nodeTabs NodeTabArrSorterByCarry) Swap(i, j int) {
 	nodeTabs[i], nodeTabs[j] = nodeTabs[j], nodeTabs[i]
 }
 
-func (nodeTabs NodeTabArrSorterByCarry) SetNodeTabCarry(availCarryCount, demand int) {
-	if availCarryCount >= demand {
+func (nodeTabs NodeTabArrSorterByCarry) SetNodeTabCarry(availCarryCount, replicaNum int) {
+	if availCarryCount >= replicaNum {
 		return
 	}
-	for availCarryCount < demand {
+	for availCarryCount < replicaNum {
 		availCarryCount = 0
 		for _, nt := range nodeTabs {
 			carry := nt.Carry + nt.Weight
@@ -48,7 +67,7 @@ func (nodeTabs NodeTabArrSorterByCarry) SetNodeTabCarry(availCarryCount, demand 
 	}
 }
 
-func (c *Cluster) GetMaxTotal() (maxTotal uint64) {
+func (c *Cluster) GetDataNodeMaxTotal() (maxTotal uint64) {
 	c.dataNodes.Range(func(key, value interface{}) bool {
 		dataNode := value.(*DataNode)
 		if dataNode.Total > maxTotal {
@@ -59,26 +78,26 @@ func (c *Cluster) GetMaxTotal() (maxTotal uint64) {
 	return
 }
 
-func (c *Cluster) getAvailDataNodeHosts(excludeHosts []string, demand int) (newHosts []string, err error) {
+func (c *Cluster) getAvailDataNodeHosts(excludeRack string, excludeHosts []string, replicaNum int) (newHosts []string, err error) {
 	orderHosts := make([]string, 0)
 	newHosts = make([]string, 0)
-	if demand == 0 {
+	if replicaNum == 0 {
 		return
 	}
 
-	maxTotal := c.GetMaxTotal()
-	nodeTabs, availCarryCount := c.GetAvailCarryNodeTab(maxTotal, excludeHosts)
-	if len(nodeTabs) < demand {
+	maxTotal := c.GetDataNodeMaxTotal()
+	nodeTabs, availCarryCount := c.GetAvailCarryDataNodeTab(maxTotal, excludeRack, excludeHosts)
+	if len(nodeTabs) < replicaNum {
 		err = fmt.Errorf(GetAvailDataNodeHostsErr+" err:%v ,ActiveNodeCount:%v  MatchNodeCount:%v  ",
 			NoHaveAnyDataNodeToWrite, c.DataNodeCount(), len(nodeTabs))
 		return
 	}
 
-	nodeTabs.SetNodeTabCarry(availCarryCount, demand)
+	nodeTabs.SetNodeTabCarry(availCarryCount, replicaNum)
 	sort.Sort(nodeTabs)
 
-	for i := 0; i < demand; i++ {
-		node := nodeTabs[i].Ptr
+	for i := 0; i < replicaNum; i++ {
+		node := nodeTabs[i].Ptr.(*DataNode)
 		node.SelectNodeForWrite()
 		orderHosts = append(orderHosts, node.HttpAddr)
 	}
@@ -90,31 +109,14 @@ func (c *Cluster) getAvailDataNodeHosts(excludeHosts []string, demand int) (newH
 	return
 }
 
-func AddrIsInArr(arr []string, addr string) (ok bool) {
-	if arr == nil {
-		return
-	}
-
-	if arr == nil || len(arr) == 0 {
-		return
-	}
-
-	for _, specifyAddr := range arr {
-		if specifyAddr == addr {
-			ok = true
-			break
-		}
-	}
-
-	return
-}
-
-func (c *Cluster) GetAvailCarryNodeTab(maxTotal uint64, excludeHosts []string) (nodeTabs NodeTabArrSorterByCarry, availCount int) {
+func (c *Cluster) GetAvailCarryDataNodeTab(maxTotal uint64, excludeRack string, excludeHosts []string) (nodeTabs NodeTabArrSorterByCarry, availCount int) {
 	nodeTabs = make(NodeTabArrSorterByCarry, 0)
-
 	c.dataNodes.Range(func(key, value interface{}) bool {
 		dataNode := value.(*DataNode)
-		if AddrIsInArr(excludeHosts, dataNode.HttpAddr) == true {
+		if dataNode.RackName == excludeRack {
+			return true
+		}
+		if contains(excludeHosts, dataNode.HttpAddr) == true {
 			return true
 		}
 		if dataNode.IsWriteAble() == false {
@@ -131,6 +133,80 @@ func (c *Cluster) GetAvailCarryNodeTab(maxTotal uint64, excludeHosts []string) (
 			nt.Weight = (float64)(maxTotal-dataNode.Used) / (float64)(maxTotal)
 		}
 		nt.Ptr = dataNode
+		nodeTabs = append(nodeTabs, nt)
+
+		return true
+	})
+
+	return
+}
+
+func (c *Cluster) GetMetaNodeMaxTotal() (maxTotal uint64) {
+	c.metaNodes.Range(func(key, value interface{}) bool {
+		metaNode := value.(*MetaNode)
+		if metaNode.Total > maxTotal {
+			maxTotal = metaNode.Total
+		}
+		return true
+	})
+	return
+}
+
+func (c *Cluster) getAvailMetaNodeHosts(excludeRack string, excludeHosts []string, replicaNum int) (newHosts []string, err error) {
+	orderHosts := make([]string, 0)
+	newHosts = make([]string, 0)
+	if replicaNum == 0 {
+		return
+	}
+
+	maxTotal := c.GetMetaNodeMaxTotal()
+	nodeTabs, availCarryCount := c.GetAvailCarryMetaNodeTab(maxTotal, excludeRack, excludeHosts)
+	if len(nodeTabs) < replicaNum {
+		err = fmt.Errorf(GetAvailMetaNodeHostsErr+" err:%v ,ActiveNodeCount:%v  MatchNodeCount:%v  ",
+			NoHaveAnyMetaNodeToWrite, c.DataNodeCount(), len(nodeTabs))
+		return
+	}
+
+	nodeTabs.SetNodeTabCarry(availCarryCount, replicaNum)
+	sort.Sort(nodeTabs)
+
+	for i := 0; i < replicaNum; i++ {
+		node := nodeTabs[i].Ptr.(*MetaNode)
+		node.SelectNodeForWrite()
+		orderHosts = append(orderHosts, node.Addr)
+	}
+
+	if newHosts, err = c.DisOrderArray(orderHosts); err != nil {
+		err = fmt.Errorf(GetAvailMetaNodeHostsErr+"err:%v  orderHosts is nil", err.Error())
+		return
+	}
+	return
+}
+
+func (c *Cluster) GetAvailCarryMetaNodeTab(maxTotal uint64, excludeRack string, excludeHosts []string) (nodeTabs NodeTabArrSorterByCarry, availCount int) {
+	nodeTabs = make(NodeTabArrSorterByCarry, 0)
+	c.metaNodes.Range(func(key, value interface{}) bool {
+		metaNode := value.(*MetaNode)
+		if metaNode.RackName == excludeRack {
+			return true
+		}
+		if contains(excludeHosts, metaNode.Addr) == true {
+			return true
+		}
+		if metaNode.IsWriteAble() == false {
+			return true
+		}
+		if metaNode.IsAvailCarryNode() == true {
+			availCount++
+		}
+		nt := new(NodeTab)
+		nt.Carry = metaNode.carry
+		if metaNode.Used < 0 {
+			nt.Weight = 1.0
+		} else {
+			nt.Weight = (float64)(maxTotal-metaNode.Used) / (float64)(maxTotal)
+		}
+		nt.Ptr = metaNode
 		nodeTabs = append(nodeTabs, nt)
 
 		return true
