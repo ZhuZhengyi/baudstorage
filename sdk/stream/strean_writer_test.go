@@ -87,6 +87,7 @@ func TestExtentClient_Write(t *testing.T) {
 			fmt.Println(err)
 			t.FailNow()
 		}
+		localFpWrite.Sync()
 	}
 	client.Close(inode)
 	fmt.Println("sum write bytes:", writebytes)
