@@ -3,14 +3,15 @@ package metanode
 import (
 	"encoding/json"
 	"errors"
-	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk/stream"
-	"github.com/tiglabs/raft"
 	"io/ioutil"
 	"os"
 	"path"
 	"sync/atomic"
 	"time"
+
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/sdk/stream"
+	"github.com/tiglabs/raft"
 )
 
 // Errors
@@ -117,16 +118,40 @@ func (mr *MetaRange) StartStoreSchedule() {
 			}
 			goto end
 		}
-	end:
-		continue
 	store:
-		// first load applyID
-		// load ino tree
-		// load dentry tree
-		// dump ino tree to file.bak
-		// dump dentry tree to file.bak
-		// dump dentry applyid.bak
+		// 1st: load applyID
+		if err := mr.store.StoreApplyID(); err != nil {
+			//TODO: Log
+			goto end
+		}
+		// 2st: load ino tree
+		if err := mr.store.StoreInodeTree(); err != nil {
+			//TODO: Log
+			goto end
+		}
+		// 3st: load dentry tree
+		if err := mr.store.StoreDentryTree(); err != nil {
+			//TODO: Log
+			goto end
+
+		}
 		// rename
+		if err := os.Rename(path.Join(mr.RootDir, "_inode"), path.Join(mr.RootDir, "inode")); err != nil {
+			//TODO: Log
+			goto end
+		}
+		if err := os.Rename(path.Join(mr.RootDir, "_dentry"), path.Join(mr.RootDir, "dentry")); err != nil {
+			//TODO: Log
+			goto end
+		}
+		if err := os.Rename(path.Join(mr.RootDir, "_applyid"), path.Join(mr.RootDir, "applyid")); err != nil {
+			//TODO: Log
+			goto end
+		}
+	end:
+		os.Remove(path.Join(mr.RootDir, "_applyid"))
+		os.Remove(path.Join(mr.RootDir, "_inode"))
+		os.Remove(path.Join(mr.RootDir, "_dentry"))
 	}
 	return
 }

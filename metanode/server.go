@@ -1,145 +1,157 @@
 package metanode
 
 import (
+	"encoding/json"
+	"fmt"
+	"net"
+	"strconv"
+	"time"
+
 	"errors"
-	"sync"
 
-	"github.com/tiglabs/baudstorage/util/config"
+	"github.com/tiglabs/baudstorage/master"
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
-	"github.com/tiglabs/raft"
 )
 
-// Configuration keys
-const (
-	cfgNodeId  = "nodeID"
-	cfgListen  = "listen"
-	cfgLogDir  = "logDir"
-	cfgMetaDir = "metaDir"
-)
-
-// State type definition
-type nodeState uint8
-
-// State constants
-const (
-	sReady nodeState = iota
-	sRunning
-)
-
-// The MetaNode manage Dentry and Inode information in multiple MetaRange, and
-// through the Raft algorithm and other MetaNodes in the RageGroup for reliable
-// data synchronization to maintain data consistency within the MetaGroup.
-type MetaNode struct {
-	nodeId           string
-	listen           int
-	metaDir          string //metaNode store root dir
-	logDir           string
-	masterAddr       string
-	metaRangeManager *MetaRangeManager
-	raftResolver     *raft.SocketResolver
-	raftServer       *raft.RaftServer
-	httpStopC        chan uint8
-	log              *log.Log
-	state            nodeState
-	stateMutex       sync.RWMutex
-	wg               sync.WaitGroup
-}
-
-// Start this MeteNode with specified configuration.
-//  1. Start tcp server and accept connection from master and clients.
-//  2. Restore each meta range from snapshot.
-//  3. Restore raft fsm of each meta range.
-func (m *MetaNode) Start(cfg *config.Config) (err error) {
-	// Parallel safe.
-	m.stateMutex.Lock()
-	defer m.stateMutex.Unlock()
-	if m.state != sReady {
-		// Only work if this MetaNode current is not running.
-		return
-	}
-	// Prepare configuration
-	if err = m.prepareConfig(cfg); err != nil {
-		return
-	}
-	// Init logging
-	if m.log, err = log.NewLog(m.logDir, "MetaNode", log.DebugLevel); err != nil {
-		return
-	}
-	// Load metaRanges relation from file and start raft
-	if err = m.load(); err != nil {
-		return
-	}
-
-	// start raft server
-	if err = m.startRaftServer(); err != nil {
-		return
-	}
-	// Start MetaRanges Store Schedule
-	if err = m.startStoreSchedule(); err != nil {
-		return
-	}
-	// Start tcp server
-	if err = m.startTcpServer(); err != nil {
-		return
-	}
-	// Start reply
-	m.state = sRunning
-	m.wg.Add(1)
-	return
-}
-
-func (m *MetaNode) startStoreSchedule() (err error) {
-	for _, mr := range m.metaRangeManager.metaRangeMap {
-		go mr.StartStoreSchedule()
-	}
-	return
-}
-
-// Shutdown stop this MetaNode.
-func (m *MetaNode) Shutdown() {
-	// Parallel safe.
-	m.stateMutex.Lock()
-	defer m.stateMutex.Unlock()
-	if m.state != sRunning {
-		// Only work if this MetaNode current is running.
-		return
-	}
-	// Shutdown node and release resource.
-	m.stopTcpServer()
-	m.stopRaftServer()
-	m.state = sReady
-	m.wg.Done()
-}
-
-// Sync will block invoker goroutine until this MetaNode shutdown.
-func (m *MetaNode) Sync() {
-	m.wg.Wait()
-}
-
-func (m *MetaNode) prepareConfig(cfg *config.Config) (err error) {
-	if cfg == nil {
-		err = errors.New("invalid configuration")
-		return
-	}
-	m.nodeId = cfg.GetString(cfgNodeId)
-	m.listen = int(cfg.GetInt(cfgListen))
-	m.logDir = cfg.GetString(cfgLogDir)
-	m.metaDir = cfg.GetString(cfgMetaDir)
-	return
-}
-
-func (m *MetaNode) load() (err error) {
-	// Load metaRangeManager
-	err = m.metaRangeManager.LoadMetaManagers(m.metaDir)
+// StartTcpService bind and listen specified port and accept tcp connections.
+func (m *MetaNode) startServer() (err error) {
+	// Init and start server.
+	m.httpStopC = make(chan uint8)
+	ln, err := net.Listen("tcp", ":"+strconv.Itoa(m.listen))
 	if err != nil {
 		return
 	}
+	// Start goroutine for tcp accept handing.
+	go func(stopC chan uint8) {
+		defer ln.Close()
+		for {
+			conn, err := ln.Accept()
+			select {
+			case <-stopC:
+				return
+			default:
+			}
+			if err != nil {
+				continue
+			}
+			// Start a goroutine for tcp connection handling.
+			go m.servConn(conn, stopC)
+		}
+	}(m.httpStopC)
 	return
 }
 
-// NewServer create an new MetaNode instance.
-func NewServer() *MetaNode {
-	return &MetaNode{
-		metaRangeManager: NewMetaRangeManager(),
+func (m *MetaNode) stopTcpServer() {
+	if m.httpStopC != nil {
+		defer func() {
+			if r := recover(); r != nil {
+				log.LogError("action[StopTcpServer],err:%v", r)
+			}
+		}()
+		close(m.httpStopC)
 	}
+}
+
+// ServeTcpConn read data from specified tco connection until connection
+// closed by remote or tcp service have been shutdown.
+func (m *MetaNode) servConn(conn net.Conn, stopC chan uint8) {
+	defer conn.Close()
+	for {
+		select {
+		case <-stopC:
+			return
+		default:
+		}
+		p := &Packet{}
+		if err := p.ReadFromConn(conn, proto.ReadDeadlineTime*time.Second); err != nil {
+			log.LogError("serve MetaNode: ", err.Error())
+			return
+		}
+		// Start a goroutine for packet handling. Do not block connection read goroutine.
+		go func() {
+			if err := m.routePacket(conn, p); err != nil {
+				log.LogError("serve operatorPkg: ", err.Error())
+				return
+			}
+		}()
+	}
+}
+
+// RoutePacket check the OpCode in specified packet and route it to handler.
+func (m *MetaNode) routePacket(conn net.Conn, p *Packet) (err error) {
+	switch p.Opcode {
+	case proto.OpMetaCreateInode:
+		// Client → MetaNode
+		err = m.opCreateInode(conn, p)
+	case proto.OpMetaCreateDentry:
+		// Client → MetaNode
+		err = m.opCreateDentry(conn, p)
+	case proto.OpMetaDeleteInode:
+		// Client → MetaNode
+		err = m.opDeleteInode(conn, p)
+	case proto.OpMetaDeleteDentry:
+		// Client → MetaNode
+		err = m.opDeleteDentry(conn, p)
+	case proto.OpMetaReadDir:
+		// Client → MetaNode
+		err = m.opReadDir(conn, p)
+	case proto.OpMetaOpen:
+		// Client → MetaNode
+		err = m.opOpen(conn, p)
+	case proto.OpMetaCreateMetaRange:
+		// Mater → MetaNode
+		err = m.opCreateMetaRange(conn, p)
+	default:
+		// Unknown operation
+		err = errors.New("unknown Opcode: " + proto.GetOpMesg(p.Opcode))
+	}
+	return
+}
+
+// ReplyToClient send reply data though tcp connection to client.
+func (m *MetaNode) replyToClient(conn net.Conn, p *Packet, data interface{}) (err error) {
+	// Handle panic
+	defer func() {
+		if r := recover(); r != nil {
+			switch data := r.(type) {
+			case error:
+				err = data
+			default:
+				err = errors.New(data.(string))
+			}
+		}
+	}()
+	// Process data and send reply though specified tcp connection.
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		return
+	}
+	p.Data = jsonBytes
+	err = p.WriteToConn(conn)
+	return
+}
+
+// ReplyToMaster reply operation result to master by sending http request.
+func (m *MetaNode) replyToMaster(ip string, data interface{}) (err error) {
+	// Handle panic
+	defer func() {
+		if r := recover(); r != nil {
+			switch data := r.(type) {
+			case error:
+				err = data
+			default:
+				err = errors.New(data.(string))
+			}
+		}
+	}()
+	// Process data and send reply though http specified remote address.
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		return
+	}
+	url := fmt.Sprintf("http://%s%s", ip, master.MetaNodeResponse)
+	util.PostToNode(jsonBytes, url)
+	return
 }
