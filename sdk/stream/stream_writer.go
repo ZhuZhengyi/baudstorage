@@ -165,7 +165,7 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 	if err = stream.allocateNewExtentWriter(); err != nil {
 		return
 	}
-	if err = stream.updateExtentKeyFn(stream.getWriter().toKey()); err != nil {
+	if err = stream.updateExtentKeyFn(stream.currentInode, stream.getWriter().toKey()); err != nil {
 		return
 	}
 	for e := sendList.Front(); e != nil; e = e.Next() {
