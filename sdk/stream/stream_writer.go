@@ -142,7 +142,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 	if err != nil {
 		return
 	}
-	if err = stream.updateExtentKeyFn(writer.toKey()); err != nil {
+	if err = stream.updateExtentKeyFn(stream.currentInode, writer.toKey()); err != nil {
 		return
 	}
 	if writer.isFullExtent() {
