@@ -3,45 +3,78 @@ package stream
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"runtime"
 	"testing"
 	"time"
 )
 
-func TestExtentClient_Write(t *testing.T) {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	client, err := NewExtentClient("log", "127.0.0.1:7778")
+var allKeys map[uint64]*StreamKey
+
+func saveKey(inode uint64, k ExtentKey) (err error) {
+	sk := allKeys[inode]
+	sk.Put(k)
+	sk.Inode = inode
+	return
+}
+
+func updateKey(inode uint64) (sk StreamKey, err error) {
+	sk = *(allKeys[inode])
+	return
+}
+
+func openFileForWrite(inode uint64, action string) (f *os.File, err error) {
+	return os.Create(fmt.Sprintf("inode_%v_%v.txt", inode, action))
+}
+
+func initClient(t *testing.T) (client *ExtentClient) {
+	var err error
+	client, err = NewExtentClient("log", "127.0.0.1:7778", saveKey, updateKey)
 	if err != nil {
 		t.Logf(err.Error())
 		t.FailNow()
 	}
-	keysChan := make(chan ExtentKey, 100)
 	if client == nil {
 		t.Logf("init failed")
 		t.FailNow()
 	}
-	var inode uint64
-	inode = 1
-	client.InitWriteStream(inode, &keysChan)
-	var sk *StreamKey
+	return
+}
+
+func initInode(inode uint64) (sk *StreamKey) {
 	sk = new(StreamKey)
 	sk.Inode = inode
+	allKeys[inode] = sk
+	return
+}
 
-	go func() {
-		for {
-			select {
-			case k := <-keysChan:
-				sk.Put(k)
-				fmt.Println(fmt.Sprintf("k %v return keysize:%v", k.Marshal(), sk.Size()))
-			}
-		}
-	}()
-	data := make([]byte, CFSBLOCKSIZE*2)
+func prepare(inode uint64, t *testing.T, data []byte) (localFp *os.File) {
+	var err error
+	localFp, err = openFileForWrite(inode, "write")
+	if err != nil {
+		fmt.Printf("write localFile inode[%v] err[%v]\n", inode, err)
+		t.FailNow()
+	}
 	for j := 0; j < CFSBLOCKSIZE*2; j++ {
 		rand.Seed(time.Now().UnixNano())
 		data[j] = byte(rand.Int() % 255)
 	}
+	return
+}
+
+func TestExtentClient_Write(t *testing.T) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	allKeys = make(map[uint64]*StreamKey)
+	client := initClient(t)
+	var (
+		inode        uint64
+		localFpWrite *os.File
+	)
+	inode = 2
+	sk := initInode(inode)
 	writebytes := 0
+	data := make([]byte, CFSBLOCKSIZE*2)
+	localFpWrite = prepare(inode, t, data)
 	for seqNo := 0; seqNo < CFSBLOCKSIZE; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
 		ndata := data[:rand.Int31n(CFSBLOCKSIZE)]
@@ -51,9 +84,15 @@ func TestExtentClient_Write(t *testing.T) {
 			fmt.Printf("write inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err)
 			t.FailNow()
 		}
+		_, err = localFpWrite.Write(ndata)
+		if err != nil {
+			fmt.Println(err)
+			t.FailNow()
+		}
 	}
-	client.writers[inode].flushCurrExtentWriter()
+	client.Close(inode)
 	fmt.Println("sum write bytes:", writebytes)
+	localFpWrite.Close()
 	for {
 		time.Sleep(time.Second)
 		if sk.Size() == uint64(writebytes) {

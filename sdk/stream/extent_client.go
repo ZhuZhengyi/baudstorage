@@ -88,6 +88,41 @@ func (client *ExtentClient) Write(inode uint64, data []byte) (write int, err err
 	return stream.write(data, len(data))
 }
 
+func (client *ExtentClient) Flush(inode uint64) (err error) {
+	stream := client.getStreamWriter(inode)
+	if stream == nil {
+		return fmt.Errorf("cannot init write stream")
+	}
+
+	return stream.flushCurrExtentWriter()
+}
+
+func (client *ExtentClient) Close(inode uint64) (err error) {
+	var streamReader *StreamReader
+	streamWriter := client.getStreamWriter(inode)
+	err = streamWriter.flushCurrExtentWriter()
+	client.writerLock.Lock()
+	delete(client.writers, inode)
+	client.writerLock.Unlock()
+	if err != nil {
+		return
+	}
+	client.readerLock.RLock()
+	streamReader = client.readers[inode]
+	client.readerLock.RUnlock()
+	if streamReader == nil {
+		return nil
+	}
+	for _, reader := range streamReader.readers {
+		reader.exitCh <- true
+	}
+	client.readerLock.Lock()
+	delete(client.readers, inode)
+	client.readerLock.Unlock()
+
+	return
+}
+
 func (client *ExtentClient) Read(inode uint64, data []byte, offset int, size int) (read int, err error) {
 	var stream *StreamReader
 	if stream, err = client.getStreamReader(inode); err != nil {
