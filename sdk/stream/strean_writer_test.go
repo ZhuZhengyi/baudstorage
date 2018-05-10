@@ -8,34 +8,34 @@ import (
 	"time"
 )
 
+var allKeys map[uint64]*StreamKey
+
+func saveKey(inode uint64, k ExtentKey) (err error) {
+	sk := allKeys[inode]
+	sk.Put(k)
+	sk.Inode = inode
+	return
+}
+
+func updateKey(inode uint64) (sk StreamKey, err error) {
+	sk = *(allKeys[inode])
+	return
+}
+
 func TestExtentClient_Write(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	client, err := NewExtentClient("log", "127.0.0.1:7778")
+	client, err := NewExtentClient("log", "127.0.0.1:7778", saveKey, updateKey)
 	if err != nil {
 		t.Logf(err.Error())
 		t.FailNow()
 	}
-	keysChan := make(chan ExtentKey, 100)
 	if client == nil {
 		t.Logf("init failed")
 		t.FailNow()
 	}
 	var inode uint64
 	inode = 1
-	client.InitWriteStream(inode, &keysChan)
-	var sk *StreamKey
-	sk = new(StreamKey)
-	sk.Inode = inode
 
-	go func() {
-		for {
-			select {
-			case k := <-keysChan:
-				sk.Put(k)
-				fmt.Println(fmt.Sprintf("k %v return keysize:%v", k.Marshal(), sk.Size()))
-			}
-		}
-	}()
 	data := make([]byte, CFSBLOCKSIZE*2)
 	for j := 0; j < CFSBLOCKSIZE*2; j++ {
 		rand.Seed(time.Now().UnixNano())
