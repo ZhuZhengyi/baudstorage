@@ -11,17 +11,21 @@ import (
 
 var NotLeader = errors.New("not leader")
 
-type MultiRaftServer struct {
+type MultiRaft interface {
+	NewPartition(partitionId uint64) (Partition, error)
+}
+
+type multiRaft struct {
 	nodeId     uint64
 	addr       *Address
 	resolver   *Resolver
 	rs         *raft.RaftServer
-	partitions map[uint64]*RaftPartition // 节点上的分片，key：分片ID, 一个节点上可以有多个分片
+	partitions map[uint64]Partition // 节点上的分片，key：分片ID, 一个节点上可以有多个分片
 	config     *Config
 	dbtype     string
 }
 
-func NewMultiRaftServer(nodeId uint64, cfg *Config, dbType string) (server *MultiRaftServer, err error) {
+func NewMultiRaft(nodeId uint64, cfg *Config, dbType string) (mr MultiRaft, err error) {
 	// Init address
 	if err = AddrInit(cfg.PeerAddrs()); err != nil {
 		return
@@ -34,7 +38,7 @@ func NewMultiRaftServer(nodeId uint64, cfg *Config, dbType string) (server *Mult
 	}
 	// Init resolver.
 	resolver := newResolver()
-	for _, peer := range server.config.peers {
+	for _, peer := range cfg.peers {
 		resolver.AddNode(peer.ID)
 	}
 	// Init raft server.
@@ -43,12 +47,12 @@ func NewMultiRaftServer(nodeId uint64, cfg *Config, dbType string) (server *Mult
 		return
 	}
 	// Init multi raft server instance.
-	server = &MultiRaftServer{
+	mr = &multiRaft{
 		nodeId:     nodeId,
 		config:     cfg,
 		resolver:   resolver,
 		dbtype:     dbType,
-		partitions: make(map[uint64]*RaftPartition),
+		partitions: make(map[uint64]Partition),
 		addr:       addrInfo,
 		rs:         raftServer,
 	}
@@ -74,20 +78,16 @@ func initRaftServer(r *Resolver, addr *Address, nodeId uint64) (rs *raft.RaftSer
 	return rs, nil
 }
 
-func (s *MultiRaftServer) handleLeaderChange(leader uint64) {
+func (s *multiRaft) handleLeaderChange(leader uint64) {
 
 }
 
-func (s *MultiRaftServer) handlePeerChange(confChange *proto.ConfChange) (err error) {
+func (s *multiRaft) handlePeerChange(confChange *proto.ConfChange) (err error) {
 	return nil
 }
 
-func (s *MultiRaftServer) NewPartition(partitionId uint64) (p *RaftPartition, err error) {
-	p = &RaftPartition{
-		id: partitionId,
-		sm: NewRaftStateMachine(s.nodeId, partitionId, s.config.StoreDir(), s.dbtype, s.rs),
-		rs: s.rs,
-	}
+func (s *multiRaft) NewPartition(partitionId uint64) (p Partition, err error) {
+	p := NewPartition(partitionId, s.rs)
 
 	wc := &wal.Config{}
 	raftStorage, err := wal.NewStorage(fmt.Sprintf(s.config.WalDir()+"/wal%d", partitionId), wc)
@@ -95,8 +95,8 @@ func (s *MultiRaftServer) NewPartition(partitionId uint64) (p *RaftPartition, er
 		return nil, err
 	}
 
-	// state machine
-	p.sm.Restore()
+	// Restore partition
+	p.Restore()
 	p.sm.RegisterLeaderChangeHandler(s.handleLeaderChange)
 	p.sm.RegisterPeerChangeHandler(s.handlePeerChange)
 
