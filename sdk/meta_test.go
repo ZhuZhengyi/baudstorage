@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -17,13 +18,38 @@ const (
 	TestHttpPort   = "9900"
 )
 
-var (
-	globalNV = make(map[string]*NamespaceView)
-)
+type testcase struct {
+	inode  uint64
+	result string
+}
+
+var globalNV *NamespaceView
+
+var globalMP = []MetaPartition{
+	{"mp001", 1, 100, nil},
+	{"mp002", 101, 200, nil},
+	{"mp003", 210, 300, nil},
+	{"mp004", 301, 400, nil},
+}
+
+var globalTests = []testcase{
+	{1, "mp001"},
+	{100, "mp001"},
+	{101, "mp002"},
+	{200, "mp002"},
+	{201, ""},
+	{209, ""},
+	{210, "mp003"},
+	{220, "mp003"},
+	{300, "mp003"},
+	{301, "mp004"},
+	{400, "mp004"},
+	{401, ""},
+	{500, ""},
+}
 
 func init() {
-	nv := newNamespaceView(TestNamespace, 5)
-	globalNV[TestNamespace] = nv
+	globalNV = newNamespaceView(TestNamespace, globalMP)
 
 	go func() {
 		http.HandleFunc("/client/namespace", handleClientNS)
@@ -36,12 +62,17 @@ func init() {
 	}()
 }
 
-func newNamespaceView(name string, partitions int) *NamespaceView {
+func newNamespaceView(name string, partitions []MetaPartition) *NamespaceView {
 	nv := &NamespaceView{
 		Name: name,
 	}
 	nv.MetaPartitions = make([]*MetaPartition, 0)
-	nv.generateMetaPartitions(1, partitions)
+
+	for _, p := range partitions {
+		mp := newMetaPartition(p.GroupID, p.Start, p.End)
+		nv.MetaPartitions = append(nv.MetaPartitions, mp)
+	}
+
 	return nv
 }
 
@@ -66,13 +97,12 @@ func (nv *NamespaceView) generateMetaPartitions(start, count int) {
 func handleClientNS(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	name := r.FormValue("name")
-	nv, ok := globalNV[name]
-	if !ok {
+	if strings.Compare(name, globalNV.Name) != 0 {
 		http.Error(w, "No such namespace!", http.StatusBadRequest)
 		return
 	}
 
-	data, err := json.Marshal(nv)
+	data, err := json.Marshal(globalNV)
 	if err != nil {
 		http.Error(w, "JSON marshal failed!", http.StatusInternalServerError)
 		return
@@ -103,7 +133,7 @@ func TestGetNamespaceView(t *testing.T) {
 	}
 }
 
-func TestMetaPartitionManagement(t *testing.T) {
+func TestMetaPartitionCreate(t *testing.T) {
 	mw, err := NewMetaWrapper(TestNamespace, TestMasterAddr+":"+TestHttpPort)
 	if err != nil {
 		t.Fatal(err)
@@ -114,4 +144,22 @@ func TestMetaPartitionManagement(t *testing.T) {
 	for _, mp := range mw.partitions {
 		t.Logf("%v", *mp)
 	}
+
+	for _, tc := range globalTests {
+		mp := mw.getMetaPartitionByInode(tc.inode)
+		if checkResult(mp, tc.result) != 0 {
+			t.Fatal(mp)
+		}
+		t.Logf("PASS: Finding inode = %v , %v", tc.inode, mp)
+	}
+}
+
+func checkResult(mp *MetaPartition, result string) int {
+	var toCompare string
+	if mp == nil {
+		toCompare = ""
+	} else {
+		toCompare = mp.GroupID
+	}
+	return strings.Compare(toCompare, result)
 }
