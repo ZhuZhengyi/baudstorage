@@ -160,7 +160,7 @@ func (writer *ExtentWriter) sendCurrPacket() (err error) {
 
 //if send failed,recover it
 func (writer *ExtentWriter) recover() (sucess bool) {
-	if writer.recoverCnt > ExtentWriterRecoverCnt {
+	if writer.recoverCnt > 1 {
 		return
 	}
 	var (
