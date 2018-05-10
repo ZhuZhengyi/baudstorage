@@ -54,8 +54,7 @@ func (vg *VolGroup) ChooseTargetHosts(c *Cluster) (err error) {
 	vg.PersistenceHosts = append(vg.PersistenceHosts, addrs...)
 
 	if len(vg.PersistenceHosts) != (int)(vg.replicaNum) {
-		err = fmt.Errorf("no have enough volhost exsited")
-		return
+		return NoAnyDataNodeForCreateVol
 	}
 	log.LogDebug(fmt.Sprintf("action[ChooseTargetHosts],volID:%v,PersistenceHosts:%v",
 		vg.VolID, vg.PersistenceHosts))
@@ -70,13 +69,91 @@ func (vg *VolGroup) generateCreateVolGroupTasks() (tasks []*proto.AdminTask) {
 	return
 }
 
-/*vol的某个副本磁盘坏的情况下触发vol迁移，非常重要*/
-func (vg *VolGroup) volOffLine(offlineAddr string, sourceFunc string) {
+func (vg *VolGroup) hasMissOne() (err error) {
+	availPersistenceHostLen := len(vg.PersistenceHosts)
+	if availPersistenceHostLen <= (int)(vg.replicaNum)-1 {
+		log.LogError(fmt.Sprintf("action[%v],volID:%v,err:%v",
+			"hasMissOne", vg.VolID, VolReplicationHasMissOneError))
+		err = VolReplicationHasMissOneError
+	}
+	return
+}
 
+func (vg *VolGroup) canOffLine(offlineAddr string) (err error) {
+	msg := fmt.Sprintf("action[canOffLine],vol:%v  RocksDBHost:%v  offLine:%v ",
+		vg.VolID, vg.PersistenceHosts, offlineAddr)
+	liveLocs := vg.getLiveVols(DefaultVolTimeOutSec)
+	if len(liveLocs) < 2 {
+		msg = fmt.Sprintf(msg+" err:%v  liveLocs:%v ", CannotOffLineErr, len(liveLocs))
+		log.LogError(msg)
+		err = fmt.Errorf(msg)
+	}
+
+	return
+}
+
+func (vg *VolGroup) generatorVolOffLineLog(offlineAddr string) (msg string) {
+	msg = fmt.Sprintf("action[GeneratorVolOffLineLogInfo],vol:%v  offlineaddr:%v  ",
+		vg.VolID, offlineAddr)
+	vols := vg.GetAvailableVols()
+	for i := 0; i < len(vols); i++ {
+		vol := vols[i]
+		msg += fmt.Sprintf(" addr:%v  volStatus:%v  FileCount :%v ", vol.addr,
+			vol.status, vol.FileCount)
+	}
+	log.LogWarn(msg)
+
+	return
+}
+
+/*获取该副本目前有效的node,即Node在汇报心跳正常，并且该Node不是unavailable*/
+func (vg *VolGroup) GetAvailableVols() (vols []*Vol) {
+	vols = make([]*Vol, 0)
+	for i := 0; i < len(vg.locations); i++ {
+		vol := vg.locations[i]
+		if vol.CheckLocIsAvailContainsDiskError() == true && vg.isInPersistenceHosts(vol.addr) == true {
+			vols = append(vols, vol)
+		}
+	}
+
+	return
 }
 
 func (vg *VolGroup) volOffLineInMem(addr string) {
+	delIndex := -1
+	var loc *Vol
+	for i := 0; i < len(vg.locations); i++ {
+		vol := vg.locations[i]
+		if vol.addr == addr {
+			loc = vol
+			delIndex = i
+			break
+		}
+	}
+	msg := fmt.Sprintf("action[VolOffLineInMem],vol:%v  on Node:%v  OffLine,the node is in volLocs:%v", vg.VolID, addr, loc != nil)
+	log.LogDebug(msg)
+	if loc == nil {
+		return
+	}
 
+	for _, fc := range vg.FileInCoreMap {
+		fc.deleteFileInNode(vg.VolID, loc)
+	}
+	vg.DeleteVolByIndex(delIndex)
+
+	return
+}
+
+func (vg *VolGroup) DeleteVolByIndex(index int) {
+	var locArr []string
+	for _, loc := range vg.locations {
+		locArr = append(locArr, loc.addr)
+	}
+	msg := fmt.Sprintf("DeleteVolByIndex vol:%v  index:%v  locations :%v ", vg.VolID, index, locArr)
+	log.LogInfo(msg)
+	volLocsAfter := vg.locations[index+1:]
+	vg.locations = vg.locations[:index]
+	vg.locations = append(vg.locations, volLocsAfter...)
 }
 
 func (vg *VolGroup) generateLoadVolTasks() (tasks []*proto.AdminTask) {
@@ -409,4 +486,82 @@ func (vg *VolGroup) DeleteFileOnNode(delAddr, FileID string) {
 	}
 
 	return
+}
+
+func (vg *VolGroup) removeVolHosts(removeAddr string) (err error) {
+	orgGoal := len(vg.PersistenceHosts)
+	orgVolHosts := make([]string, len(vg.PersistenceHosts))
+	copy(orgVolHosts, vg.PersistenceHosts)
+
+	if ok := vg.removeVolHostOnUnderStore(removeAddr); !ok {
+		return
+	}
+	vg.replicaNum = (uint8)(len(vg.PersistenceHosts))
+	if err = vg.UpdateVolHosts(); err != nil {
+		vg.replicaNum = (uint8)(orgGoal)
+		vg.PersistenceHosts = orgVolHosts
+	}
+
+	msg := fmt.Sprintf("RemoveVolHostsInfo  vol:%v  Delete host:%v  on VolHostsRocksDB:%v ",
+		vg.VolID, removeAddr, vg.PersistenceHosts)
+	log.LogDebug(msg)
+
+	return
+}
+
+func (vg *VolGroup) removeVolHostOnUnderStore(removeAddr string) (ok bool) {
+	for index, addr := range vg.PersistenceHosts {
+		if addr == removeAddr {
+			after := vg.PersistenceHosts[index+1:]
+			vg.PersistenceHosts = vg.PersistenceHosts[:index]
+			vg.PersistenceHosts = append(vg.PersistenceHosts, after...)
+			ok = true
+			break
+		}
+	}
+
+	return
+}
+
+func (vg *VolGroup) addVolHosts(addAddr string) (err error) {
+	orgVolHosts := make([]string, len(vg.PersistenceHosts))
+	orgGoal := len(vg.PersistenceHosts)
+	copy(orgVolHosts, vg.PersistenceHosts)
+	for _, addr := range vg.PersistenceHosts {
+		if addr == addAddr {
+			return
+		}
+	}
+	vg.PersistenceHosts = append(vg.PersistenceHosts, addAddr)
+	vg.replicaNum = uint8(len(vg.PersistenceHosts))
+	if err = vg.UpdateVolHosts(); err != nil {
+		vg.PersistenceHosts = orgVolHosts
+		vg.replicaNum = uint8(orgGoal)
+		return
+	}
+	msg := fmt.Sprintf(" AddVolHostsInfo vol:%v  Add host:%v  on VolHostsRocksDB:%v ",
+		vg.VolID, addAddr, vg.PersistenceHosts)
+	log.LogDebug(msg)
+	return
+}
+
+func (vg *VolGroup) UpdateVol(vr *VolReport, dataNode *DataNode) {
+	vg.Lock()
+	volLoc, err := vg.getVolLocation(dataNode.HttpAddr)
+	vg.Unlock()
+
+	if err != nil && !vg.isInPersistenceHosts(dataNode.HttpAddr) {
+		return
+	}
+	if err != nil && vg.isInPersistenceHosts(dataNode.HttpAddr) {
+		volLoc = NewVol(dataNode)
+		vg.addMember(volLoc)
+	}
+	volLoc.status = (uint8)(vr.VolStatus)
+	volLoc.Total = vr.Total
+	volLoc.Used = vr.Used
+	volLoc.SetVolAlive()
+	vg.Lock()
+	vg.checkAndRemoveMissVol(dataNode.HttpAddr)
+	vg.Unlock()
 }

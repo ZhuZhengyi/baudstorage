@@ -13,15 +13,16 @@ import (
 func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 	var (
 		rstMsg string
+		name   string
 		count  int
 		err    error
 	)
 
-	if count, err = parseCreateVolPara(r); err != nil {
+	if count, name, err = parseCreateVolPara(r); err != nil {
 		goto errDeal
 	}
 	for i := 0; i < count; i++ {
-		if _, err = m.cluster.createVolGroup(); err != nil {
+		if _, err = m.cluster.createVolGroup(name); err != nil {
 			goto errDeal
 		}
 	}
@@ -37,16 +38,22 @@ errDeal:
 
 func (m *Master) getVol(w http.ResponseWriter, r *http.Request) {
 	var (
+		name  string
+		ns    *NameSpace
 		body  []byte
 		vol   *VolGroup
 		vr    *VolResponse
 		volID uint64
 		err   error
 	)
-	if volID, err = parseVolGroupID(r); err != nil {
+	if volID, name, err = parseVolIDAndNamespace(r); err != nil {
 		goto errDeal
 	}
-	if vol, err = m.cluster.getVolByVolID(volID); err != nil {
+
+	if ns, err = m.cluster.getNamespace(name); err != nil {
+		goto errDeal
+	}
+	if vol, err = ns.getVolGroupByVolID(volID); err != nil {
 		goto errDeal
 	}
 	vr = vol.convertToVolResponse()
@@ -64,22 +71,26 @@ errDeal:
 
 func (m *Master) loadVol(w http.ResponseWriter, r *http.Request) {
 	var (
-		c     *Cluster
+		name  string
+		ns    *NameSpace
 		msg   string
 		v     *VolGroup
 		volID uint64
 		err   error
 	)
 
-	if volID, err = parseVolGroupID(r); err != nil {
+	if volID, name, err = parseVolIDAndNamespace(r); err != nil {
 		goto errDeal
 	}
 
-	if v, err = c.getVolByVolID(volID); err != nil {
+	if ns, err = m.cluster.getNamespace(name); err != nil {
+		goto errDeal
+	}
+	if v, err = ns.getVolGroupByVolID(volID); err != nil {
 		goto errDeal
 	}
 
-	c.loadVolAndCheckResponse(v, false)
+	m.cluster.loadVolAndCheckResponse(v, false)
 	msg = fmt.Sprintf(AdminLoadVol+"volID :%v  LoadVol success", volID)
 	io.WriteString(w, msg)
 	log.LogInfo(msg)
@@ -93,22 +104,25 @@ errDeal:
 
 func (m *Master) volOffline(w http.ResponseWriter, r *http.Request) {
 	var (
+		name   string
+		ns     *NameSpace
 		rstMsg string
-		v      *VolGroup
+		vg     *VolGroup
 		addr   string
 		volID  uint64
 		err    error
 	)
 
-	if addr, volID, err = parseVolOfflinePara(r); err != nil {
+	if addr, volID, name, err = parseVolOfflinePara(r); err != nil {
 		goto errDeal
 	}
-
-	if v, err = m.cluster.getVolByVolID(volID); err != nil {
+	if ns, err = m.cluster.getNamespace(name); err != nil {
 		goto errDeal
 	}
-
-	v.volOffLine(addr, HandleVolOfflineErr)
+	if vg, err = ns.getVolGroupByVolID(volID); err != nil {
+		goto errDeal
+	}
+	m.cluster.volOffline(addr, vg, HandleVolOfflineErr)
 	rstMsg = fmt.Sprintf(AdminVolOffline+"volID :%v  on node:%v  has offline success", volID, addr)
 	io.WriteString(w, rstMsg)
 	log.LogWarn(rstMsg)
@@ -121,15 +135,16 @@ errDeal:
 
 func (m *Master) createNamespace(w http.ResponseWriter, r *http.Request) {
 	var (
-		name string
-		err  error
-		msg  string
+		name       string
+		err        error
+		msg        string
+		replicaNum int
 	)
 
-	if name, err = parseCreateNamespacePara(r); err != nil {
+	if name, replicaNum, err = parseCreateNamespacePara(r); err != nil {
 		goto errDeal
 	}
-	if err = m.cluster.createNamespace(name); err != nil {
+	if err = m.cluster.createNamespace(name, uint8(replicaNum)); err != nil {
 		goto errDeal
 	}
 	msg = fmt.Sprintf("create namespace[%v] successed\n", name)
@@ -143,12 +158,21 @@ errDeal:
 	return
 }
 
-func parseCreateNamespacePara(r *http.Request) (name string, err error) {
+func parseCreateNamespacePara(r *http.Request) (name string, replicaNum int, err error) {
 	r.ParseForm()
-	return checkNamespace(r)
+	if name, err = checkNamespace(r); err != nil {
+		return
+	}
+	if replicaStr := r.FormValue(ParaReplicas); replicaStr == "" {
+		err = paraNotFound(ParaReplicas)
+		return
+	} else if replicaNum, err = strconv.Atoi(replicaStr); err != nil || replicaNum == 0 {
+		err = UnMatchPara
+	}
+	return
 }
 
-func parseCreateVolPara(r *http.Request) (count int, err error) {
+func parseCreateVolPara(r *http.Request) (count int, name string, err error) {
 	r.ParseForm()
 	if countStr := r.FormValue(ParaCount); countStr == "" {
 		err = paraNotFound(ParaCount)
@@ -157,12 +181,21 @@ func parseCreateVolPara(r *http.Request) (count int, err error) {
 		err = UnMatchPara
 		return
 	}
+	if name, err = checkNamespace(r); err != nil {
+		return
+	}
 	return
 }
 
-func parseVolGroupID(r *http.Request) (volID uint64, err error) {
+func parseVolIDAndNamespace(r *http.Request) (volID uint64, name string, err error) {
 	r.ParseForm()
-	return checkVolGroupID(r)
+	if volID, err = checkVolGroupID(r); err != nil {
+		return
+	}
+	if name, err = checkNamespace(r); err != nil {
+		return
+	}
+	return
 }
 
 func checkVolGroupID(r *http.Request) (volID uint64, err error) {
@@ -174,12 +207,16 @@ func checkVolGroupID(r *http.Request) (volID uint64, err error) {
 	return strconv.ParseUint(value, 10, 64)
 }
 
-func parseVolOfflinePara(r *http.Request) (nodeAddr string, volID uint64, err error) {
+func parseVolOfflinePara(r *http.Request) (nodeAddr string, volID uint64, name string, err error) {
 	r.ParseForm()
 	if volID, err = checkVolGroupID(r); err != nil {
 		return
 	}
 	if nodeAddr, err = checkNodeAddr(r); err != nil {
+		return
+	}
+
+	if name, err = checkNamespace(r); err != nil {
 		return
 	}
 	return

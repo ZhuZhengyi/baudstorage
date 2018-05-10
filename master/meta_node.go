@@ -2,6 +2,7 @@ package master
 
 import (
 	"github.com/tiglabs/baudstorage/proto"
+	"time"
 )
 
 type MetaNode struct {
@@ -22,20 +23,10 @@ func (metaNode *MetaNode) clean() {
 	metaNode.sender.exitCh <- struct{}{}
 }
 
-func (metaNode *MetaNode) dealTaskResponse(nodeAddr string, task *proto.AdminTask) {
-	if task == nil {
-		return
+func (metaNode *MetaNode) generateHeartbeatTask() (task *proto.AdminTask) {
+	request := &proto.HeartBeatRequest{
+		CurrTime: time.Now().Unix(),
 	}
-	if _, ok := metaNode.sender.taskMap[task.ID]; !ok {
-		return
-	}
-
-	switch task.OpCode {
-	case OpCreateMetaGroup:
-	default:
-
-	}
-
+	task = proto.NewAdminTask(OpMetaNodeHeartbeat, metaNode.Addr, request)
 	return
-
 }

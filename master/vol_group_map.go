@@ -10,8 +10,6 @@ import (
 )
 
 type VolGroupMap struct {
-	clusterID   string
-	clusterType string
 	sync.RWMutex
 	volGroupMap        map[uint64]*VolGroup
 	volGroupCount      int
@@ -55,15 +53,15 @@ func (vm *VolGroupMap) updateVolResponseCache(needUpdate bool, minVolID uint64) 
 		vm.cacheVolResponse = make([]byte, 0)
 		vrs := vm.GetVolsView(minVolID)
 		if len(vrs) == 0 {
-			log.LogError(fmt.Sprintf("action[updateVolResponseCache],clusterID:%v,minVolID:%v,err:%v",
-				vm.clusterID, minVolID, NoAvailVol))
+			log.LogError(fmt.Sprintf("action[updateVolResponseCache],minVolID:%v,err:%v",
+				minVolID, NoAvailVol))
 			return nil, NoAvailVol
 		}
 		cv := NewVolsView()
 		cv.Vols = vrs
 		if body, err = json.Marshal(cv); err != nil {
-			log.LogError(fmt.Sprintf("action[updateVolResponseCache],clusterID:%v,minVolID:%v,err:%v",
-				vm.clusterID, minVolID, err.Error()))
+			log.LogError(fmt.Sprintf("action[updateVolResponseCache],minVolID:%v,err:%v",
+				minVolID, err.Error()))
 			return nil, fmt.Errorf("%v,marshal err:%v", NoAvailVol, err.Error())
 		}
 		vm.cacheVolResponse = body

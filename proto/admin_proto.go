@@ -77,11 +77,18 @@ type HeartBeatRequest struct {
 	CurrTime int64
 }
 
-type HeartBeatResponse struct {
+type DataNodeHeartBeatResponse struct {
 	MaxDiskAvailWeight int64
 	Total              uint64 `json:"TotalWeight"`
 	Used               uint64 `json:"UsedWeight"`
 	ZoneName           string `json:"Zone"`
+	Status             uint8
+	Result             string
+}
+
+type MetaNodeHeartbeatResponse struct {
+	Total uint64
+	Used uint64
 	Status             uint8
 	Result             string
 }

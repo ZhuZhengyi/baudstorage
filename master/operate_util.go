@@ -48,6 +48,8 @@ func UnmarshalTaskResponse(task *proto.AdminTask) (err error) {
 		response = &proto.LoadVolResponse{}
 	case OpCreateMetaGroup:
 		response = &proto.CreateMetaRangeResponse{}
+	case OpDeleteFile:
+		response = &proto.DeleteFileResponse{}
 	default:
 		log.LogError(fmt.Sprintf("unknown operate code(%v)", task.OpCode))
 	}

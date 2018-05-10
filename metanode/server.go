@@ -115,7 +115,8 @@ func (m *MetaNode) prepareConfig(cfg *config.Config) (err error) {
 
 func (m *MetaNode) Restore() (err error) {
 	// Restore metaRangeManager
-	if err = m.metaRangeManager.RestoreMetaManagers(m.metaDir); err != nil {
+	err = m.metaRangeManager.RestoreMetaManagers(m.metaDir)
+	if err != nil {
 		return
 	}
 	//TODO:

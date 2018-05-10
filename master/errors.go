@@ -16,11 +16,14 @@ var (
 	VolLocationNotFound = errors.New("volume server not found")
 	UnMatchPara         = errors.New("para not unmatched")
 
-	DisOrderArrayErr             = errors.New("dis order array is nil")
-	VolReplicationExcessError    = errors.New("vol Replication Excess error")
-	VolReplicationLackError      = errors.New("vol Replication Lack error")
-	VolPersistedNotAnyReplicates = errors.New("volume persisted not have any replicates")
-	NoHaveAnyDataNodeToWrite     = errors.New("No have any data node for create volume")
+	DisOrderArrayErr              = errors.New("dis order array is nil")
+	VolReplicationExcessError     = errors.New("vol Replication Excess error")
+	VolReplicationLackError       = errors.New("vol Replication Lack error")
+	VolReplicationHasMissOneError = errors.New("vol replication has miss one ,cannot miss any one")
+	VolPersistedNotAnyReplicates  = errors.New("volume persisted not have any replicates")
+	NoHaveAnyDataNodeToWrite      = errors.New("No have any data node for create volume")
+	CannotOffLineErr              = errors.New("cannot offline because avail vol replicate <0")
+	NoAnyDataNodeForCreateVol     = errors.New("no have enough data server for create vol")
 )
 
 func paraNotFound(name string) (err error) {

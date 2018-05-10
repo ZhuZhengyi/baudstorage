@@ -10,7 +10,6 @@ import (
 
 type Cluster struct {
 	Name              string
-	volGroups         *VolGroupMap
 	namespaces        map[string]*NameSpace
 	metaRangeReplicas uint8
 	dataNodes         sync.Map
@@ -23,19 +22,19 @@ type Cluster struct {
 func NewCluster(name string) (c *Cluster) {
 	c = new(Cluster)
 	c.Name = name
-	c.volGroups = NewVolMap()
 	c.cfg = NewClusterConfig()
 	c.startCheckVolGroups()
 	c.startCheckBackendLoadVolGroups()
 	c.startCheckReleaseVolGroups()
+	c.startCheckHearBeat()
 	return
 }
 
 func (c *Cluster) startCheckVolGroups() {
 	go func() {
 		for {
-			if c.volGroups != nil {
-				c.checkVolGroups()
+			for _, ns := range c.namespaces {
+				c.checkVolGroups(ns)
 			}
 			time.Sleep(time.Second * time.Duration(c.cfg.CheckVolIntervalSeconds))
 		}
@@ -45,8 +44,9 @@ func (c *Cluster) startCheckVolGroups() {
 func (c *Cluster) startCheckBackendLoadVolGroups() {
 	go func() {
 		for {
-			if c.volGroups != nil {
-				c.backendLoadVolGroup(c.cfg.everyLoadVolCount, c.cfg.LoadVolFrequencyTime)
+
+			for _, ns := range c.namespaces {
+				c.backendLoadVolGroup(ns)
 			}
 			time.Sleep(time.Second)
 		}
@@ -56,10 +56,40 @@ func (c *Cluster) startCheckBackendLoadVolGroups() {
 func (c *Cluster) startCheckReleaseVolGroups() {
 	go func() {
 		for {
-			if c.volGroups != nil {
-				c.processReleaseVolAfterLoadVolGroup()
+			for _, ns := range c.namespaces {
+				c.processReleaseVolAfterLoadVolGroup(ns)
 			}
 			time.Sleep(time.Second * DefaultReleaseVolInternalSeconds)
+		}
+	}()
+}
+
+func (c *Cluster) startCheckHearBeat() {
+	go func() {
+		for {
+			tasks := make([]*proto.AdminTask, 0)
+			c.dataNodes.Range(func(addr, dataNode interface{}) bool {
+				node := dataNode.(*DataNode)
+				task := node.generateHeartbeatTask()
+				tasks = append(tasks, task)
+				return true
+			})
+			c.putDataNodeTasks(tasks)
+			time.Sleep(time.Second * DefaultCheckHeartBeatIntervalSeconds)
+		}
+	}()
+
+	go func() {
+		for {
+			tasks := make([]*proto.AdminTask, 0)
+			c.metaNodes.Range(func(addr, metaNode interface{}) bool {
+				node := metaNode.(*MetaNode)
+				task := node.generateHeartbeatTask()
+				tasks = append(tasks, task)
+				return true
+			})
+			c.putMetaNodeTasks(tasks)
+			time.Sleep(time.Second * DefaultCheckHeartBeatIntervalSeconds)
 		}
 	}()
 }
@@ -99,24 +129,47 @@ errDeal:
 }
 
 func (c *Cluster) getVolsView() (body []byte, err error) {
-	body, err = c.volGroups.updateVolResponseCache(NoNeedUpdateVolResponse, 0)
+	body = make([]byte, 0)
+	for _, ns := range c.namespaces {
+		if partBody, err := ns.volGroups.updateVolResponseCache(NoNeedUpdateVolResponse, 0); err == nil {
+			body = append(body, partBody...)
+		} else {
+			log.LogError(fmt.Sprintf("getVolsView on namespace %v err:%v", ns.Name, err.Error()))
+		}
 
+	}
 	return
 }
 
-func (c *Cluster) getNamespace() (body []byte, err error) {
-	body, err = c.volGroups.updateVolResponseCache(NoNeedUpdateVolResponse, 0)
-
+func (c *Cluster) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error) {
+	for _, ns := range c.namespaces {
+		if vol, err = ns.getVolGroupByVolID(volID); err == nil {
+			return
+		}
+	}
 	return
 }
 
-func (c *Cluster) createVolGroup() (vg *VolGroup, err error) {
+func (c *Cluster) getNamespace(nsName string) (ns *NameSpace, err error) {
+	ns, ok := c.namespaces[nsName]
+	if !ok {
+		err = NamespaceNotFound
+	}
+	return
+}
+
+func (c *Cluster) createVolGroup(nsName string) (vg *VolGroup, err error) {
 	var (
+		ns    *NameSpace
 		volID uint64
 		tasks []*proto.AdminTask
 	)
 	c.createVolLock.Lock()
 	defer c.createVolLock.Unlock()
+	if ns, err = c.getNamespace(nsName); err != nil {
+		goto errDeal
+	}
+
 	if volID, err = c.getMaxVolID(); err != nil {
 		goto errDeal
 	}
@@ -128,7 +181,7 @@ func (c *Cluster) createVolGroup() (vg *VolGroup, err error) {
 	//todo sync and persistence hosts to other node in the cluster
 	tasks = vg.generateCreateVolGroupTasks()
 	c.putDataNodeTasks(tasks)
-	c.volGroups.putVol(vg)
+	ns.volGroups.putVol(vg)
 
 	return
 errDeal:
@@ -147,10 +200,6 @@ errDeal:
 	err = fmt.Errorf("action[getMaxVolID], Err:%v ", err.Error())
 	log.LogError(err.Error())
 	return
-}
-
-func (c *Cluster) getVolByVolID(volID uint64) (vol *VolGroup, err error) {
-	return c.volGroups.getVol(volID)
 }
 
 func (c *Cluster) getDataNode(addr string) (dataNode *DataNode, err error) {
@@ -174,15 +223,68 @@ func (c *Cluster) getMetaNode(addr string) (metaNode *MetaNode, err error) {
 func (c *Cluster) dataNodeOffLine(dataNode *DataNode) {
 	msg := fmt.Sprintf("action[dataNodeOffLine], Node[%v] OffLine", dataNode.HttpAddr)
 	log.LogWarn(msg)
-	c.volGroups.dataNodeOffline(dataNode.HttpAddr)
-	c.dataNodes.Delete(dataNode.HttpAddr)
+	for _, ns := range c.namespaces {
+		for _, vg := range ns.volGroups.volGroups {
+			c.volOffline(dataNode.HttpAddr, vg, DataNodeOfflineInfo)
+		}
+		ns.volGroups.dataNodeOffline(dataNode.HttpAddr)
+		c.dataNodes.Delete(dataNode.HttpAddr)
+	}
+
+}
+
+func (c *Cluster) volOffline(offlineAddr string, vg *VolGroup, errMsg string) {
+	var (
+		newHosts []string
+		newAddr  string
+		msg      string
+		tasks    []*proto.AdminTask
+		task     *proto.AdminTask
+		err      error
+	)
+	vg.Lock()
+	defer vg.Unlock()
+	if ok := vg.isInPersistenceHosts(offlineAddr); !ok {
+		return
+	}
+
+	if err = vg.hasMissOne(); err != nil {
+		goto errDeal
+	}
+	if err = vg.canOffLine(offlineAddr); err != nil {
+		goto errDeal
+	}
+	vg.generatorVolOffLineLog(offlineAddr)
+
+	if newHosts, err = c.getAvailDataNodeHosts(vg.PersistenceHosts, 1); err != nil {
+		goto errDeal
+	}
+	if err = vg.removeVolHosts(offlineAddr); err != nil {
+		goto errDeal
+	}
+	newAddr = newHosts[0]
+	if err = vg.addVolHosts(newAddr); err != nil {
+		goto errDeal
+	}
+	vg.volOffLineInMem(offlineAddr)
+	vg.checkAndRemoveMissVol(offlineAddr)
+	task = proto.NewAdminTask(OpCreateVol, offlineAddr, newCreateVolRequest(vg.volType, vg.VolID))
+	tasks = make([]*proto.AdminTask, 0)
+	tasks = append(tasks, task)
+	c.putDataNodeTasks(tasks)
+	goto errDeal
+errDeal:
+	msg = fmt.Sprintf(errMsg+" vol:%v  on Node:%v  "+
+		"DiskError  TimeOut Report Then Fix It on newHost:%v   Err:%v , PersistenceHosts:%v  ",
+		vg.VolID, offlineAddr, newAddr, err, vg.PersistenceHosts)
+	log.LogWarn(msg)
 }
 
 func (c *Cluster) metaNodeOffLine(metaNode *MetaNode) {
 
 }
 
-func (c *Cluster) createNamespace(name string) (err error) {
+func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {
 	var (
 		ns *NameSpace
 		mg *MetaGroup
@@ -191,7 +293,7 @@ func (c *Cluster) createNamespace(name string) (err error) {
 		err = hasExist(name)
 		goto errDeal
 	}
-	ns = NewNameSpace(name)
+	ns = NewNameSpace(name, replicaNum)
 	mg = NewMetaGroup(0, DefaultMetaTabletRange-1)
 	if err = mg.ChooseTargetHosts(c); err != nil {
 		goto errDeal
