@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -27,6 +28,14 @@ func NewStreamKey(ino uint64) *StreamKey {
 	return &StreamKey{
 		Inode: ino,
 	}
+}
+
+func (sk *StreamKey) Marshal() (data []byte, err error) {
+	return json.Marshal(sk)
+}
+
+func (sk *StreamKey) UnMarshal(data []byte) {
+	json.Unmarshal(data, sk)
 }
 
 func (sk *StreamKey) Put(k ExtentKey) {
