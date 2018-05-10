@@ -1,12 +1,22 @@
 package metanode
 
 import (
+	"bufio"
+	"encoding/binary"
+	"encoding/json"
+	"errors"
+	"io"
+	"io/ioutil"
+	"os"
+	"path"
 	"sync"
 	"time"
 
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk/stream"
+	"github.com/tiglabs/raft"
+	raftproto "github.com/tiglabs/raft/proto"
 )
 
 const defaultBTreeDegree = 32
@@ -15,7 +25,7 @@ const defaultBTreeDegree = 32
 // and manage dentry and inode by B-Tree in memory.
 type MetaRangeFsm struct {
 	metaRange  *MetaRange
-	mu         sync.RWMutex // Mutex for whole fsm
+	applyID    uint64       // for restore inode/dentry max applyID
 	dentryMu   sync.RWMutex // Mutex for dentry operation.
 	dentryTree *btree.BTree // B-Tree for dentry.
 	inodeMu    sync.RWMutex // Mutex for inode operation.
@@ -103,17 +113,14 @@ func (mf *MetaRangeFsm) DeleteDentry(dentry *Dentry) (status uint8) {
 func (mf *MetaRangeFsm) CreateInode(ino *Inode) (status uint8) {
 	// TODO: Implement it.
 	status = proto.OpOk
-	mf.mu.RLock()
 	mf.inodeMu.Lock()
 	if mf.inodeTree.Has(ino) {
 		mf.inodeMu.Unlock()
-		mf.mu.RUnlock()
 		status = proto.OpExistErr
 		return
 	}
 	mf.inodeTree.ReplaceOrInsert(ino)
 	mf.inodeMu.Unlock()
-	mf.mu.RUnlock()
 	return
 }
 
@@ -124,11 +131,9 @@ func (mf *MetaRangeFsm) CreateInode(ino *Inode) (status uint8) {
 func (mf *MetaRangeFsm) DeleteInode(ino *Inode) (status uint8) {
 	// TODO: Implement it.
 	status = proto.OpOk
-	mf.mu.RLock()
 	mf.inodeMu.Lock()
 	item := mf.inodeTree.Delete(ino)
 	mf.inodeMu.Unlock()
-	mf.mu.RUnlock()
 	if item == nil {
 		status = proto.OpNotExistErr
 		return
@@ -184,35 +189,197 @@ func (mf *MetaRangeFsm) PutStreamKey(ino *Inode, k stream.ExtentKey) (status uin
 }
 
 func (mf *MetaRangeFsm) SetInodeTree(inoTree *btree.BTree) {
-	mf.mu.RLock()
 	mf.inodeMu.Lock()
 	defer mf.inodeMu.Unlock()
-	defer mf.mu.RUnlock()
 	mf.inodeTree = inoTree
 }
 
 func (mf *MetaRangeFsm) GetInodeTree() *btree.BTree {
-	return mf.inodeTree
+	mf.inodeMu.RLock()
+	defer mf.inodeMu.RUnlock()
+	return mf.inodeTree.Clone()
 }
 
 func (mf *MetaRangeFsm) SetDentryTree(denTree *btree.BTree) {
-	mf.mu.RUnlock()
 	mf.dentryMu.Lock()
 	defer mf.dentryMu.Unlock()
-	defer mf.mu.RUnlock()
 	mf.dentryTree = denTree
 }
 
 func (mf *MetaRangeFsm) GetDentryTree() *btree.BTree {
-	return mf.dentryTree
+	mf.dentryMu.RLock()
+	defer mf.dentryMu.RUnlock()
+	return mf.dentryTree.Clone()
 }
 
-func (mf *MetaRangeFsm) GetAllTree() (ino *btree.BTree, dentry *btree.BTree,
-	applyID uint64) {
-	mf.mu.Lock()
-	defer mf.mu.Unlock()
-	ino = mf.inodeTree
-	dentry = mf.dentryTree
-	applyID = mf.metaRange.ApplyID
+// Load range inode from inode snapshot file
+func (mf *MetaRangeFsm) LoadInode() (err error) {
+	// Restore btree from ino file
+	inoFile := path.Join(mf.metaRange.RootDir, "inode")
+	fp, err := os.OpenFile(inoFile, os.O_RDONLY, 0644)
+	if err != nil {
+		if err == os.ErrNotExist {
+			err = nil
+		}
+		return
+	}
+	defer fp.Close()
+	reader := bufio.NewReader(fp)
+	for {
+		var (
+			line []byte
+			ino  = &Inode{}
+		)
+		line, _, err = reader.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+				return
+			}
+			return
+		}
+
+		if err = json.Unmarshal(line, ino); err != nil {
+			return
+		}
+		if mf.CreateInode(ino) != proto.OpOk {
+			err = errors.New("load inode info error!")
+			return
+		}
+		if mf.metaRange.Cursor < ino.Inode {
+			mf.metaRange.Cursor = ino.Inode
+		}
+	}
 	return
+}
+
+// Restore range dentry from dentry snapshot file
+func (mf *MetaRangeFsm) LoadDentry() (err error) {
+	// Restore dentry from dentry file
+	dentryFile := path.Join(mf.metaRange.RootDir, "dentry")
+	fp, err := os.OpenFile(dentryFile, os.O_RDONLY, 0644)
+	if err != nil {
+		if err == os.ErrNotExist {
+			err = nil
+		}
+		return
+	}
+	defer fp.Close()
+	reader := bufio.NewReader(fp)
+	for {
+		var (
+			line   []byte
+			dentry = &Dentry{}
+		)
+		line, _, err = reader.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+				return
+			}
+			return
+		}
+		if err = json.Unmarshal(line, dentry); err != nil {
+			return
+		}
+		if mf.CreateDentry(dentry) != proto.OpOk {
+			err = errors.New("load dentry info error!")
+			return
+		}
+	}
+	return
+}
+
+func (mf *MetaRangeFsm) LoadApplyID() (err error) {
+	applyIDFile := path.Join(mf.metaRange.RootDir, "applyid")
+	data, err := ioutil.ReadFile(applyIDFile)
+	if err != nil {
+		return
+	}
+	if len(data) == 0 {
+		err = errors.New("read applyid empty error")
+		return
+	}
+	mf.applyID = binary.BigEndian.Uint64(data)
+	return
+}
+
+func (mf *MetaRangeFsm) StoreToFile() (err error) {
+	return
+}
+
+// Implement raft StateMachine interface
+func (mf *MetaRangeFsm) Apply(command []byte, index uint64) (interface{}, error) {
+	m := &MetaRangeSnapshot{}
+	err := m.Decode(command)
+	if err != nil {
+		return nil, err
+	}
+	//TODO
+	switch m.Op {
+	}
+	mf.applyID = index
+	return nil, nil
+}
+
+func (mf *MetaRangeFsm) ApplyMemeberChange(confChange *raftproto.ConfChange,
+	index uint64) (interface{}, error) {
+	switch confChange.Type {
+	case raftproto.ConfAddNode:
+		//TODO
+	case raftproto.ConfRemoveNode:
+		//TODO
+	case raftproto.ConfUpdateNode:
+		//TODO
+
+	}
+
+	mf.applyID = index
+	return nil, nil
+}
+
+func (mf *MetaRangeFsm) Snapshot() (raftproto.Snapshot, error) {
+	appid := mf.applyID
+	ino := mf.GetInodeTree()
+	dentry := mf.GetDentryTree()
+	snapIter := NewSnapshotIterator(appid, ino, dentry)
+	return snapIter, nil
+}
+
+func (mf *MetaRangeFsm) ApplySnapshot(peers []raftproto.Peer,
+	iter raftproto.SnapIterator) error {
+	for {
+		data, err := iter.Next()
+		if err != nil {
+			return err
+		}
+		snap := NewMetaRangeSnapshot("", "", "")
+		if err = snap.Decode(data); err != nil {
+			return err
+		}
+		switch snap.Op {
+		case "inode":
+			var ino = &Inode{}
+			ino.ParseKey(snap.K)
+			ino.ParseValue(snap.V)
+			mf.CreateInode(ino)
+		case "dentry":
+			dentry := &Dentry{}
+			dentry.ParseKey(snap.K)
+			dentry.ParseValue(snap.V)
+			mf.CreateDentry(dentry)
+		default:
+			return errors.New("unknow op=" + snap.Op)
+		}
+	}
+	mf.applyID = mf.metaRange.RaftServer.AppliedIndex(mf.metaRange.RaftGroupID)
+	return nil
+}
+
+func (mf *MetaRangeFsm) HandleFatalEvent(err *raft.FatalError) {
+
+}
+
+func (mf *MetaRangeFsm) HandleLeaderChange(leader uint64) {
+
 }

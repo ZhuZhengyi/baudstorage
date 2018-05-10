@@ -66,10 +66,18 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 		return
 	}
 	// Load metaRanges relation from file and start raft
-	if err = m.Restore(); err != nil {
+	if err = m.load(); err != nil {
 		return
 	}
 
+	// start raft server
+	if err = m.startRaftServer(); err != nil {
+		return
+	}
+	// Start MetaRanges Store Schedule
+	if err = m.startStoreSchedule(); err != nil {
+		return
+	}
 	// Start tcp server
 	if err = m.startTcpServer(); err != nil {
 		return
@@ -77,6 +85,13 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	// Start reply
 	m.state = sRunning
 	m.wg.Add(1)
+	return
+}
+
+func (m *MetaNode) startStoreSchedule() (err error) {
+	for _, mr := range m.metaRangeManager.metaRangeMap {
+		go mr.StartStoreSchedule()
+	}
 	return
 }
 
@@ -113,31 +128,13 @@ func (m *MetaNode) prepareConfig(cfg *config.Config) (err error) {
 	return
 }
 
-func (m *MetaNode) Restore() (err error) {
-	// Restore metaRangeManager
-	err = m.metaRangeManager.RestoreMetaManagers(m.metaDir)
+func (m *MetaNode) load() (err error) {
+	// Load metaRangeManager
+	err = m.metaRangeManager.LoadMetaManagers(m.metaDir)
 	if err != nil {
 		return
 	}
-	//TODO:
-	// Register metaRaftEngine and raftServer
-	if err = m.startRaftServer(); err != nil {
-		return
-	}
-	// restore applyID from raft
-	m.RestoreApplyID()
 	return
-}
-
-func (m *MetaNode) RestoreApplyID() {
-	mrMap := make(map[string]*MetaRange)
-	m.metaRangeManager.Range(func(id string, mr *MetaRange) bool {
-		mrMap[id] = mr
-		return true
-	})
-	for _, mr := range mrMap {
-		mr.RestoreApplied()
-	}
 }
 
 // NewServer create an new MetaNode instance.
