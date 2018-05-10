@@ -52,6 +52,7 @@ var extraMP = []MetaPartition{
 	{"mp004", 320, 390, nil},
 	{"mp006", 600, 700, nil},
 }
+
 var extraTests = []testcase{
 	{301, ""},
 	{319, ""},
@@ -63,6 +64,16 @@ var extraTests = []testcase{
 	{600, "mp006"},
 	{700, "mp006"},
 	{701, ""},
+}
+
+var getNextTests = []testcase{
+	{0, "mp001"},
+	{1, "mp002"},
+	{101, "mp003"},
+	{301, "mp004"},
+	{320, "mp006"},
+	{600, ""},
+	{700, ""},
 }
 
 func init() {
@@ -166,7 +177,7 @@ func TestMetaPartitionFind(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	doTest(t, mw, globalTests)
+	doTest(t, mw, 0, globalTests)
 }
 
 func TestMetaPartitionUpdate(t *testing.T) {
@@ -187,14 +198,29 @@ func TestMetaPartitionUpdate(t *testing.T) {
 	}
 	mw.RUnlock()
 
-	doTest(t, mw, extraTests)
+	doTest(t, mw, 0, extraTests)
 }
 
-func doTest(t *testing.T, mw *MetaWrapper, tests []testcase) {
+func TestGetNextMetaPartition(t *testing.T) {
+	mw, err := NewMetaWrapper(TestNamespace, TestMasterAddr+":"+TestHttpPort)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doTest(t, mw, 1, getNextTests)
+}
+
+func doTest(t *testing.T, mw *MetaWrapper, op int, tests []testcase) {
+	var mp *MetaPartition
 	for _, tc := range tests {
-		mp := mw.getPartitionByInode(tc.inode)
+		switch op {
+		case 1:
+			mp = mw.getNextPartition(tc.inode)
+		default:
+			mp = mw.getPartitionByInode(tc.inode)
+		}
 		if checkResult(mp, tc.result) != 0 {
-			t.Fatal(mp)
+			t.Fatalf("inode = %v, %v", tc.inode, mp)
 		}
 		t.Logf("PASS: Finding inode = %v , %v", tc.inode, mp)
 	}

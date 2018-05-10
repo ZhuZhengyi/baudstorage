@@ -44,6 +44,7 @@ type NamespaceView struct {
 }
 
 type MetaWrapper struct {
+	sync.RWMutex
 	namespace string
 	master    []string
 	conns     *pool.ConnPool
@@ -53,8 +54,7 @@ type MetaWrapper struct {
 	partitions map[string]*MetaPartition
 	ranges     *btree.BTree // *MetaPartition tree indexed by Start
 
-	allocMeta chan string
-	sync.RWMutex
+	currStart uint64
 }
 
 func (this *MetaPartition) Less(than btree.Item) bool {
@@ -69,7 +69,6 @@ func NewMetaWrapper(namespace, masterHosts string) (*MetaWrapper, error) {
 	mw.conns = pool.NewConnPool()
 	mw.partitions = make(map[string]*MetaPartition)
 	mw.ranges = btree.New(32)
-	mw.allocMeta = make(chan string, MetaAllocBufSize)
 	if err := mw.Update(); err != nil {
 		return nil, err
 	}
@@ -118,13 +117,7 @@ func (mw *MetaWrapper) Update() error {
 
 	for _, mp := range nv.MetaPartitions {
 		mw.replaceOrInsertPartition(mp)
-		//TODO: if the meta group is full, do not put into the channel
-		select {
-		case mw.allocMeta <- mp.GroupID:
-		default:
-		}
 	}
-
 	return nil
 }
 
@@ -191,7 +184,21 @@ func (mw *MetaWrapper) getPartitionByInode(ino uint64) *MetaPartition {
 		return false
 	})
 
-	//TODO: if mp is nil, update meta partitions and try again
+	return mp
+}
+
+// Get the partition whose Start is Larger than ino.
+// Return nil if no successive partition.
+func (mw *MetaWrapper) getNextPartition(ino uint64) *MetaPartition {
+	var mp *MetaPartition
+	mw.RLock()
+	defer mw.RUnlock()
+
+	pivot := &MetaPartition{Start: ino + 1}
+	mw.ranges.AscendGreaterOrEqual(pivot, func(i btree.Item) bool {
+		mp = i.(*MetaPartition)
+		return false
+	})
 
 	return mp
 }

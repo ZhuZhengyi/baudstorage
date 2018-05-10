@@ -2,7 +2,6 @@ package sdk
 
 import (
 	"syscall"
-	"time"
 
 	"github.com/tiglabs/baudstorage/proto"
 )
@@ -18,35 +17,38 @@ func (mw *MetaWrapper) Create_ll(parentID uint64, name string, mode uint32) (sta
 	}
 	defer mw.putConn(parentConn, err)
 
+	// Create Inode
 	var inodeConn *MetaConn
 	var inodeCreated bool
-	// Create Inode
+
+	mp := mw.getPartitionByInode(mw.currStart)
+	if mp == nil {
+		return -1, nil, syscall.ENOMEM
+	}
+
 	for {
-		// Reset timer for each select
-		t := time.NewTicker(CreateInodeTimeout)
-		select {
-		case <-t.C:
+		inodeConn, err = mw.getConn(mp)
+		if err != nil {
 			break
-		case groupid := <-mw.allocMeta:
-			mp := mw.getPartitionByID(groupid)
-			if mp == nil {
-				continue
-			}
-			// establish the connection
-			inodeConn, err = mw.getConn(mp)
-			if err != nil {
-				continue
-			}
-			status, info, err = mw.icreate(inodeConn, mode)
-			if err == nil && status == int(proto.OpOk) {
-				// create inode is successful, and keep the connection
-				mw.allocMeta <- groupid
-				inodeCreated = true
-				break
-			}
-			// break the connection
-			mw.putConn(inodeConn, err)
 		}
+
+		status, info, err = mw.icreate(inodeConn, mode)
+		if err == nil && status == int(proto.OpOk) {
+			// create inode is successful, and keep the connection
+			inodeCreated = true
+			break
+		}
+		mw.putConn(inodeConn, err)
+
+		if err != nil || status != int(proto.OpInodeFullErr) {
+			break
+		}
+
+		mp = mw.getNextPartition(mw.currStart)
+		if mp == nil {
+			break
+		}
+		mw.currStart = mp.Start
 	}
 
 	if !inodeCreated {
