@@ -21,7 +21,7 @@ const (
 
 	ContinueRecive         = true
 	NotRecive              = false
-	ExtentWriterRecoverCnt = 3
+	ExtentWriterRecoverCnt = 1
 
 	DefaultWriteBufferSize = 1280 * util.KB
 )
@@ -160,7 +160,7 @@ func (writer *ExtentWriter) sendCurrPacket() (err error) {
 
 //if send failed,recover it
 func (writer *ExtentWriter) recover() (sucess bool) {
-	if writer.recoverCnt > 1 {
+	if writer.recoverCnt > ExtentWriterRecoverCnt {
 		return
 	}
 	var (
