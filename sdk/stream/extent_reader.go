@@ -48,12 +48,12 @@ func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWrape
 }
 
 func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
-	if reader.getCacheStatus() == AvaliBuffer && offset+size <= reader.cache.getBufferEndOffset() {
-		reader.cache.copyData(data, offset, size)
-		return
-	}
+	//if reader.getCacheStatus() == AvaliBuffer && offset+size <= reader.cache.getBufferEndOffset() {
+	//	reader.cache.copyData(data, offset, size)
+	//	return
+	//}
 	p := NewReadPacket(reader.key, offset, size)
-	data, err = reader.readDataFromVol(p)
+	err = reader.readDataFromVol(p, data)
 	reader.setCacheToUnavali()
 	if err == nil {
 		select {
@@ -68,10 +68,9 @@ func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
 	return
 }
 
-func (reader *ExtentReader) readDataFromVol(p *Packet) (data []byte, err error) {
+func (reader *ExtentReader) readDataFromVol(p *Packet, data []byte) (err error) {
 	rand.Seed(time.Now().UnixNano())
 	index := rand.Intn(int(reader.vol.Goal))
-	data = make([]byte, p.Size)
 	host := reader.vol.Hosts[index]
 	if _, err = reader.readDataFromHost(p, host, data); err != nil {
 		goto FORLOOP
@@ -152,7 +151,8 @@ func (reader *ExtentReader) fillCache() error {
 	bufferSize := int(util.Min(uint64(int(reader.key.Size)-reader.lastReadOffset), uint64(DefaultReadBufferSize)))
 	bufferOffset := reader.lastReadOffset
 	p := NewReadPacket(reader.key, bufferOffset, bufferSize)
-	data, err := reader.readDataFromVol(p)
+	data := make([]byte, bufferSize)
+	err := reader.readDataFromVol(p, data)
 	if err != nil {
 		return err
 	}

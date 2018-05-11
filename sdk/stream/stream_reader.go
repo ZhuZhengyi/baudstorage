@@ -101,7 +101,6 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 		return
 	}
 	readers, readerOffset, readerSize := stream.getReader(offset, size)
-	data = make([]byte, size)
 	for index := 0; index < len(readers); index++ {
 		reader := readers[index]
 		err = reader.read(data[canRead:canRead+readerSize[index]], readerOffset[index], readerSize[index])

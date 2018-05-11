@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"os"
@@ -16,6 +17,16 @@ func saveKey(inode uint64, k ExtentKey) (err error) {
 	sk.Put(k)
 	sk.Inode = inode
 	return
+}
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randSeq(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }
 
 func updateKey(inode uint64) (sk StreamKey, err error) {
@@ -56,10 +67,6 @@ func prepare(inode uint64, t *testing.T, data []byte) (localWriteFp *os.File, lo
 	if err != nil {
 		OccoursErr(fmt.Errorf("read localFile inode[%v] err[%v]\n", inode, err), t)
 	}
-	for j := 0; j < CFSBLOCKSIZE*2; j++ {
-		rand.Seed(time.Now().UnixNano())
-		data[j] = byte(rand.Int() % 255)
-	}
 	return
 }
 
@@ -74,7 +81,7 @@ func TestExtentClient_Write(t *testing.T) {
 	client := initClient(t)
 	var (
 		inode uint64
-		read int
+		read  int
 	)
 	inode = 2
 	sk := initInode(inode)
@@ -82,18 +89,24 @@ func TestExtentClient_Write(t *testing.T) {
 	data := make([]byte, CFSBLOCKSIZE*2)
 	localWriteFp, _ := prepare(inode, t, data)
 	for seqNo := 0; seqNo < CFSBLOCKSIZE; seqNo++ {
-		rand.Seed(time.Now().UnixNano())
-		ndata := data[:rand.Int31n(CFSBLOCKSIZE)]
+		writeStr := randSeq(1024 * 68)
+		ndata := ([]byte)(writeStr)
 		write, err := client.Write(inode, ndata)
 		if err != nil {
 			OccoursErr(fmt.Errorf("write inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 		}
 		client.Flush(inode)
-		rdata:=make([]byte,len(ndata))
-		read,err=client.Read(inode,rdata,writebytes,len(ndata))
+		rdata := make([]byte, len(ndata))
+		read, err = client.Read(inode, rdata, writebytes, len(ndata))
 		if err != nil {
 			OccoursErr(fmt.Errorf("read inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, read, err), t)
 		}
+		if !bytes.Equal(rdata, ndata) {
+			fmt.Printf("acatual read bytes[%v]\n", string(rdata))
+			fmt.Printf("expectr read bytes[%v]\n", writeStr)
+			OccoursErr(fmt.Errorf("acatual read bytes[%v] expect [%v]", string(rdata), writeStr), t)
+		}
+		fmt.Printf("hehehe")
 		_, err = localWriteFp.Write(ndata)
 		if err != nil {
 			OccoursErr(fmt.Errorf("write localFile inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
