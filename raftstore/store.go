@@ -1,4 +1,4 @@
-package multiraft
+package raftstore
 
 // Store is the interface defined the abstract and necessary methods for storage operation.
 type Store interface {
