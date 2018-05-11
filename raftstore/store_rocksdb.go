@@ -92,17 +92,3 @@ func (rs *RocksDBStore) Iterator(snapshot *gorocksdb.Snapshot) *gorocksdb.Iterat
 
 	return rs.db.NewIterator(ro)
 }
-
-func (rs *RocksDBStore) BatchPut(kvArr []*Kv) (interface{}, error) {
-	wo := gorocksdb.NewDefaultWriteOptions()
-	wb := gorocksdb.NewWriteBatch()
-	for _, kv := range kvArr {
-		wb.Put([]byte(kv.K), kv.V)
-	}
-
-	if err := rs.db.Write(wo, wb); err != nil {
-		err = fmt.Errorf("action[batchPutToRocksDB],err:%v", err)
-		return nil, err
-	}
-	return nil, nil
-}
