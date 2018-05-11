@@ -7,13 +7,6 @@ import (
 	"math/rand"
 )
 
-type VolReport struct {
-	VolID     uint64
-	VolStatus int
-	Total     uint64 `json:"TotalSize"`
-	Used      uint64 `json:"UsedSize"`
-}
-
 /*this struct define chunk file metadata on  dataNode */
 type FileMetaOnNode struct {
 	Crc       uint32

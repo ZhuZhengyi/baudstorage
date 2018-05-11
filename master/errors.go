@@ -36,12 +36,16 @@ func elementNotFound(name string) (err error) {
 	return errors.New(fmt.Sprintf("%v not found", name))
 }
 
+func taskNotFound(id string) (err error) {
+	return elementNotFound(fmt.Sprintf("task %v", id))
+}
+
 func metaGroupNotFound(id uint64) (err error) {
 	return elementNotFound(fmt.Sprintf("meta group %v", id))
 }
 
-func metaRangeHasExist(addr string) (err error) {
-	return hasExist(fmt.Sprintf("meta range %v", addr))
+func metaRangeNotFound(addr string) (err error) {
+	return elementNotFound(fmt.Sprintf("meta range %v", addr))
 }
 
 func hasExist(name string) (err error) {

@@ -28,7 +28,7 @@ type DataNode struct {
 	selectCount  uint64
 	carry        float64
 	sender       *AdminTaskSender
-	VolInfo      []*VolReport
+	VolInfo      []*proto.VolReport
 	VolInfoCount int
 }
 

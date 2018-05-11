@@ -533,7 +533,7 @@ func (vg *VolGroup) addVolHosts(addAddr string) (err error) {
 	return
 }
 
-func (vg *VolGroup) UpdateVol(vr *VolReport, dataNode *DataNode) {
+func (vg *VolGroup) UpdateVol(vr *proto.VolReport, dataNode *DataNode) {
 	vg.Lock()
 	volLoc, err := vg.getVolLocation(dataNode.HttpAddr)
 	vg.Unlock()

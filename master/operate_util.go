@@ -63,3 +63,17 @@ func UnmarshalTaskResponse(task *proto.AdminTask) (err error) {
 	task.Response = response
 	return
 }
+
+func contains(arr []string, element string) (ok bool) {
+	if arr == nil || len(arr) == 0 {
+		return
+	}
+
+	for _, e := range arr {
+		if e == element {
+			ok = true
+			break
+		}
+	}
+	return
+}

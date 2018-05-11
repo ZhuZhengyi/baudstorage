@@ -137,7 +137,14 @@ func (c *Cluster) processLoadVol(v *VolGroup, isRecover bool) {
 
 func (c *Cluster) checkMetaGroups(ns *NameSpace) {
 	ns.metaGroupLock.RLock()
-	ns.metaGroupLock.RUnlock()
+	defer ns.metaGroupLock.RUnlock()
+	for _, mg := range ns.MetaGroups {
+		mg.checkStatus(true)
+		mg.checkReplicas()
+		tasks := mg.generateReplicaTask()
+		c.putMetaNodeTasks(tasks)
+	}
+
 }
 
 func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTask) {
@@ -153,7 +160,7 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 		goto errDeal
 	}
 	if _, ok := metaNode.sender.taskMap[task.ID]; !ok {
-		err = elementNotFound(task.ID)
+		err = taskNotFound(task.ID)
 		goto errDeal
 	}
 	if err = UnmarshalTaskResponse(task); err != nil {
@@ -216,6 +223,28 @@ errDeal:
 }
 
 func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHeartbeatResponse) {
+	var (
+		metaNode *MetaNode
+		err      error
+		logMsg   string
+	)
+
+	if metaNode, err = c.getMetaNode(nodeAddr); err != nil {
+		goto errDeal
+	}
+
+	logMsg = fmt.Sprintf("action[dealMetaNodeHeartbeat],metaNode:%v ReportTime:%v  success", metaNode.Addr, time.Now().Unix())
+	log.LogDebug(logMsg)
+	metaNode.setNodeAlive()
+	metaNode.metaRangeInfo = resp.MetaRangeInfo
+	c.UpdateMetaNode(metaNode)
+	metaNode.metaRangeCount = len(metaNode.metaRangeInfo)
+	metaNode.metaRangeInfo = nil
+
+	return
+errDeal:
+	logMsg = fmt.Sprintf("nodeAddr %v hearbeat error :%v", nodeAddr, err.Error())
+	log.LogError(logMsg)
 	return
 }
 
@@ -364,6 +393,7 @@ func (c *Cluster) dealDataNodeHeartbeat(nodeAddr string, resp *proto.DataNodeHea
 	logMsg = fmt.Sprintf("action[dealDataNodeHeartbeat],dataNode:%v ReportTime:%v  success", dataNode.HttpAddr, time.Now().Unix())
 	log.LogDebug(logMsg)
 	dataNode.setNodeAlive()
+	dataNode.VolInfo = resp.VolInfo
 	c.UpdateDataNode(dataNode)
 	dataNode.VolInfoCount = len(dataNode.VolInfo)
 	dataNode.VolInfo = nil
@@ -383,6 +413,17 @@ func (c *Cluster) UpdateDataNode(dataNode *DataNode) {
 		}
 		if vol, err := c.getVolGroupByVolID(vr.VolID); err == nil {
 			vol.UpdateVol(vr, dataNode)
+		}
+	}
+}
+
+func (c *Cluster) UpdateMetaNode(metaNode *MetaNode) {
+	for _, mr := range metaNode.metaRangeInfo {
+		if mr == nil {
+			continue
+		}
+		if mg, err := c.getMetaGroupByID(mr.GroupId); err == nil {
+			mg.updateMetaGroup(mr, metaNode)
 		}
 	}
 }

@@ -42,9 +42,10 @@ const (
 )
 
 const (
-	MetaRangeUnavailable = -1
-	MetaRangeReadOnly    = 1
-	MetaRangeReadWrite   = 2
+	//high 4 bit represent range is available,low 4 bit represent range is writable
+	MetaRangeUnavailable uint8 = 0x00
+	MetaRangeReadOnly    uint8 = 0x10
+	MetaRangeReadWrite   uint8 = 0x11
 )
 
 const (

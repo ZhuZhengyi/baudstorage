@@ -8,20 +8,6 @@ import (
 	"time"
 )
 
-func contains(arr []string, element string) (ok bool) {
-	if arr == nil || len(arr) == 0 {
-		return
-	}
-
-	for _, e := range arr {
-		if e == element {
-			ok = true
-			break
-		}
-	}
-	return
-}
-
 type NodeTab struct {
 	Carry  float64
 	Weight float64
