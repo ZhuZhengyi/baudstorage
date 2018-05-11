@@ -5,7 +5,6 @@ import (
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/sdk"
 	"io"
-	"log"
 	"sync"
 )
 
@@ -60,7 +59,7 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	if size > CFSEXTENTSIZE {
 		return 0, fmt.Errorf("read endOffset is So High")
 	}
-	if offset < int(stream.fileSize) {
+	if offset+size < int(stream.fileSize) {
 		return size, nil
 	}
 	var newStreamKey *StreamKey
@@ -110,9 +109,10 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 		reader := readers[index]
 		err = reader.read(data[canRead:canRead+readerSize[index]], readerOffset[index], readerSize[index])
 		if err != nil {
-			err = errors.Annotatef(err, "UserRequest{inode[%v] offset[%v] size[%v]} readers{"+
-				"[%v] offset[%v] size[%v] occous error}", stream.inode, offset, size, reader.toString(), readerOffset[index],
+			err = errors.Annotatef(err, "UserRequest{inode[%v] FileSize[%v] offset[%v] size[%v]} readers{"+
+				"[%v] offset[%v] size[%v] occous error}", stream.inode, stream.fileSize, offset, size, reader.toString(), readerOffset[index],
 				readerSize[index])
+			return
 		}
 		canRead += readerSize[index]
 	}
@@ -124,21 +124,29 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 	readers = make([]*ExtentReader, 0)
 	readerOffset = make([]int, 0)
 	readerSize = make([]int, 0)
-	orgOffset := offset
-	orgSize := size
+	//orgOffset := offset
+	//orgSize := size
 	for _, r := range stream.readers {
 		if size <= 0 {
 			break
 		}
-		if r.startInodeOffset <= offset && r.endInodeOffset <= offset+size {
+		if r.startInodeOffset > offset {
+			continue
+		}
+		if r.endInodeOffset > offset+size {
+			readers = append(readers, r)
+			currReaderOffset := offset - r.startInodeOffset
+			readerOffset = append(readerOffset, currReaderOffset)
+			currReaderSize := size
+			readerSize = append(readerSize, currReaderSize)
+			offset += currReaderSize
+			size -= currReaderSize
+		} else if r.endInodeOffset <= offset+size {
 			readers = append(readers, r)
 			currReaderOffset := offset - r.startInodeOffset
 			readerOffset = append(readerOffset, currReaderOffset)
 			currReaderSize := (int(r.key.Size) - currReaderOffset)
 			readerSize = append(readerSize, currReaderSize)
-			log.Printf("inode[%v] orgOffset[%v] orgSize[%v] allocate reader[%v] "+
-				"readerOffset[%v] readerSize[%v] filesize[%v]\n", stream.inode, orgOffset, orgSize, r.toString(),
-				currReaderOffset, currReaderSize, stream.fileSize)
 			offset += currReaderSize
 			size -= currReaderSize
 		}
