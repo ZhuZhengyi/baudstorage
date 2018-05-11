@@ -5,6 +5,7 @@ import (
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/sdk"
 	"io"
+	"log"
 	"sync"
 )
 
@@ -31,7 +32,7 @@ func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, updateExtentFn fu
 	var offset int
 	var reader *ExtentReader
 	for _, key := range stream.extents.Extents {
-		if reader, err = NewExtentReader(inode,offset, key, stream.wraper); err != nil {
+		if reader, err = NewExtentReader(inode, offset, key, stream.wraper); err != nil {
 			return nil, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", inode, key)
 		}
 		stream.readers = append(stream.readers, reader)
@@ -75,7 +76,7 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 			if index < oldReaderCnt {
 				stream.readers[index].updateKey(key)
 			} else {
-				if reader, err = NewExtentReader(stream.inode,offset, key, stream.wraper); err != nil {
+				if reader, err = NewExtentReader(stream.inode, offset, key, stream.wraper); err != nil {
 					return 0, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
 				}
 				stream.readers = append(stream.readers, reader)
@@ -123,18 +124,11 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 	readers = make([]*ExtentReader, 0)
 	readerOffset = make([]int, 0)
 	readerSize = make([]int, 0)
-	//orgOffset:=offset
-	//orgSize:=size
+	orgOffset := offset
+	orgSize := size
 	for _, r := range stream.readers {
-		if r.startInodeOffset <= offset && r.endInodeOffset >= offset+size {
-			readers = append(readers, r)
-			currReaderOffset := offset - r.startInodeOffset
-			currReaderSize := size
-			readerOffset = append(readerOffset, currReaderOffset)
-			readerSize = append(readerSize, currReaderSize)
-			size -= currReaderSize
-			//log.Debug("inode[%v] orgOffset[%v] orgSize[%v] allocate reader[%v] " +
-			//	"readerOffset[%v] readerSize[%v]\n",stream.inode,orgOffset,orgSize,r.toString(),currReaderOffset,currReaderSize)
+		if size <= 0 {
+			break
 		}
 		if r.startInodeOffset <= offset && r.endInodeOffset <= offset+size {
 			readers = append(readers, r)
@@ -142,14 +136,13 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 			readerOffset = append(readerOffset, currReaderOffset)
 			currReaderSize := (int(r.key.Size) - currReaderOffset)
 			readerSize = append(readerSize, currReaderSize)
-			//log.Debug("inode[%v] orgOffset[%v] orgSize[%v] allocate reader[%v] " +
-			//	"readerOffset[%v] readerSize[%v]\n",stream.inode,orgOffset,orgSize,r.toString(),currReaderOffset,currReaderSize)
+			log.Printf("inode[%v] orgOffset[%v] orgSize[%v] allocate reader[%v] "+
+				"readerOffset[%v] readerSize[%v] filesize[%v]\n", stream.inode, orgOffset, orgSize, r.toString(),
+				currReaderOffset, currReaderSize, stream.fileSize)
 			offset += currReaderSize
 			size -= currReaderSize
 		}
-		if size <= 0 {
-			break
-		}
+
 	}
 
 	return
