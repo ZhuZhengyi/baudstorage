@@ -168,6 +168,15 @@ func (c *Cluster) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error) {
 	return
 }
 
+func (c *Cluster) getMetaGroupByID(id uint64) (mg *MetaGroup, err error) {
+	for _, ns := range c.namespaces {
+		if mg, err = ns.getMetaGroupById(id); err == nil {
+			return
+		}
+	}
+	return
+}
+
 func (c *Cluster) getNamespace(nsName string) (ns *NameSpace, err error) {
 	ns, ok := c.namespaces[nsName]
 	if !ok {

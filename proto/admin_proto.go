@@ -5,8 +5,8 @@ package proto
   or send command to datanode
 */
 
-const(
-	CmdFailed = 0
+const (
+	CmdFailed  = 0
 	CmdSuccess = 1
 )
 
@@ -17,11 +17,10 @@ type CreateVolRequest struct {
 }
 
 type CreateVolResponse struct {
-	VolId   uint64
+	VolId  uint64
 	Status uint8
 	Result string
 }
-
 
 type DeleteVolRequest struct {
 	VolType string
@@ -32,7 +31,7 @@ type DeleteVolRequest struct {
 type DeleteVolResponse struct {
 	Status uint8
 	Result string
-	VolId   uint64
+	VolId  uint64
 }
 
 type LoadVolRequest struct {
@@ -41,12 +40,12 @@ type LoadVolRequest struct {
 }
 
 type LoadVolResponse struct {
-	VolType string
-	VolId   uint64
-	Used    uint64
+	VolType     string
+	VolId       uint64
+	Used        uint64
 	VolSnapshot []*File
-	Status  uint8
-	Result  string
+	Status      uint8
+	Result      string
 }
 
 type File struct {
@@ -77,20 +76,36 @@ type HeartBeatRequest struct {
 	CurrTime int64
 }
 
+type VolReport struct {
+	VolID     uint64
+	VolStatus int
+	Total     uint64
+	Used      uint64
+}
+
 type DataNodeHeartBeatResponse struct {
 	MaxDiskAvailWeight int64
-	Total              uint64 `json:"TotalWeight"`
-	Used               uint64 `json:"UsedWeight"`
-	ZoneName           string `json:"Zone"`
+	Total              uint64
+	Used               uint64
+	RackName           string
+	VolInfo            []*VolReport
 	Status             uint8
 	Result             string
 }
 
+type MetaRangeReport struct {
+	GroupId uint64
+	Status  int
+	Total   uint64
+	Used    uint64
+}
+
 type MetaNodeHeartbeatResponse struct {
-	Total uint64
-	Used uint64
-	Status             uint8
-	Result             string
+	Total         uint64
+	Used          uint64
+	MetaRangeInfo []*MetaRangeReport
+	Status        uint8
+	Result        string
 }
 
 type DeleteFileRequest struct {
@@ -101,6 +116,6 @@ type DeleteFileRequest struct {
 type DeleteFileResponse struct {
 	Status uint8
 	Result string
-	VolId   uint64
-	Name  string
+	VolId  uint64
+	Name   string
 }

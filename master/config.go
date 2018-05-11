@@ -17,6 +17,7 @@ const (
 	LoadVolWaitTime                      = 100
 	DefaultLoadVolFrequencyTime          = 60 * 60
 	DefaultEveryLoadVolCount             = 10
+	DefaultMetaRangeTimeOutSec           = 5 * DefaultCheckHeartBeatIntervalSeconds
 )
 
 type ClusterConfig struct {
