@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/tiglabs/baudstorage/multiraft"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk/stream"
 	"github.com/tiglabs/raft"
@@ -20,22 +21,24 @@ var (
 )
 
 /* MetRangeConfig used by create metaRange and serialize
-*  id:		Consist with 'namespace_ID'. (Required when initialize)
-*  start:	Start inode ID of this range. (Required when initialize)
-*  end:		End inode ID of this range. (Required when initialize)
-*  cursor:	Cursor ID value of inode what have been already assigned.
-*  raftGroupID:	Identity for raft group.Raft nodes in same raft group must have same groupID.
-*  raftServer:	Raft server instance.
+*  ID:		Consist with 'namespace_ID'. (Required when initialize)
+*  Start:	Start inode ID of this range. (Required when initialize)
+*  End:		End inode ID of this range. (Required when initialize)
+*  Cursor:	Cursor ID value of inode what have been already assigned.
+*  RaftGroupID:	Identity for raft group.Raft nodes in same raft group must have same groupID.
+*  RaftServer:	Raft server instance.
  */
 type MetaRangeConfig struct {
-	ID          string           `json:"id"`
-	Start       uint64           `json:"start"`
-	End         uint64           `json:"end"`
-	Cursor      uint64           `json:"-"`
-	RootDir     string           `json:"-"`
-	Peers       []string         `json:"peers"`
-	RaftGroupID uint64           `json:"raftGroupID"`
-	RaftServer  *raft.RaftServer `json:"-"`
+	ID            string               `json:"id"`
+	Start         uint64               `json:"start"`
+	End           uint64               `json:"end"`
+	Cursor        uint64               `json:"-"`
+	RootDir       string               `json:"-"`
+	Peers         []string             `json:"peers"`
+	RaftGroupID   uint64               `json:"raftGroupID"`
+	RaftServer    *raft.RaftServer     `json:"-"`
+	RaftPartition *multiraft.Partition `json:"-"`
+	LeaderID      uint64               `json:"-"`
 }
 
 // MetaRange manages necessary information of meta range, include ID, boundary of range and raft identity.
