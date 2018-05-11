@@ -9,15 +9,22 @@ type CreateNameSpaceResponse struct {
 	Result string
 }
 
+type Peer struct {
+	id   uint64
+	addr string
+}
 type CreateMetaRangeRequest struct {
 	MetaId  string
+	NsName  string
 	Start   uint64
 	End     uint64
 	GroupId uint64
-	Members []string
+	Members []Peer
 }
 
 type CreateMetaRangeResponse struct {
-	Status uint8
-	Result string
+	NsName  string
+	GroupId uint64
+	Status  uint8
+	Result  string
 }
