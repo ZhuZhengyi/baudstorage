@@ -1,7 +1,10 @@
 package raftstore
 
 import (
+	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
+	"os"
+	"path"
 )
 
 const (
