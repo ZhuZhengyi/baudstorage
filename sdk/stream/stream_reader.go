@@ -31,7 +31,7 @@ func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, updateExtentFn fu
 	var offset int
 	var reader *ExtentReader
 	for _, key := range stream.extents.Extents {
-		if reader, err = NewExtentReader(offset, key, stream.wraper); err != nil {
+		if reader, err = NewExtentReader(inode,offset, key, stream.wraper); err != nil {
 			return nil, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", inode, key)
 		}
 		stream.readers = append(stream.readers, reader)
@@ -75,7 +75,7 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 			if index < oldReaderCnt {
 				stream.readers[index].updateKey(key)
 			} else {
-				if reader, err = NewExtentReader(offset, key, stream.wraper); err != nil {
+				if reader, err = NewExtentReader(stream.inode,offset, key, stream.wraper); err != nil {
 					return 0, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
 				}
 				stream.readers = append(stream.readers, reader)

@@ -8,6 +8,9 @@ import (
 	"runtime"
 	"testing"
 	"time"
+	"net/http"
+	"log"
+	_ "net/http/pprof"
 )
 
 var allKeys map[uint64]*StreamKey
@@ -39,6 +42,9 @@ func openFileForWrite(inode uint64, action string) (f *os.File, err error) {
 }
 
 func initClient(t *testing.T) (client *ExtentClient) {
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 	var err error
 	client, err = NewExtentClient("log", "127.0.0.1:7778", saveKey, updateKey)
 	if err != nil {

@@ -24,6 +24,9 @@ const (
 	ExtentWriterRecoverCnt = 1
 
 	DefaultWriteBufferSize = 1280 * util.KB
+
+	FlushIng = 2
+	NoFlush=1
 )
 
 var (
@@ -70,7 +73,11 @@ func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper
 
 //InitFlushCond   when user call backEndlush func
 func (writer *ExtentWriter) initFlushCond() {
+	if atomic.LoadUint64(&writer.isFlushIng)==FlushIng{
+		return
+	}
 	writer.cond = sync.NewCond(&sync.Mutex{})
+	atomic.StoreUint64(&writer.isFlushIng,FlushIng)
 }
 
 //when backEndlush func called,and sdk must wait
@@ -89,6 +96,7 @@ func (writer *ExtentWriter) flushWait() {
 	writer.cond.L.Lock()
 	writer.cond.Wait()
 	writer.cond.L.Unlock()
+	atomic.StoreUint64(&writer.isFlushIng,NoFlush)
 
 }
 
