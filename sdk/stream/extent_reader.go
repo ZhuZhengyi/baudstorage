@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type ExtentReader struct {
@@ -99,6 +100,7 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 	}
 	defer func() {
 		if err != nil {
+			log.LogError(err.Error())
 			conn.Close()
 		} else {
 			reader.wraper.PutConnect(conn)
