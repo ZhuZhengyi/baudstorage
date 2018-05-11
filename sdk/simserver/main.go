@@ -17,9 +17,9 @@ import (
 
 const (
 	SimNamespace  = "simserver"
-	SimMasterPort = "9900"
+	SimMasterPort = "8900"
 	SimMetaAddr   = "localhost"
-	SimMetaPort   = "9910"
+	SimMetaPort   = "8910"
 )
 
 var globalMP = []MetaPartition{
