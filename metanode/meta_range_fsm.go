@@ -95,8 +95,7 @@ func (mf *MetaRangeFsm) ApplySnapshot(peers []raftproto.Peer,
 			return errors.New("unknown op=" + strconv.Itoa(snap.Op))
 		}
 	}
-	newMF.applyID = newMF.metaRange.RaftServer.AppliedIndex(newMF.metaRange.
-		RaftGroupID)
+	newMF.applyID = newMF.metaRange.RaftPartition.AppliedIndex()
 	*mf = *newMF
 	return nil
 }
@@ -106,7 +105,6 @@ func (mf *MetaRangeFsm) HandleFatalEvent(err *raft.FatalError) {
 }
 
 func (mf *MetaRangeFsm) HandleLeaderChange(leader uint64) {
-	mf.metaRange.LeaderID = leader
 }
 
 func (mf *MetaRangeFsm) Set(key, val []byte) (err error) {

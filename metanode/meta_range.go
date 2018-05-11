@@ -9,10 +9,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/tiglabs/baudstorage/multiraft"
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/sdk/stream"
-	"github.com/tiglabs/raft"
 )
 
 // Errors
@@ -29,16 +28,14 @@ var (
 *  RaftServer:	Raft server instance.
  */
 type MetaRangeConfig struct {
-	ID            string               `json:"id"`
-	Start         uint64               `json:"start"`
-	End           uint64               `json:"end"`
-	Cursor        uint64               `json:"-"`
-	RootDir       string               `json:"-"`
-	Peers         []string             `json:"peers"`
-	RaftGroupID   uint64               `json:"raftGroupID"`
-	RaftServer    *raft.RaftServer     `json:"-"`
-	RaftPartition *multiraft.Partition `json:"-"`
-	LeaderID      uint64               `json:"-"`
+	ID            string              `json:"id"`
+	Start         uint64              `json:"start"`
+	End           uint64              `json:"end"`
+	Cursor        uint64              `json:"-"`
+	RootDir       string              `json:"-"`
+	Peers         []string            `json:"peers"`
+	RaftGroupID   uint64              `json:"raftGroupID"`
+	RaftPartition raftstore.Partition `json:"-"`
 }
 
 // MetaRange manages necessary information of meta range, include ID, boundary of range and raft identity.
