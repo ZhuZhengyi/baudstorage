@@ -31,12 +31,10 @@ func initClient(t *testing.T) (client *ExtentClient) {
 	var err error
 	client, err = NewExtentClient("log", "127.0.0.1:7778", saveKey, updateKey)
 	if err != nil {
-		t.Logf(err.Error())
-		t.FailNow()
+		OccoursErr(fmt.Errorf("init client err[%v]", err.Error()), t)
 	}
 	if client == nil {
-		t.Logf("init failed")
-		t.FailNow()
+		OccoursErr(fmt.Errorf("init client err[%v]", err.Error()), t)
 	}
 	return
 }
@@ -48,12 +46,15 @@ func initInode(inode uint64) (sk *StreamKey) {
 	return
 }
 
-func prepare(inode uint64, t *testing.T, data []byte) (localFp *os.File) {
+func prepare(inode uint64, t *testing.T, data []byte) (localWriteFp *os.File, localReadFp *os.File) {
 	var err error
-	localFp, err = openFileForWrite(inode, "write")
+	localWriteFp, err = openFileForWrite(inode, "write")
 	if err != nil {
-		fmt.Printf("write localFile inode[%v] err[%v]\n", inode, err)
-		t.FailNow()
+		OccoursErr(fmt.Errorf("write localFile inode[%v] err[%v]\n", inode, err), t)
+	}
+	localReadFp, err = os.Open(fmt.Sprintf("inode_%v_%v.txt", inode, "read"))
+	if err != nil {
+		OccoursErr(fmt.Errorf("read localFile inode[%v] err[%v]\n", inode, err), t)
 	}
 	for j := 0; j < CFSBLOCKSIZE*2; j++ {
 		rand.Seed(time.Now().UnixNano())
@@ -62,37 +63,39 @@ func prepare(inode uint64, t *testing.T, data []byte) (localFp *os.File) {
 	return
 }
 
+func OccoursErr(err error, t *testing.T) {
+	fmt.Println(err.Error())
+	t.FailNow()
+}
+
 func TestExtentClient_Write(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	allKeys = make(map[uint64]*StreamKey)
 	client := initClient(t)
 	var (
-		inode        uint64
-		localFpWrite *os.File
+		inode uint64
 	)
 	inode = 2
 	sk := initInode(inode)
 	writebytes := 0
 	data := make([]byte, CFSBLOCKSIZE*2)
-	localFpWrite = prepare(inode, t, data)
+	localWriteFp, localReadFp := prepare(inode, t, data)
 	for seqNo := 0; seqNo < CFSBLOCKSIZE; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
 		ndata := data[:rand.Int31n(CFSBLOCKSIZE)]
 		writebytes += len(ndata)
 		write, err := client.Write(inode, ndata)
 		if err != nil {
-			fmt.Printf("write inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err)
-			t.FailNow()
+			OccoursErr(fmt.Errorf("write inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 		}
-		_, err = localFpWrite.Write(ndata)
+		_, err = localWriteFp.Write(ndata)
 		if err != nil {
-			fmt.Println(err)
-			t.FailNow()
+			OccoursErr(fmt.Errorf("write localFile inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 		}
 	}
 	client.Close(inode)
 	fmt.Println("sum write bytes:", writebytes)
-	localFpWrite.Close()
+	localWriteFp.Close()
 	for {
 		time.Sleep(time.Second)
 		if sk.Size() == uint64(writebytes) {
