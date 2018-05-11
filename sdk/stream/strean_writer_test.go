@@ -3,14 +3,14 @@ package stream
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"math/rand"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"testing"
 	"time"
-	"net/http"
-	"log"
-	_ "net/http/pprof"
 )
 
 var allKeys map[uint64]*StreamKey
@@ -95,13 +95,18 @@ func TestExtentClient_Write(t *testing.T) {
 	data := make([]byte, CFSBLOCKSIZE*2)
 	localWriteFp, _ := prepare(inode, t, data)
 	for seqNo := 0; seqNo < CFSBLOCKSIZE; seqNo++ {
-		writeStr := randSeq(1024 * 1)
+		writeStr := randSeq(2000 * 1)
 		ndata := ([]byte)(writeStr)
 		write, err := client.Write(inode, ndata)
 		if err != nil {
 			OccoursErr(fmt.Errorf("write inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 		}
-		client.Flush(inode)
+		err = client.Flush(inode)
+		if err != nil {
+			OccoursErr(fmt.Errorf("flush inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
+		}
+		fmt.Printf("hahah ,write ok [%v]\n", seqNo)
+
 		rdata := make([]byte, len(ndata))
 		read, err = client.Read(inode, rdata, writebytes, len(ndata))
 		if err != nil || read != len(ndata) {
@@ -116,8 +121,7 @@ func TestExtentClient_Write(t *testing.T) {
 		if err != nil {
 			OccoursErr(fmt.Errorf("write localFile inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 		}
-		writebytes += len(ndata)
-		fmt.Printf("hahah ,write ok [%v]\n", seqNo)
+		writebytes += write
 	}
 	client.Close(inode)
 	fmt.Println("sum write bytes:", writebytes)

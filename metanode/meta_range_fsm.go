@@ -7,6 +7,7 @@ import (
 	"github.com/google/btree"
 	"github.com/tiglabs/raft"
 	raftproto "github.com/tiglabs/raft/proto"
+	"strconv"
 )
 
 const defaultBTreeDegree = 32
@@ -23,30 +24,38 @@ type MetaRangeFsm struct {
 }
 
 func (mf *MetaRangeFsm) Apply(command []byte, index uint64) (interface{}, error) {
-	m := &MetaRangeSnapshot{}
-	err := m.Decode(command)
+	msg := &MetaRangeSnapshot{}
+	err := msg.Decode(command)
 	if err != nil {
 		return nil, err
 	}
 	//TODO
-	switch m.Op {
+	switch msg.Op {
+	/*
+		case opCreateInode:
+		case opDeleteInode:
+		case opCreateDentry:
+		case opDeleteDentry:
+	*/
 	}
 	mf.applyID = index
 	return nil, nil
 }
 
-func (mf *MetaRangeFsm) ApplyMemeberChange(confChange *raftproto.ConfChange,
-	index uint64) (interface{}, error) {
+func (mf *MetaRangeFsm) ApplyMemeberChange(confChange *raftproto.ConfChange, index uint64) (interface{}, error) {
+	// Write Disk
+	// Rename
+	// Change memory state
 	switch confChange.Type {
 	case raftproto.ConfAddNode:
 		//TODO
+
 	case raftproto.ConfRemoveNode:
 		//TODO
 	case raftproto.ConfUpdateNode:
 		//TODO
 
 	}
-
 	mf.applyID = index
 	return nil, nil
 }
@@ -61,38 +70,52 @@ func (mf *MetaRangeFsm) Snapshot() (raftproto.Snapshot, error) {
 
 func (mf *MetaRangeFsm) ApplySnapshot(peers []raftproto.Peer,
 	iter raftproto.SnapIterator) error {
+	newMF := NewMetaRangeFsm(mf.metaRange)
 	for {
 		data, err := iter.Next()
 		if err != nil {
 			return err
 		}
-		snap := NewMetaRangeSnapshot("", "", "")
+		snap := NewMetaRangeSnapshot(0, "", "")
 		if err = snap.Decode(data); err != nil {
 			return err
 		}
 		switch snap.Op {
-		case "inode":
+		case opCreateInode:
 			var ino = &Inode{}
 			ino.ParseKey(snap.K)
 			ino.ParseValue(snap.V)
-			mf.CreateInode(ino)
-		case "dentry":
+			newMF.CreateInode(ino)
+		case opCreateDentry:
 			dentry := &Dentry{}
 			dentry.ParseKey(snap.K)
 			dentry.ParseValue(snap.V)
-			mf.CreateDentry(dentry)
+			newMF.CreateDentry(dentry)
 		default:
-			return errors.New("unknow op=" + snap.Op)
+			return errors.New("unknown op=" + strconv.Itoa(snap.Op))
 		}
 	}
-	mf.applyID = mf.metaRange.RaftServer.AppliedIndex(mf.metaRange.RaftGroupID)
+	newMF.applyID = newMF.metaRange.RaftPartition.AppliedIndex()
+	*mf = *newMF
 	return nil
 }
 
 func (mf *MetaRangeFsm) HandleFatalEvent(err *raft.FatalError) {
-
+	panic(err)
 }
 
 func (mf *MetaRangeFsm) HandleLeaderChange(leader uint64) {
+}
 
+func (mf *MetaRangeFsm) Set(key, val []byte) (err error) {
+	//submit raft: op,k,v
+	return
+}
+
+func (mf *MetaRangeFsm) Get(key []byte) (val interface{}, err error) {
+	return
+}
+
+func (mf *MetaRangeFsm) Delete(key []byte) (err error) {
+	return
 }

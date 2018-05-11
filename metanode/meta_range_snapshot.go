@@ -7,7 +7,7 @@ import (
 )
 
 type MetaRangeSnapshot struct {
-	Op string `json:"op"`
+	Op int    `json:"op"`
 	K  string `json:"k"`
 	V  string `json:"v"`
 }
@@ -20,7 +20,7 @@ func (s *MetaRangeSnapshot) Decode(data []byte) error {
 	return json.Unmarshal(data, s)
 }
 
-func NewMetaRangeSnapshot(op, key, value string) *MetaRangeSnapshot {
+func NewMetaRangeSnapshot(op int, key, value string) *MetaRangeSnapshot {
 	return &MetaRangeSnapshot{
 		Op: op,
 		K:  key,
@@ -72,7 +72,8 @@ func (si *SnapshotIterator) Next() (data []byte, err error) {
 				return true
 			}
 			si.curItem = ino
-			snap := NewMetaRangeSnapshot("inode", ino.GetKey(), ino.GetValue())
+			snap := NewMetaRangeSnapshot(opCreateInode, ino.GetKey(),
+				ino.GetValue())
 			data, err = snap.Encode()
 			si.cur++
 			return false
@@ -90,7 +91,8 @@ func (si *SnapshotIterator) Next() (data []byte, err error) {
 			return true
 		}
 		si.curItem = dentry
-		snap := NewMetaRangeSnapshot("dentry", dentry.GetKey(), dentry.GetValue())
+		snap := NewMetaRangeSnapshot(opCreateDentry, dentry.GetKey(),
+			dentry.GetValue())
 		data, err = snap.Encode()
 		si.cur++
 		return false

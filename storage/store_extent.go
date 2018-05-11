@@ -177,14 +177,28 @@ func (s *ExtentStore) Write(extentId uint64, offset, size int64, data []byte, cr
 	}
 	offsetInBlock := offset % BlockSize
 	blockNo := offset / BlockSize
-	if offsetInBlock != 0 {
+	if offsetInBlock!=0 {
 		blockBuffer := make([]byte, BlockSize)
-		e.file.ReadAt(blockBuffer, offset-offsetInBlock+BlockCrcHeaderSize)
+		e.file.ReadAt(blockBuffer, (blockNo)*BlockSize+BlockCrcHeaderSize)
 		crc = crc32.ChecksumIEEE(blockBuffer)
 	}
 	binary.BigEndian.PutUint32(e.blocksCrc[blockNo*PerBlockCrcSize:(blockNo+1)*PerBlockCrcSize], crc)
 	if _, err = e.file.WriteAt(e.blocksCrc[blockNo*PerBlockCrcSize:(blockNo+1)*PerBlockCrcSize], blockNo*PerBlockCrcSize); err != nil {
 		return
+	}
+	if offsetInBlock+size<=BlockSize{
+		return
+	}
+
+	nextBlockNo:=blockNo+1
+	if  offsetInBlock+size>BlockSize {
+		nextBlockBuffer := make([]byte, BlockSize)
+		e.file.ReadAt(nextBlockBuffer, (nextBlockNo)*BlockSize+BlockCrcHeaderSize)
+		crc = crc32.ChecksumIEEE(nextBlockBuffer)
+		binary.BigEndian.PutUint32(e.blocksCrc[(nextBlockNo)*PerBlockCrcSize:(nextBlockNo+1)*PerBlockCrcSize], crc)
+		if _, err = e.file.WriteAt(e.blocksCrc[(nextBlockNo)*PerBlockCrcSize:(nextBlockNo+1)*PerBlockCrcSize], (nextBlockNo)*PerBlockCrcSize); err != nil {
+			return
+		}
 	}
 
 	return
@@ -198,8 +212,7 @@ func (s *ExtentStore) checkOffsetAndSize(offset, size int64) error {
 		return ErrorUnmatchPara
 	}
 
-	offsetInBlock := offset % BlockSize
-	if offsetInBlock+size > BlockSize {
+	if size > BlockSize{
 		return ErrorUnmatchPara
 	}
 

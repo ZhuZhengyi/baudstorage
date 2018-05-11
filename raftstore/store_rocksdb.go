@@ -1,4 +1,4 @@
-package multiraft
+package raftstore
 
 import (
 	"fmt"
@@ -41,11 +41,11 @@ func (rs *RocksDBStore) Open() error {
 
 }
 
-func (rs *RocksDBStore) Delete(key string) (interface{}, error) {
+func (rs *RocksDBStore) Del(key []byte) ([]byte, error) {
 	wo := gorocksdb.NewDefaultWriteOptions()
 	wb := gorocksdb.NewWriteBatch()
 	defer wb.Clear()
-	if err := rs.db.Delete(wo, []byte(key)); err != nil {
+	if err := rs.db.Delete(wo, key); err != nil {
 		err = fmt.Errorf("action[deleteFromRocksDB],err:%v", err)
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (rs *RocksDBStore) Delete(key string) (interface{}, error) {
 
 }
 
-func (rs *RocksDBStore) Put(key string, value []byte) (interface{}, error) {
+func (rs *RocksDBStore) Put(key, value []byte) ([]byte, error) {
 	wo := gorocksdb.NewDefaultWriteOptions()
 	wb := gorocksdb.NewWriteBatch()
 	wb.Put([]byte(key), value)
@@ -66,10 +66,10 @@ func (rs *RocksDBStore) Put(key string, value []byte) (interface{}, error) {
 	return nil, nil
 }
 
-func (rs *RocksDBStore) Get(key string) (value []byte, err error) {
+func (rs *RocksDBStore) Get(key []byte) (value []byte, err error) {
 	ro := gorocksdb.NewDefaultReadOptions()
 	ro.SetFillCache(false)
-	if value, err = rs.db.GetBytes(ro, []byte(key)); err != nil {
+	if value, err = rs.db.GetBytes(ro, key); err != nil {
 		err = fmt.Errorf("action[getFromRocksDB],err:%v", err)
 		return nil, err
 	}
@@ -91,18 +91,4 @@ func (rs *RocksDBStore) Iterator(snapshot *gorocksdb.Snapshot) *gorocksdb.Iterat
 	ro.SetSnapshot(snapshot)
 
 	return rs.db.NewIterator(ro)
-}
-
-func (rs *RocksDBStore) BatchPut(kvArr []*Kv) (interface{}, error) {
-	wo := gorocksdb.NewDefaultWriteOptions()
-	wb := gorocksdb.NewWriteBatch()
-	for _, kv := range kvArr {
-		wb.Put([]byte(kv.K), kv.V)
-	}
-
-	if err := rs.db.Write(wo, wb); err != nil {
-		err = fmt.Errorf("action[batchPutToRocksDB],err:%v", err)
-		return nil, err
-	}
-	return nil, nil
 }

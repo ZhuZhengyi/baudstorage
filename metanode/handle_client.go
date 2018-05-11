@@ -17,7 +17,6 @@ func (m *MetaNode) opCreateInode(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	//submit raft
 	resp := mr.CreateInode(req)
 	// Reply operation result to client though TCP connection.
 	err = m.replyToClient(conn, p, resp)

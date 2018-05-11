@@ -1,8 +1,8 @@
 package master
 
 import (
-	"github.com/tiglabs/baudstorage/multiraft"
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/raftstore"
 )
 
 /*
@@ -10,7 +10,7 @@ import (
 */
 
 type MetadataFsm struct {
-	multiraft.RaftStoreFsm
+	raftstore.RaftStoreFsm
 }
 
 func (mf *MetadataFsm) CreateNameSpace(request proto.CreateNameSpaceRequest) (response proto.CreateNameSpaceResponse) {

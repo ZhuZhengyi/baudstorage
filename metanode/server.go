@@ -3,6 +3,7 @@ package metanode
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"strconv"
 	"time"
@@ -65,7 +66,7 @@ func (m *MetaNode) servConn(conn net.Conn, stopC chan uint8) {
 		default:
 		}
 		p := &Packet{}
-		if err := p.ReadFromConn(conn, proto.ReadDeadlineTime*time.Second); err != nil {
+		if err := p.ReadFromConn(conn, proto.ReadDeadlineTime*time.Second); err != nil && err != io.EOF {
 			log.LogError("serve MetaNode: ", err.Error())
 			return
 		}

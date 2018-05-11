@@ -26,7 +26,7 @@ const (
 	DefaultWriteBufferSize = 1280 * util.KB
 
 	FlushIng = 2
-	NoFlush=1
+	NoFlush  = 1
 )
 
 var (
@@ -52,6 +52,7 @@ type ExtentWriter struct {
 	cond       *sync.Cond //flushCond use for backEndlush func
 	isFlushIng uint64     //isFlushIng
 	sync.Mutex
+	flushLock sync.Mutex
 }
 
 func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper, extentId uint64) (writer *ExtentWriter, err error) {
@@ -73,31 +74,33 @@ func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper
 
 //InitFlushCond   when user call backEndlush func
 func (writer *ExtentWriter) initFlushCond() {
-	if atomic.LoadUint64(&writer.isFlushIng)==FlushIng{
+	if atomic.LoadUint64(&writer.isFlushIng) == FlushIng {
 		return
 	}
 	writer.cond = sync.NewCond(&sync.Mutex{})
-	atomic.StoreUint64(&writer.isFlushIng,FlushIng)
+	atomic.StoreUint64(&writer.isFlushIng, FlushIng)
 }
 
 //when backEndlush func called,and sdk must wait
 func (writer *ExtentWriter) flushWait() {
+	start := time.Now().UnixNano()
 	go func() {
-		writer.cond.L.Lock()
-		start := time.Now().UnixNano()
 		for {
-			if writer.isAllFlushed() || time.Now().UnixNano()-start > int64(time.Second) {
+			if time.Now().UnixNano()-start > int64(time.Second*2) || writer.isAllFlushed() {
+				writer.cond.L.Lock()
 				writer.cond.Signal()
+				atomic.StoreUint64(&writer.isFlushIng, NoFlush)
+				writer.cond.L.Unlock()
 				break
 			}
 		}
-		writer.cond.L.Unlock()
-	}()
-	writer.cond.L.Lock()
-	writer.cond.Wait()
-	writer.cond.L.Unlock()
-	atomic.StoreUint64(&writer.isFlushIng,NoFlush)
 
+	}()
+	if atomic.LoadUint64(&writer.isFlushIng) == FlushIng {
+		writer.cond.L.Lock()
+		writer.cond.Wait()
+		writer.cond.L.Unlock()
+	}
 }
 
 //user call write func
@@ -251,6 +254,7 @@ func (writer *ExtentWriter) flush() (err error) {
 	err = errors.Annotatef(FlushErr, "cannot backEndlush writer [%v]", writer.toString())
 	log.LogInfo(fmt.Sprintf("ActionFlushExtent [%v] start", writer.toString()))
 	defer func() {
+		writer.flushLock.Unlock()
 		writer.checkIsStopReciveGoRoutine()
 		if err == nil {
 			log.LogInfo(writer.toString() + " backEndlush ok")
@@ -261,6 +265,7 @@ func (writer *ExtentWriter) flush() (err error) {
 		}
 		err = writer.flush()
 	}()
+	writer.flushLock.Lock()
 	if writer.isAllFlushed() {
 		err = nil
 		return err

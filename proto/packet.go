@@ -178,7 +178,6 @@ func (p *Packet) MarshalHeader(out []byte) {
 	binary.BigEndian.PutUint64(out[20:28], p.FileID)
 	binary.BigEndian.PutUint64(out[28:36], uint64(p.Offset))
 	binary.BigEndian.PutUint64(out[36:HeaderSize], uint64(p.ReqID))
-	p.OrgOpcode = p.Opcode
 
 	return
 }
