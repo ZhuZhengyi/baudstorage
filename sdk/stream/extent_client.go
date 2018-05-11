@@ -16,11 +16,11 @@ type ExtentClient struct {
 	readers           map[uint64]*StreamReader
 	readerLock        sync.RWMutex
 	saveExtentKeyFn   func(inode uint64, key ExtentKey) (err error)
-	updateExtentKeyFn func(inode uint64) (streamKey StreamKey, err error)
+	updateExtentKeyFn func(inode uint64) (streamKey *StreamKey, err error)
 }
 
 func NewExtentClient(logdir string, master string, saveExtentKeyFn func(inode uint64, key ExtentKey) (err error),
-	updateExtentKeyFn func(inode uint64) (streamKey StreamKey, err error)) (client *ExtentClient, err error) {
+	updateExtentKeyFn func(inode uint64) (streamKey *StreamKey, err error)) (client *ExtentClient, err error) {
 	client = new(ExtentClient)
 	_, err = log.NewLog(logdir, "extentclient", log.DebugLevel)
 	if err != nil {

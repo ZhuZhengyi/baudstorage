@@ -12,17 +12,18 @@ type StreamReader struct {
 	inode          uint64
 	wraper         *sdk.VolGroupWraper
 	readers        []*ExtentReader
-	updateExtentFn func(inode uint64) (sk StreamKey, err error)
-	extents        StreamKey
+	updateExtentFn func(inode uint64) (sk *StreamKey, err error)
+	extents        *StreamKey
 	fileSize       uint64
 	sync.Mutex
 }
 
-func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, updateExtentFn func(inode uint64) (sk StreamKey, err error)) (stream *StreamReader, err error) {
+func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, updateExtentFn func(inode uint64) (sk *StreamKey, err error)) (stream *StreamReader, err error) {
 	stream = new(StreamReader)
 	stream.inode = inode
 	stream.wraper = wraper
 	stream.updateExtentFn = updateExtentFn
+	stream.extents = NewStreamKey(inode)
 	stream.extents, err = stream.updateExtentFn(inode)
 	if err != nil {
 		return
@@ -61,21 +62,24 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	if offset < int(stream.fileSize) {
 		return size, nil
 	}
-	var newStreamKey StreamKey
+	var newStreamKey *StreamKey
 	newStreamKey, err = stream.updateExtentFn(stream.inode)
+	stream.Lock()
+	defer stream.Unlock()
 	if err == nil {
-		stream.extents = newStreamKey
 		var newOffSet int
 		var reader *ExtentReader
-		for _, key := range stream.extents.Extents {
+		oldReaderCnt := len(stream.readers)
+		for index, key := range newStreamKey.Extents {
 			newOffSet += int(key.Size)
-			if stream.isExsitExtentReader(key) {
-				continue
+			if index < oldReaderCnt {
+				stream.readers[index].updateKey(key)
+			} else {
+				if reader, err = NewExtentReader(offset, key, stream.wraper); err != nil {
+					return 0, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
+				}
+				stream.readers = append(stream.readers, reader)
 			}
-			if reader, err = NewExtentReader(offset, key, stream.wraper); err != nil {
-				return 0, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
-			}
-			stream.readers = append(stream.readers, reader)
 		}
 		stream.fileSize = stream.extents.Size()
 	}
@@ -101,12 +105,13 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 		return
 	}
 	readers, readerOffset, readerSize := stream.getReader(offset, size)
-	data = make([]byte, size)
-	for index := 0; index <= len(readers); index++ {
+	for index := 0; index < len(readers); index++ {
 		reader := readers[index]
 		err = reader.read(data[canRead:canRead+readerSize[index]], readerOffset[index], readerSize[index])
 		if err != nil {
-			return
+			err = errors.Annotatef(err, "UserRequest{inode[%v] offset[%v] size[%v]} readers{"+
+				"[%v] offset[%v] size[%v] occous error}", stream.inode, offset, size, reader.toString(), readerOffset[index],
+				readerSize[index])
 		}
 		canRead += readerSize[index]
 	}
@@ -118,6 +123,8 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 	readers = make([]*ExtentReader, 0)
 	readerOffset = make([]int, 0)
 	readerSize = make([]int, 0)
+	//orgOffset:=offset
+	//orgSize:=size
 	for _, r := range stream.readers {
 		if r.startInodeOffset <= offset && r.endInodeOffset >= offset+size {
 			readers = append(readers, r)
@@ -126,6 +133,8 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 			readerOffset = append(readerOffset, currReaderOffset)
 			readerSize = append(readerSize, currReaderSize)
 			size -= currReaderSize
+			//log.Debug("inode[%v] orgOffset[%v] orgSize[%v] allocate reader[%v] " +
+			//	"readerOffset[%v] readerSize[%v]\n",stream.inode,orgOffset,orgSize,r.toString(),currReaderOffset,currReaderSize)
 		}
 		if r.startInodeOffset <= offset && r.endInodeOffset <= offset+size {
 			readers = append(readers, r)
@@ -133,6 +142,8 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 			readerOffset = append(readerOffset, currReaderOffset)
 			currReaderSize := (int(r.key.Size) - currReaderOffset)
 			readerSize = append(readerSize, currReaderSize)
+			//log.Debug("inode[%v] orgOffset[%v] orgSize[%v] allocate reader[%v] " +
+			//	"readerOffset[%v] readerSize[%v]\n",stream.inode,orgOffset,orgSize,r.toString(),currReaderOffset,currReaderSize)
 			offset += currReaderSize
 			size -= currReaderSize
 		}
