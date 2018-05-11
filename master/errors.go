@@ -22,8 +22,10 @@ var (
 	VolReplicationHasMissOneError = errors.New("vol replication has miss one ,cannot miss any one")
 	VolPersistedNotAnyReplicates  = errors.New("volume persisted not have any replicates")
 	NoHaveAnyDataNodeToWrite      = errors.New("No have any data node for create volume")
+	NoHaveAnyMetaNodeToWrite      = errors.New("No have any meta node for create meta range")
 	CannotOffLineErr              = errors.New("cannot offline because avail vol replicate <0")
 	NoAnyDataNodeForCreateVol     = errors.New("no have enough data server for create vol")
+	NoAnyMetaNodeForCreateVol     = errors.New("no have enough meta server for create meta range")
 )
 
 func paraNotFound(name string) (err error) {

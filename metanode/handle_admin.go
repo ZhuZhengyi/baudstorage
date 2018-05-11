@@ -45,7 +45,7 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 		ID:          req.MetaId,
 		Start:       req.Start,
 		End:         req.End,
-		cursor:      req.Start,
+		Cursor:      req.Start,
 		RaftGroupID: req.GroupId,
 		Peers:       req.Members,
 	}

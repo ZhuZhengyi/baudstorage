@@ -23,7 +23,7 @@ func NewVolsView() (volsView *VolsView) {
 }
 
 type MetaGroupView struct {
-	GroupID string
+	GroupID uint64
 	Start   uint64
 	End     uint64
 	Members []string
@@ -32,16 +32,18 @@ type MetaGroupView struct {
 type NamespaceView struct {
 	Name       string
 	MetaGroups []*MetaGroupView
+	VolGroups  []*VolResponse
 }
 
 func NewNamespaceView(name string) (view *NamespaceView) {
 	view = new(NamespaceView)
 	view.Name = name
 	view.MetaGroups = make([]*MetaGroupView, 0)
+	view.VolGroups = make([]*VolResponse, 0)
 	return
 }
 
-func NewMetaGroupView(groupID string, start, end uint64) (mgView *MetaGroupView) {
+func NewMetaGroupView(groupID uint64, start, end uint64) (mgView *MetaGroupView) {
 	mgView = new(MetaGroupView)
 	mgView.GroupID = groupID
 	mgView.Start = start
@@ -96,13 +98,15 @@ errDeal:
 	return
 }
 
-func getNamespaceView(namespace *NameSpace) (view *NamespaceView) {
-	view = NewNamespaceView(namespace.Name)
-	for _, metaGroup := range namespace.MetaGroups {
+func getNamespaceView(ns *NameSpace) (view *NamespaceView) {
+	view = NewNamespaceView(ns.Name)
+	for _, metaGroup := range ns.MetaGroups {
 		view.MetaGroups = append(view.MetaGroups, getMetaGroupView(metaGroup))
 	}
+	view.VolGroups = ns.volGroups.GetVolsView(0)
 	return
 }
+
 func getMetaGroupView(metaGroup *MetaGroup) (mgView *MetaGroupView) {
 	mgView = NewMetaGroupView(metaGroup.GroupID, metaGroup.Start, metaGroup.End)
 	for _, metaRange := range metaGroup.Members {

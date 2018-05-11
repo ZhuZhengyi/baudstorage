@@ -3,17 +3,24 @@ package master
 import "sync"
 
 type NameSpace struct {
-	Name       string
-	replicaNum uint8
-	MetaGroups map[string]*MetaGroup
-	volGroups  *VolGroupMap
+	Name          string
+	volReplicaNum uint8
+	mrReplicaNum  uint8
+	MetaGroups    map[uint64]*MetaGroup
+	volGroups     *VolGroupMap
 	sync.Mutex
 }
 
 func NewNameSpace(name string, replicaNum uint8) (ns *NameSpace) {
-	ns = &NameSpace{Name: name, MetaGroups: make(map[string]*MetaGroup, 0)}
+	ns = &NameSpace{Name: name, MetaGroups: make(map[uint64]*MetaGroup, 0)}
 	ns.volGroups = NewVolMap()
-	ns.replicaNum = replicaNum
+	ns.volReplicaNum = replicaNum
+
+	if replicaNum%2 == 0 {
+		ns.mrReplicaNum = replicaNum + 1
+	} else {
+		ns.mrReplicaNum = replicaNum
+	}
 	return
 }
 
