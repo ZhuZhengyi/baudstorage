@@ -83,22 +83,24 @@ func (writer *ExtentWriter) initFlushCond() {
 
 //when backEndlush func called,and sdk must wait
 func (writer *ExtentWriter) flushWait() {
+	start := time.Now().UnixNano()
 	go func() {
-		writer.cond.L.Lock()
-		start := time.Now().UnixNano()
 		for {
-			if writer.isAllFlushed() || time.Now().UnixNano()-start > int64(time.Second) {
+			if time.Now().UnixNano()-start > int64(time.Second*2) || writer.isAllFlushed() {
+				writer.cond.L.Lock()
 				writer.cond.Signal()
+				atomic.StoreUint64(&writer.isFlushIng, NoFlush)
+				writer.cond.L.Unlock()
 				break
 			}
 		}
-		writer.cond.L.Unlock()
-	}()
-	writer.cond.L.Lock()
-	writer.cond.Wait()
-	writer.cond.L.Unlock()
-	atomic.StoreUint64(&writer.isFlushIng, NoFlush)
 
+	}()
+	if atomic.LoadUint64(&writer.isFlushIng) == FlushIng {
+		writer.cond.L.Lock()
+		writer.cond.Wait()
+		writer.cond.L.Unlock()
+	}
 }
 
 //user call write func
