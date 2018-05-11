@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-type MultiRaft interface {
+type RaftStore interface {
 	CreatePartition(cfg *PartitionConfig) (Partition, error)
 	Stop()
 }
@@ -28,7 +28,7 @@ func (s *multiRaft) Stop() {
 	}
 }
 
-func NewMultiRaft(cfg *Config) (mr MultiRaft, err error) {
+func NewMultiRaft(cfg *Config) (mr RaftStore, err error) {
 	if err = os.MkdirAll(cfg.WalPath, os.ModeDir); err != nil {
 		return
 	}
