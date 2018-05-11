@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type ExtentReader struct {
@@ -28,12 +29,13 @@ const (
 	DefaultReadBufferSize = 10 * util.MB
 )
 
-func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWraper) (reader *ExtentReader, err error) {
+func NewExtentReader(inode uint64,inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWraper) (reader *ExtentReader, err error) {
 	reader = new(ExtentReader)
 	reader.vol, err = wraper.GetVol(key.VolId)
 	if err != nil {
 		return
 	}
+	reader.inode=inode
 	reader.key = key
 	reader.cache = NewCacheBuffer()
 	reader.startInodeOffset = inInodeOffset
@@ -48,12 +50,12 @@ func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWrape
 }
 
 func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
-	if reader.getCacheStatus() == AvaliBuffer && offset+size <= reader.cache.getBufferEndOffset() {
-		reader.cache.copyData(data, offset, size)
-		return
-	}
+	//if reader.getCacheStatus() == AvaliBuffer && offset+size <= reader.cache.getBufferEndOffset() {
+	//	reader.cache.copyData(data, offset, size)
+	//	return
+	//}
 	p := NewReadPacket(reader.key, offset, size)
-	data, err = reader.readDataFromVol(p)
+	err = reader.readDataFromVol(p, data)
 	reader.setCacheToUnavali()
 	if err == nil {
 		select {
@@ -68,10 +70,9 @@ func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
 	return
 }
 
-func (reader *ExtentReader) readDataFromVol(p *Packet) (data []byte, err error) {
+func (reader *ExtentReader) readDataFromVol(p *Packet, data []byte) (err error) {
 	rand.Seed(time.Now().UnixNano())
 	index := rand.Intn(int(reader.vol.Goal))
-	data = make([]byte, p.Size)
 	host := reader.vol.Hosts[index]
 	if _, err = reader.readDataFromHost(p, host, data); err != nil {
 		goto FORLOOP
@@ -93,36 +94,37 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 	expectReadSize := int(p.Size)
 	conn, err := reader.wraper.GetConnect(host)
 	if err != nil {
-		return 0, errors.Annotatef(fmt.Errorf(reader.toString()+" vol[%v] not found", reader.key.VolId),
-			"ReciveData Err")
+		return 0, errors.Annotatef(err, reader.toString()+"readDataFromHost vol[%v] cannot get"+
+			" connect from host[%v] ", reader.key.VolId, host)
 
 	}
 	defer func() {
 		if err != nil {
+			log.LogError(err.Error())
 			conn.Close()
 		} else {
 			reader.wraper.PutConnect(conn)
 		}
 	}()
 	if err = p.WriteToConn(conn); err != nil {
-		err = errors.Annotatef(fmt.Errorf(reader.toString()+" cannot get connect from host[%v] err[%v]", host, err.Error()),
-			"ReciveData Err")
+		err = errors.Annotatef(err, reader.toString()+"readDataFromHost write ReadPacket[%v] to  host[%v] error ",
+			p.GetUniqLogId(), host)
 		return 0, err
 	}
 	for {
 		err = p.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
-			err = errors.Annotatef(fmt.Errorf(reader.toString()+" recive dataCache from host[%v] err[%v]", host, err.Error()),
-				"ReciveData Err")
+			err = errors.Annotatef(err, reader.toString()+"readDataFromHost recive ReadPacketReply[%v] to  host[%v] error ",
+				p.GetUniqLogId(), host)
 			return
 		}
 		if p.Opcode != proto.OpOk {
-			err = errors.Annotatef(fmt.Errorf(reader.toString()+" packet[%v] from host [%v] opcode err[%v]",
+			err = errors.Annotatef(fmt.Errorf(reader.toString()+"readDataFromHost packet[%v] from host [%v] opcode err[%v]",
 				p.GetUniqLogId(), host, string(p.Data[:p.Size])), "ReciveData Err")
 			return
 		}
-		acatualReadSize += int(p.Size)
 		copy(data[acatualReadSize:acatualReadSize+int(p.Size)], p.Data[:p.Size])
+		acatualReadSize += int(p.Size)
 		if acatualReadSize >= expectReadSize {
 			return
 		}
@@ -131,12 +133,17 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 	return
 }
 
-func (reader *ExtentReader) updateKey(key ExtentKey) {
-	if !(key.VolId == reader.key.VolId && key.ExtentId == reader.key.ExtentId && key.Size > reader.key.Size) {
+func (reader *ExtentReader) updateKey(key ExtentKey) (update bool) {
+	if !(key.VolId == reader.key.VolId && key.ExtentId == reader.key.ExtentId) {
+		return
+	}
+	if key.Size <= reader.key.Size {
 		return
 	}
 	reader.key = key
 	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
+
+	return true
 }
 
 func (reader *ExtentReader) toString() (m string) {
@@ -152,7 +159,8 @@ func (reader *ExtentReader) fillCache() error {
 	bufferSize := int(util.Min(uint64(int(reader.key.Size)-reader.lastReadOffset), uint64(DefaultReadBufferSize)))
 	bufferOffset := reader.lastReadOffset
 	p := NewReadPacket(reader.key, bufferOffset, bufferSize)
-	data, err := reader.readDataFromVol(p)
+	data := make([]byte, bufferSize)
+	err := reader.readDataFromVol(p, data)
 	if err != nil {
 		return err
 	}

@@ -9,14 +9,13 @@ import (
 )
 
 type Cluster struct {
-	Name              string
-	namespaces        map[string]*NameSpace
-	metaRangeReplicas uint8
-	dataNodes         sync.Map
-	metaNodes         sync.Map
-	createVolLock     sync.Mutex
-	addZoneLock       sync.Mutex
-	cfg               *ClusterConfig
+	Name          string
+	namespaces    map[string]*NameSpace
+	dataNodes     sync.Map
+	metaNodes     sync.Map
+	createVolLock sync.Mutex
+	createNsLock  sync.Mutex
+	cfg           *ClusterConfig
 }
 
 func NewCluster(name string) (c *Cluster) {
@@ -27,6 +26,7 @@ func NewCluster(name string) (c *Cluster) {
 	c.startCheckBackendLoadVolGroups()
 	c.startCheckReleaseVolGroups()
 	c.startCheckHearBeat()
+	c.startCheckMetaGroups()
 	return
 }
 
@@ -94,20 +94,38 @@ func (c *Cluster) startCheckHearBeat() {
 	}()
 }
 
-func (c *Cluster) addMetaNode(nodeAddr string) (err error) {
-	var metaNode *MetaNode
+func (c *Cluster) startCheckMetaGroups() {
+	go func() {
+		for {
+			for _, ns := range c.namespaces {
+				c.checkMetaGroups(ns)
+			}
+			time.Sleep(time.Second * time.Duration(c.cfg.CheckVolIntervalSeconds))
+		}
+	}()
+}
+
+func (c *Cluster) addMetaNode(nodeAddr string) (id uint64, err error) {
+	var (
+		metaNode *MetaNode
+	)
 	if _, ok := c.metaNodes.Load(nodeAddr); ok {
 		err = hasExist(nodeAddr)
 		goto errDeal
 	}
 	metaNode = NewMetaNode(nodeAddr)
+
+	if id, err = c.getMaxID(); err != nil {
+		goto errDeal
+	}
+	metaNode.id = id
 	//todo sync node by raft
 	c.metaNodes.Store(nodeAddr, metaNode)
 	return
 errDeal:
 	err = fmt.Errorf("action[addMetaNode],metaNodeAddr:%v err:%v ", nodeAddr, err.Error())
 	log.LogWarn(err.Error())
-	return err
+	return
 }
 
 func (c *Cluster) addDataNode(nodeAddr string) (err error) {
@@ -160,9 +178,10 @@ func (c *Cluster) getNamespace(nsName string) (ns *NameSpace, err error) {
 
 func (c *Cluster) createVolGroup(nsName string) (vg *VolGroup, err error) {
 	var (
-		ns    *NameSpace
-		volID uint64
-		tasks []*proto.AdminTask
+		ns          *NameSpace
+		volID       uint64
+		tasks       []*proto.AdminTask
+		targetHosts []string
 	)
 	c.createVolLock.Lock()
 	defer c.createVolLock.Unlock()
@@ -170,14 +189,15 @@ func (c *Cluster) createVolGroup(nsName string) (vg *VolGroup, err error) {
 		goto errDeal
 	}
 
-	if volID, err = c.getMaxVolID(); err != nil {
+	if volID, err = c.getMaxID(); err != nil {
 		goto errDeal
 	}
 	//volID++
-	vg = newVolGroup(volID, c.cfg.replicaNum)
-	if err = vg.ChooseTargetHosts(c); err != nil {
+	vg = newVolGroup(volID, ns.volReplicaNum)
+	if targetHosts, err = c.ChooseTargetDataHosts(int(ns.volReplicaNum)); err != nil {
 		goto errDeal
 	}
+	vg.PersistenceHosts = targetHosts
 	//todo sync and persistence hosts to other node in the cluster
 	tasks = vg.generateCreateVolGroupTasks()
 	c.putDataNodeTasks(tasks)
@@ -190,14 +210,42 @@ errDeal:
 	return
 }
 
-func (c *Cluster) getMaxVolID() (volID uint64, err error) {
-	//todo getVolID from raft
+func (c *Cluster) ChooseTargetDataHosts(replicaNum int) (hosts []string, err error) {
+	var (
+		masterAddr []string
+		slaveAddrs []string
+	)
+	hosts = make([]string, 0)
+	if masterAddr, err = c.getAvailDataNodeHosts("", hosts, 1); err != nil {
+		return
+	}
+	hosts = append(hosts, masterAddr[0])
+	otherReplica := replicaNum - 1
+	if otherReplica == 0 {
+		return
+	}
+	dataNode, err := c.getDataNode(masterAddr[0])
+	if err != nil {
+		return
+	}
+	if slaveAddrs, err = c.getAvailDataNodeHosts(dataNode.RackName, hosts, otherReplica); err != nil {
+		return
+	}
+	hosts = append(hosts, slaveAddrs...)
+	if len(hosts) != replicaNum {
+		return nil, NoAnyDataNodeForCreateVol
+	}
+	return
+}
+
+func (c *Cluster) getMaxID() (id uint64, err error) {
+	//todo getMaxID from raft
 	if err != nil {
 		goto errDeal
 	}
 	return
 errDeal:
-	err = fmt.Errorf("action[getMaxVolID], Err:%v ", err.Error())
+	err = fmt.Errorf("action[getMaxID], Err:%v ", err.Error())
 	log.LogError(err.Error())
 	return
 }
@@ -227,9 +275,8 @@ func (c *Cluster) dataNodeOffLine(dataNode *DataNode) {
 		for _, vg := range ns.volGroups.volGroups {
 			c.volOffline(dataNode.HttpAddr, vg, DataNodeOfflineInfo)
 		}
-		ns.volGroups.dataNodeOffline(dataNode.HttpAddr)
-		c.dataNodes.Delete(dataNode.HttpAddr)
 	}
+	c.dataNodes.Delete(dataNode.HttpAddr)
 
 }
 
@@ -241,6 +288,7 @@ func (c *Cluster) volOffline(offlineAddr string, vg *VolGroup, errMsg string) {
 		tasks    []*proto.AdminTask
 		task     *proto.AdminTask
 		err      error
+		dataNode *DataNode
 	)
 	vg.Lock()
 	defer vg.Unlock()
@@ -256,7 +304,10 @@ func (c *Cluster) volOffline(offlineAddr string, vg *VolGroup, errMsg string) {
 	}
 	vg.generatorVolOffLineLog(offlineAddr)
 
-	if newHosts, err = c.getAvailDataNodeHosts(vg.PersistenceHosts, 1); err != nil {
+	if dataNode, err = c.getDataNode(vg.PersistenceHosts[0]); err != nil {
+		goto errDeal
+	}
+	if newHosts, err = c.getAvailDataNodeHosts(dataNode.RackName, vg.PersistenceHosts, 1); err != nil {
 		goto errDeal
 	}
 	if err = vg.removeVolHosts(offlineAddr); err != nil {
@@ -286,27 +337,62 @@ func (c *Cluster) metaNodeOffLine(metaNode *MetaNode) {
 
 func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {
 	var (
-		ns *NameSpace
-		mg *MetaGroup
+		ns      *NameSpace
+		mg      *MetaGroup
+		hosts   []string
+		groupId uint64
 	)
+	c.createNsLock.Lock()
+	defer c.createNsLock.Unlock()
 	if _, ok := c.namespaces[name]; ok {
 		err = hasExist(name)
 		goto errDeal
 	}
 	ns = NewNameSpace(name, replicaNum)
-	mg = NewMetaGroup(0, DefaultMetaTabletRange-1)
-	if err = mg.ChooseTargetHosts(c); err != nil {
+	if groupId, err = c.getMaxID(); err != nil {
 		goto errDeal
 	}
-	mg.createRange()
+	mg = NewMetaGroup(groupId, 0, DefaultMaxMetaTabletRange)
+	if hosts, err = c.ChooseTargetDataHosts(int(ns.mrReplicaNum)); err != nil {
+		goto errDeal
+	}
+	mg.PersistenceHosts = hosts
 	//todo sync namespace and metaGroup
 
-	c.putMetaNodeTasks(mg.generateCreateMetaGroupTasks())
+	c.putMetaNodeTasks(mg.generateCreateMetaGroupTasks(name))
 	ns.AddMetaGroup(mg)
 	return
 errDeal:
 	err = fmt.Errorf("action[createNamespace], name:%v, err:%v ", name, err.Error())
 	log.LogError(err.Error())
+	return
+}
+
+func (c *Cluster) ChooseTargetMetaHosts(replicaNum int) (hosts []string, err error) {
+	var (
+		masterAddr []string
+		slaveAddrs []string
+	)
+	hosts = make([]string, 0)
+	if masterAddr, err = c.getAvailMetaNodeHosts("", hosts, 1); err != nil {
+		return
+	}
+	hosts = append(hosts, masterAddr[0])
+	otherReplica := replicaNum - 1
+	if otherReplica == 0 {
+		return
+	}
+	metaNode, err := c.getMetaNode(masterAddr[0])
+	if err != nil {
+		return
+	}
+	if slaveAddrs, err = c.getAvailMetaNodeHosts(metaNode.RackName, hosts, otherReplica); err != nil {
+		return
+	}
+	hosts = append(hosts, slaveAddrs...)
+	if len(hosts) != replicaNum {
+		return nil, NoAnyMetaNodeForCreateVol
+	}
 	return
 }
 

@@ -105,15 +105,15 @@ func (wraper *VolGroupWraper) insertVol(vg VolGroup) {
 	wraper.RLock()
 	volGroup := wraper.volGroups[vg.VolId]
 	wraper.RUnlock()
+	wraper.Lock()
 	if volGroup == nil {
-		wraper.Lock()
 		wraper.volGroups[vg.VolId] = &VolGroup{VolId: vg.VolId, Status: vg.Status, Hosts: vg.Hosts, Goal: vg.Goal}
-		wraper.Unlock()
 	} else {
 		volGroup.Status = vg.Status
 		volGroup.Hosts = vg.Hosts
 		volGroup.Goal = vg.Goal
 	}
+	wraper.Unlock()
 }
 
 func (wraper *VolGroupWraper) updateVolGroup(views []VolGroup) {

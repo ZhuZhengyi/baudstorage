@@ -76,7 +76,7 @@ const (
 
 const (
 	WriteDeadlineTime  = 5
-	ReadDeadlineTime   = 5
+	ReadDeadlineTime   = 3
 	NoReadDeadlineTime = -1
 )
 

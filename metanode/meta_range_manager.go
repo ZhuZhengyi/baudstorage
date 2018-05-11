@@ -51,9 +51,9 @@ func (m *MetaRangeManager) Range(f func(id string, mr *MetaRange) bool) {
 	}
 }
 
-// Restore load meta manager snapshot from data file and restore all  meta range
+// Load meta manager snapshot from data file and restore all  meta range
 // into this meta range manager.
-func (m *MetaRangeManager) RestoreMetaManagers(metaDir string) (err error) {
+func (m *MetaRangeManager) LoadMetaManagers(metaDir string) (err error) {
 	// Check metaDir directory
 	fileInfo, err := os.Stat(metaDir)
 	if err != nil {
@@ -78,27 +78,14 @@ func (m *MetaRangeManager) RestoreMetaManagers(metaDir string) (err error) {
 			metaRangeId := fileInfo.Name()[12:]
 			go func(metaID string, fileInfo os.FileInfo) {
 				/* Create MetaRange and add metaRangeManager */
-				// Create MetaRange
 				mr := NewMetaRange(MetaRangeConfig{
-					ID:        metaID,
-					rootDir:   path.Join(metaDir, fileInfo.Name()),
-					isRestore: true,
+					ID:      metaID,
+					RootDir: path.Join(metaDir, fileInfo.Name()),
 				})
-				if err = mr.RestoreMeta(); err != nil {
+				if err = mr.Load(); err != nil {
 					// TODO: log
 					return
 				}
-				// Restore inode btree from inode file
-				if err = mr.RestoreInode(); err != nil {
-					//TODO: log
-					return
-				}
-				// Restore dentry btree from dentry
-				if err = mr.RestoreDentry(); err != nil {
-					// TODO: log
-					return
-				}
-				// Add MetaRangeManager
 				m.SetMetaRange(mr)
 				wg.Done()
 			}(metaRangeId, fileInfo)

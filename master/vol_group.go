@@ -35,30 +35,18 @@ func newVolGroup(volID uint64, replicaNum uint8) (vg *VolGroup) {
 }
 
 func (vg *VolGroup) addMember(vl *Vol) {
-
+	vg.Lock()
+	defer vg.Unlock()
+	for _, vol := range vg.locations {
+		if vl.addr == vol.addr {
+			return
+		}
+	}
+	vg.locations = append(vg.locations, vl)
 }
 
 func (vg *VolGroup) checkBadStatus() {
 
-}
-
-func (vg *VolGroup) ChooseTargetHosts(c *Cluster) (err error) {
-	var (
-		addrs []string
-	)
-	vg.Lock()
-	defer vg.Unlock()
-	if addrs, err = c.getAvailDataNodeHosts(vg.PersistenceHosts, int(vg.replicaNum)); err != nil {
-		return
-	}
-	vg.PersistenceHosts = append(vg.PersistenceHosts, addrs...)
-
-	if len(vg.PersistenceHosts) != (int)(vg.replicaNum) {
-		return NoAnyDataNodeForCreateVol
-	}
-	log.LogDebug(fmt.Sprintf("action[ChooseTargetHosts],volID:%v,PersistenceHosts:%v",
-		vg.VolID, vg.PersistenceHosts))
-	return
 }
 
 func (vg *VolGroup) generateCreateVolGroupTasks() (tasks []*proto.AdminTask) {

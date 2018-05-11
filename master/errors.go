@@ -22,12 +22,26 @@ var (
 	VolReplicationHasMissOneError = errors.New("vol replication has miss one ,cannot miss any one")
 	VolPersistedNotAnyReplicates  = errors.New("volume persisted not have any replicates")
 	NoHaveAnyDataNodeToWrite      = errors.New("No have any data node for create volume")
+	NoHaveAnyMetaNodeToWrite      = errors.New("No have any meta node for create meta range")
 	CannotOffLineErr              = errors.New("cannot offline because avail vol replicate <0")
 	NoAnyDataNodeForCreateVol     = errors.New("no have enough data server for create vol")
+	NoAnyMetaNodeForCreateVol     = errors.New("no have enough meta server for create meta range")
 )
 
 func paraNotFound(name string) (err error) {
 	return errors.New(fmt.Sprintf("parameter %v not found", name))
+}
+
+func elementNotFound(name string) (err error) {
+	return errors.New(fmt.Sprintf("%v not found", name))
+}
+
+func metaGroupNotFound(id uint64) (err error) {
+	return elementNotFound(fmt.Sprintf("meta group %v", id))
+}
+
+func metaRangeHasExist(addr string) (err error) {
+	return hasExist(fmt.Sprintf("meta range %v", addr))
 }
 
 func hasExist(name string) (err error) {
