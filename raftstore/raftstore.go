@@ -12,9 +12,10 @@ import (
 type RaftStore interface {
 	CreatePartition(cfg *PartitionConfig) (Partition, error)
 	Stop()
+	NodeManager
 }
 
-type multiRaft struct {
+type raftStore struct {
 	nodeId     uint64
 	resolver   NodeResolver
 	raftConfig *raft.Config
@@ -22,13 +23,21 @@ type multiRaft struct {
 	walPath    string
 }
 
-func (s *multiRaft) Stop() {
+func (s *raftStore) AddNode(nodeId uint64, addr string) {
+	AddNode(s.resolver, nodeId, addr)
+}
+
+func (s *raftStore) DeleteNode(nodeId uint64) {
+	DeleteNode(s.resolver, nodeId)
+}
+
+func (s *raftStore) Stop() {
 	if s.raftServer != nil {
 		s.raftServer.Stop()
 	}
 }
 
-func NewMultiRaft(cfg *Config) (mr RaftStore, err error) {
+func NewRaftStore(cfg *Config) (mr RaftStore, err error) {
 	if err = os.MkdirAll(cfg.WalPath, os.ModeDir); err != nil {
 		return
 	}
@@ -43,7 +52,7 @@ func NewMultiRaft(cfg *Config) (mr RaftStore, err error) {
 	if err != nil {
 		return
 	}
-	mr = &multiRaft{
+	mr = &raftStore{
 		nodeId:     cfg.NodeID,
 		resolver:   resolver,
 		raftConfig: rc,
@@ -52,7 +61,7 @@ func NewMultiRaft(cfg *Config) (mr RaftStore, err error) {
 	return
 }
 
-func (s *multiRaft) CreatePartition(cfg *PartitionConfig) (p Partition, err error) {
+func (s *raftStore) CreatePartition(cfg *PartitionConfig) (p Partition, err error) {
 	// Init WaL Storage for this partition.
 	// Variables:
 	// wc: WaL Configuration.
@@ -72,8 +81,6 @@ func (s *multiRaft) CreatePartition(cfg *PartitionConfig) (p Partition, err erro
 		StateMachine: cfg.SM,
 		Applied:      cfg.Applied,
 	}
-	if err = s.raftServer.CreateRaft(rc); err != nil {
-		return
-	}
-	return p, nil
+	err = s.raftServer.CreateRaft(rc)
+	return
 }

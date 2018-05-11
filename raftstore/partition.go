@@ -25,6 +25,7 @@ type Partition interface {
 	LeaderTerm() (leaderId, term uint64)
 	IsLeader() bool
 	AppliedIndex() uint64
+	NodeManager
 }
 
 type partition struct {
@@ -32,6 +33,14 @@ type partition struct {
 	raft     *raft.RaftServer
 	config   *PartitionConfig
 	resolver NodeResolver
+}
+
+func (p *partition) AddNode(nodeId uint64, addr string) {
+	AddNode(p.resolver, nodeId, addr)
+}
+
+func (p *partition) DeleteNode(nodeId uint64) {
+	DeleteNode(p.resolver, nodeId)
 }
 
 func (p *partition) ChangeMember(changeType proto.ConfChangeType, peer proto.Peer, context []byte) (

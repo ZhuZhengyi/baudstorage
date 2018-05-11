@@ -19,10 +19,14 @@ type nodeAddress struct {
 	Replicate string
 }
 
-type NodeResolver interface {
-	raft.SocketResolver
+type NodeManager interface {
 	AddNode(nodeId uint64, addr string)
 	DeleteNode(nodeId uint64)
+}
+
+type NodeResolver interface {
+	raft.SocketResolver
+	NodeManager
 }
 
 type nodeResolver struct {
@@ -66,4 +70,16 @@ func (r *nodeResolver) DeleteNode(nodeId uint64) {
 
 func NewNodeResolver() NodeResolver {
 	return &nodeResolver{}
+}
+
+func AddNode(manager NodeManager, nodeId uint64, addr string) {
+	if manager != nil {
+		manager.AddNode(nodeId, addr)
+	}
+}
+
+func DeleteNode(manager NodeManager, nodeId uint64) {
+	if manager != nil {
+		manager.DeleteNode(nodeId)
+	}
 }
