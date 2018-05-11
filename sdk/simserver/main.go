@@ -2,11 +2,16 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"runtime"
 	"sync"
+	"sync/atomic"
+	"time"
 
+	"github.com/tiglabs/baudstorage/proto"
 	. "github.com/tiglabs/baudstorage/sdk"
 )
 
@@ -26,6 +31,25 @@ var globalMP = []MetaPartition{
 
 type MasterServer struct {
 	ns map[string]*NamespaceView
+}
+
+type MetaServer struct {
+	sync.RWMutex
+	inodes  map[uint64]*Inode
+	currIno uint64
+}
+
+type Inode struct {
+	sync.RWMutex
+	ino   uint64
+	mode  uint32
+	dents map[string]*Dentry
+}
+
+type Dentry struct {
+	name string
+	ino  uint64
+	mode uint32
 }
 
 func main() {
@@ -55,7 +79,7 @@ func (m *MasterServer) Start(wg *sync.WaitGroup) {
 	}
 
 	for _, p := range globalMP {
-		mp := newMetaPartition(p.GroupID, p.Start, p.End, SimMetaAddr+":"+SimMetaPort)
+		mp := NewMetaPartition(p.GroupID, p.Start, p.End, SimMetaAddr+":"+SimMetaPort)
 		nv.MetaPartitions = append(nv.MetaPartitions, mp)
 	}
 
@@ -90,7 +114,7 @@ func (m *MasterServer) handleClientNS(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func newMetaPartition(gid string, start, end uint64, member string) *MetaPartition {
+func NewMetaPartition(gid string, start, end uint64, member string) *MetaPartition {
 	return &MetaPartition{
 		GroupID: gid,
 		Start:   start,
@@ -100,3 +124,151 @@ func newMetaPartition(gid string, start, end uint64, member string) *MetaPartiti
 }
 
 // Meta Server
+
+func NewMetaServer() *MetaServer {
+	return &MetaServer{
+		inodes:  make(map[uint64]*Inode),
+		currIno: proto.ROOT_INO,
+	}
+}
+
+func NewInode(ino uint64, mode uint32) *Inode {
+	return &Inode{
+		ino:   ino,
+		mode:  mode,
+		dents: make(map[string]*Dentry),
+	}
+}
+
+func NewDentry(name string, ino uint64, mode uint32) *Dentry {
+	return &Dentry{
+		name: name,
+		ino:  ino,
+		mode: mode,
+	}
+}
+
+func (m *MetaServer) Start(wg *sync.WaitGroup) {
+	// Create root inode
+	i := NewInode(proto.ROOT_INO, proto.ModeDir)
+	m.inodes[i.ino] = i
+
+	ln, err := net.Listen("tcp", ":"+SimMetaPort)
+	if err != nil {
+		return
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer ln.Close()
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				continue
+			}
+			go m.servConn(conn)
+		}
+	}()
+}
+
+func (m *MetaServer) servConn(conn net.Conn) {
+	defer conn.Close()
+
+	for {
+		p := &proto.Packet{}
+		if err := p.ReadFromConn(conn, 0); err != nil {
+			fmt.Println("servConn:", err)
+			return
+		}
+
+		if err := m.handlePacket(conn, p); err != nil {
+			fmt.Println("servConn:", err)
+			return
+		}
+	}
+}
+
+func (m *MetaServer) handlePacket(conn net.Conn, p *proto.Packet) (err error) {
+	switch p.Opcode {
+	case proto.OpMetaCreateInode:
+		err = m.opCreateInode(conn, p)
+		//	case proto.OpMetaCreateDentry:
+		//		err = m.opCreateDentry(conn, p)
+		//	case proto.OpMetaDeleteInode:
+		//		err = m.opDeleteInode(conn, p)
+		//	case proto.OpMetaDeleteDentry:
+		//		err = m.opDeleteDentry(conn, p)
+		//	case proto.OpMetaReadDir:
+		//		err = m.opReadDir(conn, p)
+		//	case proto.OpMetaOpen:
+		//		err = m.opOpen(conn, p)
+		//	case proto.OpMetaCreateMetaRange:
+		//		err = m.opCreateMetaRange(conn, p)
+	default:
+		err = errors.New("unknown Opcode: ")
+	}
+	return
+}
+
+func (m *MetaServer) opCreateInode(conn net.Conn, p *proto.Packet) error {
+	req := &proto.CreateInodeRequest{}
+	err := json.Unmarshal(p.Data, req)
+	if err != nil {
+		return err
+	}
+
+	ino := m.allocIno()
+	i := NewInode(ino, req.Mode)
+	m.addInode(i)
+
+	resp := &proto.CreateInodeResponse{
+		Info: NewInodeInfo(ino, req.Mode),
+	}
+	resp.Status = proto.OpOk
+
+	data, err := json.Marshal(resp)
+	if err != nil {
+		goto errOut
+	}
+
+	p.Data = data
+	err = p.WriteToConn(conn)
+	if err != nil {
+		goto errOut
+	}
+
+	return nil
+
+errOut:
+	m.deleteInode(i)
+	return err
+}
+
+func NewInodeInfo(ino uint64, mode uint32) *proto.InodeInfo {
+	return &proto.InodeInfo{
+		Inode:      ino,
+		Type:       mode,
+		Size:       0,
+		ModifyTime: time.Now(),
+		AccessTime: time.Now(),
+		CreateTime: time.Now(),
+		Extents:    make([]string, 0),
+	}
+}
+
+func (m *MetaServer) addInode(i *Inode) {
+	m.Lock()
+	defer m.Unlock()
+	m.inodes[i.ino] = i
+}
+
+func (m *MetaServer) deleteInode(i *Inode) {
+	m.Lock()
+	defer m.Unlock()
+	delete(m.inodes, i.ino)
+}
+
+func (m *MetaServer) allocIno() uint64 {
+	return atomic.AddUint64(&m.currIno, 1)
+}

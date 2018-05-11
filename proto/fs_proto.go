@@ -1,11 +1,15 @@
 package proto
 
 import (
+	"os"
 	"time"
 )
 
 const (
-	ROOT_INO = 1
+	ROOT_INO = uint64(1)
+
+	ModeRegular = uint32(0)
+	ModeDir     = uint32(os.ModeDir)
 )
 
 type InodeInfo struct {
