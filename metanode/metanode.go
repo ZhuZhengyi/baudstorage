@@ -6,7 +6,7 @@ import (
 
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
-	"github.com/tiglabs/raft"
+	"github.com/tiglabs/baudstorage/raftstore"
 )
 
 // Configuration keys
@@ -22,7 +22,7 @@ type nodeState uint8
 
 // State constants
 const (
-	sReady nodeState = iota
+	sReady   nodeState = iota
 	sRunning
 )
 
@@ -36,8 +36,7 @@ type MetaNode struct {
 	logDir           string
 	masterAddr       string
 	metaRangeManager *MetaRangeManager
-	raftResolver     *raft.SocketResolver
-	raftServer       *raft.RaftServer
+	raftStore        raftstore.RaftStore
 	httpStopC        chan uint8
 	log              *log.Log
 	state            nodeState
