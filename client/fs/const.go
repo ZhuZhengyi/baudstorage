@@ -2,7 +2,6 @@ package fs
 
 import (
 	"fmt"
-	"os"
 
 	"bazil.org/fuse"
 
@@ -23,8 +22,8 @@ const (
 )
 
 const (
-	ModeRegular = uint32(0)
-	ModeDir     = uint32(os.ModeDir)
+	ModeRegular = proto.ModeRegular
+	ModeDir     = proto.ModeDir
 )
 
 const (
