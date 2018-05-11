@@ -28,7 +28,7 @@ var (
 	ErrorChunkNotFound  = errors.New("chunk not exist")
 	ErrorVolReadOnly    = errors.New("volume readonly")
 	ErrorHasDelete      = errors.New("has delete")
-	ErrorUnmatchPara    = errors.New("unmatch offset")
+	ErrorUnmatchPara    = errors.New("unmatch parameter")
 	ErrorNoAvaliFile    = errors.New("no avail file")
 	ErrorNoUnAvaliFile  = errors.New("no Unavail file")
 	ErrorNewStoreMode   = errors.New("error new store mode ")
