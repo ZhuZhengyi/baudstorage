@@ -89,10 +89,6 @@ func (vm *VolGroupMap) GetVolsView(minVolID uint64) (vrs []*VolResponse) {
 	return
 }
 
-func (vm *VolGroupMap) dataNodeOffline(nodeAddr string) {
-
-}
-
 func (vm *VolGroupMap) getNeedReleaseVolGroups(everyReleaseVolCount int, releaseVolAfterLoadVolSeconds int64) (needReleaseVolGroups []*VolGroup) {
 	needReleaseVolGroups = make([]*VolGroup, 0)
 	vm.RLock()

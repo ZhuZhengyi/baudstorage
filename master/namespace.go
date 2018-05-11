@@ -1,12 +1,15 @@
 package master
 
-import "sync"
+import (
+	"sync"
+)
 
 type NameSpace struct {
 	Name          string
 	volReplicaNum uint8
 	mrReplicaNum  uint8
 	MetaGroups    map[uint64]*MetaGroup
+	metaGroupLock sync.RWMutex
 	volGroups     *VolGroupMap
 	sync.Mutex
 }
@@ -48,4 +51,12 @@ func (ns *NameSpace) GetMetaGroup(inode uint64) (mg *MetaGroup) {
 
 func (ns *NameSpace) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error) {
 	return ns.volGroups.getVol(volID)
+}
+
+func (ns *NameSpace) getMetaGroupById(groupId uint64) (mg *MetaGroup, err error) {
+	mg, ok := ns.MetaGroups[groupId]
+	if !ok {
+		err = metaGroupNotFound(groupId)
+	}
+	return
 }

@@ -32,6 +32,18 @@ func paraNotFound(name string) (err error) {
 	return errors.New(fmt.Sprintf("parameter %v not found", name))
 }
 
+func elementNotFound(name string) (err error) {
+	return errors.New(fmt.Sprintf("%v not found", name))
+}
+
+func metaGroupNotFound(id uint64) (err error) {
+	return elementNotFound(fmt.Sprintf("meta group %v", id))
+}
+
+func metaRangeHasExist(addr string) (err error) {
+	return hasExist(fmt.Sprintf("meta range %v", addr))
+}
+
 func hasExist(name string) (err error) {
 	err = errors.New(fmt.Sprintf("%v has exist", name))
 	return
