@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/sdk"
+	"github.com/tiglabs/baudstorage/util/log"
 	"io"
 	"sync"
 )
@@ -15,7 +16,7 @@ type StreamReader struct {
 	updateExtentFn func(inode uint64) (sk *StreamKey, err error)
 	extents        *StreamKey
 	fileSize       uint64
-	sync.Mutex
+	sync.RWMutex
 }
 
 func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, updateExtentFn func(inode uint64) (sk *StreamKey, err error)) (stream *StreamReader, err error) {
@@ -41,21 +42,15 @@ func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, updateExtentFn fu
 	return
 }
 
-func (stream *StreamReader) isExsitExtentReader(k ExtentKey) (exsit bool) {
-	for _, reader := range stream.readers {
-		if reader.key.isEquare(k) {
-			return true
-		}
-	}
-
-	return
-}
-
 func (stream *StreamReader) toString() (m string) {
+	stream.RLock()
+	defer stream.RUnlock()
 	return fmt.Sprintf("inode[%v] fileSize[%v] extents[%v] ", stream.inode, stream.fileSize, stream.extents)
 }
 
 func (stream *StreamReader) initCheck(offset, size int) (canread int, err error) {
+	stream.RLock()
+	defer stream.RUnlock()
 	if size > CFSEXTENTSIZE {
 		return 0, fmt.Errorf("read endOffset is So High")
 	}
@@ -64,11 +59,13 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	}
 	var newStreamKey *StreamKey
 	newStreamKey, err = stream.updateExtentFn(stream.inode)
-	stream.Lock()
-	defer stream.Unlock()
+
 	if err == nil {
-		var newOffSet int
-		var reader *ExtentReader
+		var (
+			newOffSet int
+			reader    *ExtentReader
+		)
+		readers := make([]*ExtentReader, 0)
 		oldReaderCnt := len(stream.readers)
 		for index, key := range newStreamKey.Extents {
 			newOffSet += int(key.Size)
@@ -78,10 +75,17 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 				if reader, err = NewExtentReader(stream.inode, offset, key, stream.wraper); err != nil {
 					return 0, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
 				}
-				stream.readers = append(stream.readers, reader)
+				readers = append(stream.readers, reader)
 			}
 		}
-		stream.fileSize = stream.extents.Size()
+		stream.RUnlock()
+		stream.Lock()
+		stream.fileSize = newStreamKey.Size()
+		stream.extents = newStreamKey
+		stream.readers = append(stream.readers, readers...)
+		stream.Unlock()
+		stream.RLock()
+		log.LogInfo(fmt.Sprintf("StreamReader update inode[%v] FileSize to [%v]", stream.inode, stream.fileSize))
 	}
 
 	if offset > int(stream.fileSize) {
@@ -126,6 +130,8 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 	readerSize = make([]int, 0)
 	//orgOffset := offset
 	//orgSize := size
+	stream.RLock()
+	defer stream.RUnlock()
 	for _, r := range stream.readers {
 		if size <= 0 {
 			break
@@ -150,7 +156,6 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 			offset += currReaderSize
 			size -= currReaderSize
 		}
-
 	}
 
 	return
