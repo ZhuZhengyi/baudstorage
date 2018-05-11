@@ -7,16 +7,17 @@ import (
 )
 
 type MetaNode struct {
-	Addr               string
-	metaRanges         []*MetaRange
-	isActive           bool
-	sender             *AdminTaskSender
-	RackName           string `json:"Rack"`
-	MaxDiskAvailWeight uint64 `json:"MaxDiskAvailWeight"`
-	Total              uint64 `json:"TotalWeight"`
-	Used               uint64 `json:"UsedWeight"`
-	selectCount        uint64
-	carry              float64
+	id                uint64
+	Addr              string
+	metaRanges        []*MetaRange
+	isActive          bool
+	sender            *AdminTaskSender
+	RackName          string `json:"Rack"`
+	MaxMemAvailWeight uint64 `json:"MaxMemAvailWeight"`
+	Total             uint64 `json:"TotalWeight"`
+	Used              uint64 `json:"UsedWeight"`
+	selectCount       uint64
+	carry             float64
 	sync.Mutex
 }
 
@@ -47,7 +48,7 @@ func (metaNode *MetaNode) SelectNodeForWrite() {
 func (metaNode *MetaNode) IsWriteAble() (ok bool) {
 	metaNode.Lock()
 	defer metaNode.Unlock()
-	if metaNode.isActive == true && metaNode.MaxDiskAvailWeight > DefaultMinMetaRangeSize {
+	if metaNode.isActive == true && metaNode.MaxMemAvailWeight > DefaultMinMetaRangeSize {
 		ok = true
 	}
 	return

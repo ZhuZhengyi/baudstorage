@@ -117,13 +117,14 @@ func getMetaGroupView(metaGroup *MetaGroup) (mgView *MetaGroupView) {
 
 func (m *Master) getMetaGroup(w http.ResponseWriter, r *http.Request) {
 	var (
-		body          []byte
-		code          int
-		err           error
-		name, groupId string
-		namespace     *NameSpace
-		metaGroup     *MetaGroup
-		ok            bool
+		body      []byte
+		code      int
+		err       error
+		name      string
+		groupId   uint64
+		namespace *NameSpace
+		metaGroup *MetaGroup
+		ok        bool
 	)
 	if name, groupId, err = parseGetMetaGroupPara(r); err != nil {
 		goto errDeal
@@ -148,7 +149,7 @@ errDeal:
 	return
 }
 
-func parseGetMetaGroupPara(r *http.Request) (name, groupId string, err error) {
+func parseGetMetaGroupPara(r *http.Request) (name string, groupId uint64, err error) {
 	r.ParseForm()
 	if name, err = checkNamespace(r); err != nil {
 		return

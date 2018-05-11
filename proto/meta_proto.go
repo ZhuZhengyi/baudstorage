@@ -10,8 +10,8 @@ type CreateNameSpaceResponse struct {
 }
 
 type Peer struct {
-	id   uint64
-	addr string
+	ID   uint64
+	Addr string
 }
 type CreateMetaRangeRequest struct {
 	MetaId  string

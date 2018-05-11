@@ -272,16 +272,17 @@ errDeal:
 func (m *Master) addMetaNode(w http.ResponseWriter, r *http.Request) {
 	var (
 		nodeAddr string
+		id       uint64
 		err      error
 	)
 	if nodeAddr, err = parseAddMetaNodePara(r); err != nil {
 		goto errDeal
 	}
 
-	if err = m.cluster.addMetaNode(nodeAddr); err != nil {
+	if id, err = m.cluster.addMetaNode(nodeAddr); err != nil {
 		goto errDeal
 	}
-	io.WriteString(w, fmt.Sprintf("addMetaNode %v successed\n", nodeAddr))
+	io.WriteString(w, fmt.Sprintf("addMetaNode %v successed,id(%v)", nodeAddr, id))
 	return
 errDeal:
 	logMsg := getReturnMessage("addMetaNode", r.RemoteAddr, err.Error(), http.StatusBadRequest)

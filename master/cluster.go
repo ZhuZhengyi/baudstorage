@@ -26,6 +26,7 @@ func NewCluster(name string) (c *Cluster) {
 	c.startCheckBackendLoadVolGroups()
 	c.startCheckReleaseVolGroups()
 	c.startCheckHearBeat()
+	c.startCheckMetaGroups()
 	return
 }
 
@@ -93,20 +94,38 @@ func (c *Cluster) startCheckHearBeat() {
 	}()
 }
 
-func (c *Cluster) addMetaNode(nodeAddr string) (err error) {
-	var metaNode *MetaNode
+func (c *Cluster) startCheckMetaGroups() {
+	go func() {
+		for {
+			for _, ns := range c.namespaces {
+				c.checkMetaGroups(ns)
+			}
+			time.Sleep(time.Second * time.Duration(c.cfg.CheckVolIntervalSeconds))
+		}
+	}()
+}
+
+func (c *Cluster) addMetaNode(nodeAddr string) (id uint64, err error) {
+	var (
+		metaNode *MetaNode
+	)
 	if _, ok := c.metaNodes.Load(nodeAddr); ok {
 		err = hasExist(nodeAddr)
 		goto errDeal
 	}
 	metaNode = NewMetaNode(nodeAddr)
+
+	if id, err = c.getMaxID(); err != nil {
+		goto errDeal
+	}
+	metaNode.id = id
 	//todo sync node by raft
 	c.metaNodes.Store(nodeAddr, metaNode)
 	return
 errDeal:
 	err = fmt.Errorf("action[addMetaNode],metaNodeAddr:%v err:%v ", nodeAddr, err.Error())
 	log.LogWarn(err.Error())
-	return err
+	return
 }
 
 func (c *Cluster) addDataNode(nodeAddr string) (err error) {
@@ -256,9 +275,8 @@ func (c *Cluster) dataNodeOffLine(dataNode *DataNode) {
 		for _, vg := range ns.volGroups.volGroups {
 			c.volOffline(dataNode.HttpAddr, vg, DataNodeOfflineInfo)
 		}
-		ns.volGroups.dataNodeOffline(dataNode.HttpAddr)
-		c.dataNodes.Delete(dataNode.HttpAddr)
 	}
+	c.dataNodes.Delete(dataNode.HttpAddr)
 
 }
 
@@ -341,7 +359,7 @@ func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {
 	mg.PersistenceHosts = hosts
 	//todo sync namespace and metaGroup
 
-	c.putMetaNodeTasks(mg.generateCreateMetaGroupTasks())
+	c.putMetaNodeTasks(mg.generateCreateMetaGroupTasks(name))
 	ns.AddMetaGroup(mg)
 	return
 errDeal:

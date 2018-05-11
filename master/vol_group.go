@@ -35,7 +35,14 @@ func newVolGroup(volID uint64, replicaNum uint8) (vg *VolGroup) {
 }
 
 func (vg *VolGroup) addMember(vl *Vol) {
-
+	vg.Lock()
+	defer vg.Unlock()
+	for _, vol := range vg.locations {
+		if vl.addr == vol.addr {
+			return
+		}
+	}
+	vg.locations = append(vg.locations, vl)
 }
 
 func (vg *VolGroup) checkBadStatus() {

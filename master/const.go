@@ -42,6 +42,12 @@ const (
 )
 
 const (
+	MetaRangeUnavailable = -1
+	MetaRangeReadOnly    = 1
+	MetaRangeReadWrite   = 2
+)
+
+const (
 	HandleVolOfflineErr = "HandleVolOffLineErr "
 )
 
