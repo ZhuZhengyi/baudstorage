@@ -21,7 +21,7 @@ type StreamKey struct {
 }
 
 func (ek *ExtentKey) isEquare(k ExtentKey) (equare bool) {
-	return ek.VolId == k.VolId && ek.ExtentId == k.ExtentId && ek.Size == k.Size
+	return ek.VolId == k.VolId && ek.ExtentId == k.ExtentId
 }
 
 func NewStreamKey(ino uint64) *StreamKey {

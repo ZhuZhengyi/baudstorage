@@ -29,8 +29,8 @@ func randSeq(n int) string {
 	return string(b)
 }
 
-func updateKey(inode uint64) (sk StreamKey, err error) {
-	sk = *(allKeys[inode])
+func updateKey(inode uint64) (sk *StreamKey, err error) {
+	sk = (allKeys[inode])
 	return
 }
 
@@ -89,7 +89,7 @@ func TestExtentClient_Write(t *testing.T) {
 	data := make([]byte, CFSBLOCKSIZE*2)
 	localWriteFp, _ := prepare(inode, t, data)
 	for seqNo := 0; seqNo < CFSBLOCKSIZE; seqNo++ {
-		writeStr := randSeq(1024 * 68)
+		writeStr := randSeq(1024 * 1)
 		ndata := ([]byte)(writeStr)
 		write, err := client.Write(inode, ndata)
 		if err != nil {
@@ -98,20 +98,20 @@ func TestExtentClient_Write(t *testing.T) {
 		client.Flush(inode)
 		rdata := make([]byte, len(ndata))
 		read, err = client.Read(inode, rdata, writebytes, len(ndata))
-		if err != nil {
+		if err != nil || read != len(ndata) {
 			OccoursErr(fmt.Errorf("read inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, read, err), t)
 		}
 		if !bytes.Equal(rdata, ndata) {
 			fmt.Printf("acatual read bytes[%v]\n", string(rdata))
 			fmt.Printf("expectr read bytes[%v]\n", writeStr)
-			OccoursErr(fmt.Errorf("acatual read bytes[%v] expect [%v]", string(rdata), writeStr), t)
+			OccoursErr(fmt.Errorf("acatual read is differ to writestr"), t)
 		}
-		fmt.Printf("hehehe")
 		_, err = localWriteFp.Write(ndata)
 		if err != nil {
 			OccoursErr(fmt.Errorf("write localFile inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 		}
 		writebytes += len(ndata)
+		fmt.Printf("hahah ,write ok [%v]\n", seqNo)
 	}
 	client.Close(inode)
 	fmt.Println("sum write bytes:", writebytes)
