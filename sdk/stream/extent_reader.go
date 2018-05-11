@@ -92,8 +92,8 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 	expectReadSize := int(p.Size)
 	conn, err := reader.wraper.GetConnect(host)
 	if err != nil {
-		return 0, errors.Annotatef(fmt.Errorf(reader.toString()+" vol[%v] not found", reader.key.VolId),
-			"ReciveData Err")
+		return 0, errors.Annotatef(err, reader.toString()+"readDataFromHost vol[%v] cannot get"+
+			" connect from host[%v] ", reader.key.VolId, host)
 
 	}
 	defer func() {
@@ -104,19 +104,19 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 		}
 	}()
 	if err = p.WriteToConn(conn); err != nil {
-		err = errors.Annotatef(fmt.Errorf(reader.toString()+" cannot get connect from host[%v] err[%v]", host, err.Error()),
-			"ReciveData Err")
+		err = errors.Annotatef(err, reader.toString()+"readDataFromHost write ReadPacket[%v] to  host[%v] error ",
+			p.GetUniqLogId(), host)
 		return 0, err
 	}
 	for {
 		err = p.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
-			err = errors.Annotatef(fmt.Errorf(reader.toString()+" recive dataCache from host[%v] err[%v]", host, err.Error()),
-				"ReciveData Err")
+			err = errors.Annotatef(err, reader.toString()+"readDataFromHost recive ReadPacketReply[%v] to  host[%v] error ",
+				p.GetUniqLogId(), host)
 			return
 		}
 		if p.Opcode != proto.OpOk {
-			err = errors.Annotatef(fmt.Errorf(reader.toString()+" packet[%v] from host [%v] opcode err[%v]",
+			err = errors.Annotatef(fmt.Errorf(reader.toString()+"readDataFromHost packet[%v] from host [%v] opcode err[%v]",
 				p.GetUniqLogId(), host, string(p.Data[:p.Size])), "ReciveData Err")
 			return
 		}
@@ -130,12 +130,17 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 	return
 }
 
-func (reader *ExtentReader) updateKey(key ExtentKey) {
-	if !(key.VolId == reader.key.VolId && key.ExtentId == reader.key.ExtentId && key.Size > reader.key.Size) {
+func (reader *ExtentReader) updateKey(key ExtentKey) (update bool) {
+	if !(key.VolId == reader.key.VolId && key.ExtentId == reader.key.ExtentId) {
+		return
+	}
+	if key.Size <= reader.key.Size {
 		return
 	}
 	reader.key = key
 	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
+
+	return true
 }
 
 func (reader *ExtentReader) toString() (m string) {

@@ -69,16 +69,17 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	if err == nil {
 		var newOffSet int
 		var reader *ExtentReader
+		oldReaderCnt := len(stream.readers)
 		for index, key := range newStreamKey.Extents {
 			newOffSet += int(key.Size)
-			if stream.isExsitExtentReader(key) {
+			if index < oldReaderCnt {
 				stream.readers[index].updateKey(key)
-				continue
+			} else {
+				if reader, err = NewExtentReader(offset, key, stream.wraper); err != nil {
+					return 0, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
+				}
+				stream.readers = append(stream.readers, reader)
 			}
-			if reader, err = NewExtentReader(offset, key, stream.wraper); err != nil {
-				return 0, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
-			}
-			stream.readers = append(stream.readers, reader)
 		}
 		stream.fileSize = stream.extents.Size()
 	}
