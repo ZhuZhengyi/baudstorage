@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type ExtentReader struct {
@@ -28,12 +29,13 @@ const (
 	DefaultReadBufferSize = 10 * util.MB
 )
 
-func NewExtentReader(inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWraper) (reader *ExtentReader, err error) {
+func NewExtentReader(inode uint64,inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWraper) (reader *ExtentReader, err error) {
 	reader = new(ExtentReader)
 	reader.vol, err = wraper.GetVol(key.VolId)
 	if err != nil {
 		return
 	}
+	reader.inode=inode
 	reader.key = key
 	reader.cache = NewCacheBuffer()
 	reader.startInodeOffset = inInodeOffset
@@ -98,6 +100,7 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 	}
 	defer func() {
 		if err != nil {
+			log.LogError(err.Error())
 			conn.Close()
 		} else {
 			reader.wraper.PutConnect(conn)
