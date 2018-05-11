@@ -35,3 +35,14 @@ type (
 	// MetaNode -> Client open file response struct
 	OpenResp = proto.OpenResponse
 )
+
+// For use when raft store and application apply
+const (
+	opCreateInode = iota
+	opDeleteInode
+	opCreateDentry
+	opDeleteDentry
+	opReadDir
+	opOpen
+	opCreateMetaRange
+)

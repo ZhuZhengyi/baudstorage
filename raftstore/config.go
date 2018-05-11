@@ -1,10 +1,7 @@
 package raftstore
 
 import (
-	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
-	"os"
-	"path"
 )
 
 const (
@@ -18,9 +15,8 @@ type Config struct {
 }
 
 type PartitionConfig struct {
-	ID       uint64
-	Applied  uint64
-	Peers    []proto.Peer
-	RaftPath string
-	SM       PartitionFsm
+	ID      uint64
+	Applied uint64
+	Peers   []proto.Peer
+	SM      PartitionFsm
 }
