@@ -135,20 +135,29 @@ func (c *Cluster) processLoadVol(v *VolGroup, isRecover bool) {
 	c.putDataNodeTasks(checkFileTasks)
 }
 
+func (c *Cluster) checkMetaGroups(ns *NameSpace) {
+	ns.metaGroupLock.RLock()
+	ns.metaGroupLock.RUnlock()
+}
+
 func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTask) {
 	if task == nil {
 		return
 	}
+	var (
+		metaNode *MetaNode
+		err      error
+	)
 
-	metaNode, err := c.getMetaNode(nodeAddr)
-	if err != nil {
-		return
+	if metaNode, err = c.getMetaNode(nodeAddr); err != nil {
+		goto errDeal
 	}
 	if _, ok := metaNode.sender.taskMap[task.ID]; !ok {
-		return
+		err = elementNotFound(task.ID)
+		goto errDeal
 	}
-	if err := UnmarshalTaskResponse(task); err != nil {
-		return
+	if err = UnmarshalTaskResponse(task); err != nil {
+		goto errDeal
 	}
 
 	switch task.OpCode {
@@ -163,9 +172,46 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	}
 
 	return
+
+errDeal:
+	log.LogError(fmt.Sprintf("action[dealMetaNodeTaskResponse],nodeAddr %v,taskId %v,err %v",
+		nodeAddr, task.ID, err.Error()))
+	return
 }
 
 func (c *Cluster) dealCreateMetaRange(nodeAddr string, resp *proto.CreateMetaRangeResponse) {
+	if resp.Status == proto.CmdFailed {
+		log.LogError(fmt.Sprintf("action[dealCreateMetaRange],nodeAddr %v create meta range failed", nodeAddr))
+		return
+	}
+
+	var (
+		metaNode *MetaNode
+		ns       *NameSpace
+		mg       *MetaGroup
+		mr       *MetaRange
+		err      error
+	)
+	if metaNode, err = c.getMetaNode(nodeAddr); err != nil {
+		goto errDeal
+	}
+	if ns, err = c.getNamespace(resp.NsName); err != nil {
+		goto errDeal
+	}
+
+	if mg, err = ns.getMetaGroupById(resp.GroupId); err != nil {
+		goto errDeal
+	}
+
+	mr = NewMetaRange(mg.Start, mg.End, metaNode.id, metaNode.Addr)
+	mr.status = MetaRangeReadWrite
+	mg.AddMember(mr)
+	mg.Lock()
+	mg.checkAndRemoveMissMetaRange(mr.Addr)
+	mg.Unlock()
+	return
+errDeal:
+	log.LogError(fmt.Sprintf("createVolSuccessTriggerOperatorErr %v", err))
 	return
 }
 
