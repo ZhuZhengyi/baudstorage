@@ -121,8 +121,8 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 				p.GetUniqLogId(), host, string(p.Data[:p.Size])), "ReciveData Err")
 			return
 		}
-		acatualReadSize += int(p.Size)
 		copy(data[acatualReadSize:acatualReadSize+int(p.Size)], p.Data[:p.Size])
+		acatualReadSize += int(p.Size)
 		if acatualReadSize >= expectReadSize {
 			return
 		}

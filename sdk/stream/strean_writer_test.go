@@ -52,7 +52,7 @@ func prepare(inode uint64, t *testing.T, data []byte) (localWriteFp *os.File, lo
 	if err != nil {
 		OccoursErr(fmt.Errorf("write localFile inode[%v] err[%v]\n", inode, err), t)
 	}
-	localReadFp, err = os.Open(fmt.Sprintf("inode_%v_%v.txt", inode, "read"))
+	localReadFp, err = openFileForWrite(inode, "read")
 	if err != nil {
 		OccoursErr(fmt.Errorf("read localFile inode[%v] err[%v]\n", inode, err), t)
 	}
@@ -74,24 +74,31 @@ func TestExtentClient_Write(t *testing.T) {
 	client := initClient(t)
 	var (
 		inode uint64
+		read int
 	)
 	inode = 2
 	sk := initInode(inode)
 	writebytes := 0
 	data := make([]byte, CFSBLOCKSIZE*2)
-	localWriteFp, localReadFp := prepare(inode, t, data)
+	localWriteFp, _ := prepare(inode, t, data)
 	for seqNo := 0; seqNo < CFSBLOCKSIZE; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
 		ndata := data[:rand.Int31n(CFSBLOCKSIZE)]
-		writebytes += len(ndata)
 		write, err := client.Write(inode, ndata)
 		if err != nil {
 			OccoursErr(fmt.Errorf("write inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
+		}
+		client.Flush(inode)
+		rdata:=make([]byte,len(ndata))
+		read,err=client.Read(inode,rdata,writebytes,len(ndata))
+		if err != nil {
+			OccoursErr(fmt.Errorf("read inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, read, err), t)
 		}
 		_, err = localWriteFp.Write(ndata)
 		if err != nil {
 			OccoursErr(fmt.Errorf("write localFile inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 		}
+		writebytes += len(ndata)
 	}
 	client.Close(inode)
 	fmt.Println("sum write bytes:", writebytes)
