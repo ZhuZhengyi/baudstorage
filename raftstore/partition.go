@@ -6,28 +6,53 @@ import (
 	"github.com/tiglabs/raft/proto"
 )
 
+// Error definitions for raft store partition.
 var (
 	ErrNotLeader = errors.New("not leader")
 )
 
+// PartitionStatus is a type alias of raft.Status
 type PartitionStatus = raft.Status
 
+// PartitionFsm wraps necessary methods include both FSM implementation
+// and data storage operation for raft store partition.
+// It extends from raft StateMachine and Store.
 type PartitionFsm interface {
 	raft.StateMachine
 	Store
 }
 
+// Partition wraps necessary methods for raft store partition operation.
+// Partition is a shard for multi-raft in RaftSore. RaftStore based on multi-raft which
+// managing multiple raft replication group at same time through single
+// raft server instance and system resource.
 type Partition interface {
+	// Submit submits command data to raft log.
 	Submit(cmd []byte) (resp interface{}, err error)
+
+	// ChaneMember submits member change event and information to raft log.
 	ChangeMember(changeType proto.ConfChangeType, peer proto.Peer, context []byte) (resp interface{}, err error)
+
+	// Stop removes this raft partition from raft server and make this partition shutdown.
 	Stop() error
+
+	// Status returns current raft status.
 	Status() (status *PartitionStatus)
+
+	// LeaderTerm returns current term of leader in raft group.
 	LeaderTerm() (leaderId, term uint64)
+
+	// IsLeader returns true if this node current is the leader in the raft group it belong to.
 	IsLeader() bool
+
+	// AppliedIndex returns current index value of applied raft log in this raft store partition.
 	AppliedIndex() uint64
+
+	// NodeManager define necessary methods for node address management.
 	NodeManager
 }
 
+// This is the default implementation of Partition interface.
 type partition struct {
 	id       uint64
 	raft     *raft.RaftServer
