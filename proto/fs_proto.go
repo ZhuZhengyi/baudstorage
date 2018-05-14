@@ -8,8 +8,8 @@ import (
 const (
 	ROOT_INO = uint64(1)
 
-	ModeRegular = uint32(0)
-	ModeDir     = uint32(os.ModeDir)
+	ModeRegular uint32 = iota
+	ModeDir
 )
 
 type InodeInfo struct {
@@ -28,10 +28,6 @@ type Dentry struct {
 	Type  uint32 `json:"type"`
 }
 
-type OpResult struct {
-	Status uint8 `json:"status"`
-}
-
 type CreateInodeRequest struct {
 	Namespace string `json:"namespace"`
 	GroupID   string
@@ -39,7 +35,6 @@ type CreateInodeRequest struct {
 }
 
 type CreateInodeResponse struct {
-	OpResult
 	Info *InodeInfo
 }
 
@@ -50,7 +45,6 @@ type DeleteInodeRequest struct {
 }
 
 type DeleteInodeResponse struct {
-	OpResult
 }
 
 type CreateDentryRequest struct {
@@ -63,7 +57,6 @@ type CreateDentryRequest struct {
 }
 
 type CreateDentryResponse struct {
-	OpResult
 }
 
 type DeleteDentryRequest struct {
@@ -85,7 +78,6 @@ type OpenRequest struct {
 }
 
 type OpenResponse struct {
-	OpResult
 }
 
 type LookupRequest struct {
@@ -96,7 +88,6 @@ type LookupRequest struct {
 }
 
 type LookupResponse struct {
-	OpResult
 	Inode uint64 `json:"inode"`
 	Mode  uint32 `json:"mode"`
 }
@@ -108,7 +99,6 @@ type InodeGetRequest struct {
 }
 
 type InodeGetResponse struct {
-	OpResult
 	Info *InodeInfo
 }
 
@@ -119,6 +109,5 @@ type ReadDirRequest struct {
 }
 
 type ReadDirResponse struct {
-	OpResult
 	Children []Dentry `json:"children"`
 }

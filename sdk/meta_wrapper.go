@@ -27,6 +27,10 @@ const (
 	MetaAllocBufSize = 1000
 )
 
+const (
+	statusOK = iota
+)
+
 type MetaPartition struct {
 	GroupID string
 	Start   uint64
@@ -251,6 +255,8 @@ func (mc *MetaConn) send(req *proto.Packet) (*proto.Packet, error) {
 	}
 	return resp, nil
 }
+
+// Status code conversion
 
 // API implementations
 //
