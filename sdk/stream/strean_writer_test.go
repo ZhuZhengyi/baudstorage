@@ -128,7 +128,6 @@ func TestExtentClient_Write(t *testing.T) {
 			OccoursErr(fmt.Errorf("write localFile inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 		}
 		writebytes += write
-		time.Sleep(time.Nanosecond * 2)
 	}
 	client.Close(inode)
 	fmt.Println("sum write bytes:", writebytes)
