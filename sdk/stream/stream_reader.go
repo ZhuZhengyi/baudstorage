@@ -13,19 +13,19 @@ type StreamReader struct {
 	inode          uint64
 	wraper         *sdk.VolGroupWraper
 	readers        []*ExtentReader
-	updateExtentFn func(inode uint64) (sk *StreamKey, err error)
+	getExtentKeyFn func(inode uint64) (sk *StreamKey, err error)
 	extents        *StreamKey
 	fileSize       uint64
 	sync.Mutex
 }
 
-func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, updateExtentFn func(inode uint64) (sk *StreamKey, err error)) (stream *StreamReader, err error) {
+func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, getExtentKeyFn func(inode uint64) (sk *StreamKey, err error)) (stream *StreamReader, err error) {
 	stream = new(StreamReader)
 	stream.inode = inode
 	stream.wraper = wraper
-	stream.updateExtentFn = updateExtentFn
+	stream.getExtentKeyFn = getExtentKeyFn
 	stream.extents = NewStreamKey(inode)
-	stream.extents, err = stream.updateExtentFn(inode)
+	stream.extents, err = stream.getExtentKeyFn(inode)
 	if err != nil {
 		return
 	}
@@ -58,7 +58,7 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 		return size, nil
 	}
 	var newStreamKey *StreamKey
-	newStreamKey, err = stream.updateExtentFn(stream.inode)
+	newStreamKey, err = stream.getExtentKeyFn(stream.inode)
 
 	if err == nil {
 		err = stream.updateLocalReader(newStreamKey)
@@ -86,15 +86,17 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err erro
 	readers := make([]*ExtentReader, 0)
 	oldReaderCnt := len(stream.readers)
 	for index, key := range newStreamKey.Extents {
-		newOffSet += int(key.Size)
 		if index < oldReaderCnt {
 			stream.readers[index].updateKey(key)
+			fmt.Printf("update extentId[%v] to [%v]\n", stream.readers[index].toString(), stream.readers[index].endInodeOffset)
 		} else {
+			fmt.Printf("new readers [%v]\n", newOffSet)
 			if reader, err = NewExtentReader(stream.inode, newOffSet, key, stream.wraper); err != nil {
 				return errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
 			}
 			readers = append(stream.readers, reader)
 		}
+		newOffSet += int(key.Size)
 	}
 	stream.fileSize = newStreamKey.Size()
 	stream.extents = newStreamKey
@@ -136,7 +138,7 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 	orgOffset := offset
 	orgSize := size
 	stream.Lock()
-	stream.Unlock()
+	defer stream.Unlock()
 	for _, r := range stream.readers {
 		var (
 			currReaderSize   int
@@ -151,24 +153,16 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 			r.Unlock()
 			continue
 		}
-		if r.endInodeOffset > offset+size {
-			readers = append(readers, r)
+		if r.endInodeOffset >= offset+size {
 			currReaderOffset = offset - r.startInodeOffset
-			readerOffset = append(readerOffset, currReaderOffset)
 			currReaderSize = size
-			readerSize = append(readerSize, currReaderSize)
-			offset += currReaderSize
-			size -= currReaderSize
 			fmt.Printf("alloc1 reader orgOffset[%v] orgSize[%v] on extentReader[%v] readeroffset[%v]"+
 				" readerSIze[%v] offset[%v] size[%v]\n",
 				orgOffset, orgSize, r.toString(), currReaderOffset, currReaderSize, offset, size)
 			isPutReader = true
-		} else if r.endInodeOffset <= offset+size {
-			readers = append(readers, r)
+		} else if r.endInodeOffset < offset+size {
 			currReaderOffset = offset - r.startInodeOffset
-			readerOffset = append(readerOffset, currReaderOffset)
 			currReaderSize = (int(r.key.Size) - currReaderOffset)
-			readerSize = append(readerSize, currReaderSize)
 			fmt.Printf("alloc2 reader orgOffset[%v] orgSize[%v] on extentReader[%v] readeroffset[%v]"+
 				" readerSIze[%v] offset[%v] size[%v]\n",
 				orgOffset, orgSize, r.toString(), currReaderOffset, currReaderSize, offset, size)
@@ -177,6 +171,9 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 		if isPutReader {
 			offset += currReaderSize
 			size -= currReaderSize
+			readerSize = append(readerSize, currReaderSize)
+			readerOffset = append(readerOffset, currReaderOffset)
+			readers = append(readers, r)
 		}
 		r.Unlock()
 	}
