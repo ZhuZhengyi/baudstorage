@@ -19,7 +19,8 @@ type StreamReader struct {
 	sync.Mutex
 }
 
-func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, getExtentKeyFn func(inode uint64) (sk *StreamKey, err error)) (stream *StreamReader, err error) {
+func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, getExtentKeyFn func(inode uint64) (sk *StreamKey,
+	err error)) (stream *StreamReader, err error) {
 	stream = new(StreamReader)
 	stream.inode = inode
 	stream.wraper = wraper
@@ -33,7 +34,8 @@ func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, getExtentKeyFn fu
 	var reader *ExtentReader
 	for _, key := range stream.extents.Extents {
 		if reader, err = NewExtentReader(inode, offset, key, stream.wraper); err != nil {
-			return nil, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", inode, key)
+			return nil, errors.Annotatef(err, "NewStreamReader inode[%v] "+
+				"key[%v] vol not found error", inode, key)
 		}
 		stream.readers = append(stream.readers, reader)
 		offset += int(key.Size)
@@ -45,7 +47,8 @@ func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, getExtentKeyFn fu
 func (stream *StreamReader) toString() (m string) {
 	stream.Lock()
 	defer stream.Unlock()
-	return fmt.Sprintf("inode[%v] fileSize[%v] extents[%v] ", stream.inode, stream.fileSize, stream.extents)
+	return fmt.Sprintf("inode[%v] fileSize[%v] extents[%v] ",
+		stream.inode, stream.fileSize, stream.extents)
 }
 
 func (stream *StreamReader) initCheck(offset, size int) (canread int, err error) {
@@ -91,11 +94,13 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err erro
 		} else if index == oldReaderCnt-1 {
 			stream.readers[index].updateKey(key)
 			newOffSet += int(key.Size)
-			fmt.Printf("inode[%v] update from Metanode TO FILESIZE[%v]\n", stream.inode, newOffSet)
+			fmt.Printf("inode[%v] update from Metanode TO FILESIZE[%v]\n",
+				stream.inode, newOffSet)
 			continue
 		} else if index > oldReaderCnt-1 {
 			if r, err = NewExtentReader(stream.inode, newOffSet, key, stream.wraper); err != nil {
-				return errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
+				return errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] "+
+					"vol not found error", stream.inode, key)
 			}
 			readers = append(readers, r)
 			newOffSet += int(key.Size)
@@ -106,7 +111,8 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err erro
 	stream.fileSize = newStreamKey.Size()
 	stream.extents = newStreamKey
 	stream.readers = append(stream.readers, readers...)
-	log.LogInfo(fmt.Sprintf("StreamReader update inode[%v] FileSize to [%v]", stream.inode, stream.fileSize))
+	log.LogInfo(fmt.Sprintf("StreamReader update inode[%v] FileSize to [%v]",
+		stream.inode, stream.fileSize))
 
 	return nil
 }
@@ -122,8 +128,9 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 		r := readers[index]
 		err = r.read(data[canRead:canRead+readerSize[index]], readerOffset[index], readerSize[index])
 		if err != nil {
-			err = errors.Annotatef(err, "UserRequest{inode[%v] FileSize[%v] offset[%v] size[%v]} readers{"+
-				"[%v] offset[%v] size[%v] occous error}", stream.inode, stream.fileSize, offset, size, r.toString(), readerOffset[index],
+			err = errors.Annotatef(err, "UserRequest{inode[%v] FileSize[%v] "+
+				"offset[%v] size[%v]} readers{ [%v] offset[%v] size[%v] occous error}",
+				stream.inode, stream.fileSize, offset, size, r.toString(), readerOffset[index],
 				readerSize[index])
 			return canRead, err
 		}

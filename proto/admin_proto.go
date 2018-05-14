@@ -96,8 +96,8 @@ type DataNodeHeartBeatResponse struct {
 type MetaRangeReport struct {
 	GroupId uint64
 	Status  int
-	Total   uint64
 	Used    uint64
+	IsLeader bool
 }
 
 type MetaNodeHeartbeatResponse struct {

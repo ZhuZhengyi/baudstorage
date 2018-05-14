@@ -374,6 +374,7 @@ func (c *Cluster) CreateMetaGroup(nsName string, start, end uint64) (err error) 
 		mg      *MetaGroup
 		hosts   []string
 		groupId uint64
+		peers   []proto.Peer
 	)
 	ns, ok := c.namespaces[nsName]
 	if !ok {
@@ -384,26 +385,29 @@ func (c *Cluster) CreateMetaGroup(nsName string, start, end uint64) (err error) 
 		return
 	}
 	mg = NewMetaGroup(groupId, start, end)
-	if hosts, err = c.ChooseTargetDataHosts(int(ns.mrReplicaNum)); err != nil {
+	if hosts, peers, err = c.ChooseTargetMetaHosts(int(ns.mrReplicaNum)); err != nil {
 		return
 	}
 	mg.PersistenceHosts = hosts
+	mg.peers = peers
 	//todo sync namespace and metaGroup
-
 	ns.AddMetaGroup(mg)
-	c.putMetaNodeTasks(mg.generateCreateMetaGroupTasks(""))
+	c.putMetaNodeTasks(mg.generateCreateMetaGroupTasks(nil))
 	return
 }
 
-func (c *Cluster) ChooseTargetMetaHosts(replicaNum int) (hosts []string, err error) {
+func (c *Cluster) ChooseTargetMetaHosts(replicaNum int) (hosts []string, peers []proto.Peer, err error) {
 	var (
 		masterAddr []string
 		slaveAddrs []string
+		masterPeer []proto.Peer
+		slavePeers []proto.Peer
 	)
 	hosts = make([]string, 0)
-	if masterAddr, err = c.getAvailMetaNodeHosts("", hosts, 1); err != nil {
+	if masterAddr, masterPeer, err = c.getAvailMetaNodeHosts("", hosts, 1); err != nil {
 		return
 	}
+	peers = append(peers, masterPeer...)
 	hosts = append(hosts, masterAddr[0])
 	otherReplica := replicaNum - 1
 	if otherReplica == 0 {
@@ -413,12 +417,13 @@ func (c *Cluster) ChooseTargetMetaHosts(replicaNum int) (hosts []string, err err
 	if err != nil {
 		return
 	}
-	if slaveAddrs, err = c.getAvailMetaNodeHosts(metaNode.RackName, hosts, otherReplica); err != nil {
+	if slaveAddrs, slavePeers, err = c.getAvailMetaNodeHosts(metaNode.RackName, hosts, otherReplica); err != nil {
 		return
 	}
 	hosts = append(hosts, slaveAddrs...)
+	peers = append(peers, slavePeers...)
 	if len(hosts) != replicaNum {
-		return nil, NoAnyMetaNodeForCreateVol
+		return nil, nil, NoAnyMetaNodeForCreateVol
 	}
 	return
 }

@@ -100,6 +100,9 @@ func TestExtentClient_Write(t *testing.T) {
 	writebytes := 0
 	data := make([]byte, CFSBLOCKSIZE*2)
 	localWriteFp, _ := prepare(inode, t, data)
+	client.Open(inode)
+	client.Open(inode)
+	client.Open(inode)
 	for seqNo := 0; seqNo < CFSBLOCKSIZE; seqNo++ {
 		writeStr := randSeq(2000 * 1)
 		ndata := ([]byte)(writeStr)
@@ -114,6 +117,7 @@ func TestExtentClient_Write(t *testing.T) {
 		fmt.Printf("hahah ,write ok [%v]\n", seqNo)
 
 		rdata := make([]byte, len(ndata))
+
 		read, err = client.Read(inode, rdata, writebytes, len(ndata))
 		if err != nil || read != len(ndata) {
 			OccoursErr(fmt.Errorf("read inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, read, err), t)
@@ -129,6 +133,8 @@ func TestExtentClient_Write(t *testing.T) {
 		}
 		writebytes += write
 	}
+	client.Close(inode)
+	client.Close(inode)
 	client.Close(inode)
 	fmt.Println("sum write bytes:", writebytes)
 	localWriteFp.Close()
