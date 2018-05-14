@@ -81,20 +81,21 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err error) {
 	var (
 		newOffSet int
-		reader    *ExtentReader
+		r         *ExtentReader
 	)
 	readers := make([]*ExtentReader, 0)
 	oldReaderCnt := len(stream.readers)
 	for index, key := range newStreamKey.Extents {
-		if index < oldReaderCnt {
+		if index < oldReaderCnt-1 {
+			newOffSet += int(key.Size)
+			continue
+		} else if index == oldReaderCnt-1 {
 			stream.readers[index].updateKey(key)
-			fmt.Printf("update extentId[%v] to [%v]\n", stream.readers[index].toString(), stream.readers[index].endInodeOffset)
-		} else {
-			fmt.Printf("new readers [%v]\n", newOffSet)
-			if reader, err = NewExtentReader(stream.inode, newOffSet, key, stream.wraper); err != nil {
+		} else if index >= oldReaderCnt {
+			if r, err = NewExtentReader(stream.inode, newOffSet, key, stream.wraper); err != nil {
 				return errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
 			}
-			readers = append(stream.readers, reader)
+			readers = append(readers, r)
 		}
 		newOffSet += int(key.Size)
 	}
@@ -112,7 +113,7 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 	if err != nil {
 		err = io.EOF
 	}
-	if keyCanRead == 0 {
+	if keyCanRead <= 0 {
 		return
 	}
 	readers, readerOffset, readerSize := stream.getReader(offset, size)
@@ -149,7 +150,8 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 			break
 		}
 		r.Lock()
-		if r.startInodeOffset > offset {
+		fmt.Printf("reader cnt[%v]\n", len(stream.readers))
+		if r.startInodeOffset > offset || r.endInodeOffset <= offset {
 			r.Unlock()
 			continue
 		}
@@ -160,7 +162,7 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 				" readerSIze[%v] offset[%v] size[%v]\n",
 				orgOffset, orgSize, r.toString(), currReaderOffset, currReaderSize, offset, size)
 			isPutReader = true
-		} else if r.endInodeOffset < offset+size {
+		} else {
 			currReaderOffset = offset - r.startInodeOffset
 			currReaderSize = (int(r.key.Size) - currReaderOffset)
 			fmt.Printf("alloc2 reader orgOffset[%v] orgSize[%v] on extentReader[%v] readeroffset[%v]"+
