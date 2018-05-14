@@ -63,14 +63,13 @@ func (m *MockServer) packErrorBody(request *proto.Packet, err error) {
 	log.LogError(fmt.Sprintf("request [%v]Action[%v] error[%v]", request.GetUniqLogId(),
 		proto.GetOpMesg(request.Opcode), err.Error()))
 	data := make([]byte, len(err.Error()))
-	copy(data,([]byte)(err.Error()))
-	request.PackErrorWithBody(proto.OpIntraGroupNetErr,data)
-
+	copy(data, ([]byte)(err.Error()))
+	request.PackErrorWithBody(proto.OpIntraGroupNetErr, data)
 
 	return
 }
 
-func (m *MockServer) operator(request *proto.Packet, connect net.Conn)(err error) {
+func (m *MockServer) operator(request *proto.Packet, connect net.Conn) (err error) {
 
 	defer func() {
 		log.LogDebug(request.ActionMesg(util.GetFuncTrace(), "remote", time.Now().UnixNano(), err))
@@ -98,29 +97,29 @@ func (m *MockServer) operator(request *proto.Packet, connect net.Conn)(err error
 		request.WriteToConn(connect)
 		return
 	case proto.OpStreamRead:
-		needReplySize:=request.Size
-		offset:=request.Offset
+		needReplySize := request.Size
+		offset := request.Offset
 		for {
-			if needReplySize<=0{
+			if needReplySize <= 0 {
 				break
 			}
-			err=nil
-			currReadSize:=uint32(util.Min(int(needReplySize),storage.BlockSize))
-			request.Data=make([]byte,currReadSize)
-			request.Crc,err=m.storage.Read(request.FileID,offset,int64(currReadSize),request.Data)
-			if err!=nil {
-				fmt.Printf("err is [%v]",err.Error())
-				m.packErrorBody(request,err)
+			err = nil
+			currReadSize := uint32(util.Min(int(needReplySize), storage.BlockSize))
+			request.Data = make([]byte, currReadSize)
+			request.Crc, err = m.storage.Read(request.FileID, offset, int64(currReadSize), request.Data)
+			if err != nil {
+				fmt.Printf("err is [%v]", err.Error())
+				m.packErrorBody(request, err)
 				request.WriteToConn(connect)
 				return
 			}
-			request.Size=currReadSize
-			request.Opcode=proto.OpOk
-			if err=request.WriteToConn(connect);err!=nil {
+			request.Size = currReadSize
+			request.Opcode = proto.OpOk
+			if err = request.WriteToConn(connect); err != nil {
 				return
 			}
-			needReplySize-=currReadSize
-			offset+=int64(currReadSize)
+			needReplySize -= currReadSize
+			offset += int64(currReadSize)
 		}
 		return
 
@@ -140,8 +139,8 @@ func (s *MockServer) readFromCliAndDeal(connect net.Conn) (err error) {
 	if err = pkg.ReadFromConn(connect, NoReadDeadlineTime); err != nil {
 		goto errDeal
 	}
-	err=s.operator(pkg, connect)
-	if err!=nil {
+	err = s.operator(pkg, connect)
+	if err != nil {
 		connect.Close()
 	}
 

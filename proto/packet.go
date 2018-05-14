@@ -191,8 +191,8 @@ func (p *Packet) UnmarshalHeader(in []byte) error {
 
 	p.StoreType = in[1]
 	p.Opcode = in[2]
-	p.Nodes = in[3]
-	p.Resultcode =in[4]
+	p.Resultcode =in[3]
+	p.Nodes = in[4]
 	p.Crc = binary.BigEndian.Uint32(in[5:9])
 	p.Size = binary.BigEndian.Uint32(in[9:13])
 	p.Arglen = binary.BigEndian.Uint32(in[13:17])
@@ -200,7 +200,6 @@ func (p *Packet) UnmarshalHeader(in []byte) error {
 	p.FileID = binary.BigEndian.Uint64(in[21:29])
 	p.Offset = int64(binary.BigEndian.Uint64(in[29:37]))
 	p.ReqID = int64(binary.BigEndian.Uint64(in[37:HeaderSize]))
-	p.Resultcode = p.Opcode
 
 	return nil
 }
