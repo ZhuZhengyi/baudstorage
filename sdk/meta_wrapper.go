@@ -36,15 +36,15 @@ const (
 )
 
 type MetaPartition struct {
-	GroupID string
-	Start   uint64
-	End     uint64
-	Members []string
+	PartitionID string
+	Start       uint64
+	End         uint64
+	Members     []string
 }
 
 type MetaConn struct {
 	conn net.Conn
-	gid  string
+	id   string
 }
 
 type NamespaceView struct {
@@ -146,12 +146,12 @@ func (mw *MetaWrapper) refresh() {
 //
 
 func (mw *MetaWrapper) addPartition(mp *MetaPartition) {
-	mw.partitions[mp.GroupID] = mp
+	mw.partitions[mp.PartitionID] = mp
 	mw.ranges.ReplaceOrInsert(mp)
 }
 
 func (mw *MetaWrapper) deletePartition(mp *MetaPartition) {
-	delete(mw.partitions, mp.GroupID)
+	delete(mw.partitions, mp.PartitionID)
 	mw.ranges.Delete(mp)
 }
 
@@ -159,7 +159,7 @@ func (mw *MetaWrapper) replaceOrInsertPartition(mp *MetaPartition) {
 	mw.Lock()
 	defer mw.Unlock()
 
-	found, ok := mw.partitions[mp.GroupID]
+	found, ok := mw.partitions[mp.PartitionID]
 	if ok {
 		mw.deletePartition(found)
 	}
@@ -223,7 +223,7 @@ func (mw *MetaWrapper) getConn(mp *MetaPartition) (*MetaConn, error) {
 		return nil, err
 	}
 
-	mc := &MetaConn{conn: conn, gid: mp.GroupID}
+	mc := &MetaConn{conn: conn, id: mp.PartitionID}
 	return mc, nil
 }
 

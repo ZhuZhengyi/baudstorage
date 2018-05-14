@@ -85,7 +85,7 @@ func (m *MasterServer) Start(wg *sync.WaitGroup) {
 	}
 
 	for _, p := range globalMP {
-		mp := NewMetaPartition(p.GroupID, p.Start, p.End, SimMetaAddr+":"+SimMetaPort)
+		mp := NewMetaPartition(p.PartitionID, p.Start, p.End, SimMetaAddr+":"+SimMetaPort)
 		nv.MetaPartitions = append(nv.MetaPartitions, mp)
 	}
 
@@ -120,12 +120,12 @@ func (m *MasterServer) handleClientNS(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func NewMetaPartition(gid string, start, end uint64, member string) *MetaPartition {
+func NewMetaPartition(id string, start, end uint64, member string) *MetaPartition {
 	return &MetaPartition{
-		GroupID: gid,
-		Start:   start,
-		End:     end,
-		Members: []string{member, member, member},
+		PartitionID: id,
+		Start:       start,
+		End:         end,
+		Members:     []string{member, member, member},
 	}
 }
 

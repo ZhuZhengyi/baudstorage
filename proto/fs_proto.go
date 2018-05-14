@@ -28,9 +28,9 @@ type Dentry struct {
 }
 
 type CreateInodeRequest struct {
-	Namespace string `json:"namespace"`
-	GroupID   string
-	Mode      uint32 `json:"mode"`
+	Namespace   string `json:"namespace"`
+	PartitionID string
+	Mode        uint32 `json:"mode"`
 }
 
 type CreateInodeResponse struct {
@@ -38,25 +38,25 @@ type CreateInodeResponse struct {
 }
 
 type DeleteInodeRequest struct {
-	Namespace string `json:"namespace"`
-	GroupID   string
-	Inode     uint64 `json:"inode"`
+	Namespace   string `json:"namespace"`
+	PartitionID string
+	Inode       uint64 `json:"inode"`
 }
 
 type CreateDentryRequest struct {
-	Namespace string `json:"namespace"`
-	GroupID   string
-	ParentID  uint64 `json:"parentID"`
-	Inode     uint64 `json:"inode"`
-	Name      string `json:"name"`
-	Mode      uint32 `json:"mode"`
+	Namespace   string `json:"namespace"`
+	PartitionID string
+	ParentID    uint64 `json:"parentID"`
+	Inode       uint64 `json:"inode"`
+	Name        string `json:"name"`
+	Mode        uint32 `json:"mode"`
 }
 
 type DeleteDentryRequest struct {
-	Namespace string `json:"namespace"`
-	GroupID   string
-	ParentID  uint64 `json:"parentID"`
-	Name      string `json:"name"`
+	Namespace   string `json:"namespace"`
+	PartitionID string
+	ParentID    uint64 `json:"parentID"`
+	Name        string `json:"name"`
 }
 
 type DeleteDentryResponse struct {
@@ -64,16 +64,16 @@ type DeleteDentryResponse struct {
 }
 
 type OpenRequest struct {
-	Namespace string `json:"namespace"`
-	GroupID   string
-	Inode     uint64 `json:"inode"`
+	Namespace   string `json:"namespace"`
+	PartitionID string
+	Inode       uint64 `json:"inode"`
 }
 
 type LookupRequest struct {
-	Namespace string `json:"namespace"`
-	GroupID   string
-	ParentID  uint64 `json:"parentID"`
-	Name      string `json:"name"`
+	Namespace   string `json:"namespace"`
+	PartitionID string
+	ParentID    uint64 `json:"parentID"`
+	Name        string `json:"name"`
 }
 
 type LookupResponse struct {
@@ -82,9 +82,9 @@ type LookupResponse struct {
 }
 
 type InodeGetRequest struct {
-	Namespace string `json:"namespace"`
-	GroupID   string
-	Inode     uint64 `json:"inode"`
+	Namespace   string `json:"namespace"`
+	PartitionID string
+	Inode       uint64 `json:"inode"`
 }
 
 type InodeGetResponse struct {
@@ -92,9 +92,9 @@ type InodeGetResponse struct {
 }
 
 type ReadDirRequest struct {
-	Namespace string `json:"namespace"`
-	GroupID   string
-	ParentID  uint64 `json:"parentID"`
+	Namespace   string `json:"namespace"`
+	PartitionID string
+	ParentID    uint64 `json:"parentID"`
 }
 
 type ReadDirResponse struct {
