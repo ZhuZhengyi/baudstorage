@@ -52,7 +52,7 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	stream.Lock()
 	defer stream.Unlock()
 	if size > CFSEXTENTSIZE {
-		return 0, fmt.Errorf("read endOffset is So High")
+		return 0, io.EOF
 	}
 	if offset+size < int(stream.fileSize) {
 		return size, nil
@@ -67,12 +67,11 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 		return 0, err
 	}
 
-	if offset > int(stream.fileSize) {
-		return 0, fmt.Errorf("fileSize[%v] but read startOffset[%v]", stream.fileSize, offset)
+	if offset >= int(stream.fileSize) {
+		return 0, io.EOF
 	}
 	if offset+size > int(stream.fileSize) {
-		return int(stream.fileSize) - (offset + size), fmt.Errorf("fileSize[%v] but read startOffset[%v] endOffset[%v]",
-			stream.fileSize, offset, size)
+		return int(stream.fileSize) - (offset + size), io.EOF
 	}
 
 	return size, nil
@@ -114,11 +113,7 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err erro
 func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int, err error) {
 	var keyCanRead int
 	keyCanRead, err = stream.initCheck(offset, size)
-	if err != nil {
-		fmt.Printf(err.Error())
-		err = io.EOF
-	}
-	if keyCanRead <= 0 {
+	if keyCanRead <= 0 || err != nil {
 		return
 	}
 	readers, readerOffset, readerSize := stream.getReader(offset, size)
