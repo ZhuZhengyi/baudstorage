@@ -199,8 +199,8 @@ func (m *MetaServer) handlePacket(conn net.Conn, p *proto.Packet) (err error) {
 	switch p.Opcode {
 	case proto.OpMetaCreateInode:
 		err = m.opCreateInode(conn, p)
-		//	case proto.OpMetaCreateDentry:
-		//		err = m.opCreateDentry(conn, p)
+	case proto.OpMetaCreateDentry:
+		err = m.opCreateDentry(conn, p)
 		//	case proto.OpMetaDeleteInode:
 		//		err = m.opDeleteInode(conn, p)
 		//	case proto.OpMetaDeleteDentry:
@@ -227,7 +227,6 @@ func (m *MetaServer) opCreateInode(conn net.Conn, p *proto.Packet) error {
 
 	ino := m.allocIno()
 	i := NewInode(ino, req.Mode)
-	m.addInode(i)
 
 	resp := &proto.CreateInodeResponse{
 		Info: NewInodeInfo(ino, req.Mode),
@@ -235,22 +234,45 @@ func (m *MetaServer) opCreateInode(conn net.Conn, p *proto.Packet) error {
 
 	data, err := json.Marshal(resp)
 	if err != nil {
-		log.Println("opCreateInode Marshal, err = ", err)
-		goto errOut
+		p.Resultcode = proto.OpErr
+		goto out
 	}
 
+	m.addInode(i)
 	p.Data = data
 	p.Size = uint32(len(data))
 	p.Resultcode = proto.OpOk
+
+out:
 	err = p.WriteToConn(conn)
+	return err
+}
+
+func (m *MetaServer) opCreateDentry(conn net.Conn, p *proto.Packet) error {
+	req := &proto.CreateDentryRequest{}
+	err := json.Unmarshal(p.Data, req)
 	if err != nil {
-		goto errOut
+		return err
 	}
 
-	return nil
+	dentry := NewDentry(req.Name, req.Inode, req.Mode)
+	p.Data = nil
+	p.Size = 0
 
-errOut:
-	m.deleteInode(i)
+	parent := m.getInode(req.ParentID)
+	if parent == nil {
+		p.Resultcode = proto.OpNotExistErr
+		goto out
+	}
+
+	if found := parent.addDentry(dentry); found != nil {
+		p.Resultcode = proto.OpExistErr
+		goto out
+	}
+
+	p.Resultcode = proto.OpOk
+out:
+	err = p.WriteToConn(conn)
 	return err
 }
 
@@ -266,18 +288,55 @@ func NewInodeInfo(ino uint64, mode uint32) *proto.InodeInfo {
 	}
 }
 
-func (m *MetaServer) addInode(i *Inode) {
+func (m *MetaServer) addInode(i *Inode) *Inode {
 	m.Lock()
 	defer m.Unlock()
+	inode, ok := m.inodes[i.ino]
+	if ok {
+		return inode
+	}
 	m.inodes[i.ino] = i
+	return nil
 }
 
-func (m *MetaServer) deleteInode(i *Inode) {
+func (m *MetaServer) deleteInode(ino uint64) {
 	m.Lock()
 	defer m.Unlock()
-	delete(m.inodes, i.ino)
+	delete(m.inodes, ino)
+}
+
+func (m *MetaServer) getInode(ino uint64) *Inode {
+	m.RLock()
+	defer m.RUnlock()
+	i, ok := m.inodes[ino]
+	if !ok {
+		return nil
+	}
+	return i
 }
 
 func (m *MetaServer) allocIno() uint64 {
 	return atomic.AddUint64(&m.currIno, 1)
+}
+
+func (i *Inode) addDentry(d *Dentry) *Dentry {
+	i.Lock()
+	defer i.Unlock()
+	dentry, ok := i.dents[d.name]
+	if ok {
+		return dentry
+	}
+	i.dents[d.name] = d
+	return nil
+}
+
+func (i *Inode) deleteDentry(name string) *Dentry {
+	i.Lock()
+	defer i.Unlock()
+	dentry, ok := i.dents[name]
+	if ok {
+		delete(i.dents, name)
+		return dentry
+	}
+	return nil
 }
