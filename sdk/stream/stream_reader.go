@@ -124,12 +124,12 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 			err = errors.Annotatef(err, "UserRequest{inode[%v] FileSize[%v] offset[%v] size[%v]} readers{"+
 				"[%v] offset[%v] size[%v] occous error}", stream.inode, stream.fileSize, offset, size, r.toString(), readerOffset[index],
 				readerSize[index])
-			return
+			return canRead,err
 		}
 		canRead += readerSize[index]
 	}
 
-	return
+	return canRead,nil
 }
 
 func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader, readersOffsets []int, readersSize []int) {
