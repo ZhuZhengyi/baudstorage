@@ -54,6 +54,8 @@ func UnmarshalTaskResponse(task *proto.AdminTask) (err error) {
 		response = &proto.DeleteMetaPartitionResponse{}
 	case OpUpdateMetaPartition:
 		response = &proto.UpdateMetaPartitionResponse{}
+	case OpLoadMetaPartition:
+		response = task.Response.(*proto.LoadMetaPartitionMetricResponse)
 	case OpDataNodeHeartbeat:
 		response = &proto.DataNodeHeartBeatResponse{}
 	case OpMetaNodeHeartbeat:

@@ -60,6 +60,7 @@ type File struct {
 }
 
 type LoadMetaPartitionMetricRequest struct {
+	PartitionID uint64
 	Start uint64
 	End   uint64
 }

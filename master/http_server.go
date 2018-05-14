@@ -21,12 +21,14 @@ const (
 	ClientMetaGroup = "client/metaGroup"
 
 	// Node APIs
-	AddDataNode     = "dataNode/add"
-	AddMetaNode     = "metaNode/add"
-	DataNodeOffline = "admin/dataNodeOffline"
-	MetaNodeOffline = "admin/metaNodeOffline"
-	GetDataNode     = "admin/getDataNode"
-	GetMetaNode     = "admin/getMetaNode"
+	AddDataNode               = "dataNode/add"
+	AddMetaNode               = "metaNode/add"
+	DataNodeOffline           = "admin/dataNodeOffline"
+	MetaNodeOffline           = "admin/metaNodeOffline"
+	GetDataNode               = "admin/getDataNode"
+	GetMetaNode               = "admin/getMetaNode"
+	AdminLoadMetaPartition    = "admin/loadMetaPartition"
+	AdminMetaPartitionOffline = "admin/metaPartitionOffline"
 
 	// Operation response
 	MetaNodeResponse = "metaNode/response" // Method: 'POST', ContentType: 'application/json'
@@ -88,6 +90,10 @@ func (m *Master) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		m.dataNodeTaskResponse(w, r)
 	case MetaNodeResponse:
 		m.metaNodeTaskResponse(w, r)
+	case AdminLoadMetaPartition:
+		m.loadMetaPartition(w, r)
+	case AdminMetaPartitionOffline:
+		m.metaPartitionOffline(w, r)
 	default:
 
 	}

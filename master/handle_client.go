@@ -3,6 +3,7 @@ package master
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 )
 
 type VolResponse struct {
@@ -149,16 +150,24 @@ errDeal:
 	return
 }
 
-func parseGetMetaPartitionPara(r *http.Request) (name string, groupId uint64, err error) {
+func parseGetMetaPartitionPara(r *http.Request) (name string, partitionID uint64, err error) {
 	r.ParseForm()
 	if name, err = checkNamespace(r); err != nil {
 		return
 	}
-	if groupId := r.FormValue(ParaId); groupId == "" {
-		err = paraNotFound(ParaId)
+	if partitionID, err = checkMetaPartitionID(r); err != nil {
 		return
 	}
 	return
+}
+
+func checkMetaPartitionID(r *http.Request) (partitionID uint64, err error) {
+	var value string
+	if value := r.FormValue(ParaId); value == "" {
+		err = paraNotFound(ParaId)
+		return
+	}
+	return strconv.ParseUint(value, 10, 64)
 }
 
 func parseGetNamespacePara(r *http.Request) (name string, err error) {

@@ -69,7 +69,8 @@ const (
 	OpDataNodeHeartbeat   = 0x07
 	OpMetaNodeHeartbeat   = 0x08
 	OpDeleteMetaPartition = 0x09
-	OpUpdateMetaPartition = 0x10
+	OpUpdateMetaPartition = 0x0A
+	OpLoadMetaPartition   = 0x0B
 )
 
 const (

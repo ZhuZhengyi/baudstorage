@@ -114,6 +114,18 @@ func (c *Cluster) loadVolAndCheckResponse(v *VolGroup, isRecover bool) {
 	}()
 }
 
+func (c *Cluster) loadMetaPartitionAndCheckResponse(mp *MetaPartition, isRecover bool) {
+	go func() {
+		c.processLoadMetaPartition(mp, isRecover)
+	}()
+}
+
+func (c *Cluster) processLoadMetaPartition(mp *MetaPartition, isRecover bool) {
+	tasks := mp.generateLoadMetaPartitionTasks()
+	c.putMetaNodeTasks(tasks)
+	//todo check response
+}
+
 func (c *Cluster) processLoadVol(v *VolGroup, isRecover bool) {
 	log.LogInfo(fmt.Sprintf("action[processLoadVol],volID:%v,isRecover:%v", v.VolID, isRecover))
 	loadVolTasks := v.generateLoadVolTasks()
@@ -182,6 +194,9 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	case OpUpdateMetaPartition:
 		response := task.Response.(*proto.UpdateMetaPartitionResponse)
 		c.dealUpdateMetaPartition(task.OperatorAddr, response)
+	case OpLoadMetaPartition:
+		response := task.Response.(*proto.LoadMetaPartitionMetricResponse)
+		c.dealLoadMetaPartition(task.OperatorAddr, response)
 	default:
 		log.LogError(fmt.Sprintf("unknown operate code %v", task.OpCode))
 	}
@@ -192,6 +207,10 @@ errDeal:
 	log.LogError(fmt.Sprintf("action[dealMetaNodeTaskResponse],nodeAddr %v,taskId %v,err %v",
 		nodeAddr, task.ID, err.Error()))
 	return
+}
+
+func (c *Cluster) dealLoadMetaPartition(nodeAddr string, resp *proto.LoadMetaPartitionMetricResponse) {
+
 }
 
 func (c *Cluster) dealUpdateMetaPartition(nodeAddr string, resp *proto.UpdateMetaPartitionResponse) {

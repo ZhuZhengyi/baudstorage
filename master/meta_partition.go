@@ -270,6 +270,16 @@ func (mp *MetaPartition) generateAddLackMetaReplicaTask(addrs []string) (tasks [
 	return mp.generateCreateMetaPartitionTasks(addrs)
 }
 
+func (mp *MetaPartition) generateLoadMetaPartitionTasks() (tasks []*proto.AdminTask) {
+	req := &proto.LoadMetaPartitionMetricRequest{PartitionID: mp.PartitionID}
+	for _, mr := range mp.Replicas {
+		t := proto.NewAdminTask(OpLoadMetaPartition, mr.Addr, req)
+		tasks = append(tasks, t)
+	}
+
+	return
+}
+
 func (mr *MetaReplica) generateUpdateMetaReplicaTask(groupId uint64) (t *proto.AdminTask) {
 	req := &proto.DeleteMetaPartitionRequest{GroupId: groupId}
 	t = proto.NewAdminTask(OpUpdateMetaPartition, mr.Addr, req)
