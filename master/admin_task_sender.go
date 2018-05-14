@@ -54,8 +54,8 @@ type AdminTaskSender struct {
 	targetAddr string
 	taskMap    map[string]*proto.AdminTask
 	sync.Mutex
-	exitCh   chan struct{}
-	connPool *pool.ConnPool
+	exitCh     chan struct{}
+	connPool   *pool.ConnPool
 }
 
 func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
@@ -124,9 +124,11 @@ func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) 
 	if err = response.ReadFromConn(conn, TaskWaitResponseTimeOut); err != nil {
 		return
 	}
-	if response.Opcode == proto.OpOk {
+	if response.IsOkReply() {
 		task.SendTime = time.Now().Unix()
 		task.SendCount++
+	} else {
+		log.LogError("send task failed,err %v", response.Data)
 	}
 	return
 }
