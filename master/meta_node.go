@@ -9,7 +9,7 @@ import (
 type MetaNode struct {
 	id                uint64
 	Addr              string
-	metaRanges        []*MetaRange
+	metaPartitions    []*MetaReplica
 	isActive          bool
 	sender            *AdminTaskSender
 	RackName          string `json:"Rack"`
@@ -51,7 +51,7 @@ func (metaNode *MetaNode) SelectNodeForWrite() {
 func (metaNode *MetaNode) IsWriteAble() (ok bool) {
 	metaNode.Lock()
 	defer metaNode.Unlock()
-	if metaNode.isActive == true && metaNode.MaxMemAvailWeight > DefaultMinMetaRangeSize {
+	if metaNode.isActive == true && metaNode.MaxMemAvailWeight > DefaultMinMetaPartitionRange {
 		ok = true
 	}
 	return

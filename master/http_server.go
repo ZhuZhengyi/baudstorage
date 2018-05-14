@@ -83,7 +83,7 @@ func (m *Master) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case ClientNamespace:
 		m.getNamespace(w, r)
 	case ClientMetaGroup:
-		m.getMetaGroup(w, r)
+		m.getMetaPartition(w, r)
 	case DataNodeResponse:
 		m.dataNodeTaskResponse(w, r)
 	case MetaNodeResponse:
