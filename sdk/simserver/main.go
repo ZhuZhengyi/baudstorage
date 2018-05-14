@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"runtime"
@@ -20,6 +20,8 @@ const (
 	SimMasterPort = "8900"
 	SimMetaAddr   = "localhost"
 	SimMetaPort   = "8910"
+
+	SimLogFlags = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile
 )
 
 var globalMP = []MetaPartition{
@@ -53,7 +55,8 @@ type Dentry struct {
 }
 
 func main() {
-	fmt.Println("Staring Sim Server ...")
+	log.SetFlags(SimLogFlags)
+	log.Println("Staring Sim Server ...")
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	var wg sync.WaitGroup
@@ -93,9 +96,9 @@ func (m *MasterServer) Start(wg *sync.WaitGroup) {
 		defer wg.Done()
 		http.HandleFunc("/client/namespace", m.handleClientNS)
 		if err := http.ListenAndServe(":"+SimMasterPort, nil); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		} else {
-			fmt.Println("Done!")
+			log.Println("Done!")
 		}
 	}()
 }
@@ -181,12 +184,12 @@ func (m *MetaServer) servConn(conn net.Conn) {
 	for {
 		p := &proto.Packet{}
 		if err := p.ReadFromConn(conn, proto.NoReadDeadlineTime); err != nil {
-			fmt.Println("servConn ReadFromConn:", err)
+			log.Println("servConn ReadFromConn:", err)
 			return
 		}
 
 		if err := m.handlePacket(conn, p); err != nil {
-			fmt.Println("servConn handlePacket:", err)
+			log.Println("servConn handlePacket:", err)
 			return
 		}
 	}
@@ -218,7 +221,7 @@ func (m *MetaServer) opCreateInode(conn net.Conn, p *proto.Packet) error {
 	req := &proto.CreateInodeRequest{}
 	err := json.Unmarshal(p.Data, req)
 	if err != nil {
-		fmt.Println("opCreateInode Unmarshal, err = ", err)
+		log.Println("opCreateInode Unmarshal, err = ", err)
 		return err
 	}
 
@@ -233,7 +236,7 @@ func (m *MetaServer) opCreateInode(conn net.Conn, p *proto.Packet) error {
 
 	data, err := json.Marshal(resp)
 	if err != nil {
-		fmt.Println("opCreateInode Marshal, err = ", err)
+		log.Println("opCreateInode Marshal, err = ", err)
 		goto errOut
 	}
 
