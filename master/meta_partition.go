@@ -201,7 +201,7 @@ func (mp *MetaPartition) updateHosts() {
 	//todo
 }
 
-func (mp *MetaPartition) updateMetaPartition(mgr *proto.MetaRangeReport, metaNode *MetaNode) {
+func (mp *MetaPartition) updateMetaPartition(mgr *proto.MetaPartitionReport, metaNode *MetaNode) {
 	mp.Lock()
 	mr, err := mp.getMetaReplica(metaNode.Addr)
 	mp.Unlock()
@@ -247,7 +247,7 @@ func (mp *MetaPartition) generateReplicaTask() (tasks []*proto.AdminTask) {
 func (mp *MetaPartition) generateCreateMetaPartitionTasks(specifyAddrs []string) (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	hosts := make([]string, 0)
-	req := &proto.CreateMetaRangeRequest{
+	req := &proto.CreateMetaPartitionRequest{
 		Start:   mp.Start,
 		End:     mp.End,
 		GroupId: mp.PartitionID,
@@ -271,13 +271,13 @@ func (mp *MetaPartition) generateAddLackMetaReplicaTask(addrs []string) (tasks [
 }
 
 func (mr *MetaReplica) generateUpdateMetaReplicaTask(groupId uint64) (t *proto.AdminTask) {
-	req := &proto.DeleteMetaRangeRequest{GroupId: groupId}
+	req := &proto.DeleteMetaPartitionRequest{GroupId: groupId}
 	t = proto.NewAdminTask(OpUpdateMetaPartition, mr.Addr, req)
 	return
 }
 
 func (mr *MetaReplica) generateDeleteReplicaTask(groupId uint64) (t *proto.AdminTask) {
-	req := &proto.DeleteMetaRangeRequest{GroupId: groupId}
+	req := &proto.DeleteMetaPartitionRequest{GroupId: groupId}
 	t = proto.NewAdminTask(OpDeleteMetaPartition, mr.Addr, req)
 	return
 }

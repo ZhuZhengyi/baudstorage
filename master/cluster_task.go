@@ -171,16 +171,16 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 
 	switch task.OpCode {
 	case OpCreateMetaPartition:
-		response := task.Response.(*proto.CreateMetaRangeResponse)
+		response := task.Response.(*proto.CreateMetaPartitionResponse)
 		c.dealCreateMetaPartition(task.OperatorAddr, response)
 	case OpMetaNodeHeartbeat:
 		response := task.Response.(*proto.MetaNodeHeartbeatResponse)
 		c.dealMetaNodeHeartbeat(task.OperatorAddr, response)
 	case OpDeleteMetaPartition:
-		response := task.Response.(*proto.DeleteMetaRangeResponse)
+		response := task.Response.(*proto.DeleteMetaPartitionResponse)
 		c.dealDeleteMetaPartition(task.OperatorAddr, response)
 	case OpUpdateMetaPartition:
-		response := task.Response.(*proto.UpdateMetaRangeResponse)
+		response := task.Response.(*proto.UpdateMetaPartitionResponse)
 		c.dealUpdateMetaPartition(task.OperatorAddr, response)
 	default:
 		log.LogError(fmt.Sprintf("unknown operate code %v", task.OpCode))
@@ -194,7 +194,7 @@ errDeal:
 	return
 }
 
-func (c *Cluster) dealUpdateMetaPartition(nodeAddr string, resp *proto.UpdateMetaRangeResponse) {
+func (c *Cluster) dealUpdateMetaPartition(nodeAddr string, resp *proto.UpdateMetaPartitionResponse) {
 	if resp.Status == proto.CmdFailed {
 		log.LogError(fmt.Sprintf("action[dealUpdateMetaPartition],nodeAddr %v update meta range failed,err %v", nodeAddr, resp.Result))
 		return
@@ -214,7 +214,7 @@ errDeal:
 	return
 }
 
-func (c *Cluster) dealDeleteMetaPartition(nodeAddr string, resp *proto.DeleteMetaRangeResponse) {
+func (c *Cluster) dealDeleteMetaPartition(nodeAddr string, resp *proto.DeleteMetaPartitionResponse) {
 	if resp.Status == proto.CmdFailed {
 		log.LogError(fmt.Sprintf("action[dealDeleteMetaPartition],nodeAddr %v delete meta range failed,err %v", nodeAddr, resp.Result))
 		return
@@ -235,7 +235,7 @@ errDeal:
 	return
 }
 
-func (c *Cluster) dealCreateMetaPartition(nodeAddr string, resp *proto.CreateMetaRangeResponse) {
+func (c *Cluster) dealCreateMetaPartition(nodeAddr string, resp *proto.CreateMetaPartitionResponse) {
 	if resp.Status == proto.CmdFailed {
 		log.LogError(fmt.Sprintf("action[dealCreateMetaPartition],nodeAddr %v create meta range failed,err %v", nodeAddr, resp.Result))
 		return
@@ -285,7 +285,7 @@ func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHea
 	logMsg = fmt.Sprintf("action[dealMetaNodeHeartbeat],metaNode:%v ReportTime:%v  success", metaNode.Addr, time.Now().Unix())
 	log.LogDebug(logMsg)
 	metaNode.setNodeAlive()
-	metaNode.metaRangeInfo = resp.MetaRangeInfo
+	metaNode.metaRangeInfo = resp.MetaPartitionInfo
 	c.UpdateMetaNode(metaNode)
 	metaNode.metaRangeCount = len(metaNode.metaRangeInfo)
 	metaNode.metaRangeInfo = nil

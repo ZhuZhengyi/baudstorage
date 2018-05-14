@@ -24,7 +24,7 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 	}
 	defer func() {
 		// Response task result to master.
-		resp := &proto.CreateMetaRangeResponse{}
+		resp := &proto.CreateMetaPartitionResponse{}
 		if err != nil {
 			// Operation failure.
 			resp.Status = proto.OpErr
@@ -42,7 +42,7 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	// Unmarshal request to entity
-	req := &proto.CreateMetaRangeRequest{}
+	req := &proto.CreateMetaPartitionRequest{}
 	if err := json.Unmarshal(requestJson, req); err != nil {
 		return
 	}

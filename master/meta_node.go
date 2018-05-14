@@ -19,7 +19,7 @@ type MetaNode struct {
 	selectCount       uint64
 	carry             float64
 	reportTime        time.Time
-	metaRangeInfo     []*proto.MetaRangeReport
+	metaRangeInfo     []*proto.MetaPartitionReport
 	metaRangeCount    int
 	sync.Mutex
 }
