@@ -298,10 +298,10 @@ func (p *Packet) PackOkGetWatermarkReply(size int64) {
 	p.Arglen = 0
 }
 
-func (p *Packet) PackOkGetInfoReply(buf []byte) {
-	p.Size = uint32(len(buf))
+func (p *Packet) PackOkWithReply(reply []byte) {
+	p.Size = uint32(len(reply))
 	p.Data = make([]byte, p.Size)
-	copy(p.Data[:p.Size], buf)
+	copy(p.Data[:p.Size], reply)
 	p.Resultcode = OpOk
 	p.Arglen = 0
 }
