@@ -2,6 +2,7 @@ package metanode
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -13,6 +14,7 @@ const metaManagePrefix = "metaManager_"
 
 // MetaRangeGroup manage all MetaRange and make mapping between namespace and MetaRange.
 type MetaRangeManager struct {
+	dataPath string
 	metaRangeMap map[string]*MetaRange // Key: metaRangeId, Val: metaRange
 	mu           sync.RWMutex
 }
@@ -22,7 +24,7 @@ func (m *MetaRangeManager) SetMetaRange(mr *MetaRange) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if _, ok := m.metaRangeMap[mr.ID]; ok {
-		err = errors.New("metaRange '" + mr.ID + "' is existed!")
+		err = fmt.Errorf("meta range %d is existed", mr.ID)
 		return
 	}
 	m.metaRangeMap[mr.ID] = mr
@@ -62,7 +64,7 @@ func (m *MetaRangeManager) LoadMetaManagers(metaDir string) (err error) {
 		return
 	}
 	if !fileInfo.IsDir() {
-		err = errors.New("metaDir must be directory!")
+		err = errors.New("metaDir must be directory")
 		return
 	}
 	// Scan data directory.
