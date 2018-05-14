@@ -71,7 +71,7 @@ func (rs *RocksDBStore) Get(key interface{}) (result interface{}, err error) {
 	return rs.db.GetBytes(ro, key.([]byte))
 }
 
-func (rs *RocksDBStore) Snapshot() *gorocksdb.Snapshot {
+func (rs *RocksDBStore) RocksDBSnapshot() *gorocksdb.Snapshot {
 	return rs.db.NewSnapshot()
 }
 
