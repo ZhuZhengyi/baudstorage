@@ -24,9 +24,6 @@ const (
 	ExtentWriterRecoverCnt = 1
 
 	DefaultWriteBufferSize = 1280 * util.KB
-
-	FlushIng = 2
-	NoFlush  = 1
 )
 
 var (
@@ -245,7 +242,6 @@ func (writer *ExtentWriter) flush() (err error) {
 		writer.flushLock.Unlock()
 		writer.checkIsStopReciveGoRoutine()
 		if err == nil {
-			log.LogInfo(writer.toString() + " backEndlush ok")
 			return
 		}
 		if !writer.recover() {
@@ -256,28 +252,24 @@ func (writer *ExtentWriter) flush() (err error) {
 	writer.flushLock.Lock()
 	if writer.isAllFlushed() {
 		err = nil
-		return err
+		return nil
 	}
 	if writer.getPacket() != nil {
-		err = writer.sendCurrPacket()
-		if err != nil {
+		if err = writer.sendCurrPacket(); err != nil {
 			return err
 		}
 	}
-
 	if writer.isAllFlushed() {
 		err = nil
-		return err
+		return nil
 	}
 	writer.flushWait()
-
 	if !writer.isAllFlushed() {
 		err = errors.Annotatef(FlushErr, "cannot backEndlush writer [%v]", writer.toString())
 		return err
 	}
-	err = nil
 
-	return
+	return nil
 }
 
 func (writer *ExtentWriter) close() {
@@ -300,8 +292,8 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 		return errors.Annotatef(fmt.Errorf("processReply recive [%v] error [%v]", request.GetUniqLogId(),
 			string(reply.Data[:reply.Size])), "writer[%v]", writer.toString())
 	}
-	writer.removeRquest(e)
 	writer.addByteAck(uint64(request.Size))
+	writer.removeRquest(e)
 	log.LogDebug(fmt.Sprintf("ActionProcessReply[%v] is recived", request.GetUniqLogId()))
 
 	return nil

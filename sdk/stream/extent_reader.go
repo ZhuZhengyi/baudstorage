@@ -51,10 +51,10 @@ func NewExtentReader(inode uint64, inInodeOffset int, key ExtentKey, wraper *sdk
 }
 
 func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
-	//if reader.getCacheStatus() == AvaliBuffer && offset+size <= reader.cache.getBufferEndOffset() {
-	//	reader.cache.copyData(data, offset, size)
-	//	return
-	//}
+	if reader.getCacheStatus() == AvaliBuffer && offset+size <= reader.cache.getBufferEndOffset() {
+		reader.cache.copyData(data, offset, size)
+		return
+	}
 	reader.Lock()
 	p := NewReadPacket(reader.key, offset, size)
 	reader.Unlock()

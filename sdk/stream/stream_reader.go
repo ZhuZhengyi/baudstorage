@@ -89,12 +89,9 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err erro
 			newOffSet += int(key.Size)
 			continue
 		} else if index == oldReaderCnt-1 {
-			updated := stream.readers[index].updateKey(key)
-			if updated {
-				newOffSet += int(key.Size)
-				fmt.Printf("inode[%v] update from Metanode TO fILESIZE[%v]\n", stream.inode, newStreamKey.Size())
-			}
+			stream.readers[index].updateKey(key)
 			newOffSet += int(key.Size)
+			fmt.Printf("inode[%v] update from Metanode TO FILESIZE[%v]\n", stream.inode, newOffSet)
 			continue
 		} else if index > oldReaderCnt-1 {
 			if r, err = NewExtentReader(stream.inode, newOffSet, key, stream.wraper); err != nil {
@@ -102,6 +99,7 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err erro
 			}
 			readers = append(readers, r)
 			newOffSet += int(key.Size)
+			fmt.Printf("inode[%v] update from Metanode TO FILESIZE[%v]\n", stream.inode, newOffSet)
 			continue
 		}
 	}
