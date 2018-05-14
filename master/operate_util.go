@@ -50,6 +50,14 @@ func UnmarshalTaskResponse(task *proto.AdminTask) (err error) {
 		response = &proto.CreateMetaRangeResponse{}
 	case OpDeleteFile:
 		response = &proto.DeleteFileResponse{}
+	case OpDeleteMetaRange:
+		response = &proto.DeleteMetaRangeResponse{}
+	case OpUpdateMetaRange:
+		response = &proto.UpdateMetaRangeResponse{}
+	case OpDataNodeHeartbeat:
+		response = &proto.DataNodeHeartBeatResponse{}
+	case OpMetaNodeHeartbeat:
+		response = &proto.MetaNodeHeartbeatResponse{}
 	default:
 		log.LogError(fmt.Sprintf("unknown operate code(%v)", task.OpCode))
 	}

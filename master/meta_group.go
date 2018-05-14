@@ -57,6 +57,26 @@ func (mg *MetaGroup) AddMember(mr *MetaRange) {
 	return
 }
 
+func (mg *MetaGroup) RemoveMember(mr *MetaRange) {
+	mg.Lock()
+	defer mg.Unlock()
+	var newMembers []*MetaRange
+	for _, m := range mg.Members {
+		if m.Addr == mr.Addr {
+			continue
+		}
+		newMembers = append(newMembers, m)
+	}
+	mg.Members = newMembers
+	return
+}
+
+func (mg *MetaGroup) updateEnd() {
+	for _, mr := range mg.Members {
+		mr.end = mg.End
+	}
+}
+
 func (mg *MetaGroup) getMetaRange(addr string) (mr *MetaRange, err error) {
 	mg.Lock()
 	defer mg.Unlock()
@@ -74,21 +94,35 @@ func (mg *MetaGroup) checkAndRemoveMissMetaRange(addr string) {
 	}
 }
 
-func (mg *MetaGroup) checkStatus(writeLog bool) {
+func (mg *MetaGroup) checkStatus(writeLog bool, replicaNum int) {
 	mg.Lock()
 	defer mg.Unlock()
+	missedCount := 0
 	for _, metaRange := range mg.Members {
 		metaRange.checkStatus()
 		if metaRange.isMissed() {
 			mg.addMissNode(metaRange.Addr, metaRange.ReportTime)
+			missedCount++
 		}
 		mg.status = metaRange.status & metaRange.status
+	}
+
+	if missedCount < replicaNum/2 {
+		mg.status = MetaRangeReadOnly
 	}
 
 	if writeLog {
 		log.LogInfo(fmt.Sprintf("action[checkStatus],id:%v,status:%v,replicaNum:%v",
 			mg.GroupID, mg.status, mg.replicaNum))
 	}
+}
+
+func (mg *MetaGroup) checkThreshold(threshold float32, size uint64) (t *proto.AdminTask) {
+	mr := mg.Members[0]
+	if float32(mr.Used/size) > threshold {
+		t = mg.generateUpdateMetaRangeTask()
+	}
+	return
 }
 
 func (mg *MetaGroup) addMissNode(addr string, lastReportTime int64) {
@@ -130,10 +164,32 @@ func (mg *MetaGroup) generateReplicaTask() (tasks []*proto.AdminTask) {
 }
 
 func (mg *MetaGroup) deleteExcessReplication() (excessAddr string, t *proto.AdminTask, err error) {
-
+	for _, mr := range mg.Members {
+		if !contains(mg.PersistenceHosts, mr.Addr) {
+			excessAddr = mr.Addr
+			t = mr.generateDeleteReplicaTask()
+			err = MetaGroupReplicationExcessError
+			break
+		}
+	}
 	return
 }
+
 func (mg *MetaGroup) addLackReplication() (lackAddr string, t *proto.AdminTask, err error) {
+
+	var liveReplicas []string
+	for _, mr := range mg.Members {
+		liveReplicas = append(liveReplicas, mr.Addr)
+	}
+	for _, host := range mg.PersistenceHosts {
+		if !contains(liveReplicas, host) {
+			lackAddr = host
+			tasks := mg.generateCreateMetaGroupTasks(host)
+			t = tasks[0]
+			err = MetaGroupReplicationLackError
+			break
+		}
+	}
 	return
 }
 
@@ -163,7 +219,7 @@ func (mg *MetaGroup) updateMetaGroup(mgr *proto.MetaRangeReport, metaNode *MetaN
 	mg.Unlock()
 }
 
-func (mg *MetaGroup) generateCreateMetaGroupTasks(nsName string) (tasks []*proto.AdminTask) {
+func (mg *MetaGroup) generateCreateMetaGroupTasks(specifyAddr string) (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	peers := make([]proto.Peer, 0)
 	for _, m := range mg.Members {
@@ -177,9 +233,19 @@ func (mg *MetaGroup) generateCreateMetaGroupTasks(nsName string) (tasks []*proto
 		GroupId: mg.GroupID,
 		Members: peers,
 	}
-	for _, addr := range mg.PersistenceHosts {
-		tasks = append(tasks, proto.NewAdminTask(OpCreateMetaGroup, addr, req))
+	if specifyAddr == "" {
+		for _, addr := range mg.PersistenceHosts {
+			tasks = append(tasks, proto.NewAdminTask(OpCreateMetaGroup, addr, req))
+		}
+	} else {
+		tasks = append(tasks, proto.NewAdminTask(OpCreateMetaGroup, specifyAddr, req))
 	}
+
+	return
+}
+func (mg *MetaGroup) generateUpdateMetaRangeTask() (t *proto.AdminTask) {
+	req := &proto.DeleteMetaRangeRequest{GroupId: mg.GroupID}
+	t = proto.NewAdminTask(OpUpdateMetaRange, mg.Members[0].Addr, req)
 	return
 }
 
@@ -199,4 +265,10 @@ func (mr *MetaRange) isMissed() (miss bool) {
 
 func (mr *MetaRange) setLastReportTime() {
 	mr.ReportTime = time.Now().Unix()
+}
+
+func (mr *MetaRange) generateDeleteReplicaTask() (t *proto.AdminTask) {
+	req := &proto.DeleteMetaRangeRequest{GroupId: mr.id}
+	t = proto.NewAdminTask(OpDeleteMetaRange, mr.Addr, req)
+	return
 }

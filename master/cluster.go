@@ -346,10 +346,7 @@ func (c *Cluster) metaNodeOffLine(metaNode *MetaNode) {
 
 func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {
 	var (
-		ns      *NameSpace
-		mg      *MetaGroup
-		hosts   []string
-		groupId uint64
+		ns *NameSpace
 	)
 	c.createNsLock.Lock()
 	defer c.createNsLock.Unlock()
@@ -358,22 +355,43 @@ func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {
 		goto errDeal
 	}
 	ns = NewNameSpace(name, replicaNum)
-	if groupId, err = c.getMaxID(); err != nil {
-		goto errDeal
-	}
-	mg = NewMetaGroup(groupId, 0, DefaultMaxMetaTabletRange)
-	if hosts, err = c.ChooseTargetDataHosts(int(ns.mrReplicaNum)); err != nil {
-		goto errDeal
-	}
-	mg.PersistenceHosts = hosts
-	//todo sync namespace and metaGroup
 
-	c.putMetaNodeTasks(mg.generateCreateMetaGroupTasks(name))
-	ns.AddMetaGroup(mg)
+	c.namespaces[name] = ns
+	if err = c.CreateMetaGroup(name, 0, DefaultMaxMetaTabletRange); err != nil {
+		delete(c.namespaces, name)
+		goto errDeal
+	}
 	return
 errDeal:
 	err = fmt.Errorf("action[createNamespace], name:%v, err:%v ", name, err.Error())
 	log.LogError(err.Error())
+	return
+}
+
+func (c *Cluster) CreateMetaGroup(nsName string, start, end uint64) (err error) {
+	var (
+		ns      *NameSpace
+		mg      *MetaGroup
+		hosts   []string
+		groupId uint64
+	)
+	ns, ok := c.namespaces[nsName]
+	if !ok {
+		err = elementNotFound(nsName)
+		return
+	}
+	if groupId, err = c.getMaxID(); err != nil {
+		return
+	}
+	mg = NewMetaGroup(groupId, start, end)
+	if hosts, err = c.ChooseTargetDataHosts(int(ns.mrReplicaNum)); err != nil {
+		return
+	}
+	mg.PersistenceHosts = hosts
+	//todo sync namespace and metaGroup
+
+	ns.AddMetaGroup(mg)
+	c.putMetaNodeTasks(mg.generateCreateMetaGroupTasks(""))
 	return
 }
 

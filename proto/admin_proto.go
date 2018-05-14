@@ -119,3 +119,28 @@ type DeleteFileResponse struct {
 	VolId  uint64
 	Name   string
 }
+
+type DeleteMetaRangeRequest struct {
+	GroupId uint64
+}
+
+type DeleteMetaRangeResponse struct {
+	GroupId uint64
+	Status  uint8
+	Result  string
+}
+
+type UpdateMetaRangeRequest struct {
+	GroupId uint64
+	NsName string
+	Start   uint64
+	End     uint64
+}
+
+type UpdateMetaRangeResponse struct {
+	GroupId uint64
+	NsName string
+	End     uint64
+	Status  uint8
+	Result  string
+}
