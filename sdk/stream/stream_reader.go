@@ -89,8 +89,11 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err erro
 			newOffSet += int(key.Size)
 			continue
 		} else if index == oldReaderCnt-1 {
-			fmt.Printf("update to filesize[%v] newstreamkey[%v]\n", key.Size, newStreamKey.Size())
-			stream.readers[index].updateKey(key)
+			updated := stream.readers[index].updateKey(key)
+			if updated {
+				newOffSet += int(key.Size)
+				fmt.Printf("inode[%v] update from Metanode TO fILESIZE[%v]\n", stream.inode, newStreamKey.Size())
+			}
 			newOffSet += int(key.Size)
 			continue
 		} else if index > oldReaderCnt-1 {
@@ -124,12 +127,12 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 			err = errors.Annotatef(err, "UserRequest{inode[%v] FileSize[%v] offset[%v] size[%v]} readers{"+
 				"[%v] offset[%v] size[%v] occous error}", stream.inode, stream.fileSize, offset, size, r.toString(), readerOffset[index],
 				readerSize[index])
-			return canRead,err
+			return canRead, err
 		}
 		canRead += readerSize[index]
 	}
 
-	return canRead,nil
+	return canRead, nil
 }
 
 func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader, readersOffsets []int, readersSize []int) {

@@ -125,6 +125,7 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 			return acatualReadSize, err
 
 		}
+		p.Resultcode = proto.OpStreamRead
 		if p.Opcode != proto.OpOk {
 			err = errors.Annotatef(fmt.Errorf(string(p.Data[:p.Size])), reader.toString()+"readDataFromHost host [%v]"+
 				"  request[%v] reply[%v]", host, p.GetUniqLogId(), p.GetUniqLogId())
@@ -135,6 +136,7 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 		if acatualReadSize >= expectReadSize {
 			return acatualReadSize, err
 		}
+
 	}
 	return acatualReadSize, nil
 }

@@ -70,8 +70,7 @@ func (m *MockServer) packErrorBody(request *proto.Packet, err error) {
 	return
 }
 
-func (m *MockServer) operator(request *proto.Packet, connect net.Conn) {
-	var err error
+func (m *MockServer) operator(request *proto.Packet, connect net.Conn)(err error) {
 
 	defer func() {
 		log.LogDebug(request.ActionMesg(util.GetFuncTrace(), "remote", time.Now().UnixNano(), err))
@@ -86,6 +85,7 @@ func (m *MockServer) operator(request *proto.Packet, connect net.Conn) {
 		}
 		request.PackOkReply()
 		request.WriteToConn(connect)
+		return
 	case proto.OpWrite:
 		crc := crc32.ChecksumIEEE(request.Data[:request.Size])
 		err = m.storage.Write(uint64(request.FileID), request.Offset, int64(request.Size), request.Data, crc)
@@ -96,6 +96,7 @@ func (m *MockServer) operator(request *proto.Packet, connect net.Conn) {
 		}
 		request.PackOkReply()
 		request.WriteToConn(connect)
+		return
 	case proto.OpStreamRead:
 		needReplySize:=request.Size
 		offset:=request.Offset
@@ -108,6 +109,7 @@ func (m *MockServer) operator(request *proto.Packet, connect net.Conn) {
 			request.Data=make([]byte,currReadSize)
 			request.Crc,err=m.storage.Read(request.FileID,offset,int64(currReadSize),request.Data)
 			if err!=nil {
+				fmt.Printf("err is [%v]",err.Error())
 				m.packErrorBody(request,err)
 				request.WriteToConn(connect)
 				return
@@ -120,6 +122,7 @@ func (m *MockServer) operator(request *proto.Packet, connect net.Conn) {
 			needReplySize-=currReadSize
 			offset+=int64(currReadSize)
 		}
+		return
 
 	}
 
@@ -137,7 +140,10 @@ func (s *MockServer) readFromCliAndDeal(connect net.Conn) (err error) {
 	if err = pkg.ReadFromConn(connect, NoReadDeadlineTime); err != nil {
 		goto errDeal
 	}
-	s.operator(pkg, connect)
+	err=s.operator(pkg, connect)
+	if err!=nil {
+		connect.Close()
+	}
 
 	return nil
 errDeal:
