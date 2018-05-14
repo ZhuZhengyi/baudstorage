@@ -302,7 +302,7 @@ func (p *Packet)IsOkReply() bool{
 	return p.Resultcode==OpOk
 }
 
-func (p *Packet) PackOkWithReply(reply []byte) {
+func (p *Packet) PackOkWithBody(reply []byte) {
 	p.Size = uint32(len(reply))
 	p.Data = make([]byte, p.Size)
 	copy(p.Data[:p.Size], reply)
@@ -310,7 +310,7 @@ func (p *Packet) PackOkWithReply(reply []byte) {
 	p.Arglen = 0
 }
 
-func (p *Packet)PackErrorReply(errCode uint8,reply []byte){
+func (p *Packet) PackErrorWithBody(errCode uint8,reply []byte){
 	p.Size = uint32(len(reply))
 	p.Data = make([]byte, p.Size)
 	copy(p.Data[:p.Size], reply)
