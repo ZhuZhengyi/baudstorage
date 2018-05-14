@@ -232,7 +232,6 @@ func (m *MetaServer) opCreateInode(conn net.Conn, p *proto.Packet) error {
 	resp := &proto.CreateInodeResponse{
 		Info: NewInodeInfo(ino, req.Mode),
 	}
-	resp.Status = proto.OpOk
 
 	data, err := json.Marshal(resp)
 	if err != nil {
@@ -242,6 +241,7 @@ func (m *MetaServer) opCreateInode(conn net.Conn, p *proto.Packet) error {
 
 	p.Data = data
 	p.Size = uint32(len(data))
+	p.Resultcode = proto.OpOk
 	err = p.WriteToConn(conn)
 	if err != nil {
 		goto errOut

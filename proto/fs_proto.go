@@ -1,7 +1,6 @@
 package proto
 
 import (
-	"os"
 	"time"
 )
 
@@ -44,9 +43,6 @@ type DeleteInodeRequest struct {
 	Inode     uint64 `json:"inode"`
 }
 
-type DeleteInodeResponse struct {
-}
-
 type CreateDentryRequest struct {
 	Namespace string `json:"namespace"`
 	GroupID   string
@@ -54,9 +50,6 @@ type CreateDentryRequest struct {
 	Inode     uint64 `json:"inode"`
 	Name      string `json:"name"`
 	Mode      uint32 `json:"mode"`
-}
-
-type CreateDentryResponse struct {
 }
 
 type DeleteDentryRequest struct {
@@ -67,17 +60,13 @@ type DeleteDentryRequest struct {
 }
 
 type DeleteDentryResponse struct {
-	Status uint8  `json:"status"`
-	Inode  uint64 `json:"inode"`
+	Inode uint64 `json:"inode"`
 }
 
 type OpenRequest struct {
 	Namespace string `json:"namespace"`
 	GroupID   string
 	Inode     uint64 `json:"inode"`
-}
-
-type OpenResponse struct {
 }
 
 type LookupRequest struct {
