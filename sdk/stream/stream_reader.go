@@ -139,8 +139,6 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 	readersSize = make([]int, 0)
 	stream.Lock()
 	defer stream.Unlock()
-	orgOffset := offset
-	orgSize := size
 	for _, r := range stream.readers {
 		var (
 			currReaderSize   int
@@ -159,17 +157,10 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 			currReaderOffset = offset - r.startInodeOffset
 			currReaderSize = size
 			isPutReader = true
-			fmt.Printf("alloc1 reader orgOffset[%v] orgSize[%v] on extentReader[%v] readeroffset[%v]"+
-				" readerSIze[%v] offset[%v] size[%v]\n",
-				orgOffset, orgSize, r.toString(), currReaderOffset, currReaderSize, offset, size)
-
 		} else {
 			currReaderOffset = offset - r.startInodeOffset
 			currReaderSize = (int(r.key.Size) - currReaderOffset)
 			isPutReader = true
-			fmt.Printf("alloc2 reader orgOffset[%v] orgSize[%v] on extentReader[%v] readeroffset[%v]"+
-				" readerSIze[%v] offset[%v] size[%v]\n",
-				orgOffset, orgSize, r.toString(), currReaderOffset, currReaderSize, offset, size)
 		}
 		if isPutReader {
 			offset += currReaderSize
