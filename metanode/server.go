@@ -1,8 +1,6 @@
 package metanode
 
 import (
-	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -10,9 +8,7 @@ import (
 
 	"errors"
 
-	"github.com/tiglabs/baudstorage/master"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
@@ -108,47 +104,5 @@ func (m *MetaNode) routePacket(conn net.Conn, p *Packet) (err error) {
 		// Unknown operation
 		err = errors.New("unknown Opcode: " + proto.GetOpMesg(p.Opcode))
 	}
-	return
-}
-
-// ReplyToClient send reply data though tcp connection to client.
-func (m *MetaNode) replyToClient(conn net.Conn, p *Packet, data []byte) (err error) {
-	// Handle panic
-	defer func() {
-		if r := recover(); r != nil {
-			switch data := r.(type) {
-			case error:
-				err = data
-			default:
-				err = errors.New(data.(string))
-			}
-		}
-	}()
-	// Process data and send reply though specified tcp connection.
-	p.Data = data
-	err = p.WriteToConn(conn)
-	return
-}
-
-// ReplyToMaster reply operation result to master by sending http request.
-func (m *MetaNode) replyToMaster(ip string, data interface{}) (err error) {
-	// Handle panic
-	defer func() {
-		if r := recover(); r != nil {
-			switch data := r.(type) {
-			case error:
-				err = data
-			default:
-				err = errors.New(data.(string))
-			}
-		}
-	}()
-	// Process data and send reply though http specified remote address.
-	jsonBytes, err := json.Marshal(data)
-	if err != nil {
-		return
-	}
-	url := fmt.Sprintf("http://%s%s", ip, master.MetaNodeResponse)
-	util.PostToNode(jsonBytes, url)
 	return
 }

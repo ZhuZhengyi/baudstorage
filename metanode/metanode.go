@@ -23,7 +23,7 @@ type nodeState uint8
 
 // State constants
 const (
-	sReady nodeState = iota
+	sReady   nodeState = iota
 	sRunning
 )
 
@@ -71,7 +71,7 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 		return
 	}
 
-	// start raft server
+	// Start raft server
 	if err = m.startRaftServer(); err != nil {
 		return
 	}
