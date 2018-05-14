@@ -2,14 +2,15 @@ package metanode
 
 import (
 	"encoding/json"
-	"github.com/google/btree"
 	"io"
+
+	"github.com/google/btree"
 )
 
 type MetaRangeSnapshot struct {
-	Op int    `json:"op"`
-	K  string `json:"k"`
-	V  string `json:"v"`
+	Op uint32 `json:"op"`
+	K  []byte `json:"k"`
+	V  []byte `json:"v"`
 }
 
 func (s *MetaRangeSnapshot) Encode() ([]byte, error) {
@@ -20,7 +21,7 @@ func (s *MetaRangeSnapshot) Decode(data []byte) error {
 	return json.Unmarshal(data, s)
 }
 
-func NewMetaRangeSnapshot(op int, key, value string) *MetaRangeSnapshot {
+func NewMetaRangeSnapshot(op uint32, key, value []byte) *MetaRangeSnapshot {
 	return &MetaRangeSnapshot{
 		Op: op,
 		K:  key,
@@ -72,8 +73,8 @@ func (si *SnapshotIterator) Next() (data []byte, err error) {
 				return true
 			}
 			si.curItem = ino
-			snap := NewMetaRangeSnapshot(opCreateInode, ino.GetKey(),
-				ino.GetValue())
+			snap := NewMetaRangeSnapshot(opCreateInode, ino.GetKeyBytes(),
+				ino.GetValueBytes())
 			data, err = snap.Encode()
 			si.cur++
 			return false
@@ -91,8 +92,8 @@ func (si *SnapshotIterator) Next() (data []byte, err error) {
 			return true
 		}
 		si.curItem = dentry
-		snap := NewMetaRangeSnapshot(opCreateDentry, dentry.GetKey(),
-			dentry.GetValue())
+		snap := NewMetaRangeSnapshot(opCreateDentry, dentry.GetKeyBytes(),
+			dentry.GetValueBytes())
 		data, err = snap.Encode()
 		si.cur++
 		return false

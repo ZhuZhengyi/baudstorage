@@ -1,6 +1,7 @@
 package metanode
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -33,7 +34,7 @@ type MetaRangeConfig struct {
 	End           uint64              `json:"end"`
 	Cursor        uint64              `json:"-"`
 	RootDir       string              `json:"-"`
-	Peers         []string            `json:"peers"`
+	Peers         []proto.Peer        `json:"peers"`
 	RaftGroupID   uint64              `json:"raftGroupID"`
 	RaftPartition raftstore.Partition `json:"-"`
 }
@@ -157,7 +158,7 @@ func (mr *MetaRange) StartStoreSchedule() {
 }
 
 // UpdatePeers
-func (mr *MetaRange) UpdatePeers(peers []string) {
+func (mr *MetaRange) UpdatePeers(peers []proto.Peer) {
 	mr.Peers = peers
 }
 
@@ -177,34 +178,54 @@ func (mr *MetaRange) nextInodeID() (inodeId uint64, err error) {
 	}
 }
 
-func (mr *MetaRange) CreateDentry(req *CreateDentryReq) (resp *CreateDentryResp) {
+func (mr *MetaRange) CreateDentry(req *CreateDentryReq) (data []byte, err error) {
+	var resp *CreateDentryResp
 	dentry := &Dentry{
 		ParentId: req.ParentID,
 		Name:     req.Name,
 		Inode:    req.Inode,
 		Type:     req.Mode,
 	}
-	status := mr.store.CreateDentry(dentry)
-	resp.Status = status
+	val, err := json.Marshal(dentry)
+	if err != nil {
+		return
+	}
+	r, err := mr.put(opCreateDentry, val)
+	if err != nil {
+		return
+	}
+	resp.Status = r.(uint8)
+	data, err = json.Marshal(resp)
 	return
 }
 
-func (mr *MetaRange) DeleteDentry(req *DeleteDentryReq) (resp *DeleteDentryResp) {
+func (mr *MetaRange) DeleteDentry(req *DeleteDentryReq) (data []byte, err error) {
+	var resp *DeleteDentryResp
 	dentry := &Dentry{
 		ParentId: req.ParentID,
 		Name:     req.Name,
 	}
-	status := mr.store.DeleteDentry(dentry)
-	resp.Status = status
+	val, err := json.Marshal(dentry)
+	if err != nil {
+		return
+	}
+	r, err := mr.put(opDeleteDentry, val)
+	if err != nil {
+		return
+	}
+	resp.Status = r.(uint8)
 	resp.Inode = dentry.Inode
+	data, err = json.Marshal(resp)
 	return
 }
 
-func (mr *MetaRange) CreateInode(req *CreateInoReq) (resp *CreateInoResp) {
-	var err error
+func (mr *MetaRange) CreateInode(req *CreateInoReq) (data []byte, err error) {
+	var resp CreateInoResp
 	resp.Info.Inode, err = mr.nextInodeID()
 	if err != nil {
+		err = nil
 		resp.Status = proto.OpInodeFullErr
+		data, err = json.Marshal(resp)
 		return
 	}
 	ts := time.Now().Unix()
@@ -215,15 +236,34 @@ func (mr *MetaRange) CreateInode(req *CreateInoReq) (resp *CreateInoResp) {
 		ModifyTime: ts,
 		Stream:     stream.NewStreamKey(resp.Info.Inode),
 	}
-	resp.Status = mr.store.CreateInode(ino)
+	val, err := json.Marshal(ino)
+	if err != nil {
+		return
+	}
+	r, err := mr.put(opCreateInode, val)
+	if err != nil {
+		return
+	}
+	resp.Status = r.(uint8)
+	data, err = json.Marshal(resp)
 	return
 }
 
-func (mr *MetaRange) DeleteInode(req *DeleteInoReq) (resp *DeleteInoResp) {
+func (mr *MetaRange) DeleteInode(req *DeleteInoReq) (data []byte, err error) {
+	var resp DeleteDentryResp
 	ino := &Inode{
 		Inode: req.Inode,
 	}
-	resp.Status = mr.store.DeleteInode(ino)
+	val, err := json.Marshal(ino)
+	if err != nil {
+		return
+	}
+	r, err := mr.put(opDeleteInode, val)
+	if err != nil {
+		return
+	}
+	resp.Status = r.(uint8)
+	data, err = json.Marshal(resp)
 	return
 }
 
@@ -231,14 +271,37 @@ func (mr *MetaRange) PutStreamKey() {
 	return
 }
 
-func (mr *MetaRange) ReadDir(req *ReadDirReq) (resp *ReadDirResp) {
+func (mr *MetaRange) ReadDir(req *ReadDirReq) (data []byte, err error) {
 	// TODO: Implement read dir operation.
-	resp = mr.store.ReadDir(req)
+	val, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
+	resp, err := mr.put(opReadDir, val)
+	if err != nil {
+		return
+	}
+	data, err = json.Marshal(resp)
 	return
 }
 
-func (mr *MetaRange) Open(req *OpenReq) (resp *OpenResp) {
+func (mr *MetaRange) Open(req *OpenReq) (data []byte, err error) {
 	// TODO: Implement open operation.
-	resp = mr.store.OpenFile(req)
+	val, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
+	resp, err := mr.put(opOpen, val)
+	if err != nil {
+		return
+	}
+	data, err = json.Marshal(resp)
+	return
+}
+
+func (mr *MetaRange) put(op uint32, body []byte) (r interface{}, err error) {
+	key := make([]byte, 4)
+	binary.BigEndian.PutUint32(key, op)
+	r, err = mr.store.Put(key, body)
 	return
 }

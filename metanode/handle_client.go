@@ -17,7 +17,10 @@ func (m *MetaNode) opCreateInode(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	resp := mr.CreateInode(req)
+	resp, err := mr.CreateInode(req)
+	if err != nil {
+		return
+	}
 	// Reply operation result to client though TCP connection.
 	err = m.replyToClient(conn, p, resp)
 	return
@@ -33,7 +36,10 @@ func (m *MetaNode) opCreateDentry(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return err
 	}
-	resp := mr.CreateDentry(req)
+	resp, err := mr.CreateDentry(req)
+	if err != nil {
+		return
+	}
 	// Reply operation result to client though TCP connection.
 	err = m.replyToClient(conn, p, resp)
 	return
@@ -49,7 +55,10 @@ func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	resp := mr.DeleteDentry(req)
+	resp, err := mr.DeleteDentry(req)
+	if err != nil {
+		return
+	}
 	// Reply operation result to client though TCP connection.
 	err = m.replyToClient(conn, p, resp)
 	return
@@ -64,7 +73,10 @@ func (m *MetaNode) opDeleteInode(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	resp := mr.DeleteInode(req)
+	resp, err := mr.DeleteInode(req)
+	if err != nil {
+		return
+	}
 	err = m.replyToClient(conn, p, resp)
 	return
 }
@@ -79,7 +91,10 @@ func (m *MetaNode) opReadDir(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	resp := mr.ReadDir(req)
+	resp, err := mr.ReadDir(req)
+	if err != nil {
+		return
+	}
 	// Reply operation result to client though TCP connection.
 	err = m.replyToClient(conn, p, resp)
 	return
@@ -95,7 +110,10 @@ func (m *MetaNode) opOpen(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	resp := mr.Open(req)
+	resp, err := mr.Open(req)
+	if err != nil {
+		return
+	}
 	// Reply operation result to client though TCP connection.
 	err = m.replyToClient(conn, p, resp)
 	return
