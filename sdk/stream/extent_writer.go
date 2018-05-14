@@ -24,9 +24,6 @@ const (
 	ExtentWriterRecoverCnt = 1
 
 	DefaultWriteBufferSize = 1280 * util.KB
-
-	FlushIng = 2
-	NoFlush  = 1
 )
 
 var (
