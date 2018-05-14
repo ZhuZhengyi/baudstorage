@@ -85,7 +85,7 @@ FORLOOP:
 		_, err = reader.readDataFromHost(p, host, data)
 		if err == nil {
 			return
-		}else {
+		} else {
 			log.LogError(err.Error())
 		}
 	}
@@ -98,7 +98,7 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 	conn, err := reader.wraper.GetConnect(host)
 	if err != nil {
 		return 0, errors.Annotatef(err, reader.toString()+"readDataFromHost vol[%v] cannot get"+
-			" connect from host[%v] ", reader.key.VolId, host)
+			" connect from host[%v] request[%v] ", reader.key.VolId, host, p.GetUniqLogId())
 
 	}
 	defer func() {
@@ -110,30 +110,30 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 		}
 	}()
 	if err = p.WriteToConn(conn); err != nil {
-		err = errors.Annotatef(err, reader.toString()+"readDataFromHost write ReadPacket[%v] to  host[%v] error ",
-			p.GetUniqLogId(), host)
+		err = errors.Annotatef(err, reader.toString()+"readDataFromHost write ReadPacket[%v] to  host[%v] error request[%v]",
+			p.GetUniqLogId(), host, p)
 		return 0, err
 	}
 	for {
 		err = p.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
-			err = errors.Annotatef(err, reader.toString()+"readDataFromHost recive ReadPacketReply[%v] to  host[%v] error ",
-				p.GetUniqLogId(), host)
-			return
+			err = errors.Annotatef(err, reader.toString()+"readDataFromHost recive ReadPacketReply[%v] to  host[%v] error reqeust[%v] ",
+				p.GetUniqLogId(), host, p)
+			return acatualReadSize, err
+
 		}
 		if p.Opcode != proto.OpOk {
-			err = errors.Annotatef(fmt.Errorf(reader.toString()+"readDataFromHost packet[%v] from host [%v] opcode err[%v]",
-				p.GetUniqLogId(), host, string(p.Data[:p.Size])), "ReciveData Err")
-			return
+			err = errors.Annotatef(fmt.Errorf(string(p.Data[:p.Size])), reader.toString()+"readDataFromHost packet[%v] from host [%v]  request[%v]",
+				p.GetUniqLogId(), host, p)
+			return acatualReadSize, err
 		}
 		copy(data[acatualReadSize:acatualReadSize+int(p.Size)], p.Data[:p.Size])
 		acatualReadSize += int(p.Size)
 		if acatualReadSize >= expectReadSize {
-			return
+			return acatualReadSize, err
 		}
 	}
-
-	return
+	return acatualReadSize, nil
 }
 
 func (reader *ExtentReader) updateKey(key ExtentKey) (update bool) {

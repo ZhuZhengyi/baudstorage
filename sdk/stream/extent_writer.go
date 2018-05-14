@@ -49,7 +49,7 @@ type ExtentWriter struct {
 	handleCh         chan bool //a Chan for signal recive goroutine recive packet from connect
 	recoverCnt       int       //if failed,then recover contine,this is recover count
 
-	cond       *sync.Cond //flushCond use for backEndlush func
+	cond *sync.Cond //flushCond use for backEndlush func
 	sync.Mutex
 	flushLock sync.Mutex
 }
@@ -71,12 +71,10 @@ func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper
 	return
 }
 
-
-
 //when backEndlush func called,and sdk must wait
 func (writer *ExtentWriter) flushWait() {
 	start := time.Now().UnixNano()
-	writer.cond=sync.NewCond(&sync.Mutex{})
+	writer.cond = sync.NewCond(&sync.Mutex{})
 	writer.cond.L.Lock()
 	go func() {
 		writer.cond.L.Lock()
