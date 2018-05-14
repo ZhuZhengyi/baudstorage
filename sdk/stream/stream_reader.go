@@ -16,7 +16,7 @@ type StreamReader struct {
 	updateExtentFn func(inode uint64) (sk *StreamKey, err error)
 	extents        *StreamKey
 	fileSize       uint64
-	sync.RWMutex
+	sync.Mutex
 }
 
 func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, updateExtentFn func(inode uint64) (sk *StreamKey, err error)) (stream *StreamReader, err error) {
@@ -43,14 +43,14 @@ func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, updateExtentFn fu
 }
 
 func (stream *StreamReader) toString() (m string) {
-	stream.RLock()
-	defer stream.RUnlock()
+	stream.Lock()
+	defer stream.Unlock()
 	return fmt.Sprintf("inode[%v] fileSize[%v] extents[%v] ", stream.inode, stream.fileSize, stream.extents)
 }
 
 func (stream *StreamReader) initCheck(offset, size int) (canread int, err error) {
-	stream.RLock()
-	defer stream.RUnlock()
+	stream.Lock()
+	defer stream.Unlock()
 	if size > CFSEXTENTSIZE {
 		return 0, fmt.Errorf("read endOffset is So High")
 	}
@@ -78,13 +78,9 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 				readers = append(stream.readers, reader)
 			}
 		}
-		stream.RUnlock()
-		stream.Lock()
 		stream.fileSize = newStreamKey.Size()
 		stream.extents = newStreamKey
 		stream.readers = append(stream.readers, readers...)
-		stream.Unlock()
-		stream.RLock()
 		log.LogInfo(fmt.Sprintf("StreamReader update inode[%v] FileSize to [%v]", stream.inode, stream.fileSize))
 	}
 
@@ -128,34 +124,52 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 	readers = make([]*ExtentReader, 0)
 	readerOffset = make([]int, 0)
 	readerSize = make([]int, 0)
-	//orgOffset := offset
-	//orgSize := size
-	stream.RLock()
-	defer stream.RUnlock()
+	orgOffset := offset
+	orgSize := size
+	stream.Lock()
+	stream.Unlock()
 	for _, r := range stream.readers {
+		var (
+			currReaderSize   int
+			currReaderOffset int
+			isPutReader      bool
+		)
 		if size <= 0 {
 			break
 		}
+		r.Lock()
 		if r.startInodeOffset > offset {
+			r.Unlock()
 			continue
 		}
 		if r.endInodeOffset > offset+size {
 			readers = append(readers, r)
-			currReaderOffset := offset - r.startInodeOffset
+			currReaderOffset = offset - r.startInodeOffset
 			readerOffset = append(readerOffset, currReaderOffset)
-			currReaderSize := size
+			currReaderSize = size
 			readerSize = append(readerSize, currReaderSize)
 			offset += currReaderSize
 			size -= currReaderSize
+			fmt.Printf("alloc1 reader orgOffset[%v] orgSize[%v] on extentReader[%v] readeroffset[%v]"+
+				" readerSIze[%v] offset[%v] size[%v]\n",
+				orgOffset, orgSize, r.toString(), currReaderOffset, currReaderSize, offset, size)
+			isPutReader = true
 		} else if r.endInodeOffset <= offset+size {
 			readers = append(readers, r)
-			currReaderOffset := offset - r.startInodeOffset
+			currReaderOffset = offset - r.startInodeOffset
 			readerOffset = append(readerOffset, currReaderOffset)
-			currReaderSize := (int(r.key.Size) - currReaderOffset)
+			currReaderSize = (int(r.key.Size) - currReaderOffset)
 			readerSize = append(readerSize, currReaderSize)
+			fmt.Printf("alloc2 reader orgOffset[%v] orgSize[%v] on extentReader[%v] readeroffset[%v]"+
+				" readerSIze[%v] offset[%v] size[%v]\n",
+				orgOffset, orgSize, r.toString(), currReaderOffset, currReaderSize, offset, size)
+			isPutReader = true
+		}
+		if isPutReader {
 			offset += currReaderSize
 			size -= currReaderSize
 		}
+		r.Unlock()
 	}
 
 	return

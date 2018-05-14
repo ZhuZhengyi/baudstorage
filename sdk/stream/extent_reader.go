@@ -121,13 +121,13 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 		err = p.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
 			err = errors.Annotatef(err, reader.toString()+"readDataFromHost host[%v]  error reqeust[%v]",
-				 host, p.GetUniqLogId())
+				host, p.GetUniqLogId())
 			return acatualReadSize, err
 
 		}
 		if p.Opcode != proto.OpOk {
-			err = errors.Annotatef(fmt.Errorf(string(p.Data[:p.Size])), reader.toString()+"readDataFromHost host [%v]" +
-				"  request[%v] reply[%v]",host, p.GetUniqLogId(),p.GetUniqLogId())
+			err = errors.Annotatef(fmt.Errorf(string(p.Data[:p.Size])), reader.toString()+"readDataFromHost host [%v]"+
+				"  request[%v] reply[%v]", host, p.GetUniqLogId(), p.GetUniqLogId())
 			return acatualReadSize, err
 		}
 		copy(data[acatualReadSize:acatualReadSize+int(p.Size)], p.Data[:p.Size])
@@ -160,13 +160,14 @@ func (reader *ExtentReader) toString() (m string) {
 }
 
 func (reader *ExtentReader) fillCache() error {
+	reader.Lock()
 	if reader.cache.getBufferEndOffset() == int(reader.key.Size) {
+		reader.Unlock()
 		return nil
 	}
 	reader.setCacheToUnavali()
 	bufferSize := int(util.Min(uint64(int(reader.key.Size)-reader.lastReadOffset), uint64(DefaultReadBufferSize)))
 	bufferOffset := reader.lastReadOffset
-	reader.Lock()
 	p := NewReadPacket(reader.key, bufferOffset, bufferSize)
 	reader.Unlock()
 	data := make([]byte, bufferSize)
