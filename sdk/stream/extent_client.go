@@ -73,6 +73,14 @@ func (client *ExtentClient) getStreamWriter(inode uint64) (stream *StreamWriter)
 	return
 }
 
+func (client *ExtentClient) getStreamWriterForClose(inode uint64) (stream *StreamWriter) {
+	client.writerLock.RLock()
+	stream = client.writers[inode]
+	client.writerLock.RUnlock()
+
+	return
+}
+
 func (client *ExtentClient) getStreamReader(inode uint64) (stream *StreamReader, err error) {
 	client.referLock.Lock()
 	inodeReferCnt := client.referCnt[inode]
@@ -132,31 +140,28 @@ func (client *ExtentClient) Close(inode uint64) (err error) {
 	}
 	inodeReferCnt = client.referCnt[inode]
 	client.referLock.Unlock()
+	streamWriter := client.getStreamWriterForClose(inode)
+	if streamWriter != nil {
+		err = streamWriter.flushCurrExtentWriter()
+	}
 	if inodeReferCnt != 0 {
 		return
 	}
-	var streamReader *StreamReader
-	streamWriter := client.getStreamWriter(inode)
-	err = streamWriter.flushCurrExtentWriter()
+
 	client.writerLock.Lock()
 	delete(client.writers, inode)
 	client.writerLock.Unlock()
-	if err != nil {
-		return
-	}
 	client.readerLock.RLock()
-	streamReader = client.readers[inode]
+	streamReader := client.readers[inode]
 	client.readerLock.RUnlock()
-	if streamReader == nil {
-		return nil
+	if streamReader != nil {
+		for _, reader := range streamReader.readers {
+			reader.exitCh <- true
+		}
+		client.readerLock.Lock()
+		delete(client.readers, inode)
+		client.readerLock.Unlock()
 	}
-	for _, reader := range streamReader.readers {
-		reader.exitCh <- true
-	}
-	client.readerLock.Lock()
-	delete(client.readers, inode)
-	client.readerLock.Unlock()
-	fmt.Printf("hahah close realy")
 
 	return
 }
