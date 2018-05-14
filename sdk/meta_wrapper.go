@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -245,7 +246,7 @@ func (mc *MetaConn) send(req *proto.Packet) (*proto.Packet, error) {
 	}
 	resp := proto.NewPacket()
 	err = resp.ReadFromConn(mc.conn, proto.ReadDeadlineTime)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		return nil, err
 	}
 	return resp, nil
@@ -265,6 +266,7 @@ func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *pro
 	if err != nil {
 		return
 	}
+	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {

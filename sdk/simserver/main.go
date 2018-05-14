@@ -61,6 +61,9 @@ func main() {
 	ms := NewMasterServer()
 	ms.Start(&wg)
 
+	mt := NewMetaServer()
+	mt.Start(&wg)
+
 	wg.Wait()
 }
 
@@ -177,13 +180,13 @@ func (m *MetaServer) servConn(conn net.Conn) {
 
 	for {
 		p := &proto.Packet{}
-		if err := p.ReadFromConn(conn, 0); err != nil {
-			fmt.Println("servConn:", err)
+		if err := p.ReadFromConn(conn, proto.NoReadDeadlineTime); err != nil {
+			fmt.Println("servConn ReadFromConn:", err)
 			return
 		}
 
 		if err := m.handlePacket(conn, p); err != nil {
-			fmt.Println("servConn:", err)
+			fmt.Println("servConn handlePacket:", err)
 			return
 		}
 	}
@@ -215,6 +218,7 @@ func (m *MetaServer) opCreateInode(conn net.Conn, p *proto.Packet) error {
 	req := &proto.CreateInodeRequest{}
 	err := json.Unmarshal(p.Data, req)
 	if err != nil {
+		fmt.Println("opCreateInode Unmarshal, err = ", err)
 		return err
 	}
 
@@ -229,10 +233,12 @@ func (m *MetaServer) opCreateInode(conn net.Conn, p *proto.Packet) error {
 
 	data, err := json.Marshal(resp)
 	if err != nil {
+		fmt.Println("opCreateInode Marshal, err = ", err)
 		goto errOut
 	}
 
 	p.Data = data
+	p.Size = uint32(len(data))
 	err = p.WriteToConn(conn)
 	if err != nil {
 		goto errOut
