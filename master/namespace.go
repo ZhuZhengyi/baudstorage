@@ -8,8 +8,8 @@ type NameSpace struct {
 	Name          string
 	volReplicaNum uint8
 	mrReplicaNum  uint8
-	threshold float32
-	mrSize uint64
+	threshold     float32
+	mrSize        uint64
 	MetaGroups    map[uint64]*MetaGroup
 	metaGroupLock sync.RWMutex
 	volGroups     *VolGroupMap

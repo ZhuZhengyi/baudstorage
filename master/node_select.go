@@ -2,6 +2,7 @@ package master
 
 import (
 	"fmt"
+	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 	"math/rand"
 	"sort"
@@ -12,6 +13,7 @@ type NodeTab struct {
 	Carry  float64
 	Weight float64
 	Ptr    Node
+	Id     uint64
 }
 
 type Node interface {
@@ -138,9 +140,10 @@ func (c *Cluster) GetMetaNodeMaxTotal() (maxTotal uint64) {
 	return
 }
 
-func (c *Cluster) getAvailMetaNodeHosts(excludeRack string, excludeHosts []string, replicaNum int) (newHosts []string, err error) {
+func (c *Cluster) getAvailMetaNodeHosts(excludeRack string, excludeHosts []string, replicaNum int) (newHosts []string, peers []proto.Peer, err error) {
 	orderHosts := make([]string, 0)
 	newHosts = make([]string, 0)
+	peers = make([]proto.Peer, 0)
 	if replicaNum == 0 {
 		return
 	}
@@ -160,6 +163,8 @@ func (c *Cluster) getAvailMetaNodeHosts(excludeRack string, excludeHosts []strin
 		node := nodeTabs[i].Ptr.(*MetaNode)
 		node.SelectNodeForWrite()
 		orderHosts = append(orderHosts, node.Addr)
+		peer := proto.Peer{ID: node.id, Addr: node.Addr}
+		peers = append(peers, peer)
 	}
 
 	if newHosts, err = c.DisOrderArray(orderHosts); err != nil {
