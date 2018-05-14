@@ -23,7 +23,7 @@ const (
 	ExtentNameSplit = "_"
 	VolNameSplit    = "_"
 	AddrSplit       = "/"
-	HeaderSize      = 44
+	HeaderSize      = 45
 	PkgArgMaxSize   = 100
 	ConnBufferSize  = 4096
 )
@@ -86,21 +86,21 @@ const (
 )
 
 type Packet struct {
-	Magic     uint8
-	StoreType uint8
-	Opcode    uint8
-	Nodes     uint8
-	Crc       uint32
-	Size      uint32
-	Arglen    uint32
-	VolID     uint32
-	FileID    uint64
-	Offset    int64
-	ReqID     int64
-	Arg       []byte //if create or append ops, data contains addrs
-	Data      []byte
-	StartT    int64
-	OrgOpcode uint8
+	Magic      uint8
+	StoreType  uint8
+	Opcode     uint8
+	Resultcode uint8
+	Nodes      uint8
+	Crc        uint32
+	Size       uint32
+	Arglen     uint32
+	VolID      uint32
+	FileID     uint64
+	Offset     int64
+	ReqID      int64
+	Arg        []byte //if create or append ops, data contains addrs
+	Data       []byte
+	StartT     int64
 }
 
 func NewPacket() *Packet {
@@ -170,14 +170,15 @@ func (p *Packet) MarshalHeader(out []byte) {
 	out[0] = p.Magic
 	out[1] = p.StoreType
 	out[2] = p.Opcode
-	out[3] = p.Nodes
-	binary.BigEndian.PutUint32(out[4:8], p.Crc)
-	binary.BigEndian.PutUint32(out[8:12], p.Size)
-	binary.BigEndian.PutUint32(out[12:16], p.Arglen)
-	binary.BigEndian.PutUint32(out[16:20], p.VolID)
-	binary.BigEndian.PutUint64(out[20:28], p.FileID)
-	binary.BigEndian.PutUint64(out[28:36], uint64(p.Offset))
-	binary.BigEndian.PutUint64(out[36:HeaderSize], uint64(p.ReqID))
+	out[3] = p.Resultcode
+	out[4] = p.Nodes
+	binary.BigEndian.PutUint32(out[5:9], p.Crc)
+	binary.BigEndian.PutUint32(out[9:13], p.Size)
+	binary.BigEndian.PutUint32(out[13:17], p.Arglen)
+	binary.BigEndian.PutUint32(out[17:21], p.VolID)
+	binary.BigEndian.PutUint64(out[21:29], p.FileID)
+	binary.BigEndian.PutUint64(out[29:37], uint64(p.Offset))
+	binary.BigEndian.PutUint64(out[37:HeaderSize], uint64(p.ReqID))
 
 	return
 }
@@ -190,15 +191,15 @@ func (p *Packet) UnmarshalHeader(in []byte) error {
 
 	p.StoreType = in[1]
 	p.Opcode = in[2]
-	p.Nodes = in[3]
-	p.Crc = binary.BigEndian.Uint32(in[4:8])
-	p.Size = binary.BigEndian.Uint32(in[8:12])
-	p.Arglen = binary.BigEndian.Uint32(in[12:16])
-	p.VolID = binary.BigEndian.Uint32(in[16:20])
-	p.FileID = binary.BigEndian.Uint64(in[20:28])
-	p.Offset = int64(binary.BigEndian.Uint64(in[28:36]))
-	p.ReqID = int64(binary.BigEndian.Uint64(in[36:HeaderSize]))
-	p.OrgOpcode = p.Opcode
+	p.Resultcode =in[3]
+	p.Nodes = in[4]
+	p.Crc = binary.BigEndian.Uint32(in[5:9])
+	p.Size = binary.BigEndian.Uint32(in[9:13])
+	p.Arglen = binary.BigEndian.Uint32(in[13:17])
+	p.VolID = binary.BigEndian.Uint32(in[17:21])
+	p.FileID = binary.BigEndian.Uint64(in[21:29])
+	p.Offset = int64(binary.BigEndian.Uint64(in[29:37]))
+	p.ReqID = int64(binary.BigEndian.Uint64(in[37:HeaderSize]))
 
 	return nil
 }
@@ -279,33 +280,46 @@ func (p *Packet) ReadFromConn(c net.Conn, deadlineTime time.Duration) (err error
 }
 
 func (p *Packet) PackOkReply() {
-	p.Opcode = OpOk
+	p.Resultcode = OpOk
 	p.Size = 0
 	p.Arglen = 0
 }
 
 func (p *Packet) PackOkReadReply() {
-	p.Opcode = OpOk
+	p.Resultcode = OpOk
 	p.Arglen = 0
 }
 
 func (p *Packet) PackOkGetWatermarkReply(size int64) {
 	p.Offset = size
 	p.Size = 0
-	p.Opcode = OpOk
+	p.Resultcode = OpOk
 	p.Arglen = 0
 }
 
-func (p *Packet) PackOkGetInfoReply(buf []byte) {
-	p.Size = uint32(len(buf))
+func (p *Packet)IsOkReply() bool{
+	return p.Resultcode==OpOk
+}
+
+func (p *Packet) PackOkWithBody(reply []byte) {
+	p.Size = uint32(len(reply))
 	p.Data = make([]byte, p.Size)
-	copy(p.Data[:p.Size], buf)
-	p.Opcode = OpOk
+	copy(p.Data[:p.Size], reply)
+	p.Resultcode = OpOk
+	p.Arglen = 0
+}
+
+func (p *Packet) PackErrorWithBody(errCode uint8,reply []byte){
+	p.Size = uint32(len(reply))
+	p.Data = make([]byte, p.Size)
+	copy(p.Data[:p.Size], reply)
+	p.Resultcode = errCode
 	p.Arglen = 0
 }
 
 func (p *Packet) GetUniqLogId() (m string) {
-	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v", p.ReqID, p.VolID, p.FileID, p.Offset, p.Size, GetOpMesg(p.OrgOpcode))
+	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v_%v", p.ReqID, p.VolID, p.FileID,
+		p.Offset, p.Size, GetOpMesg(p.Opcode), GetOpMesg(p.Resultcode))
 
 	return
 }
@@ -318,13 +332,13 @@ func (p *Packet) ActionMesg(action, remote string, start int64, err error) (m st
 	if err == nil {
 		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[%v] size[%v] "+
 			" cost[%v] isTransite[%v] ",
-			p.GetUniqLogId(), action, remote, GetOpMesg(p.OrgOpcode), GetOpMesg(p.Opcode), p.Size,
+			p.GetUniqLogId(), action, remote, GetOpMesg(p.Resultcode), GetOpMesg(p.Opcode), p.Size,
 			(time.Now().UnixNano()-start)/1e6, p.IsTransitPkg())
 
 	} else {
 		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[%v] size[%v] "+
 			", err[%v] isTransite[%v]", p.GetUniqLogId(), action,
-			remote, GetOpMesg(p.OrgOpcode), GetOpMesg(p.Opcode), p.Size, err.Error(),
+			remote, GetOpMesg(p.Resultcode), GetOpMesg(p.Opcode), p.Size, err.Error(),
 			p.IsTransitPkg())
 	}
 

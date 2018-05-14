@@ -122,8 +122,6 @@ func (mf *MetaRangeFsm) OpenFile(req *OpenReq) (resp *OpenResp) {
 	}
 	item.(*Inode).AccessTime = time.Now().Unix()
 	resp.Status = proto.OpOk
-	//TODO: raft sync
-
 	return
 }
 

@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"strconv"
+
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/sdk/stream"
-	"strconv"
 )
 
 // Dentry wraps necessary properties of `dentry` information in file system.
@@ -41,14 +42,15 @@ func (d *Dentry) GetKey() (m string) {
 	return fmt.Sprintf("%10d*%s", d.ParentId, d.Name)
 }
 
-func (d *Dentry) ParseKey(key string) (err error) {
-	_, err = fmt.Sscanf(key, "%d*%s", &d.ParentId, d.Name)
-	return
-}
-
 // GetKeyBytes is the bytes version of GetKey method which returns byte slice result.
 func (d *Dentry) GetKeyBytes() (m []byte) {
 	return []byte(d.GetKey())
+}
+
+func (d *Dentry) ParseKeyBytes(k []byte) (err error) {
+	key := string(k)
+	_, err = fmt.Sscanf(key, "%d*%s", &d.ParentId, d.Name)
+	return
 }
 
 // GetValueString returns string value of this dentry which consists of Inode and Type properties.
@@ -56,14 +58,15 @@ func (d *Dentry) GetValue() (m string) {
 	return fmt.Sprintf("%d*%d", d.Inode, d.Type)
 }
 
-func (d *Dentry) ParseValue(value string) (err error) {
-	_, err = fmt.Sscanf(value, "%d*%d", &d.Inode, &d.Type)
-	return
-}
-
 // GetValueBytes is the bytes version of GetValue method which returns byte slice result.
 func (d *Dentry) GetValueBytes() (m []byte) {
 	return []byte(d.GetValue())
+}
+
+func (d *Dentry) ParseValueBytes(val []byte) (err error) {
+	value := string(val)
+	_, err = fmt.Sscanf(value, "%d*%d", &d.Inode, &d.Type)
+	return
 }
 
 // Inode wraps necessary properties of `inode` information in file system.
@@ -101,19 +104,20 @@ func (i *Inode) GetKey() (m string) {
 	return fmt.Sprintf("%d", i.Inode)
 }
 
-func (i *Inode) ParseKey(key string) (err error) {
+// GetKeyBytes is the bytes version of GetKey method which returns byte slice result.
+func (i *Inode) GetKeyBytes() (m []byte) {
+
+	return []byte(i.GetKey())
+}
+
+func (i *Inode) ParseKeyBytes(k []byte) (err error) {
+	key := string(k)
 	inodeID, err := strconv.ParseUint(key, 10, 64)
 	if err != nil {
 		return
 	}
 	i.Inode = inodeID
 	return
-}
-
-// GetKeyBytes is the bytes version of GetKey method which returns byte slice result.
-func (i *Inode) GetKeyBytes() (m []byte) {
-
-	return []byte(i.GetKey())
 }
 
 // GetValue returns string value of this Inode which consists of Name, Size, AccessTime and
@@ -132,12 +136,13 @@ func (i *Inode) GetValue() (m string) {
 	return s
 }
 
-func (i *Inode) ParseValue(value string) (err error) {
-	_, err = fmt.Sscanf(value, "%d*%d*%d*%d", &i.Type, &i.Size, &i.AccessTime, &i.ModifyTime)
-	return
-}
-
 // GetValueBytes is the bytes version of GetValue method which returns byte slice result.
 func (i *Inode) GetValueBytes() (m []byte) {
 	return []byte(i.GetValue())
+}
+
+func (i *Inode) ParseValueBytes(val []byte) (err error) {
+	value := string(val)
+	_, err = fmt.Sscanf(value, "%d*%d*%d*%d", &i.Type, &i.Size, &i.AccessTime, &i.ModifyTime)
+	return
 }

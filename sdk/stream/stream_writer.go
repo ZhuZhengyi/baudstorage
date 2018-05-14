@@ -20,22 +20,22 @@ const (
 
 type StreamWriter struct {
 	sync.Mutex
-	wraper            *sdk.VolGroupWraper
-	currentWriter     *ExtentWriter //current ExtentWriter
-	errCount          int           //error count
-	excludeVols       []uint32      //exclude Vols
-	currentVolId      uint32        //current VolId
-	currentExtentId   uint64        //current ExtentId
-	currentInode      uint64        //inode
-	flushLock         sync.Mutex
-	updateExtentKeyFn func(inode uint64, key ExtentKey) (err error)
+	wraper          *sdk.VolGroupWraper
+	currentWriter   *ExtentWriter //current ExtentWriter
+	errCount        int           //error count
+	excludeVols     []uint32      //exclude Vols
+	currentVolId    uint32        //current VolId
+	currentExtentId uint64        //current ExtentId
+	currentInode    uint64        //inode
+	flushLock       sync.Mutex
+	saveExtentKeyFn func(inode uint64, key ExtentKey) (err error)
 }
 
-func NewStreamWriter(wraper *sdk.VolGroupWraper, inode uint64, updateExtentKeyFn func(inode uint64, key ExtentKey) (err error)) (stream *StreamWriter) {
+func NewStreamWriter(wraper *sdk.VolGroupWraper, inode uint64, saveExtentKeyFn func(inode uint64, key ExtentKey) (err error)) (stream *StreamWriter) {
 	stream = new(StreamWriter)
 	stream.excludeVols = make([]uint32, 0)
 	stream.wraper = wraper
-	stream.updateExtentKeyFn = updateExtentKeyFn
+	stream.saveExtentKeyFn = saveExtentKeyFn
 	stream.currentInode = inode
 	go stream.autoFlushThread()
 
@@ -136,19 +136,24 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 	stream.flushLock.Lock()
 	writer := stream.getWriter()
 	if writer == nil {
-		return
+		return nil
 	}
 	if err = writer.flush(); err != nil {
-		return
+		return err
 	}
-	if err = stream.updateExtentKeyFn(stream.currentInode, writer.toKey()); err != nil {
-		return
+	ek := writer.toKey()
+	if ek.Size != 0 {
+		err = stream.saveExtentKeyFn(stream.currentInode, ek)
 	}
+	if err != nil {
+		return err
+	}
+
 	if writer.isFullExtent() {
 		stream.setWriterToNull()
 	}
 
-	return
+	return err
 }
 
 func (stream *StreamWriter) recoverExtent() (err error) {
@@ -164,7 +169,11 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 	if err = stream.allocateNewExtentWriter(); err != nil {
 		return
 	}
-	if err = stream.updateExtentKeyFn(stream.currentInode, stream.getWriter().toKey()); err != nil {
+	ek := stream.getWriter().toKey()
+	if ek.Size != 0 {
+		err = stream.saveExtentKeyFn(stream.currentInode, ek)
+	}
+	if err != nil {
 		return
 	}
 	for e := sendList.Front(); e != nil; e = e.Next() {
