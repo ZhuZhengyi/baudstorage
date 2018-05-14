@@ -145,7 +145,6 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 	ek := writer.toKey()
 	if ek.Size != 0 {
 		err = stream.saveExtentKeyFn(stream.currentInode, ek)
-		fmt.Printf("update to %v\n", ek.Size)
 	}
 	if err != nil {
 		return err

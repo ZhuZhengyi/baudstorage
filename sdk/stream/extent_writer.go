@@ -295,8 +295,8 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 		return errors.Annotatef(fmt.Errorf("processReply recive [%v] error [%v]", request.GetUniqLogId(),
 			string(reply.Data[:reply.Size])), "writer[%v]", writer.toString())
 	}
-	writer.removeRquest(e)
 	writer.addByteAck(uint64(request.Size))
+	writer.removeRquest(e)
 	log.LogDebug(fmt.Sprintf("ActionProcessReply[%v] is recived", request.GetUniqLogId()))
 
 	return nil
