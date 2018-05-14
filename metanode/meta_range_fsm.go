@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sync"
 
+	"encoding/json"
 	"github.com/google/btree"
-	"github.com/kubernetes/kubernetes/staging/src/k8s.io/apimachinery/pkg/util/json"
 	"github.com/tiglabs/raft"
 	raftproto "github.com/tiglabs/raft/proto"
 )
@@ -31,7 +31,6 @@ func (mf *MetaRangeFsm) Apply(command []byte, index uint64) (resp interface{}, e
 	if err != nil {
 		goto end
 	}
-	//TODO
 	switch msg.Op {
 	case opCreateInode:
 		ino := &Inode{}
@@ -76,7 +75,7 @@ end:
 	return
 }
 
-func (mf *MetaRangeFsm) ApplyMemeberChange(confChange *raftproto.ConfChange, index uint64) (interface{}, error) {
+func (mf *MetaRangeFsm) ApplyMemberChange(confChange *raftproto.ConfChange, index uint64) (interface{}, error) {
 	// Write Disk
 	// Rename
 	// Change memory state
@@ -141,7 +140,7 @@ func (mf *MetaRangeFsm) HandleFatalEvent(err *raft.FatalError) {
 func (mf *MetaRangeFsm) HandleLeaderChange(leader uint64) {
 }
 
-func (mf *MetaRangeFsm) Put(key, val []byte) (resp interface{}, err error) {
+func (mf *MetaRangeFsm) Put(key, val []byte) (resp []byte, err error) {
 	snap := NewMetaRangeSnapshot(0, nil, nil)
 	snap.Op = binary.BigEndian.Uint32(key)
 	snap.V = val
@@ -150,7 +149,11 @@ func (mf *MetaRangeFsm) Put(key, val []byte) (resp interface{}, err error) {
 		return
 	}
 	//submit raft
-	resp, err = mf.metaRange.RaftPartition.Submit(cmd)
+	data, err := mf.metaRange.RaftPartition.Submit(cmd)
+	if err != nil {
+		return
+	}
+	resp = data.([]byte)
 	return
 }
 
