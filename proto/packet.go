@@ -310,6 +310,14 @@ func (p *Packet) PackOkWithReply(reply []byte) {
 	p.Arglen = 0
 }
 
+func (p *Packet)PackErrorReply(errCode uint8,reply []byte){
+	p.Size = uint32(len(reply))
+	p.Data = make([]byte, p.Size)
+	copy(p.Data[:p.Size], reply)
+	p.Resultcode = errCode
+	p.Arglen = 0
+}
+
 func (p *Packet) GetUniqLogId() (m string) {
 	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v_%v", p.ReqID, p.VolID, p.FileID,
 		p.Offset, p.Size, GetOpMesg(p.Opcode), GetOpMesg(p.Resultcode))
