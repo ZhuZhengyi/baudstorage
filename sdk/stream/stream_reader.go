@@ -90,6 +90,7 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err erro
 			newOffSet += int(key.Size)
 			continue
 		} else if index == oldReaderCnt-1 {
+			fmt.Printf("update to filesize[%v] newstreamkey[%v]\n", key.Size, newStreamKey.Size())
 			stream.readers[index].updateKey(key)
 		} else if index >= oldReaderCnt {
 			if r, err = NewExtentReader(stream.inode, newOffSet, key, stream.wraper); err != nil {
@@ -111,6 +112,7 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 	var keyCanRead int
 	keyCanRead, err = stream.initCheck(offset, size)
 	if err != nil {
+		fmt.Printf(err.Error())
 		err = io.EOF
 	}
 	if keyCanRead <= 0 {
@@ -132,12 +134,10 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 	return
 }
 
-func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader, readerOffset []int, readerSize []int) {
+func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader, readersOffsets []int, readersSize []int) {
 	readers = make([]*ExtentReader, 0)
-	readerOffset = make([]int, 0)
-	readerSize = make([]int, 0)
-	orgOffset := offset
-	orgSize := size
+	readersOffsets = make([]int, 0)
+	readersSize = make([]int, 0)
 	stream.Lock()
 	defer stream.Unlock()
 	for _, r := range stream.readers {
@@ -157,23 +157,17 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 		if r.endInodeOffset >= offset+size {
 			currReaderOffset = offset - r.startInodeOffset
 			currReaderSize = size
-			fmt.Printf("alloc1 reader orgOffset[%v] orgSize[%v] on extentReader[%v] readeroffset[%v]"+
-				" readerSIze[%v] offset[%v] size[%v]\n",
-				orgOffset, orgSize, r.toString(), currReaderOffset, currReaderSize, offset, size)
 			isPutReader = true
 		} else {
 			currReaderOffset = offset - r.startInodeOffset
 			currReaderSize = (int(r.key.Size) - currReaderOffset)
-			fmt.Printf("alloc2 reader orgOffset[%v] orgSize[%v] on extentReader[%v] readeroffset[%v]"+
-				" readerSIze[%v] offset[%v] size[%v]\n",
-				orgOffset, orgSize, r.toString(), currReaderOffset, currReaderSize, offset, size)
 			isPutReader = true
 		}
 		if isPutReader {
 			offset += currReaderSize
 			size -= currReaderSize
-			readerSize = append(readerSize, currReaderSize)
-			readerOffset = append(readerOffset, currReaderOffset)
+			readersSize = append(readersSize, currReaderSize)
+			readersOffsets = append(readersOffsets, currReaderOffset)
 			readers = append(readers, r)
 		}
 		r.Unlock()
