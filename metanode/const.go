@@ -1,6 +1,7 @@
 package metanode
 
 import (
+	"encoding/binary"
 	"github.com/tiglabs/baudstorage/proto"
 )
 
@@ -36,9 +37,21 @@ type (
 	OpenResp = proto.OpenResponse
 )
 
+type StoreKey = uint32
+
+func (k StoreKey) GetBytes() (bytes []byte) {
+	bytes = make([]byte, 4)
+	binary.BigEndian.PutUint32(bytes, k)
+	return
+}
+
+func (k *StoreKey) Parse(bytes []byte) {
+	*k = binary.BigEndian.Uint32(bytes)
+}
+
 // For use when raft store and application apply
 const (
-	opCreateInode = iota
+	opCreateInode     StoreKey = iota
 	opDeleteInode
 	opCreateDentry
 	opDeleteDentry
