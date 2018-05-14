@@ -92,13 +92,16 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err erro
 		} else if index == oldReaderCnt-1 {
 			fmt.Printf("update to filesize[%v] newstreamkey[%v]\n", key.Size, newStreamKey.Size())
 			stream.readers[index].updateKey(key)
-		} else if index >= oldReaderCnt {
+			newOffSet += int(key.Size)
+			continue
+		} else if index > oldReaderCnt-1 {
 			if r, err = NewExtentReader(stream.inode, newOffSet, key, stream.wraper); err != nil {
 				return errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
 			}
 			readers = append(readers, r)
+			newOffSet += int(key.Size)
+			continue
 		}
-		newOffSet += int(key.Size)
 	}
 	stream.fileSize = newStreamKey.Size()
 	stream.extents = newStreamKey
