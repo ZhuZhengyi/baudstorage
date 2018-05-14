@@ -141,9 +141,14 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 	if err = writer.flush(); err != nil {
 		return
 	}
-	if err = stream.saveExtentKeyFn(stream.currentInode, writer.toKey()); err != nil {
+	ek := writer.toKey()
+	if ek.Size != 0 {
+		err = stream.saveExtentKeyFn(stream.currentInode, ek)
+	}
+	if err != nil {
 		return
 	}
+
 	if writer.isFullExtent() {
 		stream.setWriterToNull()
 	}
@@ -164,7 +169,11 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 	if err = stream.allocateNewExtentWriter(); err != nil {
 		return
 	}
-	if err = stream.saveExtentKeyFn(stream.currentInode, stream.getWriter().toKey()); err != nil {
+	ek := stream.getWriter().toKey()
+	if ek.Size != 0 {
+		err = stream.saveExtentKeyFn(stream.currentInode, ek)
+	}
+	if err != nil {
 		return
 	}
 	for e := sendList.Front(); e != nil; e = e.Next() {
