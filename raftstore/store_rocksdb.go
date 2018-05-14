@@ -59,16 +59,16 @@ func (rs *RocksDBStore) Put(key, value interface{}) (result interface{}, err err
 	wb := gorocksdb.NewWriteBatch()
 	wb.Put(key.([]byte), value.([]byte))
 	if err := rs.db.Write(wo, wb); err != nil {
-		return
+		return nil, err
 	}
 	result = value
-	return
+	return result, nil
 }
 
 func (rs *RocksDBStore) Get(key interface{}) (result interface{}, err error) {
 	ro := gorocksdb.NewDefaultReadOptions()
 	ro.SetFillCache(false)
-	result, err = rs.db.GetBytes(ro, key.([]byte))
+	return rs.db.GetBytes(ro, key.([]byte))
 }
 
 func (rs *RocksDBStore) Snapshot() *gorocksdb.Snapshot {
