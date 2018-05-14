@@ -104,7 +104,7 @@ func TestExtentClient_Write(t *testing.T) {
 		writeStr := randSeq(2000 * 1)
 		ndata := ([]byte)(writeStr)
 		write, err := client.Write(inode, ndata)
-		if err != nil {
+		if err != nil || write != len(ndata) {
 			OccoursErr(fmt.Errorf("write inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 		}
 		err = client.Flush(inode)

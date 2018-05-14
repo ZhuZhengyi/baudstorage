@@ -146,7 +146,7 @@ func (reader *ExtentReader) updateKey(key ExtentKey) (update bool) {
 	if !(key.VolId == reader.key.VolId && key.ExtentId == reader.key.ExtentId) {
 		return
 	}
-	if key.Size <= reader.key.Size {
+	if key.Size < reader.key.Size {
 		return
 	}
 	reader.key = key
