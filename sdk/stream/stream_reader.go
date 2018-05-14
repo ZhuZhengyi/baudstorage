@@ -61,27 +61,10 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	newStreamKey, err = stream.updateExtentFn(stream.inode)
 
 	if err == nil {
-		var (
-			newOffSet int
-			reader    *ExtentReader
-		)
-		readers := make([]*ExtentReader, 0)
-		oldReaderCnt := len(stream.readers)
-		for index, key := range newStreamKey.Extents {
-			newOffSet += int(key.Size)
-			if index < oldReaderCnt {
-				stream.readers[index].updateKey(key)
-			} else {
-				if reader, err = NewExtentReader(stream.inode, offset, key, stream.wraper); err != nil {
-					return 0, errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
-				}
-				readers = append(stream.readers, reader)
-			}
-		}
-		stream.fileSize = newStreamKey.Size()
-		stream.extents = newStreamKey
-		stream.readers = append(stream.readers, readers...)
-		log.LogInfo(fmt.Sprintf("StreamReader update inode[%v] FileSize to [%v]", stream.inode, stream.fileSize))
+		err = stream.updateLocalReader(newStreamKey)
+	}
+	if err != nil {
+		return 0, err
 	}
 
 	if offset > int(stream.fileSize) {
@@ -93,6 +76,32 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	}
 
 	return size, nil
+}
+
+func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err error) {
+	var (
+		newOffSet int
+		reader    *ExtentReader
+	)
+	readers := make([]*ExtentReader, 0)
+	oldReaderCnt := len(stream.readers)
+	for index, key := range newStreamKey.Extents {
+		newOffSet += int(key.Size)
+		if index < oldReaderCnt {
+			stream.readers[index].updateKey(key)
+		} else {
+			if reader, err = NewExtentReader(stream.inode, newOffSet, key, stream.wraper); err != nil {
+				return errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] vol not found error", stream.inode, key)
+			}
+			readers = append(stream.readers, reader)
+		}
+	}
+	stream.fileSize = newStreamKey.Size()
+	stream.extents = newStreamKey
+	stream.readers = append(stream.readers, readers...)
+	log.LogInfo(fmt.Sprintf("StreamReader update inode[%v] FileSize to [%v]", stream.inode, stream.fileSize))
+
+	return nil
 }
 
 func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int, err error) {
