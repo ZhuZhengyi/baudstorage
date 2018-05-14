@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type ExtentKey struct {
@@ -18,6 +19,7 @@ type ExtentKey struct {
 type StreamKey struct {
 	Inode   uint64
 	Extents []ExtentKey
+	sync.Mutex
 }
 
 func (ek *ExtentKey) isEquare(k ExtentKey) (equare bool) {
@@ -39,6 +41,8 @@ func (sk *StreamKey) UnMarshal(data []byte) {
 }
 
 func (sk *StreamKey) Put(k ExtentKey) {
+	sk.Lock()
+	defer sk.Unlock()
 	isFound := false
 	for index := 0; index < len(sk.Extents); index++ {
 		if sk.Extents[index].VolId == k.VolId && sk.Extents[index].ExtentId == k.ExtentId {
@@ -55,6 +59,8 @@ func (sk *StreamKey) Put(k ExtentKey) {
 }
 
 func (sk *StreamKey) Size() (bytes uint64) {
+	sk.Lock()
+	defer sk.Unlock()
 	for _, okey := range sk.Extents {
 		bytes += uint64(okey.Size)
 	}
@@ -62,12 +68,16 @@ func (sk *StreamKey) Size() (bytes uint64) {
 }
 
 func (sk *StreamKey) GetExtentLen() int {
+	sk.Lock()
+	defer sk.Unlock()
 	return len(sk.Extents)
 }
 
 // Range calls f sequentially for each key and value present in the extent key collection.
 // If f returns false, range stops the iteration.
 func (sk *StreamKey) Range(f func(i int, v ExtentKey) bool) {
+	sk.Lock()
+	defer sk.Unlock()
 	for i, v := range sk.Extents {
 		if !f(i, v) {
 			return
