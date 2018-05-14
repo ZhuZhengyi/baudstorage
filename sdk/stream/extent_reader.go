@@ -75,6 +75,7 @@ func (reader *ExtentReader) readDataFromVol(p *Packet, data []byte) (err error) 
 	index := rand.Intn(int(reader.vol.Goal))
 	host := reader.vol.Hosts[index]
 	if _, err = reader.readDataFromHost(p, host, data); err != nil {
+		log.LogError(err.Error())
 		goto FORLOOP
 	}
 	return
@@ -84,6 +85,8 @@ FORLOOP:
 		_, err = reader.readDataFromHost(p, host, data)
 		if err == nil {
 			return
+		}else {
+			log.LogError(err.Error())
 		}
 	}
 
