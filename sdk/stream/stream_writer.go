@@ -136,6 +136,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 	stream.flushLock.Lock()
 	writer := stream.getWriter()
 	if writer == nil {
+		err = nil
 		return nil
 	}
 	if err = writer.flush(); err != nil {
@@ -149,7 +150,6 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 	if err != nil {
 		return err
 	}
-
 	if writer.isFullExtent() {
 		stream.setWriterToNull()
 	}

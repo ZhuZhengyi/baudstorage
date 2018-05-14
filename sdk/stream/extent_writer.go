@@ -245,7 +245,6 @@ func (writer *ExtentWriter) flush() (err error) {
 		writer.flushLock.Unlock()
 		writer.checkIsStopReciveGoRoutine()
 		if err == nil {
-			log.LogInfo(writer.toString() + " backEndlush ok")
 			return
 		}
 		if !writer.recover() {
@@ -256,28 +255,24 @@ func (writer *ExtentWriter) flush() (err error) {
 	writer.flushLock.Lock()
 	if writer.isAllFlushed() {
 		err = nil
-		return err
+		return nil
 	}
 	if writer.getPacket() != nil {
-		err = writer.sendCurrPacket()
-		if err != nil {
+		if err = writer.sendCurrPacket(); err != nil {
 			return err
 		}
 	}
-
 	if writer.isAllFlushed() {
 		err = nil
-		return err
+		return nil
 	}
 	writer.flushWait()
-
 	if !writer.isAllFlushed() {
 		err = errors.Annotatef(FlushErr, "cannot backEndlush writer [%v]", writer.toString())
 		return err
 	}
-	err = nil
 
-	return
+	return nil
 }
 
 func (writer *ExtentWriter) close() {
