@@ -112,7 +112,7 @@ func (m *MetaNode) routePacket(conn net.Conn, p *Packet) (err error) {
 }
 
 // ReplyToClient send reply data though tcp connection to client.
-func (m *MetaNode) replyToClient(conn net.Conn, p *Packet, data interface{}) (err error) {
+func (m *MetaNode) replyToClient(conn net.Conn, p *Packet, data []byte) (err error) {
 	// Handle panic
 	defer func() {
 		if r := recover(); r != nil {
@@ -125,11 +125,7 @@ func (m *MetaNode) replyToClient(conn net.Conn, p *Packet, data interface{}) (er
 		}
 	}()
 	// Process data and send reply though specified tcp connection.
-	jsonBytes, err := json.Marshal(data)
-	if err != nil {
-		return
-	}
-	p.Data = jsonBytes
+	p.Data = data
 	err = p.WriteToConn(conn)
 	return
 }
