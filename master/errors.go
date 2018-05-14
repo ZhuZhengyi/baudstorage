@@ -28,6 +28,8 @@ var (
 	NoAnyMetaNodeForCreateVol       = errors.New("no have enough meta server for create meta range")
 	MetaGroupReplicationExcessError = errors.New("meta group Replication Excess error")
 	MetaGroupReplicationLackError   = errors.New("meta group Replication Lack error")
+
+	NoLeader = errors.New("no leader")
 )
 
 func paraNotFound(name string) (err error) {
