@@ -71,7 +71,7 @@ const (
 	OpAgain            uint8 = 0xF9
 	OpExistErr         uint8 = 0xFA
 	OpInodeFullErr     uint8 = 0xFB
-	OpOk               uint8 = 0x01
+	OpOk               uint8 = 0x00
 )
 
 const (
