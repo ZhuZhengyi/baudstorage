@@ -1,5 +1,7 @@
 package master
 
+import "github.com/tiglabs/baudstorage/util"
+
 const (
 	DefaultReplicaNum                    = 3
 	DefaultEveryReleaseVolCount          = 10
@@ -18,6 +20,8 @@ const (
 	DefaultLoadVolFrequencyTime          = 60 * 60
 	DefaultEveryLoadVolCount             = 10
 	DefaultMetaRangeTimeOutSec           = 5 * DefaultCheckHeartBeatIntervalSeconds
+	DefaultMetaRangeThreshold = 0.75
+	DefaultMetaRangeMemSize = 16*util.GB
 )
 
 type ClusterConfig struct {

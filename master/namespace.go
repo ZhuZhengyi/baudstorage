@@ -8,6 +8,8 @@ type NameSpace struct {
 	Name          string
 	volReplicaNum uint8
 	mrReplicaNum  uint8
+	threshold float32
+	mrSize uint64
 	MetaGroups    map[uint64]*MetaGroup
 	metaGroupLock sync.RWMutex
 	volGroups     *VolGroupMap
@@ -18,7 +20,8 @@ func NewNameSpace(name string, replicaNum uint8) (ns *NameSpace) {
 	ns = &NameSpace{Name: name, MetaGroups: make(map[uint64]*MetaGroup, 0)}
 	ns.volGroups = NewVolMap()
 	ns.volReplicaNum = replicaNum
-
+	ns.threshold = DefaultMetaRangeThreshold
+	ns.mrSize = DefaultMetaRangeMemSize
 	if replicaNum%2 == 0 {
 		ns.mrReplicaNum = replicaNum + 1
 	} else {

@@ -68,6 +68,8 @@ const (
 	OpCreateMetaGroup   = 0x06
 	OpDataNodeHeartbeat = 0x07
 	OpMetaNodeHeartbeat = 0x08
+	OpDeleteMetaRange   = 0x09
+	OpUpdateMetaRange   = 0x10
 )
 
 const (

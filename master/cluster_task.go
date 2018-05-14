@@ -138,12 +138,14 @@ func (c *Cluster) processLoadVol(v *VolGroup, isRecover bool) {
 func (c *Cluster) checkMetaGroups(ns *NameSpace) {
 	ns.metaGroupLock.RLock()
 	defer ns.metaGroupLock.RUnlock()
+	var tasks []*proto.AdminTask
 	for _, mg := range ns.MetaGroups {
-		mg.checkStatus(true)
+		mg.checkStatus(true, int(ns.mrReplicaNum))
 		mg.checkReplicas()
-		tasks := mg.generateReplicaTask()
-		c.putMetaNodeTasks(tasks)
+		tasks = append(tasks, mg.generateReplicaTask()...)
+		tasks = append(tasks, mg.checkThreshold(ns.threshold, ns.mrSize))
 	}
+	c.putMetaNodeTasks(tasks)
 
 }
 
@@ -174,6 +176,12 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	case OpMetaNodeHeartbeat:
 		response := task.Response.(*proto.MetaNodeHeartbeatResponse)
 		c.dealMetaNodeHeartbeat(task.OperatorAddr, response)
+	case OpDeleteMetaRange:
+		response := task.Response.(*proto.DeleteMetaRangeResponse)
+		c.dealDeleteMetaRange(task.OperatorAddr, response)
+	case OpUpdateMetaRange:
+		response := task.Response.(*proto.UpdateMetaRangeResponse)
+		c.dealUpdateMetaRange(task.OperatorAddr, response)
 	default:
 		log.LogError(fmt.Sprintf("unknown operate code %v", task.OpCode))
 	}
@@ -186,9 +194,50 @@ errDeal:
 	return
 }
 
+func (c *Cluster) dealUpdateMetaRange(nodeAddr string, resp *proto.UpdateMetaRangeResponse) {
+	if resp.Status == proto.CmdFailed {
+		log.LogError(fmt.Sprintf("action[dealUpdateMetaRange],nodeAddr %v update meta range failed,err %v", nodeAddr, resp.Result))
+		return
+	}
+	mg, err := c.getMetaGroupByID(resp.GroupId)
+	mg.End = resp.End
+	mg.updateEnd()
+	if err != nil {
+		goto errDeal
+	}
+	if err = c.CreateMetaGroup(resp.NsName, mg.End, DefaultMaxMetaTabletRange); err != nil {
+		goto errDeal
+	}
+	return
+errDeal:
+	log.LogError(fmt.Sprintf("createVolSuccessTriggerOperatorErr %v", err))
+	return
+}
+
+func (c *Cluster) dealDeleteMetaRange(nodeAddr string, resp *proto.DeleteMetaRangeResponse) {
+	if resp.Status == proto.CmdFailed {
+		log.LogError(fmt.Sprintf("action[dealDeleteMetaRange],nodeAddr %v delete meta range failed,err %v", nodeAddr, resp.Result))
+		return
+	}
+	var mr *MetaRange
+	mg, err := c.getMetaGroupByID(resp.GroupId)
+	if err != nil {
+		goto errDeal
+	}
+	if mr, err = mg.getMetaRange(nodeAddr); err != nil {
+		goto errDeal
+	}
+	mg.RemoveMember(mr)
+	return
+
+errDeal:
+	log.LogError(fmt.Sprintf("createVolSuccessTriggerOperatorErr %v", err))
+	return
+}
+
 func (c *Cluster) dealCreateMetaRange(nodeAddr string, resp *proto.CreateMetaRangeResponse) {
 	if resp.Status == proto.CmdFailed {
-		log.LogError(fmt.Sprintf("action[dealCreateMetaRange],nodeAddr %v create meta range failed", nodeAddr))
+		log.LogError(fmt.Sprintf("action[dealCreateMetaRange],nodeAddr %v create meta range failed,err %v", nodeAddr, resp.Result))
 		return
 	}
 
