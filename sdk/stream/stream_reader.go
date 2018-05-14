@@ -151,7 +151,7 @@ func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader
 			break
 		}
 		r.Lock()
-		if r.startInodeOffset > offset {
+		if r.startInodeOffset > offset || r.endInodeOffset <= offset {
 			r.Unlock()
 			continue
 		}
