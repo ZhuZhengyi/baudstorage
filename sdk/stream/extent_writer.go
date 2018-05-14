@@ -50,7 +50,6 @@ type ExtentWriter struct {
 	recoverCnt       int       //if failed,then recover contine,this is recover count
 
 	cond       *sync.Cond //flushCond use for backEndlush func
-	isFlushIng uint64     //isFlushIng
 	sync.Mutex
 	flushLock sync.Mutex
 }
@@ -72,35 +71,26 @@ func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper
 	return
 }
 
-//InitFlushCond   when user call backEndlush func
-func (writer *ExtentWriter) initFlushCond() {
-	if atomic.LoadUint64(&writer.isFlushIng) == FlushIng {
-		return
-	}
-	writer.cond = sync.NewCond(&sync.Mutex{})
-	atomic.StoreUint64(&writer.isFlushIng, FlushIng)
-}
+
 
 //when backEndlush func called,and sdk must wait
 func (writer *ExtentWriter) flushWait() {
 	start := time.Now().UnixNano()
+	writer.cond=sync.NewCond(&sync.Mutex{})
+	writer.cond.L.Lock()
 	go func() {
+		writer.cond.L.Lock()
 		for {
 			if time.Now().UnixNano()-start > int64(time.Second*2) || writer.isAllFlushed() {
-				writer.cond.L.Lock()
 				writer.cond.Signal()
-				atomic.StoreUint64(&writer.isFlushIng, NoFlush)
-				writer.cond.L.Unlock()
 				break
 			}
 		}
+		writer.cond.L.Unlock()
 
 	}()
-	if atomic.LoadUint64(&writer.isFlushIng) == FlushIng {
-		writer.cond.L.Lock()
-		writer.cond.Wait()
-		writer.cond.L.Unlock()
-	}
+	writer.cond.Wait()
+	writer.cond.L.Unlock()
 }
 
 //user call write func
@@ -281,7 +271,6 @@ func (writer *ExtentWriter) flush() (err error) {
 		err = nil
 		return err
 	}
-	writer.initFlushCond()
 	writer.flushWait()
 
 	if !writer.isAllFlushed() {
