@@ -4,9 +4,9 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
-	"github.com/tiglabs/baudstorage/raftstore"
 )
 
 // Configuration keys
@@ -15,6 +15,7 @@ const (
 	cfgListen  = "listen"
 	cfgLogDir  = "logDir"
 	cfgMetaDir = "metaDir"
+	cfgRaftDir = "raftDir"
 )
 
 // State type definition
@@ -22,7 +23,7 @@ type nodeState uint8
 
 // State constants
 const (
-	sReady   nodeState = iota
+	sReady nodeState = iota
 	sRunning
 )
 
@@ -30,10 +31,11 @@ const (
 // through the Raft algorithm and other MetaNodes in the RageGroup for reliable
 // data synchronization to maintain data consistency within the MetaGroup.
 type MetaNode struct {
-	nodeId           string
+	nodeId           uint64
 	listen           int
 	metaDir          string //metaNode store root dir
 	logDir           string
+	raftDir          string //raft log store base dir
 	masterAddr       string
 	metaRangeManager *MetaRangeManager
 	raftStore        raftstore.RaftStore
@@ -119,10 +121,11 @@ func (m *MetaNode) prepareConfig(cfg *config.Config) (err error) {
 		err = errors.New("invalid configuration")
 		return
 	}
-	m.nodeId = cfg.GetString(cfgNodeId)
+	m.nodeId = uint64(cfg.GetInt(cfgNodeId))
 	m.listen = int(cfg.GetInt(cfgListen))
 	m.logDir = cfg.GetString(cfgLogDir)
 	m.metaDir = cfg.GetString(cfgMetaDir)
+	m.raftDir = cfg.GetString(cfgRaftDir)
 	return
 }
 
