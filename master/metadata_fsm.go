@@ -44,6 +44,6 @@ func encodeNameSpaceKey(name string) string {
 	return PrefixNameSpace + KeySeparator + name
 }
 
-func (mf *MetadataFsm) CreateMetaRange(request proto.CreateMetaRangeRequest) (response proto.CreateMetaRangeResponse) {
+func (mf *MetadataFsm) CreateMetaRange(request proto.CreateMetaPartitionRequest) (response proto.CreateMetaPartitionResponse) {
 	return
 }

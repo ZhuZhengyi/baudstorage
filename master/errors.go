@@ -44,11 +44,11 @@ func taskNotFound(id string) (err error) {
 	return elementNotFound(fmt.Sprintf("task %v", id))
 }
 
-func metaGroupNotFound(id uint64) (err error) {
+func metaPartitionNotFound(id uint64) (err error) {
 	return elementNotFound(fmt.Sprintf("meta group %v", id))
 }
 
-func metaRangeNotFound(addr string) (err error) {
+func metaReplicaNotFound(addr string) (err error) {
 	return elementNotFound(fmt.Sprintf("meta range %v", addr))
 }
 
