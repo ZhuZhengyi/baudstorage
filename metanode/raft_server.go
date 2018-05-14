@@ -27,9 +27,7 @@ func (m *MetaNode) startRaftServer() (err error) {
 func (m MetaNode) createPartition(mr *MetaRange) (err error) {
 	var peers []proto.Peer
 	for _, peer := range mr.Peers {
-		peers = append(peers, proto.Peer{
-			ID: peer.ID,
-		})
+		m.raftStore.AddNode(peer.ID, peer.Addr)
 	}
 	partitionConf := &raftstore.PartitionConfig{
 		ID:      mr.RaftGroupID,
