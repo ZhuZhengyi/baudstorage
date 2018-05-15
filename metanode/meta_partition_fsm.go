@@ -13,19 +13,19 @@ import (
 
 const defaultBTreeDegree = 32
 
-// MetaRangeFsm responsible for sync data log with other meta range through Raft
+// MetaPartitionFsm responsible for sync data log with other meta range through Raft
 // and manage dentry and inode by B-Tree in memory.
-type MetaRangeFsm struct {
-	metaRange  *MetaRange
-	applyID    uint64       // for store inode/dentry max applyID
-	dentryMu   sync.RWMutex // Mutex for dentry operation.
-	dentryTree *btree.BTree // B-Tree for dentry.
-	inodeMu    sync.RWMutex // Mutex for inode operation.
-	inodeTree  *btree.BTree // B-Tree for inode.
+type MetaPartitionFsm struct {
+	metaPartition *MetaPartition
+	applyID       uint64       // for store inode/dentry max applyID
+	dentryMu      sync.RWMutex // Mutex for dentry operation.
+	dentryTree    *btree.BTree // B-Tree for dentry.
+	inodeMu       sync.RWMutex // Mutex for inode operation.
+	inodeTree     *btree.BTree // B-Tree for inode.
 }
 
-func (mf *MetaRangeFsm) Apply(command []byte, index uint64) (resp interface{}, err error) {
-	msg := &MetaRangeSnapshot{}
+func (mf *MetaPartitionFsm) Apply(command []byte, index uint64) (resp interface{}, err error) {
+	msg := &MetaPartitionSnapshot{}
 	err = msg.Decode(command)
 	if err != nil {
 		goto end
@@ -74,7 +74,7 @@ end:
 	return
 }
 
-func (mf *MetaRangeFsm) ApplyMemberChange(confChange *raftproto.ConfChange, index uint64) (interface{}, error) {
+func (mf *MetaPartitionFsm) ApplyMemberChange(confChange *raftproto.ConfChange, index uint64) (interface{}, error) {
 	// Write Disk
 	// Rename
 	// Change memory state
@@ -91,7 +91,7 @@ func (mf *MetaRangeFsm) ApplyMemberChange(confChange *raftproto.ConfChange, inde
 	return nil, nil
 }
 
-func (mf *MetaRangeFsm) Snapshot() (raftproto.Snapshot, error) {
+func (mf *MetaPartitionFsm) Snapshot() (raftproto.Snapshot, error) {
 	appid := mf.applyID
 	ino := mf.GetInodeTree()
 	dentry := mf.GetDentryTree()
@@ -99,15 +99,15 @@ func (mf *MetaRangeFsm) Snapshot() (raftproto.Snapshot, error) {
 	return snapIter, nil
 }
 
-func (mf *MetaRangeFsm) ApplySnapshot(peers []raftproto.Peer,
+func (mf *MetaPartitionFsm) ApplySnapshot(peers []raftproto.Peer,
 	iter raftproto.SnapIterator) error {
-	newMF := NewMetaRangeFsm(mf.metaRange)
+	newMF := NewMetaPartitionFsm(mf.metaPartition)
 	for {
 		data, err := iter.Next()
 		if err != nil {
 			return err
 		}
-		snap := NewMetaRangeSnapshot(0, nil, nil)
+		snap := NewMetaPartitionSnapshot(0, nil, nil)
 		if err = snap.Decode(data); err != nil {
 			return err
 		}
@@ -126,23 +126,23 @@ func (mf *MetaRangeFsm) ApplySnapshot(peers []raftproto.Peer,
 			return errors.New(fmt.Sprintf("unknown op=%d", snap.Op))
 		}
 	}
-	newMF.applyID = newMF.metaRange.RaftPartition.AppliedIndex()
+	newMF.applyID = newMF.metaPartition.RaftPartition.AppliedIndex()
 	*mf = *newMF
 	return nil
 }
 
-func (mf *MetaRangeFsm) HandleFatalEvent(err *raft.FatalError) {
+func (mf *MetaPartitionFsm) HandleFatalEvent(err *raft.FatalError) {
 	panic(err)
 }
 
-func (mf *MetaRangeFsm) HandleLeaderChange(leader uint64) {
-	if leader == mf.metaRange.RaftGroupID {
-		mf.metaRange.IsLeader = true
+func (mf *MetaPartitionFsm) HandleLeaderChange(leader uint64) {
+	if leader == mf.metaPartition.RaftGroupID {
+		mf.metaPartition.IsLeader = true
 	}
 }
 
-func (mf *MetaRangeFsm) Put(key, val interface{}) (resp interface{}, err error) {
-	snap := NewMetaRangeSnapshot(0, nil, nil)
+func (mf *MetaPartitionFsm) Put(key, val interface{}) (resp interface{}, err error) {
+	snap := NewMetaPartitionSnapshot(0, nil, nil)
 	snap.Op = key.(uint32)
 	snap.V = val.([]byte)
 	cmd, err := json.Marshal(snap)
@@ -150,17 +150,17 @@ func (mf *MetaRangeFsm) Put(key, val interface{}) (resp interface{}, err error) 
 		return
 	}
 	//submit raft
-	resp, err = mf.metaRange.RaftPartition.Submit(cmd)
+	resp, err = mf.metaPartition.RaftPartition.Submit(cmd)
 	if err != nil {
 		return
 	}
 	return
 }
 
-func (mf *MetaRangeFsm) Get(key interface{}) (interface{}, error) {
+func (mf *MetaPartitionFsm) Get(key interface{}) (interface{}, error) {
 	return nil, nil
 }
 
-func (mf *MetaRangeFsm) Del(key interface{}) (interface{}, error) {
+func (mf *MetaPartitionFsm) Del(key interface{}) (interface{}, error) {
 	return nil, nil
 }

@@ -15,9 +15,9 @@ import (
 )
 
 // Load inode info from inode snapshot file
-func (mf *MetaRangeFsm) LoadInode() (err error) {
+func (mf *MetaPartitionFsm) LoadInode() (err error) {
 	// Restore btree from ino file
-	inoFile := path.Join(mf.metaRange.RootDir, "inode")
+	inoFile := path.Join(mf.metaPartition.RootDir, "inode")
 	fp, err := os.OpenFile(inoFile, os.O_RDONLY, 0644)
 	if err != nil {
 		if err == os.ErrNotExist {
@@ -48,17 +48,17 @@ func (mf *MetaRangeFsm) LoadInode() (err error) {
 			err = errors.New("load inode info error!")
 			return
 		}
-		if mf.metaRange.Cursor < ino.Inode {
-			mf.metaRange.Cursor = ino.Inode
+		if mf.metaPartition.Cursor < ino.Inode {
+			mf.metaPartition.Cursor = ino.Inode
 		}
 	}
 	return
 }
 
 // Load dentry from dentry snapshot file
-func (mf *MetaRangeFsm) LoadDentry() (err error) {
+func (mf *MetaPartitionFsm) LoadDentry() (err error) {
 	// Restore dentry from dentry file
-	dentryFile := path.Join(mf.metaRange.RootDir, "dentry")
+	dentryFile := path.Join(mf.metaPartition.RootDir, "dentry")
 	fp, err := os.OpenFile(dentryFile, os.O_RDONLY, 0644)
 	if err != nil {
 		if err == os.ErrNotExist {
@@ -92,8 +92,8 @@ func (mf *MetaRangeFsm) LoadDentry() (err error) {
 	return
 }
 
-func (mf *MetaRangeFsm) LoadApplyID() (err error) {
-	applyIDFile := path.Join(mf.metaRange.RootDir, "applyid")
+func (mf *MetaPartitionFsm) LoadApplyID() (err error) {
+	applyIDFile := path.Join(mf.metaPartition.RootDir, "applyid")
 	data, err := ioutil.ReadFile(applyIDFile)
 	if err != nil {
 		return
@@ -106,8 +106,8 @@ func (mf *MetaRangeFsm) LoadApplyID() (err error) {
 	return
 }
 
-func (mf *MetaRangeFsm) StoreApplyID() (err error) {
-	filename := path.Join(mf.metaRange.RootDir, "_applyid")
+func (mf *MetaPartitionFsm) StoreApplyID() (err error) {
+	filename := path.Join(mf.metaPartition.RootDir, "_applyid")
 	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_TRUNC, 0644)
 	if err != nil {
 		return
@@ -120,8 +120,8 @@ func (mf *MetaRangeFsm) StoreApplyID() (err error) {
 	return
 }
 
-func (mf *MetaRangeFsm) StoreInodeTree() (err error) {
-	filename := path.Join(mf.metaRange.RootDir, "_inode")
+func (mf *MetaPartitionFsm) StoreInodeTree() (err error) {
+	filename := path.Join(mf.metaPartition.RootDir, "_inode")
 	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND, 0644)
 	if err != nil {
 		return
@@ -148,8 +148,8 @@ func (mf *MetaRangeFsm) StoreInodeTree() (err error) {
 	return
 }
 
-func (mf *MetaRangeFsm) StoreDentryTree() (err error) {
-	filename := path.Join(mf.metaRange.RootDir, "_dentry")
+func (mf *MetaPartitionFsm) StoreDentryTree() (err error) {
+	filename := path.Join(mf.metaPartition.RootDir, "_dentry")
 	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND, 0644)
 	if err != nil {
 		return

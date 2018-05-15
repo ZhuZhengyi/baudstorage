@@ -8,18 +8,18 @@ import (
 	"github.com/tiglabs/baudstorage/sdk/stream"
 )
 
-func NewMetaRangeFsm(mr *MetaRange) *MetaRangeFsm {
-	return &MetaRangeFsm{
-		metaRange:  mr,
-		dentryTree: btree.New(defaultBTreeDegree),
-		inodeTree:  btree.New(defaultBTreeDegree),
+func NewMetaPartitionFsm(mr *MetaPartition) *MetaPartitionFsm {
+	return &MetaPartitionFsm{
+		metaPartition: mr,
+		dentryTree:    btree.New(defaultBTreeDegree),
+		inodeTree:     btree.New(defaultBTreeDegree),
 	}
 }
 
 // GetDentry query dentry from DentryTree with specified dentry info;
 // if it exist, the required parameter is the dentry entity,
 // if not exist, not change
-func (mf *MetaRangeFsm) GetDentry(dentry *Dentry) (status uint8) {
+func (mf *MetaPartitionFsm) GetDentry(dentry *Dentry) (status uint8) {
 	status = proto.OpOk
 	item := mf.dentryTree.Get(dentry)
 	if item == nil {
@@ -33,7 +33,7 @@ func (mf *MetaRangeFsm) GetDentry(dentry *Dentry) (status uint8) {
 // GetInode query inode from InodeTree with specified inode info;
 // if it exist, the required parameter is the inode entity,
 // if not exist, not change
-func (mf *MetaRangeFsm) GetInode(ino *Inode) (status uint8) {
+func (mf *MetaPartitionFsm) GetInode(ino *Inode) (status uint8) {
 	status = proto.OpOk
 	item := mf.inodeTree.Get(ino)
 	if item == nil {
@@ -44,12 +44,12 @@ func (mf *MetaRangeFsm) GetInode(ino *Inode) (status uint8) {
 	return
 }
 
-func (mf *MetaRangeFsm) GetInodeTree() *btree.BTree {
+func (mf *MetaPartitionFsm) GetInodeTree() *btree.BTree {
 	return mf.inodeTree
 }
 
 // CreateDentry insert dentry into dentry tree.
-func (mf *MetaRangeFsm) CreateDentry(dentry *Dentry) (status uint8) {
+func (mf *MetaPartitionFsm) CreateDentry(dentry *Dentry) (status uint8) {
 	// TODO: Implement it.
 	status = proto.OpOk
 	mf.dentryMu.Lock()
@@ -64,7 +64,7 @@ func (mf *MetaRangeFsm) CreateDentry(dentry *Dentry) (status uint8) {
 }
 
 // DeleteDentry delete dentry from dentry tree.
-func (mf *MetaRangeFsm) DeleteDentry(dentry *Dentry) (status uint8) {
+func (mf *MetaPartitionFsm) DeleteDentry(dentry *Dentry) (status uint8) {
 	// TODO: Implement it.
 	status = proto.OpOk
 	mf.dentryMu.Lock()
@@ -78,12 +78,12 @@ func (mf *MetaRangeFsm) DeleteDentry(dentry *Dentry) (status uint8) {
 	return
 }
 
-func (mf *MetaRangeFsm) GetDentryTree() *btree.BTree {
+func (mf *MetaPartitionFsm) GetDentryTree() *btree.BTree {
 	return mf.dentryTree
 }
 
 // CreateInode create inode to inode tree.
-func (mf *MetaRangeFsm) CreateInode(ino *Inode) (status uint8) {
+func (mf *MetaPartitionFsm) CreateInode(ino *Inode) (status uint8) {
 	// TODO: Implement it.
 	status = proto.OpOk
 	mf.inodeMu.Lock()
@@ -98,7 +98,7 @@ func (mf *MetaRangeFsm) CreateInode(ino *Inode) (status uint8) {
 }
 
 // DeleteInode delete specified inode item from inode tree.
-func (mf *MetaRangeFsm) DeleteInode(ino *Inode) (status uint8) {
+func (mf *MetaPartitionFsm) DeleteInode(ino *Inode) (status uint8) {
 	// TODO: Implement it.
 	status = proto.OpOk
 	mf.inodeMu.Lock()
@@ -112,7 +112,7 @@ func (mf *MetaRangeFsm) DeleteInode(ino *Inode) (status uint8) {
 	return
 }
 
-func (mf *MetaRangeFsm) OpenFile(req *OpenReq) (status uint8) {
+func (mf *MetaPartitionFsm) OpenFile(req *OpenReq) (status uint8) {
 	item := mf.inodeTree.Get(&Inode{
 		Inode: req.Inode,
 	})
@@ -125,7 +125,7 @@ func (mf *MetaRangeFsm) OpenFile(req *OpenReq) (status uint8) {
 	return
 }
 
-func (mf *MetaRangeFsm) ReadDir(req *ReadDirReq) (resp *ReadDirResp) {
+func (mf *MetaPartitionFsm) ReadDir(req *ReadDirReq) (resp *ReadDirResp) {
 	begDentry := &Dentry{
 		ParentId: req.ParentID,
 	}
@@ -144,7 +144,7 @@ func (mf *MetaRangeFsm) ReadDir(req *ReadDirReq) (resp *ReadDirResp) {
 	return
 }
 
-func (mf *MetaRangeFsm) PutStreamKey(ino *Inode, k stream.ExtentKey) (status uint8) {
+func (mf *MetaPartitionFsm) PutStreamKey(ino *Inode, k stream.ExtentKey) (status uint8) {
 	status = proto.OpOk
 	item := mf.inodeTree.Get(ino)
 	if item == nil {

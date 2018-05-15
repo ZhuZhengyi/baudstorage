@@ -72,7 +72,7 @@ func (m *MetaNode) servConn(conn net.Conn, stopC chan uint8) {
 		}
 		// Start a goroutine for packet handling. Do not block connection read goroutine.
 		go func() {
-			if err := m.routePacket(conn, p); err != nil {
+			if err := m.handlePacket(conn, p); err != nil {
 				log.LogError("serve operatorPkg: ", err.Error())
 				return
 			}
@@ -81,7 +81,7 @@ func (m *MetaNode) servConn(conn net.Conn, stopC chan uint8) {
 }
 
 // RoutePacket check the OpCode in specified packet and route it to handler.
-func (m *MetaNode) routePacket(conn net.Conn, p *Packet) (err error) {
+func (m *MetaNode) handlePacket(conn net.Conn, p *Packet) (err error) {
 	switch p.Opcode {
 	case proto.OpMetaCreateInode:
 		// Client → MetaNode

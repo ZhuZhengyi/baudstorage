@@ -8,9 +8,9 @@ import (
 
 // Type alias.
 type (
-	// Master -> MetaNode  create metaRange request struct
+	// Master -> MetaNode  create metaPartition request struct
 	CreateMetaRangeReq = proto.CreateMetaPartitionRequest
-	// MetaNode -> Master create metaRange response struct
+	// MetaNode -> Master create metaPartition response struct
 	CreateMetaRangeResp = proto.CreateMetaPartitionResponse
 	// Client -> MetaNode create inode request struct
 	CreateInoReq = proto.CreateInodeRequest
@@ -56,5 +56,6 @@ const (
 )
 
 var (
-	ErrNonLeader = errors.New("Non Leader")
+	ErrNonLeader = errors.New("non leader")
+	ErrNotLeader = errors.New("not leader")
 )

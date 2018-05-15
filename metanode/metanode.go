@@ -27,23 +27,23 @@ const (
 	sRunning
 )
 
-// The MetaNode manage Dentry and Inode information in multiple MetaRange, and
+// The MetaNode manage Dentry and Inode information in multiple MetaPartition, and
 // through the Raft algorithm and other MetaNodes in the RageGroup for reliable
 // data synchronization to maintain data consistency within the MetaGroup.
 type MetaNode struct {
-	nodeId           uint64
-	listen           int
-	metaDir          string //metaNode store root dir
-	logDir           string
-	raftDir          string //raft log store base dir
-	masterAddr       string
-	metaRangeManager *MetaRangeManager
-	raftStore        raftstore.RaftStore
-	httpStopC        chan uint8
-	log              *log.Log
-	state            nodeState
-	stateMutex       sync.RWMutex
-	wg               sync.WaitGroup
+	nodeId      uint64
+	listen      int
+	metaDir     string //metaNode store root dir
+	logDir      string
+	raftDir     string //raft log store base dir
+	masterAddr  string
+	metaManager *MetaManager
+	raftStore   raftstore.RaftStore
+	httpStopC   chan uint8
+	log         *log.Log
+	state       nodeState
+	stateMutex  sync.RWMutex
+	wg          sync.WaitGroup
 }
 
 // Start this MeteNode with specified configuration.
@@ -90,7 +90,7 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 }
 
 func (m *MetaNode) startStoreSchedule() (err error) {
-	for _, mr := range m.metaRangeManager.metaRangeMap {
+	for _, mr := range m.metaManager.partitions {
 		go mr.StartStoreSchedule()
 	}
 	return
@@ -130,14 +130,14 @@ func (m *MetaNode) prepareConfig(cfg *config.Config) (err error) {
 }
 
 func (m *MetaNode) load() (err error) {
-	// Load metaRangeManager
-	err = m.metaRangeManager.LoadMetaManagers(m.metaDir)
+	// Load metaManager
+	err = m.metaManager.LoadMetaManagers(m.metaDir)
 	return
 }
 
 // NewServer create an new MetaNode instance.
 func NewServer() *MetaNode {
 	return &MetaNode{
-		metaRangeManager: NewMetaRangeManager(),
+		metaManager: NewMetaRangeManager(),
 	}
 }

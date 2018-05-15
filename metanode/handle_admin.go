@@ -51,9 +51,9 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 	if err := json.Unmarshal(requestJson, req); err != nil {
 		return
 	}
-	// Create new  MetaRange.
+	// Create new  MetaPartition.
 	id := fmt.Sprintf("%d", req.GroupId)
-	mConf := MetaRangeConfig{
+	mConf := MetaPartitionConfig{
 		ID:          id,
 		Start:       req.Start,
 		End:         req.End,
@@ -63,17 +63,17 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 		RootDir:     path.Join(m.metaDir, id),
 	}
 	mr := NewMetaRange(mConf)
-	if err = m.metaRangeManager.SetMetaRange(mr); err != nil {
+	if err = m.metaManager.SetMetaRange(mr); err != nil {
 		return
 	}
 	defer func() {
 		if err != nil {
-			m.metaRangeManager.DeleteMetaRange(mr.ID)
+			m.metaManager.DeleteMetaRange(mr.ID)
 		}
 	}()
-	// Create metaRange base dir
+	// Create metaPartition base dir
 	if _, err = os.Stat(mr.RootDir); err == nil {
-		err = errors.New(fmt.Sprint("metaRange root dir '%s' is exsited!",
+		err = errors.New(fmt.Sprint("metaPartition root dir '%s' is exsited!",
 			mr.RootDir))
 		return
 	}
@@ -83,7 +83,7 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 			os.RemoveAll(mr.RootDir)
 		}
 	}()
-	// Write metaRange to file
+	// Write metaPartition to file
 	if err = mr.StoreMeta(); err != nil {
 		return
 	}

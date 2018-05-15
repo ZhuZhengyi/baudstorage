@@ -15,7 +15,7 @@ func (m *MetaNode) opCreateInode(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.PartitionID)
+	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}
@@ -33,7 +33,7 @@ func (m *MetaNode) opCreateDentry(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.PartitionID)
+	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.PartitionID)
+	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}
@@ -70,7 +70,7 @@ func (m *MetaNode) opDeleteInode(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.PartitionID)
+	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}
@@ -88,7 +88,7 @@ func (m *MetaNode) opReadDir(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.PartitionID)
+	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}
@@ -107,7 +107,7 @@ func (m *MetaNode) opOpen(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.PartitionID)
+	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}

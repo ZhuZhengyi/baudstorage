@@ -16,7 +16,7 @@ func (m *MetaNode) startRaftServer() (err error) {
 	if err != nil {
 		return
 	}
-	for _, mr := range m.metaRangeManager.metaRangeMap {
+	for _, mr := range m.metaManager.partitions {
 		if err = m.createPartition(mr); err != nil {
 			return
 		}
@@ -24,7 +24,7 @@ func (m *MetaNode) startRaftServer() (err error) {
 	return
 }
 
-func (m MetaNode) createPartition(mr *MetaRange) (err error) {
+func (m MetaNode) createPartition(mr *MetaPartition) (err error) {
 	var peers []proto.Peer
 	for _, peer := range mr.Peers {
 		m.raftStore.AddNode(peer.ID, peer.Addr)

@@ -71,6 +71,5 @@ func (connP *ConnPool) Put(c net.Conn) {
 		return
 	}
 	pool.Put(c)
-
 	return
 }

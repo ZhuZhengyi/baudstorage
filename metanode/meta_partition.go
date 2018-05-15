@@ -19,7 +19,7 @@ var (
 	ErrInodeOutOfRange = errors.New("inode ID out of range.")
 )
 
-/* MetRangeConfig used by create metaRange and serialize
+/* MetRangeConfig used by create metaPartition and serialize
 *  ID:		Consist with 'namespace_ID'. (Required when initialize)
 *  Start:	Start inode ID of this range. (Required when initialize)
 *  End:		End inode ID of this range. (Required when initialize)
@@ -27,7 +27,7 @@ var (
 *  RaftGroupID:	Identity for raft group.Raft nodes in same raft group must have same groupID.
 *  RaftServer:	Raft server instance.
  */
-type MetaRangeConfig struct {
+type MetaPartitionConfig struct {
 	ID            string              `json:"id"`
 	Start         uint64              `json:"start"`
 	End           uint64              `json:"end"`
@@ -39,27 +39,27 @@ type MetaRangeConfig struct {
 	RaftPartition raftstore.Partition `json:"-"`
 }
 
-// MetaRange manages necessary information of meta range, include ID, boundary of range and raft identity.
-// When a new inode is requested, MetaRange allocates the inode id for this inode is possible.
+// MetaPartition manages necessary information of meta range, include ID, boundary of range and raft identity.
+// When a new inode is requested, MetaPartition allocates the inode id for this inode is possible.
 // States:
 //  +-----+             +-------+
 //  | New | → Restore → | Ready |
 //  +-----+             +-------+
-type MetaRange struct {
-	MetaRangeConfig
-	store *MetaRangeFsm
+type MetaPartition struct {
+	MetaPartitionConfig
+	store *MetaPartitionFsm
 }
 
-func NewMetaRange(conf MetaRangeConfig) *MetaRange {
-	mr := &MetaRange{
-		MetaRangeConfig: conf,
+func NewMetaRange(conf MetaPartitionConfig) *MetaPartition {
+	mr := &MetaPartition{
+		MetaPartitionConfig: conf,
 	}
-	mr.store = NewMetaRangeFsm(mr)
+	mr.store = NewMetaPartitionFsm(mr)
 	return mr
 }
 
 // Load used when metaNode start and recover data from snapshot
-func (mr *MetaRange) Load() (err error) {
+func (mr *MetaPartition) Load() (err error) {
 	if err = mr.LoadMeta(); err != nil {
 		return
 	}
@@ -77,7 +77,7 @@ func (mr *MetaRange) Load() (err error) {
 }
 
 // Load range meta from meta snapshot file.
-func (mr *MetaRange) LoadMeta() (err error) {
+func (mr *MetaPartition) LoadMeta() (err error) {
 	// Load struct from meta
 	metaFile := path.Join(mr.RootDir, "meta")
 	fp, err := os.OpenFile(metaFile, os.O_RDONLY, 0655)
@@ -89,15 +89,15 @@ func (mr *MetaRange) LoadMeta() (err error) {
 	if err != nil || len(data) == 0 {
 		return
 	}
-	var mConf MetaRangeConfig
+	var mConf MetaPartitionConfig
 	if err = json.Unmarshal(data, &mConf); err != nil {
 		return
 	}
-	mr.MetaRangeConfig = mConf
+	mr.MetaPartitionConfig = mConf
 	return
 }
 
-func (mr *MetaRange) StoreMeta() (err error) {
+func (mr *MetaPartition) StoreMeta() (err error) {
 	// Store Meta to file
 	metaFile := path.Join(mr.RootDir, "_meta")
 	fp, err := os.OpenFile(metaFile, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE,
@@ -121,7 +121,7 @@ func (mr *MetaRange) StoreMeta() (err error) {
 	return
 }
 
-func (mr *MetaRange) StartStoreSchedule() {
+func (mr *MetaPartition) StartStoreSchedule() {
 	t := time.NewTicker(5 * time.Minute)
 	next := time.Now().Add(time.Hour)
 	curApplyID := mr.store.applyID
@@ -182,13 +182,13 @@ func (mr *MetaRange) StartStoreSchedule() {
 }
 
 // UpdatePeers
-func (mr *MetaRange) UpdatePeers(peers []proto.Peer) {
+func (mr *MetaPartition) UpdatePeers(peers []proto.Peer) {
 	mr.Peers = peers
 }
 
 // NextInodeId returns a new ID value of inode and update offset.
-// If inode ID is out of this MetaRange limit then return ErrInodeOutOfRange error.
-func (mr *MetaRange) nextInodeID() (inodeId uint64, err error) {
+// If inode ID is out of this MetaPartition limit then return ErrInodeOutOfRange error.
+func (mr *MetaPartition) nextInodeID() (inodeId uint64, err error) {
 	for {
 		cur := mr.Cursor
 		end := mr.End
@@ -202,7 +202,7 @@ func (mr *MetaRange) nextInodeID() (inodeId uint64, err error) {
 	}
 }
 
-func (mr *MetaRange) CreateDentry(req *CreateDentryReq, p *Packet) (err error) {
+func (mr *MetaPartition) CreateDentry(req *CreateDentryReq, p *Packet) (err error) {
 	dentry := &Dentry{
 		ParentId: req.ParentID,
 		Name:     req.Name,
@@ -221,7 +221,7 @@ func (mr *MetaRange) CreateDentry(req *CreateDentryReq, p *Packet) (err error) {
 	return
 }
 
-func (mr *MetaRange) DeleteDentry(req *DeleteDentryReq, p *Packet) (err error) {
+func (mr *MetaPartition) DeleteDentry(req *DeleteDentryReq, p *Packet) (err error) {
 	var resp *DeleteDentryResp
 	dentry := &Dentry{
 		ParentId: req.ParentID,
@@ -247,7 +247,7 @@ func (mr *MetaRange) DeleteDentry(req *DeleteDentryReq, p *Packet) (err error) {
 	return
 }
 
-func (mr *MetaRange) CreateInode(req *CreateInoReq, p *Packet) (err error) {
+func (mr *MetaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 	inoID, err := mr.nextInodeID()
 	if err != nil {
 		err = nil
@@ -292,7 +292,7 @@ func (mr *MetaRange) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 	return
 }
 
-func (mr *MetaRange) DeleteInode(req *DeleteInoReq, p *Packet) (err error) {
+func (mr *MetaPartition) DeleteInode(req *DeleteInoReq, p *Packet) (err error) {
 	ino := &Inode{
 		Inode: req.Inode,
 	}
@@ -322,11 +322,11 @@ func (mr *MetaRange) DeleteInode(req *DeleteInoReq, p *Packet) (err error) {
 	return
 }
 
-func (mr *MetaRange) PutStreamKey() {
+func (mr *MetaPartition) PutStreamKey() {
 	return
 }
 
-func (mr *MetaRange) ReadDir(req *ReadDirReq, p *Packet) (err error) {
+func (mr *MetaPartition) ReadDir(req *ReadDirReq, p *Packet) (err error) {
 	// TODO: Implement read dir operation.
 	val, err := json.Marshal(req)
 	if err != nil {
@@ -348,7 +348,7 @@ func (mr *MetaRange) ReadDir(req *ReadDirReq, p *Packet) (err error) {
 	return
 }
 
-func (mr *MetaRange) Open(req *OpenReq, p *Packet) (err error) {
+func (mr *MetaPartition) Open(req *OpenReq, p *Packet) (err error) {
 	// TODO: Implement open operation.
 	val, err := json.Marshal(req)
 	if err != nil {
@@ -364,7 +364,7 @@ func (mr *MetaRange) Open(req *OpenReq, p *Packet) (err error) {
 	return
 }
 
-func (mr *MetaRange) put(op interface{}, body []byte) (r interface{}, err error) {
+func (mr *MetaPartition) put(op interface{}, body []byte) (r interface{}, err error) {
 	r, err = mr.store.Put(op, body)
 	return
 }
