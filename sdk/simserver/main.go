@@ -203,14 +203,14 @@ func (m *MetaServer) handlePacket(conn net.Conn, p *proto.Packet) (err error) {
 		err = m.handleCreateDentry(conn, p)
 	case proto.OpMetaDeleteInode:
 		err = m.handleDeleteInode(conn, p)
-		//	case proto.OpMetaDeleteDentry:
-		//		err = m.opDeleteDentry(conn, p)
-		//	case proto.OpMetaReadDir:
-		//		err = m.opReadDir(conn, p)
-		//	case proto.OpMetaOpen:
-		//		err = m.opOpen(conn, p)
-		//	case proto.OpMetaCreateMetaRange:
-		//		err = m.opCreateMetaRange(conn, p)
+	case proto.OpMetaDeleteDentry:
+		err = m.handleDeleteDentry(conn, p)
+	case proto.OpMetaLookup:
+		err = m.handleLookup(conn, p)
+	case proto.OpMetaReadDir:
+		err = m.handleReadDir(conn, p)
+	case proto.OpMetaInodeGet:
+		err = m.handleInodeGet(conn, p)
 	default:
 		err = errors.New("unknown Opcode: ")
 	}
@@ -297,6 +297,91 @@ func (m *MetaServer) handleDeleteInode(conn net.Conn, p *proto.Packet) error {
 	return err
 }
 
+func (m *MetaServer) handleDeleteDentry(conn net.Conn, p *proto.Packet) error {
+	req := &proto.DeleteDentryRequest{}
+	err := json.Unmarshal(p.Data, req)
+	if err != nil {
+		return err
+	}
+
+	var (
+		data  []byte
+		child *Dentry
+		resp  *proto.DeleteDentryResponse
+	)
+
+	parent := m.getInode(req.ParentID)
+	if parent == nil {
+		p.Resultcode = proto.OpErr
+		goto out
+	}
+
+	child = parent.deleteDentry(req.Name)
+	if child == nil {
+		p.Resultcode = proto.OpNotExistErr
+		goto out
+	}
+
+	resp = &proto.DeleteDentryResponse{
+		Inode: child.ino,
+	}
+	data, err = json.Marshal(resp)
+
+out:
+	p.Data = data
+	p.Size = uint32(len(data))
+	err = p.WriteToConn(conn)
+	return err
+}
+
+func (m *MetaServer) handleLookup(conn net.Conn, p *proto.Packet) error {
+	req := &proto.LookupRequest{}
+	err := json.Unmarshal(p.Data, req)
+	if err != nil {
+		return err
+	}
+
+	var (
+		data   []byte
+		dentry *Dentry
+		resp   *proto.LookupResponse
+	)
+
+	parent := m.getInode(req.ParentID)
+	if parent == nil {
+		p.Resultcode = proto.OpErr
+		goto out
+	}
+
+	dentry = parent.getDentry(req.Name)
+	if dentry == nil {
+		p.Resultcode = proto.OpNotExistErr
+		goto out
+	}
+
+	resp = &proto.LookupResponse{
+		Inode: dentry.ino,
+		Mode:  dentry.mode,
+	}
+
+	data, _ = json.Marshal(resp)
+	p.Resultcode = proto.OpOk
+
+out:
+	p.Data = data
+	p.Size = uint32(len(data))
+	err = p.WriteToConn(conn)
+	return err
+}
+
+func (m *MetaServer) handleReadDir(conn net.Conn, p *proto.Packet) error {
+	return nil
+}
+
+func (m *MetaServer) handleInodeGet(conn net.Conn, p *proto.Packet) error {
+	return nil
+}
+
 func NewInodeInfo(ino uint64, mode uint32) *proto.InodeInfo {
 	return &proto.InodeInfo{
 		Inode:      ino,
@@ -362,6 +447,16 @@ func (i *Inode) deleteDentry(name string) *Dentry {
 	dentry, ok := i.dents[name]
 	if ok {
 		delete(i.dents, name)
+		return dentry
+	}
+	return nil
+}
+
+func (i *Inode) getDentry(name string) *Dentry {
+	i.Lock()
+	defer i.Unlock()
+	dentry, ok := i.dents[name]
+	if ok {
 		return dentry
 	}
 	return nil
