@@ -60,6 +60,7 @@ const (
 
 	// Operations: Master -> MetaNode
 	OpMetaCreateMetaRange uint8 = 0x1A
+	OpHeartBeatRequest    uint8 = 0x1B
 
 	// Commons
 	OpIntraGroupNetErr uint8 = 0xF3
@@ -191,7 +192,7 @@ func (p *Packet) UnmarshalHeader(in []byte) error {
 
 	p.StoreType = in[1]
 	p.Opcode = in[2]
-	p.Resultcode =in[3]
+	p.Resultcode = in[3]
 	p.Nodes = in[4]
 	p.Crc = binary.BigEndian.Uint32(in[5:9])
 	p.Size = binary.BigEndian.Uint32(in[9:13])
@@ -297,8 +298,8 @@ func (p *Packet) PackOkGetWatermarkReply(size int64) {
 	p.Arglen = 0
 }
 
-func (p *Packet)IsOkReply() bool{
-	return p.Resultcode==OpOk
+func (p *Packet) IsOkReply() bool {
+	return p.Resultcode == OpOk
 }
 
 func (p *Packet) PackOkWithBody(reply []byte) {
@@ -309,7 +310,7 @@ func (p *Packet) PackOkWithBody(reply []byte) {
 	p.Arglen = 0
 }
 
-func (p *Packet) PackErrorWithBody(errCode uint8,reply []byte){
+func (p *Packet) PackErrorWithBody(errCode uint8, reply []byte) {
 	p.Size = uint32(len(reply))
 	p.Data = make([]byte, p.Size)
 	copy(p.Data[:p.Size], reply)

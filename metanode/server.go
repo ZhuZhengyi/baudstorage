@@ -104,6 +104,8 @@ func (m *MetaNode) routePacket(conn net.Conn, p *Packet) (err error) {
 	case proto.OpMetaCreateMetaRange:
 		// Mater → MetaNode
 		err = m.opCreateMetaRange(conn, p)
+	case proto.OpHeartBeatRequest:
+		err = m.opHeartBeatRequest(conn, p)
 	default:
 		// Unknown operation
 		err = errors.New("unknown Opcode: " + proto.GetOpMesg(p.Opcode))
@@ -148,7 +150,7 @@ func (m *MetaNode) replyToMaster(ip string, data interface{}) (err error) {
 	if err != nil {
 		return
 	}
-	url := fmt.Sprintf("http://%s%s", ip, master.MetaNodeResponse)
+	url := fmt.Sprintf("http://%s/%s", ip, master.MetaNodeResponse)
 	util.PostToNode(jsonBytes, url)
 	return
 }

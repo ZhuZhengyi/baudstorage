@@ -9,17 +9,22 @@ import (
 
 // Handle OpCreate Inode
 func (m *MetaNode) opCreateInode(conn net.Conn, p *Packet) (err error) {
+	var resp []byte
 	req := &CreateInoReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
+	mr, err := m.metaRangeManager.LoadMetaRange(req.GroupID)
 	if err != nil {
 		return
 	}
-	resp, err := mr.CreateInode(req)
-	if err != nil {
-		return
+	if mr.IsLeader {
+		resp, err = mr.CreateInode(req)
+		if err != nil {
+			return
+		}
+	} else {
+		// Proxy to Master Request
 	}
 	// Reply operation result to client though TCP connection.
 	err = m.replyToClient(conn, p, resp)
@@ -32,7 +37,7 @@ func (m *MetaNode) opCreateDentry(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
+	mr, err := m.metaRangeManager.LoadMetaRange(req.GroupID)
 	if err != nil {
 		return err
 	}
@@ -51,7 +56,7 @@ func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
+	mr, err := m.metaRangeManager.LoadMetaRange(req.GroupID)
 	if err != nil {
 		return
 	}
@@ -69,7 +74,7 @@ func (m *MetaNode) opDeleteInode(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
+	mr, err := m.metaRangeManager.LoadMetaRange(req.GroupID)
 	if err != nil {
 		return
 	}
@@ -87,7 +92,7 @@ func (m *MetaNode) opReadDir(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
+	mr, err := m.metaRangeManager.LoadMetaRange(req.GroupID)
 	if err != nil {
 		return
 	}
@@ -106,7 +111,7 @@ func (m *MetaNode) opOpen(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
+	mr, err := m.metaRangeManager.LoadMetaRange(req.GroupID)
 	if err != nil {
 		return
 	}

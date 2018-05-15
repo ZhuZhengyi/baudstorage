@@ -36,6 +36,7 @@ type MetaRangeConfig struct {
 	RootDir       string              `json:"-"`
 	Peers         []proto.Peer        `json:"peers"`
 	RaftGroupID   uint64              `json:"raftGroupID"`
+	IsLeader      bool                `json:"-"`
 	RaftPartition raftstore.Partition `json:"-"`
 }
 
@@ -78,7 +79,7 @@ func (mr *MetaRange) Load() (err error) {
 
 // Load range meta from meta snapshot file.
 func (mr *MetaRange) LoadMeta() (err error) {
-	// Restore struct from meta
+	// Load struct from meta
 	metaFile := path.Join(mr.RootDir, "meta")
 	fp, err := os.OpenFile(metaFile, os.O_RDONLY, 0655)
 	if err != nil {
@@ -94,6 +95,30 @@ func (mr *MetaRange) LoadMeta() (err error) {
 		return
 	}
 	mr.MetaRangeConfig = mConf
+	return
+}
+
+func (mr *MetaRange) StoreMeta() (err error) {
+	// Store Meta to file
+	metaFile := path.Join(mr.RootDir, "_meta")
+	fp, err := os.OpenFile(metaFile, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE,
+		0655)
+	if err != nil {
+		return
+	}
+	defer func() {
+		fp.Close()
+		if err != nil {
+			os.Remove(metaFile)
+		}
+	}()
+	data, err := json.Marshal(mr)
+	if err != nil {
+		return
+	}
+	if _, err = fp.Write(data); err != nil {
+		return
+	}
 	return
 }
 

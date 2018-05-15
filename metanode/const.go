@@ -2,6 +2,7 @@ package metanode
 
 import (
 	"encoding/binary"
+	"errors"
 	"github.com/tiglabs/baudstorage/proto"
 )
 
@@ -51,11 +52,15 @@ func (k *StoreKey) Parse(bytes []byte) {
 
 // For use when raft store and application apply
 const (
-	opCreateInode     StoreKey = iota
+	opCreateInode StoreKey = iota
 	opDeleteInode
 	opCreateDentry
 	opDeleteDentry
 	opReadDir
 	opOpen
 	opCreateMetaRange
+)
+
+var (
+	ErrNonLeader = errors.New("Non Leader")
 )

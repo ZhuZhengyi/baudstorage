@@ -18,7 +18,7 @@ const defaultBTreeDegree = 32
 // and manage dentry and inode by B-Tree in memory.
 type MetaRangeFsm struct {
 	metaRange  *MetaRange
-	applyID    uint64       // for restore inode/dentry max applyID
+	applyID    uint64       // for store inode/dentry max applyID
 	dentryMu   sync.RWMutex // Mutex for dentry operation.
 	dentryTree *btree.BTree // B-Tree for dentry.
 	inodeMu    sync.RWMutex // Mutex for inode operation.
@@ -82,7 +82,6 @@ func (mf *MetaRangeFsm) ApplyMemberChange(confChange *raftproto.ConfChange, inde
 	switch confChange.Type {
 	case raftproto.ConfAddNode:
 		//TODO
-
 	case raftproto.ConfRemoveNode:
 		//TODO
 	case raftproto.ConfUpdateNode:
@@ -138,6 +137,9 @@ func (mf *MetaRangeFsm) HandleFatalEvent(err *raft.FatalError) {
 }
 
 func (mf *MetaRangeFsm) HandleLeaderChange(leader uint64) {
+	if leader == mf.metaRange.RaftGroupID {
+		mf.metaRange.IsLeader = true
+	}
 }
 
 func (mf *MetaRangeFsm) Put(key, val []byte) (resp []byte, err error) {
