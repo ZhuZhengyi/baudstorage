@@ -198,11 +198,11 @@ func (m *MetaServer) servConn(conn net.Conn) {
 func (m *MetaServer) handlePacket(conn net.Conn, p *proto.Packet) (err error) {
 	switch p.Opcode {
 	case proto.OpMetaCreateInode:
-		err = m.opCreateInode(conn, p)
+		err = m.handleCreateInode(conn, p)
 	case proto.OpMetaCreateDentry:
-		err = m.opCreateDentry(conn, p)
-		//	case proto.OpMetaDeleteInode:
-		//		err = m.opDeleteInode(conn, p)
+		err = m.handleCreateDentry(conn, p)
+	case proto.OpMetaDeleteInode:
+		err = m.handleDeleteInode(conn, p)
 		//	case proto.OpMetaDeleteDentry:
 		//		err = m.opDeleteDentry(conn, p)
 		//	case proto.OpMetaReadDir:
@@ -217,16 +217,15 @@ func (m *MetaServer) handlePacket(conn net.Conn, p *proto.Packet) (err error) {
 	return
 }
 
-func (m *MetaServer) opCreateInode(conn net.Conn, p *proto.Packet) error {
+func (m *MetaServer) handleCreateInode(conn net.Conn, p *proto.Packet) error {
 	req := &proto.CreateInodeRequest{}
 	err := json.Unmarshal(p.Data, req)
 	if err != nil {
-		log.Println("opCreateInode Unmarshal, err = ", err)
 		return err
 	}
 
 	ino := m.allocIno()
-	i := NewInode(ino, req.Mode)
+	inode := NewInode(ino, req.Mode)
 
 	resp := &proto.CreateInodeResponse{
 		Info: NewInodeInfo(ino, req.Mode),
@@ -238,7 +237,7 @@ func (m *MetaServer) opCreateInode(conn net.Conn, p *proto.Packet) error {
 		goto out
 	}
 
-	m.addInode(i)
+	m.addInode(inode)
 	p.Data = data
 	p.Size = uint32(len(data))
 	p.Resultcode = proto.OpOk
@@ -248,7 +247,7 @@ out:
 	return err
 }
 
-func (m *MetaServer) opCreateDentry(conn net.Conn, p *proto.Packet) error {
+func (m *MetaServer) handleCreateDentry(conn net.Conn, p *proto.Packet) error {
 	req := &proto.CreateDentryRequest{}
 	err := json.Unmarshal(p.Data, req)
 	if err != nil {
@@ -276,6 +275,28 @@ out:
 	return err
 }
 
+func (m *MetaServer) handleDeleteInode(conn net.Conn, p *proto.Packet) error {
+	req := &proto.DeleteInodeRequest{}
+	err := json.Unmarshal(p.Data, req)
+	if err != nil {
+		return err
+	}
+
+	ino := req.Inode
+	p.Data = nil
+	p.Size = 0
+
+	inode := m.deleteInode(ino)
+	if inode == nil {
+		p.Resultcode = proto.OpNotExistErr
+	} else {
+		p.Resultcode = proto.OpOk
+	}
+
+	err = p.WriteToConn(conn)
+	return err
+}
+
 func NewInodeInfo(ino uint64, mode uint32) *proto.InodeInfo {
 	return &proto.InodeInfo{
 		Inode:      ino,
@@ -299,10 +320,15 @@ func (m *MetaServer) addInode(i *Inode) *Inode {
 	return nil
 }
 
-func (m *MetaServer) deleteInode(ino uint64) {
+func (m *MetaServer) deleteInode(ino uint64) *Inode {
 	m.Lock()
 	defer m.Unlock()
-	delete(m.inodes, ino)
+	inode, ok := m.inodes[ino]
+	if ok {
+		delete(m.inodes, ino)
+		return inode
+	}
+	return nil
 }
 
 func (m *MetaServer) getInode(ino uint64) *Inode {
