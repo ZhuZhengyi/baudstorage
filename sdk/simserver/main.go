@@ -19,16 +19,22 @@ const (
 	SimNamespace  = "simserver"
 	SimMasterPort = "8900"
 	SimMetaAddr   = "localhost"
-	SimMetaPort   = "8910"
 
 	SimLogFlags = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile
 )
 
-var globalMP = []MetaPartition{
-	{"mp001", 1, 100, nil},
-	{"mp002", 101, 200, nil},
-	{"mp003", 210, 300, nil},
-	{"mp004", 301, 400, nil},
+type MetaNodeDesc struct {
+	id    string
+	start uint64
+	end   uint64
+	port  string
+}
+
+var globalMetaDesc = []MetaNodeDesc{
+	{"mp001", 1, 100, "8910"},
+	{"mp002", 101, 200, "8911"},
+	{"mp003", 210, 300, "8912"},
+	{"mp004", 301, 400, "8913"},
 }
 
 type MasterServer struct {
@@ -37,6 +43,9 @@ type MasterServer struct {
 
 type MetaServer struct {
 	sync.RWMutex
+	start   uint64
+	end     uint64
+	port    string
 	inodes  map[uint64]*Inode
 	currIno uint64
 }
@@ -64,8 +73,10 @@ func main() {
 	ms := NewMasterServer()
 	ms.Start(&wg)
 
-	mt := NewMetaServer()
-	mt.Start(&wg)
+	for _, desc := range globalMetaDesc {
+		mt := NewMetaServer(desc.start, desc.end, desc.port)
+		mt.Start(&wg)
+	}
 
 	wg.Wait()
 }
@@ -84,8 +95,8 @@ func (m *MasterServer) Start(wg *sync.WaitGroup) {
 		MetaPartitions: make([]*MetaPartition, 0),
 	}
 
-	for _, p := range globalMP {
-		mp := NewMetaPartition(p.PartitionID, p.Start, p.End, SimMetaAddr+":"+SimMetaPort)
+	for _, desc := range globalMetaDesc {
+		mp := NewMetaPartition(desc.id, desc.start, desc.end, SimMetaAddr+":"+desc.port)
 		nv.MetaPartitions = append(nv.MetaPartitions, mp)
 	}
 
@@ -131,10 +142,13 @@ func NewMetaPartition(id string, start, end uint64, member string) *MetaPartitio
 
 // Meta Server
 
-func NewMetaServer() *MetaServer {
+func NewMetaServer(start, end uint64, port string) *MetaServer {
 	return &MetaServer{
+		start:   start,
+		end:     end,
+		port:    port,
 		inodes:  make(map[uint64]*Inode),
-		currIno: proto.ROOT_INO,
+		currIno: start - 1,
 	}
 }
 
@@ -156,10 +170,13 @@ func NewDentry(name string, ino uint64, mode uint32) *Dentry {
 
 func (m *MetaServer) Start(wg *sync.WaitGroup) {
 	// Create root inode
-	i := NewInode(proto.ROOT_INO, proto.ModeDir)
-	m.inodes[i.ino] = i
+	if m.start == proto.ROOT_INO {
+		m.allocIno()
+		i := NewInode(proto.ROOT_INO, proto.ModeDir)
+		m.inodes[i.ino] = i
+	}
 
-	ln, err := net.Listen("tcp", ":"+SimMetaPort)
+	ln, err := net.Listen("tcp", ":"+m.port)
 	if err != nil {
 		return
 	}
@@ -218,31 +235,41 @@ func (m *MetaServer) handlePacket(conn net.Conn, p *proto.Packet) (err error) {
 }
 
 func (m *MetaServer) handleCreateInode(conn net.Conn, p *proto.Packet) error {
+	var (
+		data  []byte
+		inode *Inode
+		resp  *proto.CreateInodeResponse
+	)
+
 	req := &proto.CreateInodeRequest{}
 	err := json.Unmarshal(p.Data, req)
 	if err != nil {
 		return err
 	}
 
-	ino := m.allocIno()
-	inode := NewInode(ino, req.Mode)
+	ino, ok := m.allocIno()
+	if !ok {
+		p.Resultcode = proto.OpInodeFullErr
+		goto out
+	}
 
-	resp := &proto.CreateInodeResponse{
+	inode = NewInode(ino, req.Mode)
+	resp = &proto.CreateInodeResponse{
 		Info: NewInodeInfo(ino, req.Mode),
 	}
 
-	data, err := json.Marshal(resp)
+	data, err = json.Marshal(resp)
 	if err != nil {
 		p.Resultcode = proto.OpErr
 		goto out
 	}
 
 	m.addInode(inode)
-	p.Data = data
-	p.Size = uint32(len(data))
 	p.Resultcode = proto.OpOk
 
 out:
+	p.Data = data
+	p.Size = uint32(len(data))
 	err = p.WriteToConn(conn)
 	return err
 }
@@ -484,8 +511,12 @@ func (m *MetaServer) getInode(ino uint64) *Inode {
 	return i
 }
 
-func (m *MetaServer) allocIno() uint64 {
-	return atomic.AddUint64(&m.currIno, 1)
+func (m *MetaServer) allocIno() (uint64, bool) {
+	ino := atomic.AddUint64(&m.currIno, 1)
+	if ino < m.start || ino > m.end {
+		return 0, false
+	}
+	return ino, true
 }
 
 func (i *Inode) addDentry(d *Dentry) *Dentry {
