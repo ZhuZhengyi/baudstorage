@@ -145,7 +145,7 @@ func (mr *MetaRange) StartStoreSchedule() {
 			goto end
 		}
 	store:
-		// 1st: load applyID
+	// 1st: load applyID
 		if err := mr.store.StoreApplyID(); err != nil {
 			//TODO: Log
 			goto end

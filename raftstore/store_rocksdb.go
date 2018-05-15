@@ -30,7 +30,6 @@ func (rs *RocksDBStore) Open() error {
 	opts.SetBlockBasedTableFactory(basedTableOptions)
 	opts.SetCreateIfMissing(true)
 	db, err := gorocksdb.OpenDb(opts, rs.dir)
-
 	if err != nil {
 		err = fmt.Errorf("action[openRocksDB],err:%v", err)
 		return err
@@ -41,43 +40,38 @@ func (rs *RocksDBStore) Open() error {
 
 }
 
-func (rs *RocksDBStore) Del(key []byte) ([]byte, error) {
+func (rs *RocksDBStore) Del(key interface{}) (result interface{}, err error) {
+	ro := gorocksdb.NewDefaultReadOptions()
 	wo := gorocksdb.NewDefaultWriteOptions()
 	wb := gorocksdb.NewWriteBatch()
 	defer wb.Clear()
-	if err := rs.db.Delete(wo, key); err != nil {
-		err = fmt.Errorf("action[deleteFromRocksDB],err:%v", err)
-		return nil, err
+	slice, err := rs.db.Get(ro, key.([]byte))
+	if err != nil {
+		return
 	}
-
-	return nil, nil
-
+	result = slice.Data()
+	err = rs.db.Delete(wo, key.([]byte))
+	return
 }
 
-func (rs *RocksDBStore) Put(key, value []byte) ([]byte, error) {
+func (rs *RocksDBStore) Put(key, value interface{}) (result interface{}, err error) {
 	wo := gorocksdb.NewDefaultWriteOptions()
 	wb := gorocksdb.NewWriteBatch()
-	wb.Put([]byte(key), value)
+	wb.Put(key.([]byte), value.([]byte))
 	if err := rs.db.Write(wo, wb); err != nil {
-		err = fmt.Errorf("action[putToRocksDB],err:%v", err)
 		return nil, err
 	}
-
-	return nil, nil
+	result = value
+	return result, nil
 }
 
-func (rs *RocksDBStore) Get(key []byte) (value []byte, err error) {
+func (rs *RocksDBStore) Get(key interface{}) (result interface{}, err error) {
 	ro := gorocksdb.NewDefaultReadOptions()
 	ro.SetFillCache(false)
-	if value, err = rs.db.GetBytes(ro, key); err != nil {
-		err = fmt.Errorf("action[getFromRocksDB],err:%v", err)
-		return nil, err
-	}
-
-	return value, nil
+	return rs.db.GetBytes(ro, key.([]byte))
 }
 
-func (rs *RocksDBStore) Snapshot() *gorocksdb.Snapshot {
+func (rs *RocksDBStore) RocksDBSnapshot() *gorocksdb.Snapshot {
 	return rs.db.NewSnapshot()
 }
 

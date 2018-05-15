@@ -19,9 +19,9 @@ const (
 	LoadVolWaitTime                      = 100
 	DefaultLoadVolFrequencyTime          = 60 * 60
 	DefaultEveryLoadVolCount             = 10
-	DefaultMetaRangeTimeOutSec           = 5 * DefaultCheckHeartBeatIntervalSeconds
-	DefaultMetaRangeThreshold            = 0.75
-	DefaultMetaRangeMemSize              = 16 * util.GB
+	DefaultMetaPartitionTimeOutSec       = 5 * DefaultCheckHeartBeatIntervalSeconds
+	DefaultMetaPartitionThreshold        = 0.75
+	DefaultMetaPartitionMemSize          = 16 * util.GB
 )
 
 type ClusterConfig struct {

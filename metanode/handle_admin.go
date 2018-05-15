@@ -2,18 +2,25 @@ package metanode
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/tiglabs/baudstorage/util"
 	"net"
 	"os"
 	"path"
 
-	"github.com/henrylee2cn/goutil/errors"
 	"github.com/tiglabs/baudstorage/proto"
+)
+
+const (
+	// Operation response
+	metaNodeResponse = "metaNode/response" // Method: 'POST', ContentType: 'application/json'
 )
 
 // Handle OpCreateMetaRange
 func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
-	req := &proto.CreateMetaRangeRequest{}
+	// Ack to master
+	go m.ackAdmin(conn, p)
 	// Get task from packet.
 	adminTask := &proto.AdminTask{}
 	if err = json.Unmarshal(p.Data, adminTask); err != nil {
@@ -21,8 +28,7 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 	}
 	defer func() {
 		// Response task result to master.
-		resp := &proto.CreateMetaRangeResponse{}
-		resp.GroupId = req.GroupId
+		resp := &proto.CreateMetaPartitionResponse{}
 		if err != nil {
 			// Operation failure.
 			resp.Status = proto.OpErr
@@ -41,6 +47,7 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	// Unmarshal request to entity
+	req := &proto.CreateMetaPartitionRequest{}
 	if err := json.Unmarshal(requestJson, req); err != nil {
 		return
 	}
@@ -90,5 +97,34 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 func (m *MetaNode) opHeartBeatRequest(conn net.Conn, p *Packet) (err error) {
 	// Ack from Master Request
 
+	return
+}
+
+// ReplyToMaster reply operation result to master by sending http request.
+func (m *MetaNode) replyAdmin(ip string, data interface{}) (err error) {
+	// Handle panic
+	defer func() {
+		if r := recover(); r != nil {
+			switch data := r.(type) {
+			case error:
+				err = data
+			default:
+				err = errors.New(data.(string))
+			}
+		}
+	}()
+	// Process data and send reply though http specified remote address.
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		return
+	}
+	url := fmt.Sprintf("http://%s%s", ip, metaNodeResponse)
+	util.PostToNode(jsonBytes, url)
+	return
+}
+
+func (m *MetaNode) ackAdmin(conn net.Conn, p *Packet) (err error) {
+	p.PackOkReply()
+	err = p.WriteToConn(conn)
 	return
 }

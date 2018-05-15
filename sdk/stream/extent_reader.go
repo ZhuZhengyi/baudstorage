@@ -30,7 +30,8 @@ const (
 	DefaultReadBufferSize = 10 * util.MB
 )
 
-func NewExtentReader(inode uint64, inInodeOffset int, key ExtentKey, wraper *sdk.VolGroupWraper) (reader *ExtentReader, err error) {
+func NewExtentReader(inode uint64, inInodeOffset int, key ExtentKey,
+	wraper *sdk.VolGroupWraper) (reader *ExtentReader, err error) {
 	reader = new(ExtentReader)
 	reader.vol, err = wraper.GetVol(key.VolId)
 	if err != nil {
@@ -100,8 +101,9 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 	expectReadSize := int(p.Size)
 	conn, err := reader.wraper.GetConnect(host)
 	if err != nil {
-		return 0, errors.Annotatef(err, reader.toString()+"readDataFromHost vol[%v] cannot get"+
-			" connect from host[%v] request[%v] ", reader.key.VolId, host, p.GetUniqLogId())
+		return 0, errors.Annotatef(err, reader.toString()+
+			"readDataFromHost vol[%v] cannot get  connect from host[%v] request[%v] ",
+			reader.key.VolId, host, p.GetUniqLogId())
 
 	}
 	defer func() {
@@ -126,8 +128,9 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 
 		}
 		if p.Resultcode != proto.OpOk {
-			err = errors.Annotatef(fmt.Errorf(string(p.Data[:p.Size])), reader.toString()+"readDataFromHost host [%v]"+
-				"  request[%v] reply[%v]", host, p.GetUniqLogId(), p.GetUniqLogId())
+			err = errors.Annotatef(fmt.Errorf(string(p.Data[:p.Size])),
+				reader.toString()+"readDataFromHost host [%v] request[%v] reply[%v]",
+				host, p.GetUniqLogId(), p.GetUniqLogId())
 			return acatualReadSize, err
 		}
 		copy(data[acatualReadSize:acatualReadSize+int(p.Size)], p.Data[:p.Size])
@@ -167,7 +170,8 @@ func (reader *ExtentReader) fillCache() error {
 		return nil
 	}
 	reader.setCacheToUnavali()
-	bufferSize := int(util.Min(uint64(int(reader.key.Size)-reader.lastReadOffset), uint64(DefaultReadBufferSize)))
+	bufferSize := int(util.Min(uint64(int(reader.key.Size)-reader.lastReadOffset),
+		uint64(DefaultReadBufferSize)))
 	bufferOffset := reader.lastReadOffset
 	p := NewReadPacket(reader.key, bufferOffset, bufferSize)
 	reader.Unlock()

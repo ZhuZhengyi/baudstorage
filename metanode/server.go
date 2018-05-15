@@ -1,8 +1,6 @@
 package metanode
 
 import (
-	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -10,9 +8,9 @@ import (
 
 	"errors"
 
-	"github.com/tiglabs/baudstorage/master"
+	"encoding/json"
+	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
@@ -150,7 +148,7 @@ func (m *MetaNode) replyToMaster(ip string, data interface{}) (err error) {
 	if err != nil {
 		return
 	}
-	url := fmt.Sprintf("http://%s/%s", ip, master.MetaNodeResponse)
+	url := fmt.Sprintf("http://%s/%s", ip, m.MetaNodeResponse)
 	util.PostToNode(jsonBytes, url)
 	return
 }

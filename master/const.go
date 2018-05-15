@@ -42,10 +42,10 @@ const (
 )
 
 const (
-	//high 4 bit represent range is available,low 4 bit represent range is writable
-	MetaRangeUnavailable uint8 = 0x00
-	MetaRangeReadOnly    uint8 = 0x10
-	MetaRangeReadWrite   uint8 = 0x11
+	//high 4 bit represent partition is available,low 4 bit represent partition is writable
+	MetaPartitionUnavailable uint8 = 0x00
+	MetaPartitionReadOnly    uint8 = 0x10
+	MetaPartitionReadWrite   uint8 = 0x11
 )
 
 const (
@@ -53,23 +53,24 @@ const (
 )
 
 const (
-	DefaultMaxMetaTabletRange = 1<<64 - 1
-	DefaultMinMetaRangeSize   = 1 << 34
-	RuntimeStackBufSize       = 4096
+	DefaultMaxMetaPartitionRange = 1<<64 - 1
+	DefaultMinMetaPartitionRange = 1 << 34
+	RuntimeStackBufSize          = 4096
 )
 
 //OpCode
 const (
-	OpCreateVol         = 0x01
-	OpDeleteVol         = 0x02
-	OpReplicateFile     = 0x03
-	OpDeleteFile        = 0x04
-	OpLoadVol           = 0x05
-	OpCreateMetaGroup   = 0x06
-	OpDataNodeHeartbeat = 0x07
-	OpMetaNodeHeartbeat = 0x08
-	OpDeleteMetaRange   = 0x09
-	OpUpdateMetaRange   = 0x10
+	OpCreateVol           = 0x01
+	OpDeleteVol           = 0x02
+	OpReplicateFile       = 0x03
+	OpDeleteFile          = 0x04
+	OpLoadVol             = 0x05
+	OpCreateMetaPartition = 0x06
+	OpDataNodeHeartbeat   = 0x07
+	OpMetaNodeHeartbeat   = 0x08
+	OpDeleteMetaPartition = 0x09
+	OpUpdateMetaPartition = 0x0A
+	OpLoadMetaPartition   = 0x0B
 )
 
 const (

@@ -5,47 +5,47 @@ import (
 )
 
 type NameSpace struct {
-	Name          string
-	volReplicaNum uint8
-	mrReplicaNum  uint8
-	threshold     float32
-	mrSize        uint64
-	MetaGroups    map[uint64]*MetaGroup
-	metaGroupLock sync.RWMutex
-	volGroups     *VolGroupMap
+	Name              string
+	volReplicaNum     uint8
+	mpReplicaNum      uint8
+	threshold         float32
+	mpSize            uint64
+	MetaPartitions    map[uint64]*MetaPartition
+	metaPartitionLock sync.RWMutex
+	volGroups         *VolGroupMap
 	sync.Mutex
 }
 
 func NewNameSpace(name string, replicaNum uint8) (ns *NameSpace) {
-	ns = &NameSpace{Name: name, MetaGroups: make(map[uint64]*MetaGroup, 0)}
+	ns = &NameSpace{Name: name, MetaPartitions: make(map[uint64]*MetaPartition, 0)}
 	ns.volGroups = NewVolMap()
 	ns.volReplicaNum = replicaNum
-	ns.threshold = DefaultMetaRangeThreshold
-	ns.mrSize = DefaultMetaRangeMemSize
+	ns.threshold = DefaultMetaPartitionThreshold
+	ns.mpSize = DefaultMetaPartitionMemSize
 	if replicaNum%2 == 0 {
-		ns.mrReplicaNum = replicaNum + 1
+		ns.mpReplicaNum = replicaNum + 1
 	} else {
-		ns.mrReplicaNum = replicaNum
+		ns.mpReplicaNum = replicaNum
 	}
 	return
 }
 
-func (ns *NameSpace) AddMetaGroup(mg *MetaGroup) {
+func (ns *NameSpace) AddMetaPartition(mp *MetaPartition) {
 	exist := false
-	for _, omg := range ns.MetaGroups {
-		if omg.Start == mg.Start && omg.End == mg.End {
+	for _, oldMp := range ns.MetaPartitions {
+		if oldMp.Start == mp.Start && oldMp.End == mp.End {
 			exist = true
 		}
 	}
 	if !exist {
-		ns.MetaGroups[mg.GroupID] = mg
+		ns.MetaPartitions[mp.PartitionID] = mp
 	}
 }
 
-func (ns *NameSpace) GetMetaGroup(inode uint64) (mg *MetaGroup) {
-	for _, mg = range ns.MetaGroups {
-		if mg.Start >= inode && mg.End < inode {
-			return mg
+func (ns *NameSpace) GetMetaPartition(inode uint64) (mp *MetaPartition) {
+	for _, mp = range ns.MetaPartitions {
+		if mp.Start >= inode && mp.End < inode {
+			return mp
 		}
 	}
 
@@ -56,10 +56,10 @@ func (ns *NameSpace) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error)
 	return ns.volGroups.getVol(volID)
 }
 
-func (ns *NameSpace) getMetaGroupById(groupId uint64) (mg *MetaGroup, err error) {
-	mg, ok := ns.MetaGroups[groupId]
+func (ns *NameSpace) getMetaPartitionById(partitionID uint64) (mp *MetaPartition, err error) {
+	mp, ok := ns.MetaPartitions[partitionID]
 	if !ok {
-		err = metaGroupNotFound(groupId)
+		err = metaPartitionNotFound(partitionID)
 	}
 	return
 }

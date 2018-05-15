@@ -13,7 +13,7 @@ type Peer struct {
 	ID   uint64
 	Addr string
 }
-type CreateMetaRangeRequest struct {
+type CreateMetaPartitionRequest struct {
 	MetaId  string
 	NsName  string
 	Start   uint64
@@ -22,7 +22,7 @@ type CreateMetaRangeRequest struct {
 	Members []Peer
 }
 
-type CreateMetaRangeResponse struct {
+type CreateMetaPartitionResponse struct {
 	NsName  string
 	GroupId uint64
 	Status  uint8

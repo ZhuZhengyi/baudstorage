@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"runtime"
@@ -20,6 +20,8 @@ const (
 	SimMasterPort = "8900"
 	SimMetaAddr   = "localhost"
 	SimMetaPort   = "8910"
+
+	SimLogFlags = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile
 )
 
 var globalMP = []MetaPartition{
@@ -53,13 +55,17 @@ type Dentry struct {
 }
 
 func main() {
-	fmt.Println("Staring Sim Server ...")
+	log.SetFlags(SimLogFlags)
+	log.Println("Staring Sim Server ...")
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	var wg sync.WaitGroup
 
 	ms := NewMasterServer()
 	ms.Start(&wg)
+
+	mt := NewMetaServer()
+	mt.Start(&wg)
 
 	wg.Wait()
 }
@@ -79,7 +85,7 @@ func (m *MasterServer) Start(wg *sync.WaitGroup) {
 	}
 
 	for _, p := range globalMP {
-		mp := NewMetaPartition(p.GroupID, p.Start, p.End, SimMetaAddr+":"+SimMetaPort)
+		mp := NewMetaPartition(p.PartitionID, p.Start, p.End, SimMetaAddr+":"+SimMetaPort)
 		nv.MetaPartitions = append(nv.MetaPartitions, mp)
 	}
 
@@ -90,9 +96,9 @@ func (m *MasterServer) Start(wg *sync.WaitGroup) {
 		defer wg.Done()
 		http.HandleFunc("/client/namespace", m.handleClientNS)
 		if err := http.ListenAndServe(":"+SimMasterPort, nil); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		} else {
-			fmt.Println("Done!")
+			log.Println("Done!")
 		}
 	}()
 }
@@ -114,12 +120,12 @@ func (m *MasterServer) handleClientNS(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func NewMetaPartition(gid string, start, end uint64, member string) *MetaPartition {
+func NewMetaPartition(id string, start, end uint64, member string) *MetaPartition {
 	return &MetaPartition{
-		GroupID: gid,
-		Start:   start,
-		End:     end,
-		Members: []string{member, member, member},
+		PartitionID: id,
+		Start:       start,
+		End:         end,
+		Members:     []string{member, member, member},
 	}
 }
 
@@ -177,13 +183,13 @@ func (m *MetaServer) servConn(conn net.Conn) {
 
 	for {
 		p := &proto.Packet{}
-		if err := p.ReadFromConn(conn, 0); err != nil {
-			fmt.Println("servConn:", err)
+		if err := p.ReadFromConn(conn, proto.NoReadDeadlineTime); err != nil {
+			log.Println("servConn ReadFromConn:", err)
 			return
 		}
 
 		if err := m.handlePacket(conn, p); err != nil {
-			fmt.Println("servConn:", err)
+			log.Println("servConn handlePacket:", err)
 			return
 		}
 	}
@@ -215,6 +221,7 @@ func (m *MetaServer) opCreateInode(conn net.Conn, p *proto.Packet) error {
 	req := &proto.CreateInodeRequest{}
 	err := json.Unmarshal(p.Data, req)
 	if err != nil {
+		log.Println("opCreateInode Unmarshal, err = ", err)
 		return err
 	}
 
@@ -225,14 +232,16 @@ func (m *MetaServer) opCreateInode(conn net.Conn, p *proto.Packet) error {
 	resp := &proto.CreateInodeResponse{
 		Info: NewInodeInfo(ino, req.Mode),
 	}
-	resp.Status = proto.OpOk
 
 	data, err := json.Marshal(resp)
 	if err != nil {
+		log.Println("opCreateInode Marshal, err = ", err)
 		goto errOut
 	}
 
 	p.Data = data
+	p.Size = uint32(len(data))
+	p.Resultcode = proto.OpOk
 	err = p.WriteToConn(conn)
 	if err != nil {
 		goto errOut

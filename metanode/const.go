@@ -9,9 +9,9 @@ import (
 // Type alias.
 type (
 	// Master -> MetaNode  create metaRange request struct
-	CreateMetaRangeReq = proto.CreateMetaRangeRequest
+	CreateMetaRangeReq = proto.CreateMetaPartitionRequest
 	// MetaNode -> Master create metaRange response struct
-	CreateMetaRangeResp = proto.CreateMetaRangeResponse
+	CreateMetaRangeResp = proto.CreateMetaPartitionResponse
 	// Client -> MetaNode create inode request struct
 	CreateInoReq = proto.CreateInodeRequest
 	// MetaNode -> Client create inode response struct

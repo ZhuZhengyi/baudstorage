@@ -2,6 +2,7 @@ package metanode
 
 import (
 	"encoding/json"
+	"github.com/juju/errors"
 	"net"
 
 	"github.com/tiglabs/baudstorage/proto"
@@ -27,7 +28,7 @@ func (m *MetaNode) opCreateInode(conn net.Conn, p *Packet) (err error) {
 		// Proxy to Master Request
 	}
 	// Reply operation result to client though TCP connection.
-	err = m.replyToClient(conn, p, resp)
+	err = m.replyClient(conn, p, resp)
 	return
 }
 
@@ -46,7 +47,7 @@ func (m *MetaNode) opCreateDentry(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	// Reply operation result to client though TCP connection.
-	err = m.replyToClient(conn, p, resp)
+	err = m.replyClient(conn, p, resp)
 	return
 }
 
@@ -65,7 +66,7 @@ func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	// Reply operation result to client though TCP connection.
-	err = m.replyToClient(conn, p, resp)
+	err = m.replyClient(conn, p, resp)
 	return
 }
 
@@ -82,7 +83,7 @@ func (m *MetaNode) opDeleteInode(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	err = m.replyToClient(conn, p, resp)
+	err = m.replyClient(conn, p, resp)
 	return
 }
 
@@ -101,7 +102,7 @@ func (m *MetaNode) opReadDir(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	// Reply operation result to client though TCP connection.
-	err = m.replyToClient(conn, p, resp)
+	err = m.replyClient(conn, p, resp)
 	return
 }
 
@@ -120,6 +121,25 @@ func (m *MetaNode) opOpen(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	// Reply operation result to client though TCP connection.
-	err = m.replyToClient(conn, p, resp)
+	err = m.replyClient(conn, p, resp)
+	return
+}
+
+// ReplyToClient send reply data though tcp connection to client.
+func (m *MetaNode) replyClient(conn net.Conn, p *Packet, data []byte) (err error) {
+	// Handle panic
+	defer func() {
+		if r := recover(); r != nil {
+			switch data := r.(type) {
+			case error:
+				err = data
+			default:
+				err = errors.New(data.(string))
+			}
+		}
+	}()
+	// Process data and send reply though specified tcp connection.
+	p.Data = data
+	err = p.WriteToConn(conn)
 	return
 }

@@ -46,14 +46,16 @@ func UnmarshalTaskResponse(task *proto.AdminTask) (err error) {
 		response = &proto.DeleteVolResponse{}
 	case OpLoadVol:
 		response = &proto.LoadVolResponse{}
-	case OpCreateMetaGroup:
-		response = &proto.CreateMetaRangeResponse{}
+	case OpCreateMetaPartition:
+		response = &proto.CreateMetaPartitionResponse{}
 	case OpDeleteFile:
 		response = &proto.DeleteFileResponse{}
-	case OpDeleteMetaRange:
-		response = &proto.DeleteMetaRangeResponse{}
-	case OpUpdateMetaRange:
-		response = &proto.UpdateMetaRangeResponse{}
+	case OpDeleteMetaPartition:
+		response = &proto.DeleteMetaPartitionResponse{}
+	case OpUpdateMetaPartition:
+		response = &proto.UpdateMetaPartitionResponse{}
+	case OpLoadMetaPartition:
+		response = task.Response.(*proto.LoadMetaPartitionMetricResponse)
 	case OpDataNodeHeartbeat:
 		response = &proto.DataNodeHeartBeatResponse{}
 	case OpMetaNodeHeartbeat:
