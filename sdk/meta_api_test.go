@@ -2,8 +2,7 @@ package sdk
 
 import (
 	"testing"
-
-	"github.com/tiglabs/baudstorage/proto"
+	//	"github.com/tiglabs/baudstorage/proto"
 )
 
 const (
@@ -29,24 +28,12 @@ func TestCreate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mp := mw.getPartitionByID("mp001")
-	if mp == nil {
-		t.Fatal("No such partition")
+	for i := 0; i < 110; i++ {
+		info, err := mw.Create_ll(1, "abc", 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("inode: %v", *info)
 	}
 
-	mc, err := mw.getConn(mp)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	status, info, err := mw.icreate(mc, proto.ModeDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if status != int(proto.OpOk) {
-		t.Fatal("status: ", status)
-	}
-
-	t.Logf("ino = %v", info.Inode)
 }
