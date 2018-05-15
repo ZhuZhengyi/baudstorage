@@ -7,22 +7,22 @@ import (
 	"github.com/google/btree"
 )
 
-type MetaRangeSnapshot struct {
+type MetaPartitionSnapshot struct {
 	Op uint32 `json:"op"`
 	K  []byte `json:"k"`
 	V  []byte `json:"v"`
 }
 
-func (s *MetaRangeSnapshot) Encode() ([]byte, error) {
+func (s *MetaPartitionSnapshot) Encode() ([]byte, error) {
 	return json.Marshal(s)
 }
 
-func (s *MetaRangeSnapshot) Decode(data []byte) error {
+func (s *MetaPartitionSnapshot) Decode(data []byte) error {
 	return json.Unmarshal(data, s)
 }
 
-func NewMetaRangeSnapshot(op uint32, key, value []byte) *MetaRangeSnapshot {
-	return &MetaRangeSnapshot{
+func NewMetaPartitionSnapshot(op uint32, key, value []byte) *MetaPartitionSnapshot {
+	return &MetaPartitionSnapshot{
 		Op: op,
 		K:  key,
 		V:  value,
@@ -73,7 +73,7 @@ func (si *SnapshotIterator) Next() (data []byte, err error) {
 				return true
 			}
 			si.curItem = ino
-			snap := NewMetaRangeSnapshot(opCreateInode, ino.GetKeyBytes(),
+			snap := NewMetaPartitionSnapshot(opCreateInode, ino.GetKeyBytes(),
 				ino.GetValueBytes())
 			data, err = snap.Encode()
 			si.cur++
@@ -92,7 +92,7 @@ func (si *SnapshotIterator) Next() (data []byte, err error) {
 			return true
 		}
 		si.curItem = dentry
-		snap := NewMetaRangeSnapshot(opCreateDentry, dentry.GetKeyBytes(),
+		snap := NewMetaPartitionSnapshot(opCreateDentry, dentry.GetKeyBytes(),
 			dentry.GetValueBytes())
 		data, err = snap.Encode()
 		si.cur++

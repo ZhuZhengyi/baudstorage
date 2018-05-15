@@ -12,41 +12,41 @@ import (
 
 const metaManagePrefix = "metaManager_"
 
-// MetaRangeGroup manage all MetaRange and make mapping between namespace and MetaRange.
-type MetaRangeManager struct {
-	dataPath string
-	metaRangeMap map[string]*MetaRange // Key: metaRangeId, Val: metaRange
-	mu           sync.RWMutex
+// MetaRangeGroup manage all MetaPartition and make mapping between namespace and MetaPartition.
+type MetaManager struct {
+	dataPath   string
+	partitions map[string]*MetaPartition // Key: metaRangeId, Val: metaPartition
+	mu         sync.RWMutex
 }
 
-// StoreMeteRange try make mapping between meta range ID and MetaRange.
-func (m *MetaRangeManager) SetMetaRange(mr *MetaRange) (err error) {
+// StoreMeteRange try make mapping between meta range ID and MetaPartition.
+func (m *MetaManager) SetMetaRange(mr *MetaPartition) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if _, ok := m.metaRangeMap[mr.ID]; ok {
-		err = fmt.Errorf("meta range %d is existed", mr.ID)
+	if _, ok := m.partitions[mr.ID]; ok {
+		err = fmt.Errorf("meta partition %d is existed", mr.ID)
 		return
 	}
-	m.metaRangeMap[mr.ID] = mr
+	m.partitions[mr.ID] = mr
 	return
 }
 
-// LoadMetaRange returns MetaRange with specified namespace if the mapping exist or report an error.
-func (m *MetaRangeManager) LoadMetaRange(id string) (mr *MetaRange, err error) {
+// LoadMetaPartition returns MetaPartition with specified namespace if the mapping exist or report an error.
+func (m *MetaManager) LoadMetaPartition(id string) (mr *MetaPartition, err error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	mr, ok := m.metaRangeMap[id]
+	mr, ok := m.partitions[id]
 	if ok {
 		return
 	}
-	err = errors.New("unknown meta range: " + id)
+	err = errors.New("unknown meta partition: " + id)
 	return
 }
 
-func (m *MetaRangeManager) Range(f func(id string, mr *MetaRange) bool) {
+func (m *MetaManager) Range(f func(id string, mr *MetaPartition) bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	for id, m := range m.metaRangeMap {
+	for id, m := range m.partitions {
 		if !f(id, m) {
 			return
 		}
@@ -55,7 +55,7 @@ func (m *MetaRangeManager) Range(f func(id string, mr *MetaRange) bool) {
 
 // Load meta manager snapshot from data file and restore all  meta range
 // into this meta range manager.
-func (m *MetaRangeManager) LoadMetaManagers(metaDir string) (err error) {
+func (m *MetaManager) LoadMetaManagers(metaDir string) (err error) {
 	// Check metaDir directory
 	fileInfo, err := os.Stat(metaDir)
 	if err != nil {
@@ -79,8 +79,8 @@ func (m *MetaRangeManager) LoadMetaManagers(metaDir string) (err error) {
 			wg.Add(1)
 			metaRangeId := fileInfo.Name()[12:]
 			go func(metaID string, fileInfo os.FileInfo) {
-				/* Create MetaRange and add metaRangeManager */
-				mr := NewMetaRange(MetaRangeConfig{
+				/* Create MetaPartition and add metaManager */
+				mr := NewMetaPartition(MetaPartitionConfig{
 					ID:      metaID,
 					RootDir: path.Join(metaDir, fileInfo.Name()),
 				})
@@ -97,14 +97,14 @@ func (m *MetaRangeManager) LoadMetaManagers(metaDir string) (err error) {
 	return
 }
 
-func (m *MetaRangeManager) DeleteMetaRange(id string) {
+func (m *MetaManager) DeleteMetaRange(id string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	delete(m.metaRangeMap, id)
+	delete(m.partitions, id)
 }
 
-func NewMetaRangeManager() *MetaRangeManager {
-	return &MetaRangeManager{
-		metaRangeMap: make(map[string]*MetaRange, 0),
+func NewMetaRangeManager() *MetaManager {
+	return &MetaManager{
+		partitions: make(map[string]*MetaPartition, 0),
 	}
 }

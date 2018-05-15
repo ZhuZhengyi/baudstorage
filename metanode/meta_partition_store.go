@@ -15,9 +15,9 @@ import (
 )
 
 // Load inode info from inode snapshot file
-func (mf *MetaRangeFsm) LoadInode() (err error) {
+func (mp *MetaPartition) LoadInode() (err error) {
 	// Restore btree from ino file
-	inoFile := path.Join(mf.metaRange.RootDir, "inode")
+	inoFile := path.Join(mp.RootDir, "inode")
 	fp, err := os.OpenFile(inoFile, os.O_RDONLY, 0644)
 	if err != nil {
 		if err == os.ErrNotExist {
@@ -44,21 +44,21 @@ func (mf *MetaRangeFsm) LoadInode() (err error) {
 		if err = json.Unmarshal(line, ino); err != nil {
 			return
 		}
-		if mf.CreateInode(ino) != proto.OpOk {
+		if mp.createInode(ino) != proto.OpOk {
 			err = errors.New("load inode info error!")
 			return
 		}
-		if mf.metaRange.Cursor < ino.Inode {
-			mf.metaRange.Cursor = ino.Inode
+		if mp.Cursor < ino.Inode {
+			mp.Cursor = ino.Inode
 		}
 	}
 	return
 }
 
 // Load dentry from dentry snapshot file
-func (mf *MetaRangeFsm) LoadDentry() (err error) {
+func (mp *MetaPartition) LoadDentry() (err error) {
 	// Restore dentry from dentry file
-	dentryFile := path.Join(mf.metaRange.RootDir, "dentry")
+	dentryFile := path.Join(mp.RootDir, "dentry")
 	fp, err := os.OpenFile(dentryFile, os.O_RDONLY, 0644)
 	if err != nil {
 		if err == os.ErrNotExist {
@@ -84,7 +84,7 @@ func (mf *MetaRangeFsm) LoadDentry() (err error) {
 		if err = json.Unmarshal(line, dentry); err != nil {
 			return
 		}
-		if mf.CreateDentry(dentry) != proto.OpOk {
+		if mp.createDentry(dentry) != proto.OpOk {
 			err = errors.New("load dentry info error!")
 			return
 		}
@@ -92,8 +92,8 @@ func (mf *MetaRangeFsm) LoadDentry() (err error) {
 	return
 }
 
-func (mf *MetaRangeFsm) LoadApplyID() (err error) {
-	applyIDFile := path.Join(mf.metaRange.RootDir, "applyid")
+func (mp *MetaPartition) LoadApplyID() (err error) {
+	applyIDFile := path.Join(mp.RootDir, "applyid")
 	data, err := ioutil.ReadFile(applyIDFile)
 	if err != nil {
 		return
@@ -102,12 +102,12 @@ func (mf *MetaRangeFsm) LoadApplyID() (err error) {
 		err = errors.New("read applyid empty error")
 		return
 	}
-	mf.applyID = binary.BigEndian.Uint64(data)
+	mp.applyID = binary.BigEndian.Uint64(data)
 	return
 }
 
-func (mf *MetaRangeFsm) StoreApplyID() (err error) {
-	filename := path.Join(mf.metaRange.RootDir, "_applyid")
+func (mp *MetaPartition) StoreApplyID() (err error) {
+	filename := path.Join(mp.RootDir, "_applyid")
 	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_TRUNC, 0644)
 	if err != nil {
 		return
@@ -116,12 +116,12 @@ func (mf *MetaRangeFsm) StoreApplyID() (err error) {
 		fp.Sync()
 		fp.Close()
 	}()
-	err = binary.Write(fp, binary.BigEndian, mf.applyID)
+	err = binary.Write(fp, binary.BigEndian, mp.applyID)
 	return
 }
 
-func (mf *MetaRangeFsm) StoreInodeTree() (err error) {
-	filename := path.Join(mf.metaRange.RootDir, "_inode")
+func (mp *MetaPartition) StoreInodeTree() (err error) {
+	filename := path.Join(mp.RootDir, "_inode")
 	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND, 0644)
 	if err != nil {
 		return
@@ -130,7 +130,7 @@ func (mf *MetaRangeFsm) StoreInodeTree() (err error) {
 		fp.Sync()
 		fp.Close()
 	}()
-	inoTree := mf.GetInodeTree()
+	inoTree := mp.getInodeTree()
 	inoTree.Ascend(func(i btree.Item) bool {
 		var data []byte
 		if data, err = json.Marshal(i); err != nil {
@@ -148,8 +148,8 @@ func (mf *MetaRangeFsm) StoreInodeTree() (err error) {
 	return
 }
 
-func (mf *MetaRangeFsm) StoreDentryTree() (err error) {
-	filename := path.Join(mf.metaRange.RootDir, "_dentry")
+func (mp *MetaPartition) StoreDentryTree() (err error) {
+	filename := path.Join(mp.RootDir, "_dentry")
 	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND, 0644)
 	if err != nil {
 		return
@@ -158,7 +158,7 @@ func (mf *MetaRangeFsm) StoreDentryTree() (err error) {
 		fp.Sync()
 		fp.Close()
 	}()
-	denTree := mf.GetDentryTree()
+	denTree := mp.getDentryTree()
 	denTree.Ascend(func(i btree.Item) bool {
 		var data []byte
 		data, err = json.Marshal(i)

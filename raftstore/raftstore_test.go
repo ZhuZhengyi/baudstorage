@@ -1,10 +1,14 @@
 package raftstore
 
 import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"sync/atomic"
 	"testing"
+
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
-	"fmt"
 )
 
 type raftAddr struct {
@@ -12,7 +16,14 @@ type raftAddr struct {
 	replicate string
 }
 
+type testKV struct {
+	Opt uint32 `json:"op"`
+	K   []byte `json:"k"`
+	V   []byte `json:"v"`
+}
+
 var raftAddresses = make(map[uint64]*raftAddr)
+var maxVolId uint64 = 1
 
 // 三个本地节点
 func init() {
@@ -57,16 +68,16 @@ func (*testSM) HandleLeaderChange(leader uint64) {
 	return
 }
 
-
 func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 	var cfg Config
+	partitions := make(map[uint64]*partition)
 
 	cfg.NodeID = 1
 	cfg.WalPath = "wal"
 
 	raftStore, err := NewRaftStore(&cfg)
-	if err != nil{
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -75,24 +86,50 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 	for k := range raftAddresses {
 		peers = append(peers, proto.Peer{ID: k})
 	}
-	for i := 0; i <= 5; i++ {
+	for i := 1; i <= 5; i++ {
 		partitionCfg := &PartitionConfig{
-			ID: uint64 (i),
+			ID:      uint64(i),
 			Applied: 0,
-			SM: &testFsm,
-			Peers: peers,
+			SM:      &testFsm,
+			Peers:   peers,
 		}
 
-		partition, err := raftStore.CreatePartition(partitionCfg)
+		var p Partition
+		p, err = raftStore.CreatePartition(partitionCfg)
 
-		if err != nil{
+		partitions[uint64(i)] = p.(*partition)
+
+		fmt.Printf("new partition %d\n", i)
+
+		if err != nil {
 			t.Fatal(err)
 		}
-
-		partition.AppliedIndex()
 	}
+
+	var (
+		data []byte
+	)
+
+	kv := &testKV{Opt: 1}
+	atomic.AddUint64(&maxVolId, 1)
+	value := strconv.FormatUint(maxVolId, 10)
+	kv.K = []byte("max_value_key")
+	kv.V = []byte(value)
+
+	if data, err = json.Marshal(kv); err != nil {
+		err = fmt.Errorf("action[KvsmAllocateVolID],marshal kv:%v,err:%v", kv, err.Error())
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	fmt.Printf("==========encode kv end ===========\n")
+
+	_, err = partitions[uint64(1)].Submit(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Printf("==========submit ok===========\n")
+
 }
-
-
-
-

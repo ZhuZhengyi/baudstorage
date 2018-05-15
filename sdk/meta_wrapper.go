@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -71,6 +72,10 @@ func (this *MetaPartition) Less(than btree.Item) bool {
 	return this.Start < that.Start
 }
 
+func init() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
+}
+
 func NewMetaWrapper(namespace, masterHosts string) (*MetaWrapper, error) {
 	mw := new(MetaWrapper)
 	mw.namespace = namespace
@@ -81,6 +86,7 @@ func NewMetaWrapper(namespace, masterHosts string) (*MetaWrapper, error) {
 	if err := mw.Update(); err != nil {
 		return nil, err
 	}
+	mw.currStart = proto.ROOT_INO
 	go mw.refresh()
 	return mw, nil
 }
@@ -289,22 +295,30 @@ func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *pro
 	packet.Opcode = proto.OpMetaCreateInode
 	packet.Data, err = json.Marshal(req)
 	if err != nil {
+		log.Println(err)
 		return
 	}
 	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	status = parseStatus(packet.Resultcode)
+	if status != statusOK {
 		return
 	}
 
 	resp := new(proto.CreateInodeResponse)
 	err = json.Unmarshal(packet.Data, &resp)
 	if err != nil {
+		log.Println(err)
+		log.Printf("data = [%v]\n", string(packet.Data))
 		return
 	}
 
-	status = parseStatus(packet.Resultcode)
 	return status, resp.Info, nil
 }
 
@@ -371,13 +385,17 @@ func (mw *MetaWrapper) ddelete(mc *MetaConn, parentID uint64, name string) (stat
 		return
 	}
 
+	status = parseStatus(packet.Resultcode)
+	if status != statusOK {
+		return
+	}
+
 	resp := new(proto.DeleteDentryResponse)
 	err = json.Unmarshal(packet.Data, &resp)
 	if err != nil {
 		return
 	}
 
-	status = parseStatus(packet.Resultcode)
 	return status, resp.Inode, nil
 }
 
@@ -399,13 +417,17 @@ func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (statu
 		return
 	}
 
+	status = parseStatus(packet.Resultcode)
+	if status != statusOK {
+		return
+	}
+
 	resp := new(proto.LookupResponse)
 	err = json.Unmarshal(packet.Data, &resp)
 	if err != nil {
 		return
 	}
 
-	status = parseStatus(packet.Resultcode)
 	return status, resp.Inode, resp.Mode, nil
 }
 
@@ -426,13 +448,17 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 		return
 	}
 
+	status = parseStatus(packet.Resultcode)
+	if status != statusOK {
+		return
+	}
+
 	resp := new(proto.InodeGetResponse)
 	err = json.Unmarshal(packet.Data, &resp)
 	if err != nil {
 		return
 	}
 
-	status = parseStatus(packet.Resultcode)
 	return status, resp.Info, nil
 }
 
@@ -450,6 +476,11 @@ func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (children []proto.
 
 	packet, err = mc.send(packet)
 	if err != nil {
+		return
+	}
+
+	status := parseStatus(packet.Resultcode)
+	if status != statusOK {
 		return
 	}
 

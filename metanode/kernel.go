@@ -74,15 +74,16 @@ type Inode struct {
 	Inode      uint64 // Inode ID
 	Type       uint32
 	Size       uint64
-	AccessTime int64
-	ModifyTime int64
+	CreateTime time.Time
+	AccessTime time.Time
+	ModifyTime time.Time
 	Stream     *stream.StreamKey
 }
 
 // NewInode returns a new inode instance pointer with specified inode ID, name and inode type code.
 // The AccessTime and ModifyTime of new instance will be set to current time.
 func NewInode(ino uint64, t uint32) *Inode {
-	ts := time.Now().Unix()
+	ts := time.Now()
 	return &Inode{
 		Inode:      ino,
 		Type:       t,

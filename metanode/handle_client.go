@@ -2,10 +2,11 @@ package metanode
 
 import (
 	"encoding/json"
-	"github.com/juju/errors"
+	"errors"
 	"net"
 
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/raft/util/log"
 )
 
 // Handle OpCreate Inode
@@ -14,16 +15,15 @@ func (m *MetaNode) opCreateInode(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
+	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}
-	resp, err := mr.CreateInode(req)
-	if err != nil {
-		return
+	if err = mr.CreateInode(req, p); err != nil {
+		log.Error("Create Inode Request: %s", err.Error())
 	}
 	// Reply operation result to client though TCP connection.
-	err = m.replyClient(conn, p, resp)
+	err = m.replyClient(conn, p)
 	return
 }
 
@@ -33,16 +33,16 @@ func (m *MetaNode) opCreateDentry(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
+	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return err
 	}
-	resp, err := mr.CreateDentry(req)
+	err = mr.CreateDentry(req, p)
 	if err != nil {
-		return
+		log.Error("Create Dentry: %s", err.Error())
 	}
 	// Reply operation result to client though TCP connection.
-	err = m.replyClient(conn, p, resp)
+	err = m.replyClient(conn, p)
 	return
 }
 
@@ -52,16 +52,16 @@ func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
+	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}
-	resp, err := mr.DeleteDentry(req)
+	err = mr.DeleteDentry(req, p)
 	if err != nil {
 		return
 	}
 	// Reply operation result to client though TCP connection.
-	err = m.replyClient(conn, p, resp)
+	err = m.replyClient(conn, p)
 	return
 }
 
@@ -70,15 +70,15 @@ func (m *MetaNode) opDeleteInode(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
+	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}
-	resp, err := mr.DeleteInode(req)
+	err = mr.DeleteInode(req, p)
 	if err != nil {
 		return
 	}
-	err = m.replyClient(conn, p, resp)
+	err = m.replyClient(conn, p)
 	return
 }
 
@@ -88,16 +88,16 @@ func (m *MetaNode) opReadDir(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
+	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}
-	resp, err := mr.ReadDir(req)
+	err = mr.ReadDir(req, p)
 	if err != nil {
 		return
 	}
 	// Reply operation result to client though TCP connection.
-	err = m.replyClient(conn, p, resp)
+	err = m.replyClient(conn, p)
 	return
 }
 
@@ -107,21 +107,21 @@ func (m *MetaNode) opOpen(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaRangeManager.LoadMetaRange(req.Namespace)
+	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}
-	resp, err := mr.Open(req)
+	err = mr.Open(req, p)
 	if err != nil {
 		return
 	}
 	// Reply operation result to client though TCP connection.
-	err = m.replyClient(conn, p, resp)
+	err = m.replyClient(conn, p)
 	return
 }
 
 // ReplyToClient send reply data though tcp connection to client.
-func (m *MetaNode) replyClient(conn net.Conn, p *Packet, data []byte) (err error) {
+func (m *MetaNode) replyClient(conn net.Conn, p *Packet) (err error) {
 	// Handle panic
 	defer func() {
 		if r := recover(); r != nil {
@@ -134,7 +134,6 @@ func (m *MetaNode) replyClient(conn net.Conn, p *Packet, data []byte) (err error
 		}
 	}()
 	// Process data and send reply though specified tcp connection.
-	p.Data = data
 	err = p.WriteToConn(conn)
 	return
 }
