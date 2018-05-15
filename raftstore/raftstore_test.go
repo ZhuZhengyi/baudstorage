@@ -4,7 +4,11 @@ import (
 	"testing"
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
+	pbproto "github.com/golang/protobuf/proto"
 	"fmt"
+	"github.com/volstore/src/master/protos"
+	"sync/atomic"
+	"strconv"
 )
 
 type raftAddr struct {
@@ -13,6 +17,7 @@ type raftAddr struct {
 }
 
 var raftAddresses = make(map[uint64]*raftAddr)
+var maxVolId uint64 = 1
 
 // 三个本地节点
 func init() {
@@ -61,6 +66,7 @@ func (*testSM) HandleLeaderChange(leader uint64) {
 func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 	var cfg Config
+	partitions := make(map[uint64]*partition)
 
 	cfg.NodeID = 1
 	cfg.WalPath = "wal"
@@ -75,7 +81,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 	for k := range raftAddresses {
 		peers = append(peers, proto.Peer{ID: k})
 	}
-	for i := 0; i <= 5; i++ {
+	for i := 1; i <= 5; i++ {
 		partitionCfg := &PartitionConfig{
 			ID: uint64 (i),
 			Applied: 0,
@@ -83,7 +89,10 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 			Peers: peers,
 		}
 
-		partition, err := raftStore.CreatePartition(partitionCfg)
+		var p Partition
+		p, err = raftStore.CreatePartition(partitionCfg)
+
+		partitions[uint64(i)] = p.(*partition)
 
 		fmt.Printf("new partition %d", i)
 
@@ -91,8 +100,31 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		partition.AppliedIndex()
+		var (
+			data []byte
+			err  error
+		)
+
+		kv := &protos.Kv{Opt: 1}
+		atomic.AddUint64(&maxVolId, 1)
+		value := strconv.FormatUint(maxVolId, 10)
+		kv.K = "max_value_key"
+		kv.V = []byte(value)
+
+		if data, err = pbproto.Marshal(kv); err != nil {
+			err = fmt.Errorf("action[KvsmAllocateVolID],marshal kv:%v,err:%v", kv, err.Error())
+			if err != nil{
+				t.Fatal(err)
+			}
+		}
+
+		_, err = partitions[1].Submit(data)
+		if err != nil{
+			t.Fatal(err)
+		}
 	}
+
+
 }
 
 
