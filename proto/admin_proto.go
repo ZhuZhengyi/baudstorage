@@ -145,3 +145,11 @@ type UpdateMetaPartitionResponse struct {
 	Status  uint8
 	Result  string
 }
+
+type MetaPartitionOfflineRequest struct {
+	PartitionID uint64
+}
+
+type MetaPartitionOfflineResponse struct {
+
+}

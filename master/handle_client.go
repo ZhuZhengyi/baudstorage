@@ -28,6 +28,7 @@ type MetaPartitionView struct {
 	Start       uint64
 	End         uint64
 	Members     []string
+	LeaderAddr  string
 }
 
 type NamespaceView struct {
@@ -101,8 +102,8 @@ errDeal:
 
 func getNamespaceView(ns *NameSpace) (view *NamespaceView) {
 	view = NewNamespaceView(ns.Name)
-	for _, metaGroup := range ns.MetaPartitions {
-		view.MetaPartitions = append(view.MetaPartitions, getMetaPartitionView(metaGroup))
+	for _, mp := range ns.MetaPartitions {
+		view.MetaPartitions = append(view.MetaPartitions, getMetaPartitionView(mp))
 	}
 	view.VolGroups = ns.volGroups.GetVolsView(0)
 	return
@@ -112,6 +113,9 @@ func getMetaPartitionView(mp *MetaPartition) (mpView *MetaPartitionView) {
 	mpView = NewMetaGroupView(mp.PartitionID, mp.Start, mp.End)
 	for _, metaReplica := range mp.Replicas {
 		mpView.Members = append(mpView.Members, metaReplica.Addr)
+		if metaReplica.isLeader {
+			mpView.LeaderAddr = metaReplica.Addr
+		}
 	}
 	return
 }

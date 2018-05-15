@@ -114,6 +114,32 @@ func (c *Cluster) loadVolAndCheckResponse(v *VolGroup, isRecover bool) {
 	}()
 }
 
+func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint64) (err error) {
+	var (
+		ns    *NameSpace
+		mp    *MetaPartition
+		t     *proto.AdminTask
+		tasks []*proto.AdminTask
+	)
+	if ns, err = c.getNamespace(nsName); err != nil {
+		goto errDeal
+	}
+	if mp, err = ns.getMetaPartitionById(partitionID); err != nil {
+		goto errDeal
+	}
+
+	if t, err = mp.generateOfflineTask(); err != nil {
+		goto errDeal
+	}
+	tasks = make([]*proto.AdminTask, 0)
+	tasks = append(tasks, t)
+	c.putMetaNodeTasks(tasks)
+	return
+errDeal:
+	log.LogError(fmt.Sprintf("action[metaPartitionOffline],nsName: %v,partitionID: %v,err: %v", nsName, partitionID, err.Error()))
+	return
+}
+
 func (c *Cluster) loadMetaPartitionAndCheckResponse(mp *MetaPartition, isRecover bool) {
 	go func() {
 		c.processLoadMetaPartition(mp, isRecover)
