@@ -10,7 +10,9 @@ import (
 
 	"encoding/json"
 	"fmt"
+
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
@@ -148,7 +150,7 @@ func (m *MetaNode) replyToMaster(ip string, data interface{}) (err error) {
 	if err != nil {
 		return
 	}
-	url := fmt.Sprintf("http://%s/%s", ip, m.MetaNodeResponse)
+	url := fmt.Sprintf("http://%s/%s", ip, metaNodeResponse)
 	util.PostToNode(jsonBytes, url)
 	return
 }

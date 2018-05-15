@@ -112,16 +112,16 @@ func (mf *MetaRangeFsm) DeleteInode(ino *Inode) (status uint8) {
 	return
 }
 
-func (mf *MetaRangeFsm) OpenFile(req *OpenReq) (resp *OpenResp) {
+func (mf *MetaRangeFsm) OpenFile(req *OpenReq) (status uint8) {
 	item := mf.inodeTree.Get(&Inode{
 		Inode: req.Inode,
 	})
 	if item == nil {
-		resp.Status = proto.OpNotExistErr
+		status = proto.OpNotExistErr
 		return
 	}
-	item.(*Inode).AccessTime = time.Now().Unix()
-	resp.Status = proto.OpOk
+	item.(*Inode).AccessTime = time.Now()
+	status = proto.OpOk
 	return
 }
 

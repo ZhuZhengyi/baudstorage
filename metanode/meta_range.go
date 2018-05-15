@@ -1,7 +1,6 @@
 package metanode
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -145,7 +144,7 @@ func (mr *MetaRange) StartStoreSchedule() {
 			goto end
 		}
 	store:
-	// 1st: load applyID
+		// 1st: load applyID
 		if err := mr.store.StoreApplyID(); err != nil {
 			//TODO: Log
 			goto end
@@ -203,8 +202,7 @@ func (mr *MetaRange) nextInodeID() (inodeId uint64, err error) {
 	}
 }
 
-func (mr *MetaRange) CreateDentry(req *CreateDentryReq) (data []byte, err error) {
-	var resp *CreateDentryResp
+func (mr *MetaRange) CreateDentry(req *CreateDentryReq, p *Packet) (err error) {
 	dentry := &Dentry{
 		ParentId: req.ParentID,
 		Name:     req.Name,
@@ -215,16 +213,15 @@ func (mr *MetaRange) CreateDentry(req *CreateDentryReq) (data []byte, err error)
 	if err != nil {
 		return
 	}
-	r, err := mr.put(opCreateDentry, val)
+	resp, err := mr.put(opCreateDentry, val)
 	if err != nil {
 		return
 	}
-	resp.Status = r.(uint8)
-	data, err = json.Marshal(resp)
+	p.Resultcode = resp.(uint8)
 	return
 }
 
-func (mr *MetaRange) DeleteDentry(req *DeleteDentryReq) (data []byte, err error) {
+func (mr *MetaRange) DeleteDentry(req *DeleteDentryReq, p *Packet) (err error) {
 	var resp *DeleteDentryResp
 	dentry := &Dentry{
 		ParentId: req.ParentID,
@@ -232,63 +229,96 @@ func (mr *MetaRange) DeleteDentry(req *DeleteDentryReq) (data []byte, err error)
 	}
 	val, err := json.Marshal(dentry)
 	if err != nil {
+		p.Resultcode = proto.OpErr
 		return
 	}
 	r, err := mr.put(opDeleteDentry, val)
 	if err != nil {
+		p.Resultcode = proto.OpErr
 		return
 	}
-	resp.Status = r.(uint8)
-	resp.Inode = dentry.Inode
-	data, err = json.Marshal(resp)
+	p.Resultcode = r.(uint8)
+	if p.Resultcode == proto.OpOk {
+		var reply []byte
+		resp.Inode = dentry.Inode
+		reply, err = json.Marshal(resp)
+		p.PackOkWithBody(reply)
+	}
 	return
 }
 
-func (mr *MetaRange) CreateInode(req *CreateInoReq) (data []byte, err error) {
-	var resp CreateInoResp
-	resp.Info.Inode, err = mr.nextInodeID()
+func (mr *MetaRange) CreateInode(req *CreateInoReq, p *Packet) (err error) {
+	inoID, err := mr.nextInodeID()
 	if err != nil {
 		err = nil
-		resp.Status = proto.OpInodeFullErr
-		data, err = json.Marshal(resp)
+		p.Resultcode = proto.OpInodeFullErr
 		return
 	}
-	ts := time.Now().Unix()
+	ts := time.Now()
 	ino := &Inode{
-		Inode:      resp.Info.Inode,
+		Inode:      inoID,
 		Type:       req.Mode,
+		CreateTime: ts,
 		AccessTime: ts,
 		ModifyTime: ts,
-		Stream:     stream.NewStreamKey(resp.Info.Inode),
+		Stream:     stream.NewStreamKey(inoID),
 	}
 	val, err := json.Marshal(ino)
 	if err != nil {
+		p.Resultcode = proto.OpErr
 		return
 	}
 	r, err := mr.put(opCreateInode, val)
 	if err != nil {
 		return
 	}
-	resp.Status = r.(uint8)
-	data, err = json.Marshal(resp)
+	p.Resultcode = r.(uint8)
+	if p.Resultcode == proto.OpOk {
+		var reply []byte
+		resp := &CreateInoResp{}
+		resp.Info.Inode = ino.Inode
+		resp.Info.Type = ino.Type
+		resp.Info.CreateTime = ino.CreateTime
+		resp.Info.ModifyTime = ino.ModifyTime
+		resp.Info.AccessTime = ino.AccessTime
+		resp.Info.Size = ino.Size
+		reply, err = json.Marshal(resp)
+		if err != nil {
+			p.Resultcode = proto.OpErr
+			return
+		}
+		p.PackOkWithBody(reply)
+	}
 	return
 }
 
-func (mr *MetaRange) DeleteInode(req *DeleteInoReq) (data []byte, err error) {
-	var resp DeleteDentryResp
+func (mr *MetaRange) DeleteInode(req *DeleteInoReq, p *Packet) (err error) {
 	ino := &Inode{
 		Inode: req.Inode,
 	}
 	val, err := json.Marshal(ino)
 	if err != nil {
+		p.Resultcode = proto.OpErr
 		return
 	}
 	r, err := mr.put(opDeleteInode, val)
 	if err != nil {
+		p.Resultcode = proto.OpErr
 		return
 	}
-	resp.Status = r.(uint8)
-	data, err = json.Marshal(resp)
+	p.Resultcode = r.(uint8)
+	if p.Resultcode == proto.OpOk {
+		var reply []byte
+		resp := &DeleteDentryResp{
+			Inode: ino.Inode,
+		}
+		reply, err = json.Marshal(resp)
+		if err != nil {
+			p.Resultcode = proto.OpErr
+			return
+		}
+		p.PackOkWithBody(reply)
+	}
 	return
 }
 
@@ -296,37 +326,45 @@ func (mr *MetaRange) PutStreamKey() {
 	return
 }
 
-func (mr *MetaRange) ReadDir(req *ReadDirReq) (data []byte, err error) {
+func (mr *MetaRange) ReadDir(req *ReadDirReq, p *Packet) (err error) {
 	// TODO: Implement read dir operation.
 	val, err := json.Marshal(req)
 	if err != nil {
+		p.Resultcode = proto.OpErr
 		return
 	}
 	resp, err := mr.put(opReadDir, val)
 	if err != nil {
+		p.Resultcode = proto.OpErr
 		return
 	}
-	data, err = json.Marshal(resp)
+	var reply []byte
+	reply, err = json.Marshal(resp)
+	if err != nil {
+		p.Resultcode = proto.OpErr
+		return
+	}
+	p.PackOkWithBody(reply)
 	return
 }
 
-func (mr *MetaRange) Open(req *OpenReq) (data []byte, err error) {
+func (mr *MetaRange) Open(req *OpenReq, p *Packet) (err error) {
 	// TODO: Implement open operation.
 	val, err := json.Marshal(req)
 	if err != nil {
+		p.Resultcode = proto.OpErr
 		return
 	}
 	resp, err := mr.put(opOpen, val)
 	if err != nil {
+		p.Resultcode = proto.OpErr
 		return
 	}
-	data, err = json.Marshal(resp)
+	p.Resultcode = resp.(uint8)
 	return
 }
 
-func (mr *MetaRange) put(op uint32, body []byte) (r interface{}, err error) {
-	key := make([]byte, 4)
-	binary.BigEndian.PutUint32(key, op)
-	r, err = mr.store.Put(key, body)
+func (mr *MetaRange) put(op interface{}, body []byte) (r interface{}, err error) {
+	r, err = mr.store.Put(op, body)
 	return
 }

@@ -18,12 +18,8 @@ type (
 	CreateInoResp = proto.CreateInodeResponse
 	// Client -> MetaNode delete inode request struct
 	DeleteInoReq = proto.DeleteInodeRequest
-	// MetaNode -> Client delete inode response struct
-	DeleteInoResp = proto.DeleteInodeResponse
 	// Client -> MetaNode create dentry request struct
 	CreateDentryReq = proto.CreateDentryRequest
-	// MetaNode -> Client create dentry response struct
-	CreateDentryResp = proto.CreateDentryResponse
 	// Client -> MetaNode delete dentry request struct
 	DeleteDentryReq = proto.DeleteDentryRequest
 	// MetaNode -> Client delete dentry response struct
@@ -34,8 +30,6 @@ type (
 	ReadDirResp = proto.ReadDirResponse
 	// Client -> MetaNode open file request struct
 	OpenReq = proto.OpenRequest
-	// MetaNode -> Client open file response struct
-	OpenResp = proto.OpenResponse
 )
 
 type StoreKey = uint32

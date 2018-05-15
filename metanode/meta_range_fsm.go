@@ -1,12 +1,11 @@
 package metanode
 
 import (
-	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
 
-	"encoding/json"
 	"github.com/google/btree"
 	"github.com/tiglabs/raft"
 	raftproto "github.com/tiglabs/raft/proto"
@@ -142,27 +141,26 @@ func (mf *MetaRangeFsm) HandleLeaderChange(leader uint64) {
 	}
 }
 
-func (mf *MetaRangeFsm) Put(key, val []byte) (resp []byte, err error) {
+func (mf *MetaRangeFsm) Put(key, val interface{}) (resp interface{}, err error) {
 	snap := NewMetaRangeSnapshot(0, nil, nil)
-	snap.Op = binary.BigEndian.Uint32(key)
-	snap.V = val
+	snap.Op = key.(uint32)
+	snap.V = val.([]byte)
 	cmd, err := json.Marshal(snap)
 	if err != nil {
 		return
 	}
 	//submit raft
-	data, err := mf.metaRange.RaftPartition.Submit(cmd)
+	resp, err = mf.metaRange.RaftPartition.Submit(cmd)
 	if err != nil {
 		return
 	}
-	resp = data.([]byte)
 	return
 }
 
-func (mf *MetaRangeFsm) Get(key []byte) ([]byte, error) {
+func (mf *MetaRangeFsm) Get(key interface{}) (interface{}, error) {
 	return nil, nil
 }
 
-func (mf *MetaRangeFsm) Del(key []byte) ([]byte, error) {
+func (mf *MetaRangeFsm) Del(key interface{}) (interface{}, error) {
 	return nil, nil
 }
