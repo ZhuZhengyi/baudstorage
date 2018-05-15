@@ -1,19 +1,26 @@
 package raftstore
 
 import (
+	"encoding/json"
 	"testing"
+	"fmt"
+	"sync/atomic"
+	"strconv"
+
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
 	pbproto "github.com/golang/protobuf/proto"
-	"fmt"
-	"github.com/volstore/src/master/protos"
-	"sync/atomic"
-	"strconv"
 )
 
 type raftAddr struct {
 	heartbeat string
 	replicate string
+}
+
+type testKV struct {
+	Op uint32 `json:"op"`
+	K  []byte `json:"k"`
+	V  []byte `json:"v"`
 }
 
 var raftAddresses = make(map[uint64]*raftAddr)
@@ -105,13 +112,13 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 			err  error
 		)
 
-		kv := &protos.Kv{Opt: 1}
+		kv := &testKV{Opt: 1}
 		atomic.AddUint64(&maxVolId, 1)
 		value := strconv.FormatUint(maxVolId, 10)
-		kv.K = "max_value_key"
+		kv.K = []byte("max_value_key")
 		kv.V = []byte(value)
 
-		if data, err = pbproto.Marshal(kv); err != nil {
+		if data, err = json.Marshal(kv); err != nil {
 			err = fmt.Errorf("action[KvsmAllocateVolID],marshal kv:%v,err:%v", kv, err.Error())
 			if err != nil{
 				t.Fatal(err)
