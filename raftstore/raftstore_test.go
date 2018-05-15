@@ -85,6 +85,8 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 		partition, err := raftStore.CreatePartition(partitionCfg)
 
+		fmt.Printf("new partition %d", i)
+
 		if err != nil{
 			t.Fatal(err)
 		}
