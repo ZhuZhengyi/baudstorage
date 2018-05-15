@@ -4,27 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sync"
 
-	"github.com/google/btree"
 	"github.com/tiglabs/raft"
 	raftproto "github.com/tiglabs/raft/proto"
 )
 
-const defaultBTreeDegree = 32
-
-// MetaPartitionFsm responsible for sync data log with other meta range through Raft
-// and manage dentry and inode by B-Tree in memory.
-type MetaPartitionFsm struct {
-	metaPartition *MetaPartition
-	applyID       uint64       // for store inode/dentry max applyID
-	dentryMu      sync.RWMutex // Mutex for dentry operation.
-	dentryTree    *btree.BTree // B-Tree for dentry.
-	inodeMu       sync.RWMutex // Mutex for inode operation.
-	inodeTree     *btree.BTree // B-Tree for inode.
-}
-
-func (mf *MetaPartitionFsm) Apply(command []byte, index uint64) (resp interface{}, err error) {
+func (mp *MetaPartition) Apply(command []byte, index uint64) (resp interface{}, err error) {
 	msg := &MetaPartitionSnapshot{}
 	err = msg.Decode(command)
 	if err != nil {
@@ -36,45 +21,45 @@ func (mf *MetaPartitionFsm) Apply(command []byte, index uint64) (resp interface{
 		if err = json.Unmarshal(msg.V, ino); err != nil {
 			goto end
 		}
-		resp = mf.CreateInode(ino)
+		resp = mp.createInode(ino)
 	case opDeleteInode:
 		ino := &Inode{}
 		if err = json.Unmarshal(msg.V, ino); err != nil {
 			goto end
 		}
-		resp = mf.DeleteInode(ino)
+		resp = mp.deleteInode(ino)
 	case opCreateDentry:
 		den := &Dentry{}
 		if err = json.Unmarshal(msg.V, den); err != nil {
 			goto end
 		}
-		resp = mf.CreateDentry(den)
+		resp = mp.createDentry(den)
 	case opDeleteDentry:
 		den := &Dentry{}
 		if err = json.Unmarshal(msg.V, den); err != nil {
 			goto end
 		}
-		resp = mf.DeleteDentry(den)
+		resp = mp.deleteDentry(den)
 	case opOpen:
 		req := &OpenReq{}
 		if err = json.Unmarshal(msg.V, req); err != nil {
 			goto end
 		}
-		resp = mf.OpenFile(req)
+		resp = mp.openFile(req)
 	case opReadDir:
 		req := &ReadDirReq{}
 		if err = json.Unmarshal(msg.V, req); err != nil {
 			goto end
 		}
-		resp = mf.ReadDir(req)
+		resp = mp.readDir(req)
 	case opCreateMetaRange:
 	}
 end:
-	mf.applyID = index
+	mp.applyID = index
 	return
 }
 
-func (mf *MetaPartitionFsm) ApplyMemberChange(confChange *raftproto.ConfChange, index uint64) (interface{}, error) {
+func (mp *MetaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, index uint64) (interface{}, error) {
 	// Write Disk
 	// Rename
 	// Change memory state
@@ -87,21 +72,21 @@ func (mf *MetaPartitionFsm) ApplyMemberChange(confChange *raftproto.ConfChange, 
 		//TODO
 
 	}
-	mf.applyID = index
+	mp.applyID = index
 	return nil, nil
 }
 
-func (mf *MetaPartitionFsm) Snapshot() (raftproto.Snapshot, error) {
-	appid := mf.applyID
-	ino := mf.GetInodeTree()
-	dentry := mf.GetDentryTree()
+func (mp *MetaPartition) Snapshot() (raftproto.Snapshot, error) {
+	appid := mp.applyID
+	ino := mp.getInodeTree()
+	dentry := mp.getDentryTree()
 	snapIter := NewSnapshotIterator(appid, ino, dentry)
 	return snapIter, nil
 }
 
-func (mf *MetaPartitionFsm) ApplySnapshot(peers []raftproto.Peer,
+func (mp *MetaPartition) ApplySnapshot(peers []raftproto.Peer,
 	iter raftproto.SnapIterator) error {
-	newMF := NewMetaPartitionFsm(mf.metaPartition)
+	newMP := NewMetaPartition(mp.MetaPartitionConfig)
 	for {
 		data, err := iter.Next()
 		if err != nil {
@@ -116,32 +101,29 @@ func (mf *MetaPartitionFsm) ApplySnapshot(peers []raftproto.Peer,
 			var ino = &Inode{}
 			ino.ParseKeyBytes(snap.K)
 			ino.ParseValueBytes(snap.V)
-			newMF.CreateInode(ino)
+			newMP.createInode(ino)
 		case opCreateDentry:
 			dentry := &Dentry{}
 			dentry.ParseKeyBytes(snap.K)
 			dentry.ParseValueBytes(snap.V)
-			newMF.CreateDentry(dentry)
+			newMP.createDentry(dentry)
 		default:
 			return errors.New(fmt.Sprintf("unknown op=%d", snap.Op))
 		}
 	}
-	newMF.applyID = newMF.metaPartition.RaftPartition.AppliedIndex()
-	*mf = *newMF
+	newMP.applyID = newMP.RaftPartition.AppliedIndex()
+	*mp = *newMP
 	return nil
 }
 
-func (mf *MetaPartitionFsm) HandleFatalEvent(err *raft.FatalError) {
+func (mp *MetaPartition) HandleFatalEvent(err *raft.FatalError) {
 	panic(err)
 }
 
-func (mf *MetaPartitionFsm) HandleLeaderChange(leader uint64) {
-	if leader == mf.metaPartition.RaftGroupID {
-		mf.metaPartition.IsLeader = true
-	}
+func (mp *MetaPartition) HandleLeaderChange(leader uint64) {
 }
 
-func (mf *MetaPartitionFsm) Put(key, val interface{}) (resp interface{}, err error) {
+func (mp *MetaPartition) Put(key, val interface{}) (resp interface{}, err error) {
 	snap := NewMetaPartitionSnapshot(0, nil, nil)
 	snap.Op = key.(uint32)
 	snap.V = val.([]byte)
@@ -150,17 +132,17 @@ func (mf *MetaPartitionFsm) Put(key, val interface{}) (resp interface{}, err err
 		return
 	}
 	//submit raft
-	resp, err = mf.metaPartition.RaftPartition.Submit(cmd)
+	resp, err = mp.RaftPartition.Submit(cmd)
 	if err != nil {
 		return
 	}
 	return
 }
 
-func (mf *MetaPartitionFsm) Get(key interface{}) (interface{}, error) {
+func (mp *MetaPartition) Get(key interface{}) (interface{}, error) {
 	return nil, nil
 }
 
-func (mf *MetaPartitionFsm) Del(key interface{}) (interface{}, error) {
+func (mp *MetaPartition) Del(key interface{}) (interface{}, error) {
 	return nil, nil
 }
