@@ -80,7 +80,7 @@ func (m *MetaManager) LoadMetaManagers(metaDir string) (err error) {
 			metaRangeId := fileInfo.Name()[12:]
 			go func(metaID string, fileInfo os.FileInfo) {
 				/* Create MetaPartition and add metaManager */
-				mr := NewMetaRange(MetaPartitionConfig{
+				mr := NewMetaPartition(MetaPartitionConfig{
 					ID:      metaID,
 					RootDir: path.Join(metaDir, fileInfo.Name()),
 				})

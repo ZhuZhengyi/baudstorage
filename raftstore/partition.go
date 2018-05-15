@@ -95,7 +95,7 @@ func (p *partition) LeaderTerm() (leaderId, term uint64) {
 }
 
 func (p *partition) IsLeader() (isLeader bool) {
-	isLeader = p.raft != nil && p.IsLeader()
+	isLeader = p.raft != nil && p.raft.IsLeader(p.id)
 	return
 }
 
