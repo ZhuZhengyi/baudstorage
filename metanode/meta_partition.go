@@ -217,7 +217,7 @@ func (mr *MetaPartition) CreateDentry(req *CreateDentryReq, p *Packet) (err erro
 	if err != nil {
 		return
 	}
-	p.Resultcode = resp.(uint8)
+	p.ResultCode = resp.(uint8)
 	return
 }
 
@@ -229,16 +229,16 @@ func (mr *MetaPartition) DeleteDentry(req *DeleteDentryReq, p *Packet) (err erro
 	}
 	val, err := json.Marshal(dentry)
 	if err != nil {
-		p.Resultcode = proto.OpErr
+		p.ResultCode = proto.OpErr
 		return
 	}
 	r, err := mr.put(opDeleteDentry, val)
 	if err != nil {
-		p.Resultcode = proto.OpErr
+		p.ResultCode = proto.OpErr
 		return
 	}
-	p.Resultcode = r.(uint8)
-	if p.Resultcode == proto.OpOk {
+	p.ResultCode = r.(uint8)
+	if p.ResultCode == proto.OpOk {
 		var reply []byte
 		resp.Inode = dentry.Inode
 		reply, err = json.Marshal(resp)
@@ -251,7 +251,7 @@ func (mr *MetaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 	inoID, err := mr.nextInodeID()
 	if err != nil {
 		err = nil
-		p.Resultcode = proto.OpInodeFullErr
+		p.ResultCode = proto.OpInodeFullErr
 		return
 	}
 	ts := time.Now()
@@ -265,15 +265,15 @@ func (mr *MetaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 	}
 	val, err := json.Marshal(ino)
 	if err != nil {
-		p.Resultcode = proto.OpErr
+		p.ResultCode = proto.OpErr
 		return
 	}
 	r, err := mr.put(opCreateInode, val)
 	if err != nil {
 		return
 	}
-	p.Resultcode = r.(uint8)
-	if p.Resultcode == proto.OpOk {
+	p.ResultCode = r.(uint8)
+	if p.ResultCode == proto.OpOk {
 		var reply []byte
 		resp := &CreateInoResp{}
 		resp.Info.Inode = ino.Inode
@@ -284,7 +284,7 @@ func (mr *MetaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 		resp.Info.Size = ino.Size
 		reply, err = json.Marshal(resp)
 		if err != nil {
-			p.Resultcode = proto.OpErr
+			p.ResultCode = proto.OpErr
 			return
 		}
 		p.PackOkWithBody(reply)
@@ -298,23 +298,23 @@ func (mr *MetaPartition) DeleteInode(req *DeleteInoReq, p *Packet) (err error) {
 	}
 	val, err := json.Marshal(ino)
 	if err != nil {
-		p.Resultcode = proto.OpErr
+		p.ResultCode = proto.OpErr
 		return
 	}
 	r, err := mr.put(opDeleteInode, val)
 	if err != nil {
-		p.Resultcode = proto.OpErr
+		p.ResultCode = proto.OpErr
 		return
 	}
-	p.Resultcode = r.(uint8)
-	if p.Resultcode == proto.OpOk {
+	p.ResultCode = r.(uint8)
+	if p.ResultCode == proto.OpOk {
 		var reply []byte
 		resp := &DeleteDentryResp{
 			Inode: ino.Inode,
 		}
 		reply, err = json.Marshal(resp)
 		if err != nil {
-			p.Resultcode = proto.OpErr
+			p.ResultCode = proto.OpErr
 			return
 		}
 		p.PackOkWithBody(reply)
@@ -330,18 +330,18 @@ func (mr *MetaPartition) ReadDir(req *ReadDirReq, p *Packet) (err error) {
 	// TODO: Implement read dir operation.
 	val, err := json.Marshal(req)
 	if err != nil {
-		p.Resultcode = proto.OpErr
+		p.ResultCode = proto.OpErr
 		return
 	}
 	resp, err := mr.put(opReadDir, val)
 	if err != nil {
-		p.Resultcode = proto.OpErr
+		p.ResultCode = proto.OpErr
 		return
 	}
 	var reply []byte
 	reply, err = json.Marshal(resp)
 	if err != nil {
-		p.Resultcode = proto.OpErr
+		p.ResultCode = proto.OpErr
 		return
 	}
 	p.PackOkWithBody(reply)
@@ -352,15 +352,15 @@ func (mr *MetaPartition) Open(req *OpenReq, p *Packet) (err error) {
 	// TODO: Implement open operation.
 	val, err := json.Marshal(req)
 	if err != nil {
-		p.Resultcode = proto.OpErr
+		p.ResultCode = proto.OpErr
 		return
 	}
 	resp, err := mr.put(opOpen, val)
 	if err != nil {
-		p.Resultcode = proto.OpErr
+		p.ResultCode = proto.OpErr
 		return
 	}
-	p.Resultcode = resp.(uint8)
+	p.ResultCode = resp.(uint8)
 	return
 }
 

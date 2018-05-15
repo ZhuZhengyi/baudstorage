@@ -304,7 +304,7 @@ func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *pro
 		return
 	}
 
-	status = parseStatus(packet.Resultcode)
+	status = parseStatus(packet.ResultCode)
 	return status, resp.Info, nil
 }
 
@@ -325,7 +325,7 @@ func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, err erro
 		return
 	}
 
-	status = parseStatus(packet.Resultcode)
+	status = parseStatus(packet.ResultCode)
 	return status, nil
 }
 
@@ -349,7 +349,7 @@ func (mw *MetaWrapper) dcreate(mc *MetaConn, parentID uint64, name string, inode
 		return
 	}
 
-	status = parseStatus(packet.Resultcode)
+	status = parseStatus(packet.ResultCode)
 	return status, nil
 }
 
@@ -377,7 +377,7 @@ func (mw *MetaWrapper) ddelete(mc *MetaConn, parentID uint64, name string) (stat
 		return
 	}
 
-	status = parseStatus(packet.Resultcode)
+	status = parseStatus(packet.ResultCode)
 	return status, resp.Inode, nil
 }
 
@@ -405,7 +405,7 @@ func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (statu
 		return
 	}
 
-	status = parseStatus(packet.Resultcode)
+	status = parseStatus(packet.ResultCode)
 	return status, resp.Inode, resp.Mode, nil
 }
 
@@ -432,7 +432,7 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 		return
 	}
 
-	status = parseStatus(packet.Resultcode)
+	status = parseStatus(packet.ResultCode)
 	return status, resp.Info, nil
 }
 

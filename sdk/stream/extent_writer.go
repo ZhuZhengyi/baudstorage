@@ -287,7 +287,7 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 		return errors.Annotatef(fmt.Errorf("processReply recive [%v] but actual recive [%v]",
 			request.GetUniqLogId(), reply.GetUniqLogId()), "writer[%v]", writer.toString())
 	}
-	if reply.Resultcode != proto.OpOk {
+	if reply.ResultCode != proto.OpOk {
 		writer.connect.Close()
 		return errors.Annotatef(fmt.Errorf("processReply recive [%v] error [%v]", request.GetUniqLogId(),
 			string(reply.Data[:reply.Size])), "writer[%v]", writer.toString())
