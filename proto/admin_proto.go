@@ -1,5 +1,6 @@
 package proto
 
+
 /*
  this struct is used to master send command to metanode
   or send command to datanode
@@ -61,8 +62,8 @@ type File struct {
 
 type LoadMetaPartitionMetricRequest struct {
 	PartitionID uint64
-	Start uint64
-	End   uint64
+	Start       uint64
+	End         uint64
 }
 
 type LoadMetaPartitionMetricResponse struct {
@@ -95,9 +96,9 @@ type DataNodeHeartBeatResponse struct {
 }
 
 type MetaPartitionReport struct {
-	GroupId uint64
-	Status  int
-	Used    uint64
+	GroupId  uint64
+	Status   int
+	Used     uint64
 	IsLeader bool
 }
 
@@ -133,14 +134,14 @@ type DeleteMetaPartitionResponse struct {
 
 type UpdateMetaPartitionRequest struct {
 	GroupId uint64
-	NsName string
+	NsName  string
 	Start   uint64
 	End     uint64
 }
 
 type UpdateMetaPartitionResponse struct {
 	GroupId uint64
-	NsName string
+	NsName  string
 	End     uint64
 	Status  uint8
 	Result  string
@@ -148,8 +149,11 @@ type UpdateMetaPartitionResponse struct {
 
 type MetaPartitionOfflineRequest struct {
 	PartitionID uint64
+	NewPeers    []Peer
 }
 
 type MetaPartitionOfflineResponse struct {
-
+	PartitionID uint64
+	Status  uint8
+	Result  string
 }
