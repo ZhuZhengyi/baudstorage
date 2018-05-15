@@ -1,19 +1,25 @@
 package raftstore
 
 import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"sync/atomic"
 	"testing"
+
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
-	pbproto "github.com/golang/protobuf/proto"
-	"fmt"
-	"github.com/volstore/src/master/protos"
-	"sync/atomic"
-	"strconv"
 )
 
 type raftAddr struct {
 	heartbeat string
 	replicate string
+}
+
+type testKV struct {
+	Opt uint32 `json:"op"`
+	K   []byte `json:"k"`
+	V   []byte `json:"v"`
 }
 
 var raftAddresses = make(map[uint64]*raftAddr)
@@ -62,7 +68,6 @@ func (*testSM) HandleLeaderChange(leader uint64) {
 	return
 }
 
-
 func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 	var cfg Config
@@ -72,7 +77,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 	cfg.WalPath = "wal"
 
 	raftStore, err := NewRaftStore(&cfg)
-	if err != nil{
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -83,10 +88,10 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 	}
 	for i := 1; i <= 5; i++ {
 		partitionCfg := &PartitionConfig{
-			ID: uint64 (i),
+			ID:      uint64(i),
 			Applied: 0,
-			SM: &testFsm,
-			Peers: peers,
+			SM:      &testFsm,
+			Peers:   peers,
 		}
 
 		var p Partition
@@ -96,7 +101,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 		fmt.Printf("new partition %d", i)
 
-		if err != nil{
+		if err != nil {
 			t.Fatal(err)
 		}
 
@@ -105,28 +110,23 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 			err  error
 		)
 
-		kv := &protos.Kv{Opt: 1}
+		kv := &testKV{Opt: 1}
 		atomic.AddUint64(&maxVolId, 1)
 		value := strconv.FormatUint(maxVolId, 10)
-		kv.K = "max_value_key"
+		kv.K = []byte("max_value_key")
 		kv.V = []byte(value)
 
-		if data, err = pbproto.Marshal(kv); err != nil {
+		if data, err = json.Marshal(kv); err != nil {
 			err = fmt.Errorf("action[KvsmAllocateVolID],marshal kv:%v,err:%v", kv, err.Error())
-			if err != nil{
+			if err != nil {
 				t.Fatal(err)
 			}
 		}
 
 		_, err = partitions[1].Submit(data)
-		if err != nil{
+		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
-
 }
-
-
-
-
