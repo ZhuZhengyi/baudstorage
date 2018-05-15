@@ -16,7 +16,7 @@ const (
 
 type BlockClient struct {
 	conns       *pool.ConnPool
-	vols        *sdk.VolGroupWraper
+	vols        *sdk.VolGroupWrapper
 	masterAddrs string
 	isShutDown  bool
 }

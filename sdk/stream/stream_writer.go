@@ -20,7 +20,7 @@ const (
 
 type StreamWriter struct {
 	sync.Mutex
-	wraper          *sdk.VolGroupWraper
+	wrapper         *sdk.VolGroupWrapper
 	currentWriter   *ExtentWriter //current ExtentWriter
 	errCount        int           //error count
 	excludeVols     []uint32      //exclude Vols
@@ -31,10 +31,10 @@ type StreamWriter struct {
 	saveExtentKeyFn func(inode uint64, key ExtentKey) (err error)
 }
 
-func NewStreamWriter(wraper *sdk.VolGroupWraper, inode uint64, saveExtentKeyFn func(inode uint64, key ExtentKey) (err error)) (stream *StreamWriter) {
+func NewStreamWriter(wrapper *sdk.VolGroupWrapper, inode uint64, saveExtentKeyFn func(inode uint64, key ExtentKey) (err error)) (stream *StreamWriter) {
 	stream = new(StreamWriter)
 	stream.excludeVols = make([]uint32, 0)
-	stream.wraper = wraper
+	stream.wrapper = wrapper
 	stream.saveExtentKeyFn = saveExtentKeyFn
 	stream.currentInode = inode
 	go stream.autoFlushThread()
@@ -197,13 +197,13 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	)
 	err = fmt.Errorf("cannot alloct new extent after maxrery")
 	for i := 0; i < MaxSelectVolForWrite; i++ {
-		if vol, err = stream.wraper.GetWriteVol(stream.excludeVols); err != nil {
+		if vol, err = stream.wrapper.GetWriteVol(stream.excludeVols); err != nil {
 			continue
 		}
 		if extentId, err = stream.createExtent(vol); err != nil {
 			continue
 		}
-		if writer, err = NewExtentWriter(stream.currentInode, vol, stream.wraper, extentId); err != nil {
+		if writer, err = NewExtentWriter(stream.currentInode, vol, stream.wrapper, extentId); err != nil {
 			continue
 		}
 		break
@@ -221,14 +221,14 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 }
 
 func (stream *StreamWriter) createExtent(vol *sdk.VolGroup) (extentId uint64, err error) {
-	connect, err := stream.wraper.GetConnect(vol.Hosts[0])
+	connect, err := stream.wrapper.GetConnect(vol.Hosts[0])
 	if err != nil {
 		log.LogError(fmt.Sprintf(util.GetFuncTrace()+" streamWriter[%v] volhosts[%v]", stream.toString(), vol.Hosts))
 		return
 	}
 	defer func() {
 		if err == nil {
-			stream.wraper.PutConnect(connect)
+			stream.wrapper.PutConnect(connect)
 		} else {
 			connect.Close()
 		}
