@@ -334,14 +334,21 @@ func (c *Cluster) volOffline(offlineAddr string, vg *VolGroup, errMsg string) {
 	c.putDataNodeTasks(tasks)
 	goto errDeal
 errDeal:
-	msg = fmt.Sprintf(errMsg+" vol:%v  on Node:%v  "+
+	msg = fmt.Sprintf(errMsg + " vol:%v  on Node:%v  "+
 		"DiskError  TimeOut Report Then Fix It on newHost:%v   Err:%v , PersistenceHosts:%v  ",
 		vg.VolID, offlineAddr, newAddr, err, vg.PersistenceHosts)
 	log.LogWarn(msg)
 }
 
 func (c *Cluster) metaNodeOffLine(metaNode *MetaNode) {
-
+	msg := fmt.Sprintf("action[metaNodeOffLine], Node[%v] OffLine", metaNode.Addr)
+	log.LogWarn(msg)
+	for _, ns := range c.namespaces {
+		for _, mp := range ns.MetaPartitions {
+			c.metaPartitionOffline(ns.Name, metaNode.Addr, mp.PartitionID)
+		}
+	}
+	c.metaNodes.Delete(metaNode.Addr)
 }
 
 func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {

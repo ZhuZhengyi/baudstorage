@@ -114,6 +114,57 @@ func (c *Cluster) loadVolAndCheckResponse(v *VolGroup, isRecover bool) {
 	}()
 }
 
+func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint64) (err error) {
+	var (
+		ns       *NameSpace
+		mp       *MetaPartition
+		t        *proto.AdminTask
+		tasks    []*proto.AdminTask
+		racks    []string
+		hosts    []string
+		newHosts []string
+		peers    []proto.Peer
+	)
+	if ns, err = c.getNamespace(nsName); err != nil {
+		goto errDeal
+	}
+	if mp, err = ns.getMetaPartitionById(partitionID); err != nil {
+		goto errDeal
+	}
+
+	if !contains(mp.PersistenceHosts, nodeAddr) {
+		return
+	}
+
+	if err = mp.canOffline(nodeAddr); err != nil {
+		goto errDeal
+	}
+
+	racks = mp.getRacks(nodeAddr)
+	hosts = make([]string, 0)
+	hosts = append(hosts, nodeAddr)
+	if newHosts, peers, err = c.getAvailMetaNodeHosts(racks[0], hosts, 1); err != nil {
+		goto errDeal
+	}
+
+	for _, mr := range mp.Replicas {
+		if mr.Addr != nodeAddr {
+			peers = append(peers, proto.Peer{ID: mr.nodeId, Addr: mr.Addr})
+		}
+	}
+	mp.peers = peers
+	tasks = mp.generateCreateMetaPartitionTasks(newHosts)
+	if t, err = mp.generateOfflineTask(); err != nil {
+		goto errDeal
+	}
+	tasks = append(tasks, t)
+	c.putMetaNodeTasks(tasks)
+	return
+errDeal:
+	log.LogError(fmt.Sprintf("action[metaPartitionOffline],nsName: %v,partitionID: %v,err: %v", nsName, partitionID, err.Error()))
+	return
+}
+
 func (c *Cluster) loadMetaPartitionAndCheckResponse(mp *MetaPartition, isRecover bool) {
 	go func() {
 		c.processLoadMetaPartition(mp, isRecover)
@@ -197,6 +248,9 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	case OpLoadMetaPartition:
 		response := task.Response.(*proto.LoadMetaPartitionMetricResponse)
 		c.dealLoadMetaPartition(task.OperatorAddr, response)
+	case OpOfflineMetaPartition:
+		response := task.Response.(*proto.MetaPartitionOfflineResponse)
+		c.dealOfflineMetaPartition(task.OperatorAddr, response)
 	default:
 		log.LogError(fmt.Sprintf("unknown operate code %v", task.OpCode))
 	}
@@ -206,6 +260,27 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 errDeal:
 	log.LogError(fmt.Sprintf("action[dealMetaNodeTaskResponse],nodeAddr %v,taskId %v,err %v",
 		nodeAddr, task.ID, err.Error()))
+	return
+}
+
+func (c *Cluster) dealOfflineMetaPartition(nodeAddr string, resp *proto.MetaPartitionOfflineResponse) {
+	if resp.Status == proto.CmdFailed {
+		log.LogError(fmt.Sprintf("action[dealOfflineMetaPartition],nodeAddr %v offline meta partition failed,err %v", nodeAddr, resp.Result))
+		return
+	}
+	var err error
+	mp, err := c.getMetaPartitionByID(resp.PartitionID)
+	if err != nil {
+		goto errDeal
+	}
+	if err = mp.removePersistenceHosts(nodeAddr); err != nil {
+		goto errDeal
+	}
+	mp.RemoveReplicaByAddr(nodeAddr)
+	mp.checkAndRemoveMissMetaReplica(nodeAddr)
+	return
+errDeal:
+	log.LogError(fmt.Sprintf("dealOfflineMetaPartition err: %v", err.Error()))
 	return
 }
 
@@ -278,9 +353,10 @@ func (c *Cluster) dealCreateMetaPartition(nodeAddr string, resp *proto.CreateMet
 		goto errDeal
 	}
 
-	mr = NewMetaReplica(mp.Start, mp.End, metaNode.id, metaNode.Addr)
+	mr = NewMetaReplica(mp.Start, mp.End, metaNode)
 	mr.status = MetaPartitionReadWrite
 	mp.AddReplica(mr)
+	mp.AddHostsByReplica(mr)
 	mp.Lock()
 	mp.checkAndRemoveMissMetaReplica(mr.Addr)
 	mp.Unlock()

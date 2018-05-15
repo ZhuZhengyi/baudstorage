@@ -490,7 +490,7 @@ func (vg *VolGroup) removeVolHosts(removeAddr string) (err error) {
 		vg.PersistenceHosts = orgVolHosts
 	}
 
-	msg := fmt.Sprintf("RemoveVolHostsInfo  vol:%v  Delete host:%v  on VolHostsRocksDB:%v ",
+	msg := fmt.Sprintf("RemoveVolHostsInfo  vol:%v  Delete host:%v  on PersistenceHosts:%v ",
 		vg.VolID, removeAddr, vg.PersistenceHosts)
 	log.LogDebug(msg)
 
@@ -527,7 +527,7 @@ func (vg *VolGroup) addVolHosts(addAddr string) (err error) {
 		vg.replicaNum = uint8(orgGoal)
 		return
 	}
-	msg := fmt.Sprintf(" AddVolHostsInfo vol:%v  Add host:%v  on VolHostsRocksDB:%v ",
+	msg := fmt.Sprintf(" AddVolHostsInfo vol:%v  Add host:%v  PersistenceHosts:%v ",
 		vg.VolID, addAddr, vg.PersistenceHosts)
 	log.LogDebug(msg)
 	return

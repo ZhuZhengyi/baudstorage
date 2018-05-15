@@ -87,3 +87,18 @@ func contains(arr []string, element string) (ok bool) {
 	}
 	return
 }
+
+func remove(arr []string, element string) (newArr []string, ok bool) {
+	newArr = make([]string, 0)
+	for index, addr := range arr {
+		if addr == element {
+			after := arr[index+1:]
+			newArr = append(newArr, arr[:index]...)
+			newArr = append(newArr, after...)
+			ok = true
+			break
+		}
+	}
+
+	return
+}
