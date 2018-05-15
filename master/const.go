@@ -24,6 +24,7 @@ const (
 	DeleteFileInCoreInfo        = "DeleteFileInCoreInfo "
 	GetVolLocationFileCountInfo = "GetVolLocationFileCountInfo "
 	DataNodeOfflineInfo         = "dataNodeOfflineInfo"
+	MetaNodeOfflineInfo         = "metaNodeOfflineInfo"
 )
 
 const (
