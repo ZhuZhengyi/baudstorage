@@ -81,6 +81,7 @@ func NewMetaWrapper(namespace, masterHosts string) (*MetaWrapper, error) {
 	if err := mw.Update(); err != nil {
 		return nil, err
 	}
+	mw.currStart = proto.ROOT_INO
 	go mw.refresh()
 	return mw, nil
 }
