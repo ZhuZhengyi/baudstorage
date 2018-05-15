@@ -99,34 +99,37 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 		partitions[uint64(i)] = p.(*partition)
 
-		fmt.Printf("new partition %d", i)
+		fmt.Printf("new partition %d\n", i)
 
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		var (
-			data []byte
-			err  error
-		)
-
-		kv := &testKV{Opt: 1}
-		atomic.AddUint64(&maxVolId, 1)
-		value := strconv.FormatUint(maxVolId, 10)
-		kv.K = []byte("max_value_key")
-		kv.V = []byte(value)
-
-		if data, err = json.Marshal(kv); err != nil {
-			err = fmt.Errorf("action[KvsmAllocateVolID],marshal kv:%v,err:%v", kv, err.Error())
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-
-		_, err = partitions[1].Submit(data)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
+
+	var (
+		data []byte
+	)
+
+	kv := &testKV{Opt: 1}
+	atomic.AddUint64(&maxVolId, 1)
+	value := strconv.FormatUint(maxVolId, 10)
+	kv.K = []byte("max_value_key")
+	kv.V = []byte(value)
+
+	if data, err = json.Marshal(kv); err != nil {
+		err = fmt.Errorf("action[KvsmAllocateVolID],marshal kv:%v,err:%v", kv, err.Error())
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	fmt.Printf("==========encode kv end ===========\n")
+
+	_, err = partitions[uint64(1)].Submit(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Printf("==========submit ok===========\n")
 
 }
