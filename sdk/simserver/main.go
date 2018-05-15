@@ -255,8 +255,6 @@ func (m *MetaServer) handleCreateDentry(conn net.Conn, p *proto.Packet) error {
 	}
 
 	dentry := NewDentry(req.Name, req.Inode, req.Mode)
-	p.Data = nil
-	p.Size = 0
 
 	parent := m.getInode(req.ParentID)
 	if parent == nil {
@@ -271,6 +269,8 @@ func (m *MetaServer) handleCreateDentry(conn net.Conn, p *proto.Packet) error {
 
 	p.Resultcode = proto.OpOk
 out:
+	p.Data = nil
+	p.Size = 0
 	err = p.WriteToConn(conn)
 	return err
 }
@@ -375,11 +375,61 @@ out:
 }
 
 func (m *MetaServer) handleReadDir(conn net.Conn, p *proto.Packet) error {
-	return nil
+	var (
+		data []byte
+		resp *proto.ReadDirResponse
+	)
+
+	req := &proto.ReadDirRequest{}
+	err := json.Unmarshal(p.Data, req)
+	if err != nil {
+		return err
+	}
+
+	parent := m.getInode(req.ParentID)
+	if parent == nil {
+		p.Resultcode = proto.OpNotExistErr
+		goto out
+	}
+
+	resp.Children = parent.listDentry()
+	data, _ = json.Marshal(resp)
+	p.Resultcode = proto.OpOk
+
+out:
+	p.Data = data
+	p.Size = uint32(len(data))
+	err = p.WriteToConn(conn)
+	return err
 }
 
 func (m *MetaServer) handleInodeGet(conn net.Conn, p *proto.Packet) error {
-	return nil
+	var (
+		data []byte
+		resp *proto.InodeGetResponse
+	)
+
+	req := &proto.InodeGetRequest{}
+	err := json.Unmarshal(p.Data, req)
+	if err != nil {
+		return err
+	}
+
+	inode := m.getInode(req.Inode)
+	if inode == nil {
+		p.Resultcode = proto.OpNotExistErr
+		goto out
+	}
+
+	resp.Info = NewInodeInfo(inode.ino, inode.mode)
+	data, _ = json.Marshal(resp)
+	p.Resultcode = proto.OpOk
+
+out:
+	p.Data = data
+	p.Size = uint32(len(data))
+	err = p.WriteToConn(conn)
+	return err
 }
 
 func NewInodeInfo(ino uint64, mode uint32) *proto.InodeInfo {
@@ -391,6 +441,14 @@ func NewInodeInfo(ino uint64, mode uint32) *proto.InodeInfo {
 		AccessTime: time.Now(),
 		CreateTime: time.Now(),
 		Extents:    make([]string, 0),
+	}
+}
+
+func NewDentryInfo(name string, ino uint64, mode uint32) *proto.Dentry {
+	return &proto.Dentry{
+		Name:  name,
+		Inode: ino,
+		Type:  mode,
 	}
 }
 
@@ -460,4 +518,15 @@ func (i *Inode) getDentry(name string) *Dentry {
 		return dentry
 	}
 	return nil
+}
+
+func (i *Inode) listDentry() []proto.Dentry {
+	dentries := make([]proto.Dentry, 0)
+	i.RLock()
+	i.RUnlock()
+	for _, d := range i.dents {
+		dentry := NewDentryInfo(d.name, d.ino, d.mode)
+		dentries = append(dentries, *dentry)
+	}
+	return dentries
 }
