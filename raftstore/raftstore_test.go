@@ -90,6 +90,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 		partitionCfg := &PartitionConfig{
 			ID:      uint64(i),
 			Applied: 0,
+			Leader:  1,
 			SM:      &testFsm,
 			Peers:   peers,
 		}
@@ -127,8 +128,9 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 	var raftServer *raft.RaftServer
 	raftServer = partitions[1].raft
-	leader := raftServer.LeaderTerm(1)
-	fmt.Printf("==========leader is =============\n", leader)
+	leader, _ := raftServer.LeaderTerm(1)
+
+	fmt.Printf("==========leader is %d=============\n", leader)
 
 	_, err = partitions[uint64(1)].Submit(data)
 	if err != nil {

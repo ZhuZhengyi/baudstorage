@@ -77,6 +77,7 @@ func (s *raftStore) CreatePartition(cfg *PartitionConfig) (p Partition, err erro
 	rc := &raft.RaftConfig{
 		ID:           cfg.ID,
 		Peers:        cfg.Peers,
+		Leader:       cfg.Leader,
 		Storage:      ws,
 		StateMachine: cfg.SM,
 		Applied:      cfg.Applied,

@@ -20,6 +20,7 @@ type Config struct {
 type PartitionConfig struct {
 	ID      uint64
 	Applied uint64
+	Leader  uint64
 	Peers   []proto.Peer
 	SM      PartitionFsm
 }
