@@ -10,7 +10,7 @@ import (
 )
 
 type ExtentClient struct {
-	wrapper           *sdk.VolGroupWraper
+	wrapper           *sdk.VolGroupWrapper
 	writers           map[uint64]*StreamWriter
 	writerLock        sync.RWMutex
 	readers           map[uint64]*StreamReader
