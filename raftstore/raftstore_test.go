@@ -142,12 +142,13 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 			fmt.Printf("==partition %d==leader %d term %d==\n", kp, leader, term)
 
 			if partitions[kp].IsLeader(){
+				fmt.Printf("==partition can submit==\n")
 				_, err = partitions[kp].Submit(data)
 				if err != nil {
 					t.Fatal(err)
 				}
 
-				t.Log("==========submit ok===========")
+				t.SkipNow()
 			}
 		}
 	}
