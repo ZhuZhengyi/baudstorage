@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/tiglabs/baudstorage/raftstore"
 	"strconv"
+	"sync"
 	"sync/atomic"
 )
 
@@ -14,11 +15,14 @@ const (
 )
 
 type IDAllocator struct {
-	volID       uint64
-	partitionID uint64
-	metaNodeID  uint64
-	store       *raftstore.RocksDBStore
-	partition   raftstore.Partition
+	volID           uint64
+	partitionID     uint64
+	metaNodeID      uint64
+	volIDLock       sync.Mutex
+	partitionIDLock sync.Mutex
+	metaNodeIDLock  sync.Mutex
+	store           *raftstore.RocksDBStore
+	partition       raftstore.Partition
 }
 
 func newIDAllocator(store *raftstore.RocksDBStore, partition raftstore.Partition) (alloc *IDAllocator) {
@@ -91,8 +95,10 @@ func (alloc *IDAllocator) restoreMaxMetaNodeID() {
 }
 
 func (alloc *IDAllocator) allocatorVolID() (volID uint64, err error) {
+	alloc.volIDLock.Lock()
+	defer alloc.volIDLock.Unlock()
 	metadata := new(Metadata)
-	atomic.AddUint64(&alloc.volID, 1)
+	volID = atomic.AddUint64(&alloc.volID, 1)
 	cmd, err := metadata.Marshal()
 	if err != nil {
 		goto errDeal
@@ -100,7 +106,6 @@ func (alloc *IDAllocator) allocatorVolID() (volID uint64, err error) {
 	if _, err := alloc.partition.Submit(cmd); err != nil {
 		goto errDeal
 	}
-	volID = atomic.LoadUint64(&alloc.volID)
 	return
 errDeal:
 	atomic.AddUint64(&alloc.volID, -1)
@@ -108,8 +113,10 @@ errDeal:
 }
 
 func (alloc *IDAllocator) allocatorPartitionID() (partitionID uint64, err error) {
+	alloc.partitionIDLock.Lock()
+	defer alloc.partitionIDLock.Unlock()
 	metadata := new(Metadata)
-	atomic.AddUint64(&alloc.partitionID, 1)
+	partitionID = atomic.AddUint64(&alloc.partitionID, 1)
 	cmd, err := metadata.Marshal()
 	if err != nil {
 		goto errDeal
@@ -117,7 +124,6 @@ func (alloc *IDAllocator) allocatorPartitionID() (partitionID uint64, err error)
 	if _, err := alloc.partition.Submit(cmd); err != nil {
 		goto errDeal
 	}
-	partitionID = atomic.LoadUint64(&alloc.partitionID)
 	return
 errDeal:
 	atomic.AddUint64(&alloc.partitionID, -1)
@@ -125,8 +131,10 @@ errDeal:
 }
 
 func (alloc *IDAllocator) allocatorMetaNodeID() (metaNodeID uint64, err error) {
+	alloc.metaNodeIDLock.Lock()
+	defer alloc.metaNodeIDLock.Unlock()
 	metadata := new(Metadata)
-	atomic.AddUint64(&alloc.metaNodeID, 1)
+	metaNodeID = atomic.AddUint64(&alloc.metaNodeID, 1)
 	cmd, err := metadata.Marshal()
 	if err != nil {
 		goto errDeal
@@ -134,7 +142,6 @@ func (alloc *IDAllocator) allocatorMetaNodeID() (metaNodeID uint64, err error) {
 	if _, err := alloc.partition.Submit(cmd); err != nil {
 		goto errDeal
 	}
-	metaNodeID = atomic.LoadUint64(&alloc.metaNodeID)
 	return
 errDeal:
 	atomic.AddUint64(&alloc.metaNodeID, -1)

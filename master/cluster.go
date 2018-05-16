@@ -19,7 +19,7 @@ type Cluster struct {
 	cfg           *ClusterConfig
 	fsm           *MetadataFsm
 	idAlloc       *IDAllocator
-	partition     *raftstore.Partition
+	partition     raftstore.Partition
 }
 
 func NewCluster(name string) (c *Cluster) {
@@ -124,7 +124,9 @@ func (c *Cluster) addMetaNode(nodeAddr string) (id uint64, err error) {
 		goto errDeal
 	}
 	metaNode.id = id
-	//todo sync node by raft
+	if err = c.syncAddMetaNode(metaNode); err != nil {
+		goto errDeal
+	}
 	c.metaNodes.Store(nodeAddr, metaNode)
 	return
 errDeal:
@@ -141,8 +143,7 @@ func (c *Cluster) addDataNode(nodeAddr string) (err error) {
 	}
 
 	dataNode = NewDataNode(nodeAddr)
-	//todo sync node by raft
-
+	c.syncAddDataNode(dataNode)
 	c.dataNodes.Store(nodeAddr, dataNode)
 	return
 errDeal:
@@ -212,7 +213,9 @@ func (c *Cluster) createVolGroup(nsName string) (vg *VolGroup, err error) {
 		goto errDeal
 	}
 	vg.PersistenceHosts = targetHosts
-	//todo sync and persistence hosts to other node in the cluster
+	if err = c.syncAddVolGroup(nsName, vg); err != nil {
+		goto errDeal
+	}
 	tasks = vg.generateCreateVolGroupTasks()
 	c.putDataNodeTasks(tasks)
 	ns.volGroups.putVol(vg)
@@ -391,6 +394,7 @@ func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err err
 	mp.PersistenceHosts = hosts
 	mp.peers = peers
 	//todo sync namespace and metaGroup
+	c.syncNamespace(ns)
 	ns.AddMetaPartition(mp)
 	c.putMetaNodeTasks(mp.generateCreateMetaPartitionTasks(nil))
 	return
