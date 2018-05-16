@@ -1,6 +1,26 @@
 package master
 
-import "github.com/tiglabs/baudstorage/util"
+import (
+	"fmt"
+	"github.com/tiglabs/baudstorage/util"
+	"github.com/tiglabs/raft/proto"
+	"strconv"
+	"strings"
+)
+
+const (
+	ColonSplit                    = ":"
+	CommaSplit                    = ","
+	CfgPeers                      = "peers"
+	VolMissSec                    = "volMissSec"
+	VolTimeOutSec                 = "volTimeOutSec"
+	EveryLoadVolCount             = "everyLoadVolCount"
+	FileDelayCheckCrc             = "fileDelayCheckCrc"
+	ReplicaNum                    = "replicaNum"
+	MetaPartitionSize             = "metaPartitionSize"
+	VolSize                       = "volSize"
+	CheckHeartBeatIntervalSeconds = "heartBeatIntervalSeconds"
+)
 
 const (
 	DefaultReplicaNum                    = 3
@@ -24,6 +44,14 @@ const (
 	DefaultMetaPartitionMemSize          = 16 * util.GB
 )
 
+//Address ...
+type Address struct {
+	HttpAddr string
+}
+
+//AddrDatabase ...
+var AddrDatabase = make(map[uint64]*Address)
+
 type ClusterConfig struct {
 	FileDelayCheckCrcSec          int64
 	FileDelayCheckLackSec         int64
@@ -36,7 +64,10 @@ type ClusterConfig struct {
 	CheckVolIntervalSeconds       int
 	everyReleaseVolCount          int
 	everyLoadVolCount             int
-	replicaNum                    uint8
+	replicaNum                    int
+
+	peers     []proto.Peer
+	peerAddrs []string
 }
 
 func NewClusterConfig() (cfg *ClusterConfig) {
@@ -54,4 +85,55 @@ func NewClusterConfig() (cfg *ClusterConfig) {
 	cfg.everyLoadVolCount = DefaultEveryLoadVolCount
 	cfg.LoadVolFrequencyTime = DefaultLoadVolFrequencyTime
 	return
+}
+
+//AddrInit ...
+func AddrInit(peerAddrs []string) (err error) {
+	fmt.Println("PeerAddrs:")
+	for _, peerAddr := range peerAddrs {
+		id, ip, port, err := parsePeerAddr(peerAddr)
+		if err != nil {
+			return err
+		}
+		AddrDatabase[id] = &Address{
+			HttpAddr: fmt.Sprintf("%s:%d", ip, port),
+		}
+		fmt.Println(AddrDatabase[id])
+	}
+	return nil
+}
+
+func parsePeerAddr(peerAddr string) (id uint64, ip string, port uint64, err error) {
+	peerStr := strings.Split(peerAddr, ColonSplit)
+	id, err = strconv.ParseUint(peerStr[0], 10, 64)
+	if err != nil {
+		return
+	}
+	port, err = strconv.ParseUint(peerStr[2], 10, 64)
+	if err != nil {
+		return
+	}
+	ip = peerStr[1]
+	return
+}
+
+func (cfg *ClusterConfig) parsePeers(peerStr string) error {
+	peerArr := strings.Split(peerStr, CommaSplit)
+	cfg.peerAddrs = peerArr
+	for _, peerAddr := range peerArr {
+		id, _, _, err := parsePeerAddr(peerAddr)
+		if err != nil {
+			return err
+		}
+		cfg.peers = append(cfg.peers, proto.Peer{ID: id})
+	}
+	return nil
+}
+
+func (cfg *ClusterConfig) PeerAddrs() []string {
+	return cfg.peerAddrs
+}
+
+func (cfg *ClusterConfig) Peers() []proto.Peer {
+	return cfg.peers
 }

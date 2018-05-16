@@ -3,6 +3,7 @@ package master
 import (
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/log"
 	"sync"
 	"time"
@@ -16,12 +17,16 @@ type Cluster struct {
 	createVolLock sync.Mutex
 	createNsLock  sync.Mutex
 	cfg           *ClusterConfig
+	fsm           *MetadataFsm
+	idAlloc       *IDAllocator
+	partition     *raftstore.Partition
 }
 
 func NewCluster(name string) (c *Cluster) {
 	c = new(Cluster)
 	c.Name = name
 	c.cfg = NewClusterConfig()
+	c.idAlloc = newIDAllocator(c.fsm.store, c.partition)
 	c.startCheckVolGroups()
 	c.startCheckBackendLoadVolGroups()
 	c.startCheckReleaseVolGroups()
@@ -115,7 +120,7 @@ func (c *Cluster) addMetaNode(nodeAddr string) (id uint64, err error) {
 	}
 	metaNode = NewMetaNode(nodeAddr)
 
-	if id, err = c.getMaxID(); err != nil {
+	if id, err = c.idAlloc.allocatorMetaNodeID(); err != nil {
 		goto errDeal
 	}
 	metaNode.id = id
@@ -198,7 +203,7 @@ func (c *Cluster) createVolGroup(nsName string) (vg *VolGroup, err error) {
 		goto errDeal
 	}
 
-	if volID, err = c.getMaxID(); err != nil {
+	if volID, err = c.idAlloc.allocatorVolID(); err != nil {
 		goto errDeal
 	}
 	//volID++
@@ -244,18 +249,6 @@ func (c *Cluster) ChooseTargetDataHosts(replicaNum int) (hosts []string, err err
 	if len(hosts) != replicaNum {
 		return nil, NoAnyDataNodeForCreateVol
 	}
-	return
-}
-
-func (c *Cluster) getMaxID() (id uint64, err error) {
-	//todo getMaxID from raft
-	if err != nil {
-		goto errDeal
-	}
-	return
-errDeal:
-	err = fmt.Errorf("action[getMaxID], Err:%v ", err.Error())
-	log.LogError(err.Error())
 	return
 }
 
@@ -334,7 +327,7 @@ func (c *Cluster) volOffline(offlineAddr string, vg *VolGroup, errMsg string) {
 	c.putDataNodeTasks(tasks)
 	goto errDeal
 errDeal:
-	msg = fmt.Sprintf(errMsg + " vol:%v  on Node:%v  "+
+	msg = fmt.Sprintf(errMsg+" vol:%v  on Node:%v  "+
 		"DiskError  TimeOut Report Then Fix It on newHost:%v   Err:%v , PersistenceHosts:%v  ",
 		vg.VolID, offlineAddr, newAddr, err, vg.PersistenceHosts)
 	log.LogWarn(msg)
@@ -377,21 +370,21 @@ errDeal:
 
 func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err error) {
 	var (
-		ns      *NameSpace
-		mp      *MetaPartition
-		hosts   []string
-		groupId uint64
-		peers   []proto.Peer
+		ns          *NameSpace
+		mp          *MetaPartition
+		hosts       []string
+		partitionID uint64
+		peers       []proto.Peer
 	)
 	ns, ok := c.namespaces[nsName]
 	if !ok {
 		err = elementNotFound(nsName)
 		return
 	}
-	if groupId, err = c.getMaxID(); err != nil {
+	if partitionID, err = c.idAlloc.allocatorPartitionID(); err != nil {
 		return
 	}
-	mp = NewMetaPartition(groupId, start, end)
+	mp = NewMetaPartition(partitionID, start, end)
 	if hosts, peers, err = c.ChooseTargetMetaHosts(int(ns.mpReplicaNum)); err != nil {
 		return
 	}

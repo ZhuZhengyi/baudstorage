@@ -1,6 +1,27 @@
 package master
 
-import "github.com/tiglabs/baudstorage/proto"
+import (
+	"encoding/json"
+	"github.com/tiglabs/baudstorage/proto"
+)
+
+type Metadata struct {
+	Op uint32 `json:"op"`
+	K  []byte `json:"k"`
+	V  []byte `json:"v"`
+}
+
+func (m *Metadata) Marshal() ([]byte, error) {
+	return json.Marshal(m)
+}
+
+func (m *Metadata) Unmarshal(data []byte) (err error) {
+	return json.Unmarshal(data, m)
+}
+
+func (c *Cluster) addVolHosts() {
+
+}
 
 func (mf *MetadataFsm) CreateNameSpace(request proto.CreateNameSpaceRequest) (response proto.CreateNameSpaceResponse) {
 	//	var (

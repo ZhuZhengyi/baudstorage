@@ -148,7 +148,7 @@ type UpdateMetaPartitionResponse struct {
 
 type MetaPartitionOfflineRequest struct {
 	PartitionID uint64
-	removePeer  Peer
+	RemovePeer  Peer
 	NewPeers    []Peer
 }
 
