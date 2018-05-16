@@ -39,6 +39,7 @@ var (
 	ErrorCompaction     = errors.New("compaction error")
 	ErrorCommit         = errors.New("commit error")
 	ErrObjectSmaller    = errors.New("object smaller error")
+	ErrPkgCrcUnmatch    = errors.New("pkg crc is not equare pkgdata")
 )
 
 /*

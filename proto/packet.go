@@ -66,6 +66,12 @@ const (
 	OpLoadMetaPartition    uint8 = 0x24
 	OpOfflineMetaPartition uint8 = 0x25
 
+
+	OpCreateVol			uint8=0x26
+	OpDeleteVol			uint8=0x27
+	OpLoadVol			uint8=0x28
+
+
 	// Commons
 	OpIntraGroupNetErr uint8 = 0xF3
 	OpArgMismatchErr   uint8 = 0xF4
