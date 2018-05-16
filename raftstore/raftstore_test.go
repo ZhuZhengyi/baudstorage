@@ -25,16 +25,6 @@ type testKV struct {
 var raftAddresses = make(map[uint64]*raftAddr)
 var maxVolId uint64 = 1
 
-// 三个本地节点
-func init() {
-	for i := 1; i <= 3; i++ {
-		raftAddresses[uint64(i)] = &raftAddr{
-			heartbeat: fmt.Sprintf(":99%d1", i),
-			replicate: fmt.Sprintf(":99%d2", i),
-		}
-	}
-}
-
 type testSM struct {
 	dir string
 }
@@ -84,6 +74,8 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 	for n := 1; n <= 3; n++ {
 		cfg.NodeID = uint64(n)
 		cfg.WalPath = fmt.Sprintf("wal%d", n)
+		cfg.HeartbeatPort = fmt.Sprintf(":99%d1", n)
+		cfg.ReplicatePort = fmt.Sprintf(":99%d2", n)
 
 		raftAddresses[uint64(n)] = &raftAddr{
 			heartbeat: fmt.Sprintf(":99%d1", n),

@@ -1,7 +1,6 @@
 package raftstore
 
 import (
-	"fmt"
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/storage/wal"
 	"os"
@@ -45,8 +44,8 @@ func NewRaftStore(cfg *Config) (mr RaftStore, err error) {
 	rc := raft.DefaultConfig()
 	rc.NodeID = cfg.NodeID
 	rc.LeaseCheck = true
-	rc.HeartbeatAddr = fmt.Sprintf(":%d", HeartbeatPort)
-	rc.ReplicateAddr = fmt.Sprintf(":%d", ReplicatePort)
+	rc.HeartbeatAddr = cfg.HeartbeatPort
+	rc.ReplicateAddr = cfg.ReplicatePort
 	rc.Resolver = resolver
 	rs, err := raft.NewRaftServer(rc)
 	if err != nil {
