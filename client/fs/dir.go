@@ -40,8 +40,7 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 }
 
 func (d *Dir) Create(ctx context.Context, req *fuse.CreateRequest, resp *fuse.CreateResponse) (fs.Node, fs.Handle, error) {
-	status, info, err := d.super.meta.Create_ll(d.inode.ino, req.Name, ModeRegular)
-	err = ParseResult(status, err)
+	info, err := d.super.mw.Create_ll(d.inode.ino, req.Name, ModeRegular)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -57,8 +56,7 @@ func (d *Dir) Forget() {
 }
 
 func (d *Dir) Mkdir(ctx context.Context, req *fuse.MkdirRequest) (fs.Node, error) {
-	status, info, err := d.super.meta.Create_ll(d.inode.ino, req.Name, ModeDir)
-	err = ParseResult(status, err)
+	info, err := d.super.mw.Create_ll(d.inode.ino, req.Name, ModeDir)
 	if err != nil {
 		return nil, err
 	}
@@ -69,8 +67,7 @@ func (d *Dir) Mkdir(ctx context.Context, req *fuse.MkdirRequest) (fs.Node, error
 }
 
 func (d *Dir) Remove(ctx context.Context, req *fuse.RemoveRequest) error {
-	status, err := d.super.meta.Delete_ll(d.inode.ino, req.Name)
-	err = ParseResult(status, err)
+	err := d.super.mw.Delete_ll(d.inode.ino, req.Name)
 	if err != nil {
 		return err
 	}
@@ -82,8 +79,7 @@ func (d *Dir) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
 }
 
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	status, ino, mode, err := d.super.meta.Lookup_ll(d.inode.ino, req.Name)
-	err = ParseResult(status, err)
+	ino, mode, err := d.super.mw.Lookup_ll(d.inode.ino, req.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +107,7 @@ func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 
 func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	dirents := make([]fuse.Dirent, 0)
-	children, err := d.super.meta.ReadDir_ll(d.inode.ino)
+	children, err := d.super.mw.ReadDir_ll(d.inode.ino)
 	if err != nil {
 		return dirents, err
 	}

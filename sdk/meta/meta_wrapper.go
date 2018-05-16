@@ -105,6 +105,7 @@ func (mw *MetaWrapper) PullNamespaceView() (*NamespaceView, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		//TODO: master would return the leader addr if it is a follower
+		log.Printf("StatusCode(%v)", resp.StatusCode)
 		err = errors.New("Get namespace view failed!")
 		return nil, err
 	}
