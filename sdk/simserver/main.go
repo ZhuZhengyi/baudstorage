@@ -238,9 +238,9 @@ func (m *MetaServer) handleCreateInode(conn net.Conn, p *proto.Packet) error {
 	var (
 		data  []byte
 		inode *Inode
-		resp  *proto.CreateInodeResponse
 	)
 
+	resp := &proto.CreateInodeResponse{}
 	req := &proto.CreateInodeRequest{}
 	err := json.Unmarshal(p.Data, req)
 	if err != nil {
@@ -254,9 +254,7 @@ func (m *MetaServer) handleCreateInode(conn net.Conn, p *proto.Packet) error {
 	}
 
 	inode = NewInode(ino, req.Mode)
-	resp = &proto.CreateInodeResponse{
-		Info: NewInodeInfo(ino, req.Mode),
-	}
+	resp.Info = NewInodeInfo(ino, req.Mode)
 
 	data, err = json.Marshal(resp)
 	if err != nil {
@@ -286,11 +284,13 @@ func (m *MetaServer) handleCreateDentry(conn net.Conn, p *proto.Packet) error {
 	parent := m.getInode(req.ParentID)
 	if parent == nil {
 		p.ResultCode = proto.OpNotExistErr
+		log.Printf("Parent(%v) Not Exist", req.ParentID)
 		goto out
 	}
 
 	if found := parent.addDentry(dentry); found != nil {
 		p.ResultCode = proto.OpExistErr
+		log.Printf("Parent(%v) Exist", req.ParentID)
 		goto out
 	}
 
@@ -325,17 +325,17 @@ func (m *MetaServer) handleDeleteInode(conn net.Conn, p *proto.Packet) error {
 }
 
 func (m *MetaServer) handleDeleteDentry(conn net.Conn, p *proto.Packet) error {
+	var (
+		data  []byte
+		child *Dentry
+	)
+
+	resp := &proto.DeleteDentryResponse{}
 	req := &proto.DeleteDentryRequest{}
 	err := json.Unmarshal(p.Data, req)
 	if err != nil {
 		return err
 	}
-
-	var (
-		data  []byte
-		child *Dentry
-		resp  *proto.DeleteDentryResponse
-	)
 
 	parent := m.getInode(req.ParentID)
 	if parent == nil {
@@ -349,9 +349,7 @@ func (m *MetaServer) handleDeleteDentry(conn net.Conn, p *proto.Packet) error {
 		goto out
 	}
 
-	resp = &proto.DeleteDentryResponse{
-		Inode: child.ino,
-	}
+	resp.Inode = child.ino
 	data, err = json.Marshal(resp)
 
 out:
@@ -362,17 +360,17 @@ out:
 }
 
 func (m *MetaServer) handleLookup(conn net.Conn, p *proto.Packet) error {
+	var (
+		data   []byte
+		dentry *Dentry
+	)
+
+	resp := &proto.LookupResponse{}
 	req := &proto.LookupRequest{}
 	err := json.Unmarshal(p.Data, req)
 	if err != nil {
 		return err
 	}
-
-	var (
-		data   []byte
-		dentry *Dentry
-		resp   *proto.LookupResponse
-	)
 
 	parent := m.getInode(req.ParentID)
 	if parent == nil {
@@ -386,11 +384,8 @@ func (m *MetaServer) handleLookup(conn net.Conn, p *proto.Packet) error {
 		goto out
 	}
 
-	resp = &proto.LookupResponse{
-		Inode: dentry.ino,
-		Mode:  dentry.mode,
-	}
-
+	resp.Inode = dentry.ino
+	resp.Mode = dentry.mode
 	data, _ = json.Marshal(resp)
 	p.ResultCode = proto.OpOk
 
@@ -404,9 +399,9 @@ out:
 func (m *MetaServer) handleReadDir(conn net.Conn, p *proto.Packet) error {
 	var (
 		data []byte
-		resp *proto.ReadDirResponse
 	)
 
+	resp := &proto.ReadDirResponse{}
 	req := &proto.ReadDirRequest{}
 	err := json.Unmarshal(p.Data, req)
 	if err != nil {
@@ -431,14 +426,13 @@ out:
 }
 
 func (m *MetaServer) handleInodeGet(conn net.Conn, p *proto.Packet) error {
-	var (
-		data []byte
-		resp *proto.InodeGetResponse
-	)
+	var data []byte
 
+	resp := &proto.InodeGetResponse{}
 	req := &proto.InodeGetRequest{}
 	err := json.Unmarshal(p.Data, req)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
@@ -449,8 +443,12 @@ func (m *MetaServer) handleInodeGet(conn net.Conn, p *proto.Packet) error {
 	}
 
 	resp.Info = NewInodeInfo(inode.ino, inode.mode)
-	data, _ = json.Marshal(resp)
-	p.ResultCode = proto.OpOk
+	if data, err = json.Marshal(resp); err != nil {
+		log.Println(err)
+		p.ResultCode = proto.OpErr
+	} else {
+		p.ResultCode = proto.OpOk
+	}
 
 out:
 	p.Data = data
@@ -522,6 +520,7 @@ func (m *MetaServer) allocIno() (uint64, bool) {
 func (i *Inode) addDentry(d *Dentry) *Dentry {
 	i.Lock()
 	defer i.Unlock()
+	log.Printf("Adding Dentry %v", *d)
 	dentry, ok := i.dents[d.name]
 	if ok {
 		return dentry

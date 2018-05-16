@@ -15,6 +15,7 @@ import (
 	"syscall"
 
 	"github.com/juju/errors"
+	"time"
 )
 
 var (
@@ -37,9 +38,10 @@ type ExtentStore struct {
 	extents      map[uint64]*Extent
 	fdlist       *list.List
 	baseExtentId uint64
+	storeSize    int
 }
 
-func NewExtentStore(dataDir string, newMode bool) (s *ExtentStore, err error) {
+func NewExtentStore(dataDir string, storeSize int, newMode bool) (s *ExtentStore, err error) {
 	s = new(ExtentStore)
 	s.dataDir = dataDir
 	if err = CheckAndCreateSubdir(dataDir, newMode); err != nil {
@@ -51,6 +53,7 @@ func NewExtentStore(dataDir string, newMode bool) (s *ExtentStore, err error) {
 	if err = s.initBaseFileId(); err != nil {
 		return nil, fmt.Errorf("NewExtentStore [%v] err[%v]", dataDir, err)
 	}
+	s.storeSize = storeSize
 
 	return
 }
@@ -90,7 +93,7 @@ func (s *ExtentStore) createExtent(extentId uint64) (e *Extent, err error) {
 	name := s.dataDir + "/" + strconv.Itoa((int)(extentId))
 
 	e = NewExtentInCore(name, extentId)
-	if e.file, err = os.OpenFile(e.filePath, ExtentOpenOpt, 0666); err != nil {
+	if err = e.file.OpenFile(e.filePath, ExtentOpenOpt, 0666); err != nil {
 		return nil, err
 	}
 	if err = os.Truncate(name, BlockCrcHeaderSize); err != nil {
@@ -144,7 +147,7 @@ func (s *ExtentStore) openExtentFromDisk(e *Extent) (err error) {
 	e.writelock()
 	defer e.writeUnlock()
 
-	if e.file, err = os.OpenFile(e.filePath, os.O_RDWR, 0666); err != nil {
+	if err = e.file.OpenFile(e.filePath, os.O_RDWR, 0666); err != nil {
 		if strings.Contains(err.Error(), syscall.ENOENT.Error()) {
 			err = ErrorChunkNotFound
 		}
@@ -177,7 +180,7 @@ func (s *ExtentStore) Write(extentId uint64, offset, size int64, data []byte, cr
 	}
 	offsetInBlock := offset % BlockSize
 	blockNo := offset / BlockSize
-	if offsetInBlock!=0 {
+	if offsetInBlock != 0 {
 		blockBuffer := make([]byte, BlockSize)
 		e.file.ReadAt(blockBuffer, (blockNo)*BlockSize+BlockCrcHeaderSize)
 		crc = crc32.ChecksumIEEE(blockBuffer)
@@ -186,12 +189,12 @@ func (s *ExtentStore) Write(extentId uint64, offset, size int64, data []byte, cr
 	if _, err = e.file.WriteAt(e.blocksCrc[blockNo*PerBlockCrcSize:(blockNo+1)*PerBlockCrcSize], blockNo*PerBlockCrcSize); err != nil {
 		return
 	}
-	if offsetInBlock+size<=BlockSize{
+	if offsetInBlock+size <= BlockSize {
 		return
 	}
 
-	nextBlockNo:=blockNo+1
-	if  offsetInBlock+size>BlockSize {
+	nextBlockNo := blockNo + 1
+	if offsetInBlock+size > BlockSize {
 		nextBlockBuffer := make([]byte, BlockSize)
 		e.file.ReadAt(nextBlockBuffer, (nextBlockNo)*BlockSize+BlockCrcHeaderSize)
 		crc = crc32.ChecksumIEEE(nextBlockBuffer)
@@ -212,7 +215,7 @@ func (s *ExtentStore) checkOffsetAndSize(offset, size int64) error {
 		return ErrorUnmatchPara
 	}
 
-	if size > BlockSize{
+	if size > BlockSize {
 		return ErrorUnmatchPara
 	}
 
@@ -238,7 +241,7 @@ func (s *ExtentStore) Read(extentId uint64, offset, size int64, nbuf []byte) (cr
 		return
 	}
 	blockNo := offset / BlockSize
-	if offsetInBlock == 0  && size==BlockSize{
+	if offsetInBlock == 0 && size == BlockSize {
 		crc = binary.BigEndian.Uint32(e.blocksCrc[blockNo*4 : (blockNo+1)*4])
 	} else {
 		crc = crc32.ChecksumIEEE(nbuf)
@@ -325,7 +328,7 @@ func (s *ExtentStore) GetBlockCrcBuffer(extentId uint64, headerBuff []byte) (err
 	return
 }
 
-func (s *ExtentStore) GetWatermark(extentId uint64) (size int64, err error) {
+func (s *ExtentStore) GetWatermark(extentId uint64) (extentInfo *FileInfo, err error) {
 	var (
 		e     *Extent
 		finfo os.FileInfo
@@ -340,7 +343,37 @@ func (s *ExtentStore) GetWatermark(extentId uint64) (size int64, err error) {
 	if err != nil {
 		return
 	}
-	size = finfo.Size() - BlockCrcHeaderSize
+	size := finfo.Size() - BlockCrcHeaderSize
+	extentInfo = &FileInfo{FileId: int(extentId), Size: uint64(size)}
+
+	return
+}
+
+func (s *ExtentStore) GetAllWatermark() (extents []*FileInfo, err error) {
+	extents = make([]*FileInfo, 0)
+	var (
+		finfos   []os.FileInfo
+		extentId uint64
+	)
+	finfos, err = ioutil.ReadDir(s.dataDir)
+	if err != nil {
+		return
+	}
+	for _, finfo := range finfos {
+		if time.Now().Unix()-finfo.ModTime().Unix() < 60*5 {
+			continue
+		}
+		extentId, err = strconv.ParseUint(finfo.Name(), 10, 2)
+		if err != nil {
+			continue
+		}
+		var einfo *FileInfo
+		einfo, err = s.GetWatermark(extentId)
+		if err != nil {
+			continue
+		}
+		extents = append(extents, einfo)
+	}
 
 	return
 }
@@ -350,7 +383,7 @@ func (s *ExtentStore) extentExist(extentId uint64) (exist bool) {
 	if _, err := os.Stat(name); err == nil {
 		exist = true
 		warterMark, err := s.GetWatermark(extentId)
-		if err == io.EOF || warterMark < BlockCrcHeaderSize {
+		if err == io.EOF || warterMark.Size < BlockCrcHeaderSize {
 			err = s.fillBlockCrcHeader(name, BlockSize)
 		}
 	}
@@ -385,9 +418,19 @@ func (s *ExtentStore) GetStoreFileCount() (files int, err error) {
 func (s *ExtentStore) GetStoreUsedSize() (size int64) {
 	if finfoArray, err := ioutil.ReadDir(s.dataDir); err == nil {
 		for _, finfo := range finfoArray {
+			if finfo.IsDir() {
+				continue
+			}
 			size += finfo.Size()
 		}
 	}
 
 	return
+}
+
+func (s *ExtentStore) GetStoreStatus() int {
+	if int(s.GetStoreUsedSize()) >= s.storeSize {
+		return ReadOnlyStore
+	}
+	return ReadWriteStore
 }

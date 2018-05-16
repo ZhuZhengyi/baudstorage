@@ -1,0 +1,75 @@
+package datanode
+
+import (
+	"fmt"
+	"github.com/tiglabs/baudstorage/storage"
+	"math"
+	"sync"
+	"sync/atomic"
+)
+
+type SpaceManager struct {
+	disks    map[string]*Disk
+	vols     map[uint32]*Vol
+	diskLock sync.RWMutex
+	volLock  sync.RWMutex
+}
+
+func (space *SpaceManager) getDisk(path string) (d *Disk, err error) {
+	space.diskLock.RLocker()
+	defer space.diskLock.RUnlock()
+	d = space.disks[path]
+	if d == nil {
+		return nil, fmt.Errorf("Disk[%v] not exsit", path)
+	}
+	return
+}
+
+func (space *SpaceManager) putDisk(d *Disk) {
+	space.diskLock.Lock()
+	space.disks[d.Path] = d
+	space.diskLock.Unlock()
+
+}
+
+func (space *SpaceManager) getMinVolCntDisk() (d *Disk) {
+	space.diskLock.RLocker()
+	defer space.diskLock.RUnlock()
+	var minVolCnt uint64
+	minVolCnt = math.MaxUint64
+	for _, d = range space.disks {
+		if atomic.LoadUint64(&d.VolCnt) < minVolCnt {
+			minVolCnt = atomic.LoadUint64(&d.VolCnt)
+		}
+	}
+
+	return
+}
+
+func (space *SpaceManager) getVol(volId uint32) (v *Vol) {
+	space.volLock.RLocker()
+	defer space.volLock.RUnlock()
+	v = space.vols[volId]
+
+	return
+}
+
+func (space *SpaceManager) putVol(v *Vol) {
+	space.volLock.Lock()
+	defer space.volLock.Unlock()
+	space.vols[v.volId] = v
+
+	return
+}
+
+func (space *SpaceManager) chooseDiskAndCreateVol(volId uint32, volMode string, storeSize int) (v *Vol, err error) {
+	if space.getVol(volId) != nil {
+		return
+	}
+	d := space.getMinVolCntDisk()
+	v, err = NewVol(volId, volMode, d.Path, storage.NewStoreMode, storeSize)
+	if err == nil {
+		space.putVol(v)
+	}
+	return
+}

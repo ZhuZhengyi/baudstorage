@@ -7,7 +7,7 @@ import (
 )
 
 type Extent struct {
-	file      *os.File
+	file      *FileSimulator
 	filePath  string
 	extentId  uint64
 	lock      sync.RWMutex
@@ -20,6 +20,7 @@ func NewExtentInCore(name string, extentId uint64) (e *Extent) {
 	e.extentId = extentId
 	e.filePath = name
 	e.blocksCrc = make([]byte, BlockCrcHeaderSize)
+	e.file = &FileSimulator{}
 
 	return
 }

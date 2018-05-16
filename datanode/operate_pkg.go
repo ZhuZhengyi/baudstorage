@@ -1,0 +1,320 @@
+package datanode
+
+import (
+	"encoding/binary"
+	"encoding/json"
+	"fmt"
+	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/storage"
+	"github.com/tiglabs/baudstorage/util"
+	"github.com/tiglabs/baudstorage/util/log"
+	"hash/crc32"
+	"io"
+	"net"
+	"strconv"
+	"strings"
+	"time"
+)
+
+func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
+	orgSize := pkg.Size
+	start := time.Now().UnixNano()
+	var err error
+	defer func() {
+		resultSize := pkg.Size
+		pkg.Size = orgSize
+		if pkg.IsErrPack() {
+			err = fmt.Errorf("operation[%v] error[%v]", proto.GetOpMesg(pkg.Opcode), string(pkg.Data[:resultSize]))
+		} else {
+			if pkg.IsReadReq() {
+				log.LogRead(pkg.actionMesg(proto.GetOpMesg(pkg.Opcode), LocalProcessAddr, start, nil))
+			} else {
+				log.LogWrite(pkg.actionMesg(proto.GetOpMesg(pkg.Opcode), LocalProcessAddr, start, nil))
+			}
+		}
+		pkg.Size = resultSize
+	}()
+	switch pkg.Opcode {
+	case proto.OpCreateFile:
+		s.createFile(pkg)
+	case proto.OpWrite:
+		s.append(pkg)
+	case proto.OpRead:
+		s.read(pkg)
+	case proto.OpCRepairRead:
+		s.repairChunkRead(pkg, c)
+	case proto.OpERepairRead:
+		s.repairExtentRead(pkg)
+	case proto.OpSyncDelNeedle:
+		s.applyDelObjects(pkg)
+	case proto.OpStreamRead:
+		s.streamRead(pkg, c)
+	case proto.OpMarkDelete:
+		s.markDel(pkg)
+	case proto.OpNotifyCompact:
+		s.compactChunk(pkg)
+	case proto.OpNotifyRepair:
+		s.repairChunk(pkg)
+	case proto.OpGetWatermark:
+		s.getWatermark(pkg)
+	case proto.OpGetAllWatermark:
+		s.getAllWatermark(pkg)
+	case proto.OpFlowInfo:
+		s.GetFlowInfo(pkg)
+	case proto.OpCreateVol:
+		s.createVol(pkg)
+	case proto.OpLoadVol:
+		s.loadVol(pkg)
+	case proto.OpDeleteVol:
+		s.deleteVol(pkg)
+	default:
+		pkg.PackErrorBody(ErrorUnknowOp.Error(), ErrorUnknowOp.Error()+strconv.Itoa(int(pkg.orgOpcode)))
+	}
+
+	return
+}
+
+func (s *DataNode) createFile(pkg *Packet) {
+	var err error
+	switch pkg.StoreType {
+	case proto.TinyStoreMode:
+		err = errors.Annotatef(ErrStoreTypeUnmatch, " CreateFile only support ExtentMode Vol")
+	case proto.ExtentStoreMode:
+		err = pkg.vol.store.(*storage.ExtentStore).MarkDelete(pkg.FileID, pkg.Offset, int64(pkg.Size))
+	}
+	if err != nil {
+		pkg.PackErrorBody(LogCreateFile, err.Error())
+	} else {
+		pkg.PackOkReply()
+	}
+
+	return
+}
+
+func (s *DataNode) markDel(pkg *Packet) {
+	var err error
+	switch pkg.StoreType {
+	case proto.TinyStoreMode:
+		err = pkg.vol.store.(*storage.TinyStore).MarkDelete(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size))
+	case proto.ExtentStoreMode:
+		err = pkg.vol.store.(*storage.ExtentStore).MarkDelete(pkg.FileID, pkg.Offset, int64(pkg.Size))
+	}
+	if err != nil {
+		pkg.PackErrorBody(LogMarkDel, err.Error())
+	} else {
+		pkg.PackOkReply()
+	}
+
+	return
+}
+
+func (s *DataNode) append(pkg *Packet) {
+	start := time.Now()
+	var err error
+	switch pkg.StoreType {
+	case proto.TinyStoreMode:
+		err = pkg.vol.store.(*storage.TinyStore).Write(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
+		s.AddDiskErrs(pkg.VolID, err, WriteFlag)
+	case proto.ExtentStoreMode:
+		err = errors.Annotatef(ErrStoreTypeUnmatch, " Append only support TinyVol")
+	}
+	if err != nil {
+		pkg.PackErrorBody(LogMarkDel, err.Error())
+	} else {
+		pkg.PackOkReply()
+		pkg.vol.RecordWriteInfo(TakeTime(&start), int64(pkg.Size))
+	}
+
+	return
+}
+
+func (s *DataNode) rd(pkg *Packet, sucPrefix, errPrefix string) (err error) {
+	start := time.Now()
+	pkg.Crc, err = pkg.vol.store.(*storage.ExtentStore).Read(pkg.FileID, int64(pkg.Offset), int64(pkg.Size), pkg.Data)
+	if err != nil {
+		pkg.PackErrorBody(LogRead, err.Error())
+		s.AddDiskErrs(pkg.VolID, err, ReadFlag)
+		return
+	}
+	t := TakeTime(&start)
+	pkg.vol.RecordReadInfo(t, int64(pkg.Size))
+
+	return
+}
+
+func (s *DataNode) read(pkg *Packet) {
+	pkg.Data = make([]byte, pkg.Size)
+	if err := s.rd(pkg, LogRead, LogRead); err != nil {
+		return
+	}
+	pkg.PackOkReadReply()
+	return
+}
+
+func (s *DataNode) applyDelObjects(pkg *Packet) {
+	if pkg.Size%storage.ObjectIdLen != 0 {
+		pkg.PackErrorBody(LogRepairNeedles, "Invalid args for OpSyncNeedle")
+		return
+	}
+	needles := make([]uint64, 0)
+	for i := 0; i < int(pkg.Size/storage.ObjectIdLen); i++ {
+		needle := binary.BigEndian.Uint64(pkg.Data[i*storage.ObjectIdLen : (i+1)*storage.ObjectIdLen])
+		needles = append(needles, needle)
+	}
+	if err := pkg.vol.store.(*storage.TinyStore).ApplyDelObjects(uint32(pkg.FileID), needles); err != nil {
+		pkg.PackErrorBody(LogRepair, "err OpSyncNeedle: "+err.Error())
+		return
+	}
+	pkg.PackOkReply()
+	return
+}
+
+func (s *DataNode) repairExtentRead(pkg *Packet) {
+	if err := s.rd(pkg, LogRepairRead, LogRepairRead); err == nil {
+		pkg.Crc = crc32.ChecksumIEEE(pkg.Data[:pkg.Size])
+		pkg.PackErrorBody(LogRepairRead, err.Error())
+		return
+	}
+	pkg.PackOkReadReply()
+
+	return
+}
+
+func (s *DataNode) repairChunkRead(pkg *Packet, conn *net.TCPConn) {
+	var (
+		err        error
+		localOid   uint64
+		requireOid uint64
+		chunkID    uint32
+	)
+	chunkID = uint32(pkg.FileID)
+	requireOid = uint64(pkg.Offset + 1)
+	localOid, err = pkg.vol.store.(*storage.TinyStore).GetLastOid(chunkID)
+	log.LogWrite(pkg.actionMesg(ActionLeaderToFollowerOpCRepairReadPackResponse,
+		fmt.Sprintf("follower require Oid[%v] localOid[%v]", requireOid, localOid), pkg.startT, err))
+	if localOid < requireOid {
+		err = fmt.Errorf(" requireOid[%v] but localOid[%v]", requireOid, localOid)
+		pkg.PackErrorBody(ActionLeaderToFollowerOpCRepairReadPackResponse, err.Error())
+		return
+	}
+	err = syncData(chunkID, requireOid, localOid, pkg, conn)
+	if err != nil {
+		pkg.PackErrorBody(ActionLeaderToFollowerOpCRepairReadPackResponse, err.Error())
+	}
+
+	return
+}
+
+func (s *DataNode) streamRead(pkg *Packet, c net.Conn) {
+	var (
+		err error
+	)
+	needReplySize := pkg.Size
+	offset := pkg.Offset
+	for {
+		if needReplySize <= 0 {
+			break
+		}
+		err = nil
+		currReadSize := uint32(util.Min(int(needReplySize), storage.BlockSize))
+		pkg.Data = make([]byte, currReadSize)
+		pkg.Crc, err = pkg.vol.store.(*storage.ExtentStore).Read(pkg.FileID, offset, int64(currReadSize), pkg.Data)
+		if err != nil {
+			pkg.PackErrorBody(ActionStreamRead, err.Error())
+			s.AddDiskErrs(pkg.VolID, err, ReadFlag)
+			pkg.WriteToConn(c)
+			return
+		}
+		pkg.Size = currReadSize
+		pkg.Opcode = proto.OpOk
+		if err = pkg.WriteToConn(c); err != nil {
+			return
+		}
+		needReplySize -= currReadSize
+		offset += int64(currReadSize)
+	}
+	return
+}
+
+func (s *DataNode) getWatermark(pkg *Packet) {
+	var buf []byte
+	var (
+		finfo *storage.FileInfo
+		err   error
+	)
+	switch pkg.StoreType {
+	case proto.TinyStoreMode:
+		finfo, err = pkg.vol.store.(*storage.TinyStore).GetWatermark(uint32(pkg.FileID))
+	case proto.ExtentStoreMode:
+		finfo, err = pkg.vol.store.(*storage.ExtentStore).GetWatermark(pkg.FileID)
+	}
+	if err != nil {
+		pkg.PackErrorBody(LogGetWm, err.Error())
+	} else {
+		buf, err = json.Marshal(finfo)
+		pkg.PackOkWithBody(buf)
+	}
+
+	return
+}
+
+func (s *DataNode) getAllWatermark(pkg *Packet) {
+	var buf []byte
+	var (
+		finfos []*storage.FileInfo
+		err    error
+	)
+	switch pkg.StoreType {
+	case proto.TinyStoreMode:
+		finfos, err = pkg.vol.store.(*storage.TinyStore).GetAllWatermark()
+	case proto.ExtentStoreMode:
+		finfos, err = pkg.vol.store.(*storage.ExtentStore).GetAllWatermark()
+	}
+	if err != nil {
+		pkg.PackErrorBody(LogGetAllWm, err.Error())
+	} else {
+		buf, err = json.Marshal(finfos)
+		pkg.PackOkWithBody(buf)
+	}
+	return
+}
+
+func (s *DataNode) compactChunk(pkg *Packet) {
+	cId := uint32(pkg.FileID)
+	vId := pkg.VolID
+	task := &CompactTask{
+		volId:    vId,
+		chunkId:  int(cId),
+		isLeader: false,
+	}
+	err := s.AddCompactTask(task)
+	if err != nil {
+		pkg.PackErrorBody(LogCompactChunk, err.Error())
+		return
+	}
+	pkg.PackOkReply()
+
+	return
+}
+
+func (s *DataNode) repairChunk(pkg *Packet) {
+	chunkId := uint32(pkg.FileID)
+	addr, remoteLastOid, err := getRepairInfo(pkg.Data[:pkg.Size])
+	if err != nil {
+		pkg.PackErrorBody(LogRepair, err.Error())
+		return
+	}
+	log.LogWrite(pkg.actionMesg(ActionFollowerToLeaderOpCRepairReadSendRequest, addr, pkg.startT, err))
+	doRepairChunk(uint64(remoteLastOid), pkg.vol, chunkId, addr, pkg.ReqID)
+	pkg.PackOkReply()
+
+	return
+}
+
+func (s *DataNode) GetFlowInfo(pkg *Packet) {
+	in, out := s.stats.GetFlow()
+	flow := strconv.Itoa(int(in/MB)) + InOutFlowSplit + strconv.Itoa(int(out/MB))
+	pkg.PackOkGetInfoReply([]byte(flow))
+	return
+}
