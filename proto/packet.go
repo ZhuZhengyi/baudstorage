@@ -59,8 +59,12 @@ const (
 	OpMetaExtentsList  uint8 = 0x19
 
 	// Operations: Master -> MetaNode
-	OpMetaCreateMetaRange uint8 = 0x1A
-	OpHeartBeatRequest    uint8 = 0x1B
+	OpCreateMetaPartition  uint8 = 0x20
+	OpMetaNodeHeartbeat    uint8 = 0x21
+	OpDeleteMetaPartition  uint8 = 0x22
+	OpUpdateMetaPartition  uint8 = 0x23
+	OpLoadMetaPartition    uint8 = 0x24
+	OpOfflineMetaPartition uint8 = 0x25
 
 	// Commons
 	OpIntraGroupNetErr uint8 = 0xF3
