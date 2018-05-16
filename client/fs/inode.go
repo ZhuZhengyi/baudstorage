@@ -33,7 +33,7 @@ type Inode struct {
 func (s *Super) InodeGet(ino uint64, inode *Inode) error {
 	info, err := s.mw.InodeGet_ll(ino)
 	if err != nil {
-		return err
+		return ParseError(err)
 	}
 	fillInode(inode, info)
 	// sanity check
