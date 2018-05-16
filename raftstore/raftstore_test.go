@@ -12,8 +12,7 @@ import (
 )
 
 type raftAddr struct {
-	heartbeat string
-	replicate string
+	ip        string
 }
 
 type testKV struct {
@@ -22,7 +21,7 @@ type testKV struct {
 	V   []byte `json:"v"`
 }
 
-var raftAddresses = make(map[uint64]*raftAddr)
+var TestAddresses = make(map[uint64]*raftAddr)
 var maxVolId uint64 = 1
 
 type testSM struct {
@@ -68,6 +67,10 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 		data    []byte
 	)
 
+	for nid := 1; nid <= 3; nid++ {
+
+	}
+
 	raftServers := make(map[uint64]*raftStore)
 	partitions := make(map[uint64]*partition)
 
@@ -77,14 +80,11 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 		cfg.HeartbeatPort = fmt.Sprintf(":99%d1", n)
 		cfg.ReplicatePort = fmt.Sprintf(":99%d2", n)
 
-		raftAddresses[uint64(n)] = &raftAddr{
-			heartbeat: fmt.Sprintf(":99%d1", n),
-			replicate: fmt.Sprintf(":99%d2", n),
+		TestAddresses[uint64(n)] = &raftAddr{
+			ip:        fmt.Sprintf("172.0.0.%d", n),
 		}
 
-		for k := range raftAddresses {
-			peers = append(peers, proto.Peer{ID: k})
-		}
+		fmt.Println(TestAddresses[uint64(n)])
 
 		raftServer, err := NewRaftStore(&cfg)
 		if err != nil {
@@ -92,6 +92,9 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 		}
 
 		raftServers[uint64(n)] = raftServer.(*raftStore)
+
+		peers = append(peers, proto.Peer{ID: uint64(n)})
+		raftServer.AddNode(uint64(n), TestAddresses[uint64(n)].ip)
 
 		fmt.Printf("================new raft store %d\n", n)
 
@@ -133,16 +136,16 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 	fmt.Printf("==========encode kv end ===========\n")
 
-	for k := range raftServers{
+	for k := range raftServers {
 		fmt.Printf("==raftServer %d==nodeid %d==\n", k, raftServers[k].nodeId)
 
-		for kp := range partitions{
+		for kp := range partitions {
 			leader, term := partitions[kp].LeaderTerm()
 
 			fmt.Printf("==partition %d==leader %d term %d==\n", kp, leader, term)
 			isLeader := partitions[kp].IsLeader()
 			fmt.Printf("==isLeader %d", isLeader)
-			if partitions[kp].IsLeader(){
+			if partitions[kp].IsLeader() {
 				fmt.Printf("==partition can submit==\n")
 				_, err = partitions[kp].Submit(data)
 				if err != nil {
