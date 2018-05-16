@@ -78,16 +78,21 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 		data    []byte
 	)
 
-	for k := range raftAddresses {
-		peers = append(peers, proto.Peer{ID: k})
-	}
-
 	raftServers := make(map[uint64]*raftStore)
 	partitions := make(map[uint64]*partition)
 
 	for n := 1; n <= 3; n++ {
 		cfg.NodeID = uint64(n)
 		cfg.WalPath = fmt.Sprintf("wal%d", n)
+
+		raftAddresses[uint64(n)] = &raftAddr{
+			heartbeat: fmt.Sprintf(":99%d1", n),
+			replicate: fmt.Sprintf(":99%d2", n),
+		}
+
+		for k := range raftAddresses {
+			peers = append(peers, proto.Peer{ID: k})
+		}
 
 		raftServer, err := NewRaftStore(&cfg)
 		if err != nil {
