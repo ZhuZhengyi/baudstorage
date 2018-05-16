@@ -139,7 +139,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 		for kp := range partitions{
 			leader, term := partitions[kp].LeaderTerm()
 
-			fmt.Printf("==========leader %d term %d=============\n", leader, term)
+			fmt.Printf("==partition %d==leader %d term %d==\n", kp, leader, term)
 
 			if partitions[kp].IsLeader(){
 				_, err = partitions[kp].Submit(data)
