@@ -1,4 +1,4 @@
-package sdk
+package meta
 
 import (
 	"fmt"
