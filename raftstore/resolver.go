@@ -90,6 +90,7 @@ func NewNodeResolver() NodeResolver {
 // AddNode add node address into specified NodeManger if possible.
 func AddNode(manager NodeManager, nodeId uint64, addr string) {
 	if manager != nil {
+		fmt.Printf("add node %d %s", nodeId, addr)
 		manager.AddNode(nodeId, addr)
 	}
 }
