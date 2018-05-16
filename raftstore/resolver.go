@@ -70,10 +70,16 @@ func (r *nodeResolver) NodeAddress(nodeID uint64, stype raft.SocketType) (addr s
 // AddNode adds node address information.
 func (r *nodeResolver) AddNode(nodeId uint64, addr string) {
 	if len(strings.TrimSpace(addr)) != 0 {
+		fmt.Printf("add node %d %s\n",nodeId, addr)
 		r.nodeMap.Store(nodeId, &nodeAddress{
 			Heartbeat: fmt.Sprintf("%s:%d", addr, HeartbeatPort),
 			Replicate: fmt.Sprintf("%s:%d", addr, ReplicatePort),
 		})
+
+		_, ok := r.nodeMap.Load(nodeId)
+		if !ok {
+			fmt.Printf("what happened?\n")
+		}
 	}
 }
 
@@ -90,7 +96,7 @@ func NewNodeResolver() NodeResolver {
 // AddNode add node address into specified NodeManger if possible.
 func AddNode(manager NodeManager, nodeId uint64, addr string) {
 	if manager != nil {
-		fmt.Printf("add node %d %s", nodeId, addr)
+		fmt.Printf("add node %d %s\n", nodeId, addr)
 		manager.AddNode(nodeId, addr)
 	}
 }
