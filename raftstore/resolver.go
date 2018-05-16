@@ -76,7 +76,7 @@ func (r *nodeResolver) AddNode(nodeId uint64, addr string) {
 			Replicate: fmt.Sprintf("%s:%d", addr, ReplicatePort),
 		})
 
-		_, ok := r.nodeMap.Load(nodeId)
+		val, ok := r.nodeMap.Load(nodeId)
 		if !ok {
 			fmt.Printf("what happened?\n")
 		}
@@ -86,7 +86,7 @@ func (r *nodeResolver) AddNode(nodeId uint64, addr string) {
 			fmt.Printf("address invalid\n")
 		}
 
-		fmt.Printf("h %s r %s", address.Heartbeat, address.Replicate)
+		fmt.Printf("h %s r %s\n", address.Heartbeat, address.Replicate)
 	}
 }
 
