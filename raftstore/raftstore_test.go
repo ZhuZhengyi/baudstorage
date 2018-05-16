@@ -99,7 +99,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 			partitionCfg := &PartitionConfig{
 				ID:      uint64(i),
 				Applied: 0,
-				Leader:  1,
+				Leader:  3,
 				Term:    10,
 				SM:      &testFsm,
 				Peers:   peers,
