@@ -68,7 +68,11 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 	)
 
 	for nid := 1; nid <= 3; nid++ {
+		TestAddresses[uint64(nid)] = &raftAddr{
+			ip:        fmt.Sprintf("172.0.0.%d", nid),
+		}
 
+		fmt.Println(TestAddresses[uint64(nid)])
 	}
 
 	raftServers := make(map[uint64]*raftStore)
@@ -80,12 +84,6 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 		cfg.HeartbeatPort = fmt.Sprintf(":99%d1", n)
 		cfg.ReplicatePort = fmt.Sprintf(":99%d2", n)
 
-		TestAddresses[uint64(n)] = &raftAddr{
-			ip:        fmt.Sprintf("172.0.0.%d", n),
-		}
-
-		fmt.Println(TestAddresses[uint64(n)])
-
 		raftServer, err := NewRaftStore(&cfg)
 		if err != nil {
 			t.Fatal(err)
@@ -94,7 +92,10 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 		raftServers[uint64(n)] = raftServer.(*raftStore)
 
 		peers = append(peers, proto.Peer{ID: uint64(n)})
-		raftServer.AddNode(uint64(n), TestAddresses[uint64(n)].ip)
+
+		for k, v := range TestAddresses{
+			raftServer.AddNode(uint64(k), v.ip)
+		}
 
 		fmt.Printf("================new raft store %d\n", n)
 
