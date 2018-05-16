@@ -21,6 +21,7 @@ const (
 	ReBootStoreMode   = false
 	NewStoreMode      = true
 	MinWriteAbleChunk = 1
+	ObjectIdLen       = 8
 )
 
 var (
@@ -38,6 +39,7 @@ var (
 	ErrorCompaction     = errors.New("compaction error")
 	ErrorCommit         = errors.New("commit error")
 	ErrObjectSmaller    = errors.New("object smaller error")
+	ErrPkgCrcUnmatch    = errors.New("pkg crc is not equare pkgdata")
 )
 
 /*
@@ -157,8 +159,8 @@ func (s *TinyStore) Write(fileId uint32, offset, size int64, data []byte, crc ui
 	defer c.compactLock.Unlock()
 
 	if objectId < c.loadLastOid() {
-		msg := fmt.Sprintf("Object id smaller than last oid. DataDir[%v] ChunkId[%v]"+
-			" ObjectId[%v] LastOid[%v]", s.dataDir, chunkId, objectId, c.loadLastOid())
+		msg := fmt.Sprintf("Object id smaller than last oid. DataDir[%v] FileId[%v]"+
+			" ObjectId[%v] Size[%v]", s.dataDir, chunkId, objectId, c.loadLastOid())
 		err = errors.New(msg)
 		return ErrObjectSmaller
 	}
@@ -233,23 +235,23 @@ func (s *TinyStore) Sync(fileId uint32) (err error) {
 	return c.file.Sync()
 }
 
-func (s *TinyStore) GetAllWatermark() (chunks []*ChunkInfo, err error) {
-	chunks = make([]*ChunkInfo, 0)
+func (s *TinyStore) GetAllWatermark() (chunks []*FileInfo, err error) {
+	chunks = make([]*FileInfo, 0)
 	for chunkId, c := range s.chunks {
-		ci := &ChunkInfo{ChunkId: chunkId, LastOid: c.loadLastOid()}
+		ci := &FileInfo{FileId: chunkId, Size: c.loadLastOid()}
 		chunks = append(chunks, ci)
 	}
 
 	return
 }
 
-func (s *TinyStore) GetWatermark(fileId uint32) (offset int64, err error) {
+func (s *TinyStore) GetWatermark(fileId uint32) (chunkInfo *FileInfo, err error) {
 	chunkId := (int)(fileId)
 	c, ok := s.chunks[chunkId]
 	if !ok {
-		return -1, ErrorChunkNotFound
+		return nil, ErrorChunkNotFound
 	}
-	offset = int64(c.loadLastOid())
+	chunkInfo = &FileInfo{FileId: chunkId, Size: c.loadLastOid()}
 
 	return
 }
@@ -381,8 +383,8 @@ func (s *TinyStore) GetDelObjects(fileId uint32) (objects []uint64) {
 	return
 }
 
-func (s *TinyStore) ApplyDelObjects(fileId uint32, objects []uint64) (err error) {
-	c, ok := s.chunks[int(fileId)]
+func (s *TinyStore) ApplyDelObjects(chunkId uint32, objects []uint64) (err error) {
+	c, ok := s.chunks[int(chunkId)]
 	if !ok {
 		return ErrorChunkNotFound
 	}
@@ -406,25 +408,6 @@ func (s *TinyStore) UpdateStoreInfo() {
 	return
 }
 
-func (s *TinyStore) DoCompactWork(chunkId int) (err error) {
-	_, ok := s.chunks[chunkId]
-	if !ok {
-		return ErrorChunkNotFound
-	}
-
-	ok = s.IsReadyToCompact(chunkId)
-	if !ok {
-		return nil
-	}
-
-	err = s.doCompactAndCommit(chunkId)
-	if err != nil {
-		return err
-	}
-
-	return s.Sync(uint32(chunkId))
-}
-
 // make sure chunkId is valid
 func (s *TinyStore) IsReadyToCompact(chunkId int) bool {
 	c := s.chunks[chunkId]
@@ -445,27 +428,48 @@ func (s *TinyStore) IsReadyToCompact(chunkId int) bool {
 	return false
 }
 
-// make sure chunkId is valid
-func (s *TinyStore) doCompactAndCommit(chunkId int) (err error) {
-	c := s.chunks[chunkId]
-	if !c.compactLock.TryLockTimed(CompactMaxWait) {
-		return nil
-	}
-	defer c.compactLock.Unlock()
-
-	if err = c.doCompact(); err != nil {
-		return ErrorCompaction
+func (s *TinyStore) DoCompactWork(chunkID int) (err error, released uint64) {
+	_, ok := s.chunks[chunkID]
+	if !ok {
+		return ErrorChunkNotFound, 0
 	}
 
-	c.commitLock.Lock()
-	defer c.commitLock.Unlock()
-
-	err = c.doCommit()
+	err, released = s.doCompactAndCommit(chunkID)
 	if err != nil {
-		return ErrorCommit
+		return err, 0
+	}
+	err = s.Sync(uint32(chunkID))
+	if err != nil {
+		return err, 0
 	}
 
-	return nil
+	return nil, released
+}
+
+func (s *TinyStore) doCompactAndCommit(chunkID int) (err error, released uint64) {
+	cc := s.chunks[chunkID]
+	// prevent write and delete operations
+	if !cc.compactLock.TryLockTimed(CompactMaxWait) {
+		return nil, 0
+	}
+	defer cc.compactLock.Unlock()
+
+	sizeBeforeCompact := cc.tree.FileBytes()
+	if err = cc.doCompact(); err != nil {
+		return ErrorCompaction, 0
+	}
+
+	cc.commitLock.Lock()
+	defer cc.commitLock.Unlock()
+
+	err = cc.doCommit()
+	if err != nil {
+		return ErrorCommit, 0
+	}
+
+	sizeAfterCompact := cc.tree.FileBytes()
+	released = sizeBeforeCompact - sizeAfterCompact
+	return nil, released
 }
 
 func CheckAndCreateSubdir(name string, newMode bool) (err error) {

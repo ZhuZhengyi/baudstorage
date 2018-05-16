@@ -74,7 +74,8 @@ type LoadMetaPartitionMetricResponse struct {
 }
 
 type HeartBeatRequest struct {
-	CurrTime int64
+	CurrTime   int64
+	MasterAddr string
 }
 
 type VolReport struct {

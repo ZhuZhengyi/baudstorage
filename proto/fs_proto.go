@@ -6,7 +6,9 @@ import (
 
 const (
 	ROOT_INO = uint64(1)
+)
 
+const (
 	ModeRegular uint32 = iota
 	ModeDir
 )

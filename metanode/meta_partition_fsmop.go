@@ -6,6 +6,7 @@ import (
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk/stream"
+	"os"
 )
 
 // GetDentry query dentry from DentryTree with specified dentry info;
@@ -145,5 +146,31 @@ func (mp *MetaPartition) putStreamKey(ino *Inode, k stream.ExtentKey) (status ui
 	}
 	ino = item.(*Inode)
 	ino.Stream.Put(k)
+	return
+}
+
+func (mp *MetaPartition) offlinePartition() (err error) {
+
+	return
+}
+
+func (mp *MetaPartition) updatePartition(start, end uint64) (err error) {
+	oldStart := mp.Start
+	oldEnd := mp.End
+	mp.Start = start
+	mp.End = end
+	defer func() {
+		if err != nil {
+			mp.Start = oldStart
+			mp.End = oldEnd
+		}
+	}()
+	err = mp.StoreMeta()
+	return
+}
+
+func (mp *MetaPartition) deletePartition() (err error) {
+	mp.Stop()
+	err = os.RemoveAll(mp.RootDir)
 	return
 }
