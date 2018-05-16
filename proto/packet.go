@@ -71,6 +71,7 @@ const (
 	OpAgain            uint8 = 0xF9
 	OpExistErr         uint8 = 0xFA
 	OpInodeFullErr     uint8 = 0xFB
+	OpArgUnmatchErr		uint8=0xFC
 	OpOk               uint8 = 0x00
 )
 
@@ -323,6 +324,8 @@ func (p *Packet) GetUniqLogId() (m string) {
 
 	return
 }
+
+
 
 func (p *Packet) IsTransitPkg() bool {
 	return p.Nodes > 0

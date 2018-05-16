@@ -35,7 +35,7 @@ func (o *Object) Marshal(out []byte) {
 	binary.BigEndian.PutUint32(out[16:ObjectHeaderSize], o.Crc)
 }
 
-func (o *Object) Uomarshal(in []byte) {
+func (o *Object) Unmarshal(in []byte) {
 	o.Oid = binary.BigEndian.Uint64(in[0:8])
 	o.Offset = binary.BigEndian.Uint32(in[8:12])
 	o.Size = binary.BigEndian.Uint32(in[12:16])
@@ -51,13 +51,13 @@ type treeStat struct {
 }
 
 type ObjectTree struct {
-	idxFile *os.File
+	idxFile *FileSimulator
 	idxLock sync.Mutex
 	tree    *btree.BTree
 	treeStat
 }
 
-func NewObjectTree(f *os.File) *ObjectTree {
+func NewObjectTree(f *FileSimulator) *ObjectTree {
 	tree := &ObjectTree{
 		tree: btree.New(32),
 	}
@@ -100,7 +100,7 @@ func (o *Object) Check(offset, size, crc uint32) bool {
 		(o.Size == size || size == TombstoneFileSize)
 }
 
-func WalkIndexFile(f *os.File, fn func(oid uint64, offset, size, crc uint32) error) (maxOid uint64, err error) {
+func WalkIndexFile(f *FileSimulator, fn func(oid uint64, offset, size, crc uint32) error) (maxOid uint64, err error) {
 	var (
 		readOff int64
 		count   int
@@ -114,7 +114,7 @@ func WalkIndexFile(f *os.File, fn func(oid uint64, offset, size, crc uint32) err
 
 	for count > 0 && err == nil || err == io.EOF {
 		for iter = 0; iter+ObjectHeaderSize <= count; iter += ObjectHeaderSize {
-			o.Uomarshal(bytes[iter : iter+ObjectHeaderSize])
+			o.Unmarshal(bytes[iter : iter+ObjectHeaderSize])
 			if maxOid < o.Oid {
 				maxOid = o.Oid
 			}
@@ -216,4 +216,8 @@ func (tree *ObjectTree) appendToIdxFile(o *Object) error {
 
 func (tree *ObjectTree) getTree() *btree.BTree {
 	return tree.tree
+}
+
+func (this *Object) IsIdentical(that *Object) bool {
+	return this.Oid == that.Oid && this.Offset == that.Offset && this.Size == that.Size && this.Crc == that.Crc
 }

@@ -11,8 +11,12 @@ import (
 	"github.com/tiglabs/baudstorage/util"
 )
 
+var (
+	DiskeErrRatio = -1
+)
+
 type Chunk struct {
-	file        *os.File
+	file        *FileSimulator
 	tree        *ObjectTree
 	lastOid     uint64
 	syncLastOid uint64
@@ -20,9 +24,9 @@ type Chunk struct {
 	compactLock util.TryMutex
 }
 
-type ChunkInfo struct {
-	ChunkId int
-	LastOid uint64
+type FileInfo struct {
+	FileId int
+	Size   uint64
 }
 
 func NewChunk(dataDir string, chunkId int) (c *Chunk, err error) {
@@ -47,13 +51,14 @@ func (c *Chunk) applyDelObjects(objects []uint64) (err error) {
 }
 
 func (c *Chunk) loadTree(name string) (maxOid uint64, err error) {
-	if c.file, err = os.OpenFile(name, ChunkOpenOpt, 0666); err != nil {
+	c.file = &FileSimulator{}
+	if err = c.file.OpenFile(name, ChunkOpenOpt, 0666); err != nil {
 		return
 	}
 
-	var idxFile *os.File
+	var idxFile *FileSimulator
 	idxName := name + ".idx"
-	if idxFile, err = os.OpenFile(idxName, ChunkOpenOpt, 0666); err != nil {
+	if err = idxFile.OpenFile(idxName, ChunkOpenOpt, 0666); err != nil {
 		c.file.Close()
 		return
 	}
@@ -126,20 +131,21 @@ func (c *Chunk) storeSyncLastOid(val uint64) {
 
 func (c *Chunk) doCompact() (err error) {
 	var (
-		newIdxFile, newDatFile *os.File
+		newIdxFile, newDatFile *FileSimulator
 		tree                   *ObjectTree
 	)
 
 	name := c.file.Name()
 	newIdxName := name + ".cpx"
 	newDatName := name + ".cpd"
-
-	if newIdxFile, err = os.OpenFile(newIdxName, ChunkOpenOpt|os.O_TRUNC, 0644); err != nil {
+	newIdxFile = &FileSimulator{}
+	newDatFile = &FileSimulator{}
+	if err = newIdxFile.OpenFile(newIdxName, ChunkOpenOpt|os.O_TRUNC, 0644); err != nil {
 		return err
 	}
 	defer newIdxFile.Close()
 
-	if newDatFile, err = os.OpenFile(newDatName, ChunkOpenOpt|os.O_TRUNC, 0644); err != nil {
+	if err = newDatFile.OpenFile(newDatName, ChunkOpenOpt|os.O_TRUNC, 0644); err != nil {
 		return err
 	}
 	defer newDatFile.Close()
@@ -153,7 +159,7 @@ func (c *Chunk) doCompact() (err error) {
 	return nil
 }
 
-func (c *Chunk) copyValidData(dstNm *ObjectTree, dstDatFile *os.File) (err error) {
+func (c *Chunk) copyValidData(dstNm *ObjectTree, dstDatFile *FileSimulator) (err error) {
 	srcNm := c.tree
 	srcDatFile := c.file
 	srcIdxFile := srcNm.idxFile
@@ -229,4 +235,66 @@ func (c *Chunk) doCommit() (err error) {
 		c.storeLastOid(maxOid)
 	}
 	return err
+}
+
+func catchupDeleteIndex(oldIdxName, newIdxName string) error {
+	oldIdxFile := &FileSimulator{}
+	if err := oldIdxFile.OpenFile(oldIdxName, os.O_RDONLY, 0644); err != nil {
+		return err
+	}
+	defer oldIdxFile.Close()
+
+	newIdxFile := &FileSimulator{}
+	if err := newIdxFile.OpenFile(newIdxName, os.O_RDWR, 0644); err != nil {
+		return err
+	}
+	defer newIdxFile.Close()
+
+	newinfo, err := newIdxFile.Stat()
+	if err != nil {
+		return err
+	}
+
+	data := make([]byte, ObjectHeaderSize)
+	_, err = newIdxFile.ReadAt(data, newinfo.Size()-ObjectHeaderSize)
+	if err != nil {
+		return err
+	}
+
+	lastIndexEntry := &Object{}
+	lastIndexEntry.Unmarshal(data)
+
+	oldinfo, err := oldIdxFile.Stat()
+	if err != nil {
+		return err
+	}
+
+	catchup := make([]byte, 0)
+	for offset := oldinfo.Size() - ObjectHeaderSize; offset >= 0; offset -= ObjectHeaderSize {
+		_, err = oldIdxFile.ReadAt(data, offset)
+		if err != nil {
+			return err
+		}
+
+		ni := &Object{}
+		ni.Unmarshal(data)
+		if ni.Size != TombstoneFileSize || ni.IsIdentical(lastIndexEntry) {
+			break
+		}
+		result := make([]byte, len(catchup)+ObjectHeaderSize)
+		copy(result, data)
+		copy(result[ObjectHeaderSize:], catchup)
+		catchup = result
+	}
+
+	_, err = newIdxFile.Seek(0, 2)
+	if err != nil {
+		return err
+	}
+	_, err = newIdxFile.Write(catchup)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
