@@ -217,9 +217,14 @@ func (c *Chunk) copyValidData(dstNm *ObjectTree, dstDatFile *FileSimulator) (err
 }
 
 func (c *Chunk) doCommit() (err error) {
-	name := c.file.Name()
+	name := c.file.fp.Name()
 	c.tree.idxFile.Close()
-	c.file.Close()
+	c.file.fp.Close()
+
+	err = catchupDeleteIndex(name+".idx", name+".cpx")
+	if err != nil {
+		return
+	}
 
 	err = os.Rename(name+".cpd", name)
 	if err != nil {
@@ -232,6 +237,7 @@ func (c *Chunk) doCommit() (err error) {
 
 	maxOid, err := c.loadTree(name)
 	if err == nil && maxOid > c.loadLastOid() {
+		// shold not happen, just in case
 		c.storeLastOid(maxOid)
 	}
 	return err

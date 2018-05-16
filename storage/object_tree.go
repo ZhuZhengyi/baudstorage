@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/google/btree"
+	"sync/atomic"
 )
 
 const (
@@ -55,6 +56,10 @@ type ObjectTree struct {
 	idxLock sync.Mutex
 	tree    *btree.BTree
 	treeStat
+}
+
+func (tree *ObjectTree) FileBytes() uint64 {
+	return atomic.LoadUint64(&tree.fileBytes)
 }
 
 func NewObjectTree(f *FileSimulator) *ObjectTree {
