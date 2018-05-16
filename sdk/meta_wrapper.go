@@ -333,6 +333,7 @@ func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, err erro
 	if err != nil {
 		return
 	}
+	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {
@@ -357,6 +358,7 @@ func (mw *MetaWrapper) dcreate(mc *MetaConn, parentID uint64, name string, inode
 	if err != nil {
 		return
 	}
+	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {
@@ -379,6 +381,7 @@ func (mw *MetaWrapper) ddelete(mc *MetaConn, parentID uint64, name string) (stat
 	if err != nil {
 		return
 	}
+	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {
@@ -411,6 +414,7 @@ func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (statu
 	if err != nil {
 		return
 	}
+	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {
@@ -440,11 +444,14 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 	packet.Opcode = proto.OpMetaInodeGet
 	packet.Data, err = json.Marshal(req)
 	if err != nil {
+		log.Println(err)
 		return
 	}
+	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {
+		log.Println(err)
 		return
 	}
 
@@ -454,8 +461,9 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 	}
 
 	resp := new(proto.InodeGetResponse)
-	err = json.Unmarshal(packet.Data, &resp)
+	err = json.Unmarshal(packet.Data, resp)
 	if err != nil {
+		log.Println(err)
 		return
 	}
 
@@ -473,6 +481,7 @@ func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (children []proto.
 	if err != nil {
 		return
 	}
+	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {
