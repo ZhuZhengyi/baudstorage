@@ -38,8 +38,7 @@ type ExtentStore struct {
 	extents      map[uint64]*Extent
 	fdlist       *list.List
 	baseExtentId uint64
-	readErr      uint64
-	writeErr     uint64
+	storeSize    int
 }
 
 func NewExtentStore(dataDir string, storeSize int, newMode bool) (s *ExtentStore, err error) {
@@ -54,6 +53,7 @@ func NewExtentStore(dataDir string, storeSize int, newMode bool) (s *ExtentStore
 	if err = s.initBaseFileId(); err != nil {
 		return nil, fmt.Errorf("NewExtentStore [%v] err[%v]", dataDir, err)
 	}
+	s.storeSize = storeSize
 
 	return
 }
@@ -418,9 +418,19 @@ func (s *ExtentStore) GetStoreFileCount() (files int, err error) {
 func (s *ExtentStore) GetStoreUsedSize() (size int64) {
 	if finfoArray, err := ioutil.ReadDir(s.dataDir); err == nil {
 		for _, finfo := range finfoArray {
+			if finfo.IsDir() {
+				continue
+			}
 			size += finfo.Size()
 		}
 	}
 
 	return
+}
+
+func (s *ExtentStore) GetStoreStatus() int {
+	if int(s.GetStoreUsedSize()) >= s.storeSize {
+		return ReadOnlyStore
+	}
+	return ReadWriteStore
 }
