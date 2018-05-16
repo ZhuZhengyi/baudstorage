@@ -48,7 +48,6 @@ type nodeResolver struct {
 func (r *nodeResolver) NodeAddress(nodeID uint64, stype raft.SocketType) (addr string, err error) {
 	val, ok := r.nodeMap.Load(nodeID)
 	if !ok {
-		fmt.Printf("not find %d addr\n", nodeID)
 		err = ErrNoSuchNode
 		return
 	}
@@ -71,23 +70,10 @@ func (r *nodeResolver) NodeAddress(nodeID uint64, stype raft.SocketType) (addr s
 // AddNode adds node address information.
 func (r *nodeResolver) AddNode(nodeId uint64, addr string) {
 	if len(strings.TrimSpace(addr)) != 0 {
-		fmt.Printf("add node %d %s\n",nodeId, addr)
 		r.nodeMap.Store(nodeId, &nodeAddress{
 			Heartbeat: fmt.Sprintf("%s:%d", addr, HeartbeatPort),
 			Replicate: fmt.Sprintf("%s:%d", addr, ReplicatePort),
 		})
-
-		val, ok := r.nodeMap.Load(nodeId)
-		if !ok {
-			fmt.Printf("what happened?\n")
-		}
-
-		address, ok := val.(*nodeAddress)
-		if !ok {
-			fmt.Printf("address invalid\n")
-		}
-
-		fmt.Printf("h %s r %s\n", address.Heartbeat, address.Replicate)
 	}
 }
 
