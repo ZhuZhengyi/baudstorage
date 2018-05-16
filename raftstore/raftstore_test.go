@@ -70,46 +70,55 @@ func (*testSM) HandleLeaderChange(leader uint64) {
 
 func TestRaftStore_CreateRaftStore(t *testing.T) {
 
-	var cfg Config
-	partitions := make(map[uint64]*partition)
+	var (
+		cfg     Config
+		err     error
+		testFsm TestFsm
+		peers   []proto.Peer
+		data    []byte
+	)
 
-	cfg.NodeID = 1
-	cfg.WalPath = "wal"
-
-	raftStore, err := NewRaftStore(&cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var testFsm TestFsm
-	var peers []proto.Peer
 	for k := range raftAddresses {
 		peers = append(peers, proto.Peer{ID: k})
 	}
-	for i := 1; i <= 5; i++ {
-		partitionCfg := &PartitionConfig{
-			ID:      uint64(i),
-			Applied: 0,
-			Leader:  1,
-			SM:      &testFsm,
-			Peers:   peers,
-		}
 
-		var p Partition
-		p, err = raftStore.CreatePartition(partitionCfg)
+	raftServers := make(map[uint64]*raftStore)
+	partitions := make(map[uint64]*partition)
 
-		partitions[uint64(i)] = p.(*partition)
+	for n := 1; n <= 3; n++ {
+		cfg.NodeID = uint64(n)
+		cfg.WalPath = fmt.Sprintf("wal%d", n)
 
-		fmt.Printf("new partition %d\n", i)
-
+		raftServer, err := NewRaftStore(&cfg)
 		if err != nil {
 			t.Fatal(err)
 		}
-	}
 
-	var (
-		data []byte
-	)
+		raftServers[uint64(n)] = raftServer.(*raftStore)
+
+		fmt.Printf("================new raft store %d\n", n)
+
+		for i := 1; i <= 5; i++ {
+			partitionCfg := &PartitionConfig{
+				ID:      uint64(i),
+				Applied: 0,
+				Leader:  uint64(n),
+				SM:      &testFsm,
+				Peers:   peers,
+			}
+
+			var p Partition
+			p, err = raftServer.CreatePartition(partitionCfg)
+
+			partitions[uint64(i)] = p.(*partition)
+
+			fmt.Printf("==========new partition %d\n", i)
+
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 
 	kv := &testKV{Opt: 1}
 	atomic.AddUint64(&maxVolId, 1)
@@ -126,9 +135,10 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 	fmt.Printf("==========encode kv end ===========\n")
 
-	var raftServer *raft.RaftServer
-	raftServer = partitions[1].raft
-	leader, _ := raftServer.LeaderTerm(1)
+	var Server *raft.RaftServer
+	Server = partitions[1].raft
+
+	leader, _ := Server.LeaderTerm(1)
 
 	fmt.Printf("==========leader is %d=============\n", leader)
 
