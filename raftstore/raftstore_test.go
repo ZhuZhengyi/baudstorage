@@ -125,6 +125,11 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 	fmt.Printf("==========encode kv end ===========\n")
 
+	var raftServer *raft.RaftServer
+	raftServer = partitions[1].raft
+	leader := raftServer.LeaderTerm(1)
+	fmt.Printf("==========leader is =============\n", leader)
+
 	_, err = partitions[uint64(1)].Submit(data)
 	if err != nil {
 		t.Fatal(err)
