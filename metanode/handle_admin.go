@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/tiglabs/baudstorage/util"
 	"net"
 	"os"
 	"path"
 
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util"
 )
 
 const (
@@ -62,7 +62,7 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 		Peers:       req.Members,
 		RootDir:     path.Join(m.metaDir, id),
 	}
-	mr := NewMetaRange(mConf)
+	mr := NewMetaPartition(mConf)
 	if err = m.metaManager.SetMetaRange(mr); err != nil {
 		return
 	}
@@ -91,6 +91,7 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 	if err = m.createPartition(mr); err != nil {
 		return
 	}
+	go mr.StartStoreSchedule()
 	return
 }
 

@@ -88,7 +88,9 @@ func (m *MetaManager) LoadMetaManagers(metaDir string) (err error) {
 					// TODO: log
 					return
 				}
-				m.SetMetaRange(mr)
+				if err = m.SetMetaRange(mr); err != nil {
+					go mr.StartStoreSchedule()
+				}
 				wg.Done()
 			}(metaRangeId, fileInfo)
 		}

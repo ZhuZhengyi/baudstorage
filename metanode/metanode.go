@@ -7,6 +7,7 @@ import (
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/baudstorage/util/pool"
 )
 
 // Configuration keys
@@ -23,7 +24,7 @@ type nodeState uint8
 
 // State constants
 const (
-	sReady   nodeState = iota
+	sReady nodeState = iota
 	sRunning
 )
 
@@ -37,6 +38,7 @@ type MetaNode struct {
 	logDir      string
 	raftDir     string //raft log store base dir
 	masterAddr  string
+	proxyPool   *pool.ConnPool
 	metaManager *MetaManager
 	raftStore   raftstore.RaftStore
 	httpStopC   chan uint8
@@ -75,10 +77,6 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	if err = m.startRaftServer(); err != nil {
 		return
 	}
-	// Start MetaRanges Store Schedule
-	if err = m.startStoreSchedule(); err != nil {
-		return
-	}
 	// Start tcp server
 	if err = m.startServer(); err != nil {
 		return
@@ -86,13 +84,6 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	// Start reply
 	m.state = sRunning
 	m.wg.Add(1)
-	return
-}
-
-func (m *MetaNode) startStoreSchedule() (err error) {
-	for _, mr := range m.metaManager.partitions {
-		go mr.StartStoreSchedule()
-	}
 	return
 }
 
@@ -139,5 +130,6 @@ func (m *MetaNode) load() (err error) {
 func NewServer() *MetaNode {
 	return &MetaNode{
 		metaManager: NewMetaRangeManager(),
+		proxyPool:   pool.NewConnPool(),
 	}
 }

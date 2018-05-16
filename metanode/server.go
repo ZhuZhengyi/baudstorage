@@ -1,15 +1,13 @@
 package metanode
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net"
 	"strconv"
 	"time"
-
-	"errors"
-
-	"encoding/json"
-	"fmt"
 
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"

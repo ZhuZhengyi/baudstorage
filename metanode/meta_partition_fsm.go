@@ -121,6 +121,7 @@ func (mp *MetaPartition) HandleFatalEvent(err *raft.FatalError) {
 }
 
 func (mp *MetaPartition) HandleLeaderChange(leader uint64) {
+	mp.LeaderID = leader
 }
 
 func (mp *MetaPartition) Put(key, val interface{}) (resp interface{}, err error) {

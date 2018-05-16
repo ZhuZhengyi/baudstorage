@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"time"
 
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/raft/util/log"
@@ -15,11 +16,14 @@ func (m *MetaNode) opCreateInode(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
+	mp, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}
-	if err = mr.CreateInode(req, p); err != nil {
+	if ok := m.ProxyServe(conn, mp, p); !ok {
+		return
+	}
+	if err = mp.CreateInode(req, p); err != nil {
 		log.Error("Create Inode Request: %s", err.Error())
 	}
 	// Reply operation result to client though TCP connection.
@@ -33,11 +37,14 @@ func (m *MetaNode) opCreateDentry(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
+	mp, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return err
 	}
-	err = mr.CreateDentry(req, p)
+	if ok := m.ProxyServe(conn, mp, p); !ok {
+		return
+	}
+	err = mp.CreateDentry(req, p)
 	if err != nil {
 		log.Error("Create Dentry: %s", err.Error())
 	}
@@ -52,11 +59,14 @@ func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
+	mp, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}
-	err = mr.DeleteDentry(req, p)
+	if ok := m.ProxyServe(conn, mp, p); !ok {
+		return
+	}
+	err = mp.DeleteDentry(req, p)
 	if err != nil {
 		return
 	}
@@ -70,11 +80,14 @@ func (m *MetaNode) opDeleteInode(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
+	mp, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}
-	err = mr.DeleteInode(req, p)
+	if ok := m.ProxyServe(conn, mp, p); !ok {
+		return
+	}
+	err = mp.DeleteInode(req, p)
 	if err != nil {
 		return
 	}
@@ -88,11 +101,14 @@ func (m *MetaNode) opReadDir(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
+	mp, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}
-	err = mr.ReadDir(req, p)
+	if ok := m.ProxyServe(conn, mp, p); !ok {
+		return
+	}
+	err = mp.ReadDir(req, p)
 	if err != nil {
 		return
 	}
@@ -107,11 +123,14 @@ func (m *MetaNode) opOpen(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		return
 	}
-	mr, err := m.metaManager.LoadMetaPartition(req.PartitionID)
+	mp, err := m.metaManager.LoadMetaPartition(req.PartitionID)
 	if err != nil {
 		return
 	}
-	err = mr.Open(req, p)
+	if ok := m.ProxyServe(conn, mp, p); !ok {
+		return
+	}
+	err = mp.Open(req, p)
 	if err != nil {
 		return
 	}
@@ -135,5 +154,50 @@ func (m *MetaNode) replyClient(conn net.Conn, p *Packet) (err error) {
 	}()
 	// Process data and send reply though specified tcp connection.
 	err = p.WriteToConn(conn)
+	return
+}
+
+func (m *MetaNode) ProxyServe(conn net.Conn, mp *MetaPartition,
+	p *Packet) (ok bool) {
+	var (
+		mConn      net.Conn
+		status     uint8
+		leaderAddr string
+		err        error
+	)
+	if leaderAddr, ok = mp.isLeader(); ok {
+		return
+	}
+	if leaderAddr == "" {
+		err = ErrNonLeader
+		status = proto.OpErr
+		goto end
+	}
+	// Get Master Conn
+	mConn, err = m.proxyPool.Get(leaderAddr)
+	if err != nil {
+		status = proto.OpErr
+		goto end
+	}
+	defer func() {
+		m.proxyPool.Put(mConn)
+	}()
+	// Send Master Conn
+	if err = p.WriteToConn(mConn); err != nil {
+		status = proto.OpErr
+		goto end
+	}
+	// Read conn from master
+	if err = p.ReadFromConn(mConn, proto.ReadDeadlineTime*time.
+		Second); err != nil {
+		status = proto.OpErr
+		goto end
+	}
+end:
+	p.PackErrorWithBody(status, nil)
+	p.WriteToConn(conn)
+	if err != nil {
+		log.Error("proxy to master: %s", err.Error())
+	}
 	return
 }
