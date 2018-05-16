@@ -95,9 +95,152 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 	return
 }
 
-func (m *MetaNode) opHeartBeatRequest(conn net.Conn, p *Packet) (err error) {
+func (m *MetaNode) opMetaNodeHeartbeat(conn net.Conn, p *Packet) (err error) {
 	// Ack from Master Request
+	adminTask := &proto.AdminTask{}
+	if err = json.Unmarshal(p.Data, adminTask); err != nil {
+		// TODO: Log
+		adminTask.Status = proto.TaskFail
+		goto end
+	}
+	// parse req
+	{
+		var (
+			req     = &proto.HeartBeatRequest{}
+			reqData []byte
+		)
+		reqData, err = json.Marshal(adminTask.Request)
+		if err != nil {
+			adminTask.Status = proto.TaskFail
+			goto end
+		}
+		if err = json.Unmarshal(reqData, req); err != nil {
+			adminTask.Status = proto.TaskFail
+			goto end
+		}
+		m.masterAddr = req.MasterAddr
+	}
+	// collect used info
+	{
+		resp := &proto.MetaNodeHeartbeatResponse{}
+		// machine mem total and used
+		resp.Total, resp.Used, err = util.GetMemInfo()
+		if err != nil {
+			adminTask.Status = proto.TaskFail
+			goto end
+		}
+		// every partition used
+		m.metaManager.Range(func(id string, mp *MetaPartition) bool {
+			mpr := &proto.MetaPartitionReport{}
+			mpr.GroupId = mp.RaftGroupID
+			mpr.IsLeader = mp.RaftPartition.IsLeader()
+			mpr.Status = 1
+			mpr.Used = mp.Sizeof()
+			resp.MetaPartitionInfo = append(resp.MetaPartitionInfo, mpr)
+			return true
+		})
+		resp.Status = proto.OpOk
+	}
 
+end:
+	if m.masterAddr == "" {
+		err = ErrNotLeader
+		return
+	}
+	err = m.replyToMaster(m.masterAddr, adminTask)
+	return
+}
+
+func (m *MetaNode) opDeleteMetaPartition(conn net.Conn, p *Packet) (err error) {
+	adminTask := &proto.AdminTask{}
+	if err = json.Unmarshal(p.Data, adminTask); err != nil {
+		adminTask.Status = proto.TaskFail
+		goto end
+	}
+	if true {
+		var (
+			mp      *MetaPartition
+			reqData []byte
+		)
+		req := &proto.DeleteMetaPartitionRequest{}
+		resp := &proto.DeleteMetaPartitionResponse{}
+		reqData, err = json.Marshal(adminTask.Request)
+		if err != nil {
+			adminTask.Status = proto.TaskFail
+			goto end
+		}
+		if err = json.Unmarshal(reqData, req); err != nil {
+			adminTask.Status = proto.TaskFail
+			goto end
+		}
+		mp, err = m.metaManager.LoadMetaPartition(fmt.Sprintf("%d", req.GroupId))
+		if err != nil {
+			adminTask.Status = proto.TaskFail
+			goto end
+		}
+		mp.Stop()
+		m.metaManager.DeleteMetaRange(fmt.Sprintf("%d", req.GroupId))
+		resp.GroupId = mp.RaftGroupID
+		resp.Status = 1
+		adminTask.Response = resp
+	}
+end:
+	if m.masterAddr == "" {
+		err = ErrNotLeader
+		return
+	}
+	err = m.replyToMaster(m.masterAddr, adminTask)
+	return
+}
+
+func (m *MetaNode) opUpdateMetaPartition(conn net.Conn, p *Packet) (err error) {
+	return
+}
+
+func (m *MetaNode) opLoadMetaPartition(conn net.Conn, p *Packet) (err error) {
+	adminTask := &proto.AdminTask{}
+	if err = json.Unmarshal(p.Data, adminTask); err != nil {
+		adminTask.Status = proto.TaskFail
+		goto end
+	}
+	// parse req
+	{
+		var (
+			req     = &proto.LoadMetaPartitionMetricRequest{}
+			resp    = &proto.LoadMetaPartitionMetricResponse{}
+			mp      *MetaPartition
+			reqData []byte
+		)
+		if reqData, err = json.Marshal(adminTask.Request); err != nil {
+			adminTask.Status = proto.TaskFail
+			goto end
+		}
+		if err = json.Unmarshal(reqData, req); err != nil {
+			adminTask.Status = proto.TaskFail
+			goto end
+		}
+		mp, err = m.metaManager.LoadMetaPartition(fmt.Sprintf("%d",
+			req.PartitionID))
+		if err != nil {
+			adminTask.Status = proto.TaskFail
+			goto end
+		}
+		resp.Start = mp.Start
+		resp.End = mp.End
+		resp.MaxInode = mp.Cursor
+		resp.Status = 1
+		adminTask.Response = resp
+	}
+end:
+	if m.masterAddr == "" {
+		err = ErrNotLeader
+		return
+	}
+	err = m.replyToMaster(m.masterAddr, adminTask)
+	return
+}
+
+func (m *MetaNode) opOfflineMetaPartition(conn net.Conn, p *Packet) (err error) {
 	return
 }
 

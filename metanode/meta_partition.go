@@ -52,6 +52,7 @@ type MetaPartitionConfig struct {
 //  +-----+             +-------+
 type MetaPartition struct {
 	MetaPartitionConfig
+	stopC      chan struct{}
 	applyID    uint64       // for store inode/dentry max applyID
 	dentryMu   sync.RWMutex // Mutex for dentry operation.
 	dentryTree *btree.BTree // B-Tree for dentry.
@@ -62,6 +63,7 @@ type MetaPartition struct {
 func NewMetaPartition(conf MetaPartitionConfig) *MetaPartition {
 	mp := &MetaPartition{
 		MetaPartitionConfig: conf,
+		stopC:               make(chan struct{}, 1),
 		dentryTree:          btree.New(defaultBTreeDegree),
 		inodeTree:           btree.New(defaultBTreeDegree),
 	}
@@ -82,6 +84,11 @@ func (mp *MetaPartition) isLeader() (leaderAddr string, ok bool) {
 	}
 
 	return
+}
+
+func (mp *MetaPartition) Sizeof() uint64 {
+
+	return 0
 }
 
 // Load used when metaNode start and recover data from snapshot
@@ -144,6 +151,7 @@ func (mp *MetaPartition) StoreMeta() (err error) {
 	if _, err = fp.Write(data); err != nil {
 		return
 	}
+	err = os.Rename(metaFile, path.Join(mp.RootDir, "meta"))
 	return
 }
 
@@ -153,6 +161,8 @@ func (mp *MetaPartition) StartStoreSchedule() {
 	curApplyID := mp.applyID
 	for {
 		select {
+		case <-mp.stopC:
+			return
 		case <-t.C:
 			now := time.Now()
 			if now.After(next) {
@@ -205,6 +215,11 @@ func (mp *MetaPartition) StartStoreSchedule() {
 		os.Remove(path.Join(mp.RootDir, "_dentry"))
 	}
 	return
+}
+
+func (mp *MetaPartition) Stop() {
+	mp.stopC <- struct{}{}
+	mp.RaftPartition.Stop()
 }
 
 // UpdatePeers
@@ -387,5 +402,20 @@ func (mp *MetaPartition) Open(req *OpenReq, p *Packet) (err error) {
 		return
 	}
 	p.ResultCode = resp.(uint8)
+	return
+}
+
+func (mp *MetaPartition) DeletePartition(req []byte) (err error) {
+	_, err = mp.Put(opDeletePartition, req)
+	return
+}
+
+func (mp *MetaPartition) UpdatePartition(req []byte) (err error) {
+	_, err = mp.Put(opUpdatePartition, req)
+	return
+}
+
+func (mp *MetaPartition) OfflienPartition(req []byte) (err error) {
+	_, err = mp.Put(opOfflineRequest, req)
 	return
 }

@@ -40,6 +40,9 @@ const (
 	opReadDir
 	opOpen
 	opCreateMetaRange
+	opDeletePartition
+	opUpdatePartition
+	opOfflinePartition
 )
 
 var (

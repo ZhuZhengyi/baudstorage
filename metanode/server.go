@@ -99,11 +99,19 @@ func (m *MetaNode) handlePacket(conn net.Conn, p *Packet) (err error) {
 	case proto.OpMetaOpen:
 		// Client → MetaNode
 		err = m.opOpen(conn, p)
-	case proto.OpMetaCreateMetaRange:
+	case proto.OpCreateMetaPartition:
 		// Mater → MetaNode
 		err = m.opCreateMetaRange(conn, p)
-	case proto.OpHeartBeatRequest:
-		err = m.opHeartBeatRequest(conn, p)
+	case proto.OpMetaNodeHeartbeat:
+		err = m.opMetaNodeHeartbeat(conn, p)
+	case proto.OpDeleteMetaPartition:
+		err = m.opDeleteMetaPartition(conn, p)
+	case proto.OpUpdateMetaPartition:
+		err = m.opUpdateMetaPartition(conn, p)
+	case proto.OpLoadMetaPartition:
+		err = m.opLoadMetaPartition(conn, p)
+	case proto.OpOfflineMetaPartition:
+		err = m.opOfflineMetaPartition(conn, p)
 	default:
 		// Unknown operation
 		err = errors.New("unknown Opcode: " + proto.GetOpMesg(p.Opcode))
