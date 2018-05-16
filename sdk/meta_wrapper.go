@@ -306,7 +306,7 @@ func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *pro
 		return
 	}
 
-	status = parseStatus(packet.Resultcode)
+	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
 		return
 	}
@@ -385,7 +385,7 @@ func (mw *MetaWrapper) ddelete(mc *MetaConn, parentID uint64, name string) (stat
 		return
 	}
 
-	status = parseStatus(packet.Resultcode)
+	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
 		return
 	}
@@ -417,7 +417,7 @@ func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (statu
 		return
 	}
 
-	status = parseStatus(packet.Resultcode)
+	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
 		return
 	}
@@ -448,7 +448,7 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 		return
 	}
 
-	status = parseStatus(packet.Resultcode)
+	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
 		return
 	}
@@ -479,7 +479,7 @@ func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (children []proto.
 		return
 	}
 
-	status := parseStatus(packet.Resultcode)
+	status := parseStatus(packet.ResultCode)
 	if status != statusOK {
 		return
 	}
