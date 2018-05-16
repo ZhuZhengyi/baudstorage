@@ -14,8 +14,6 @@ const (
 type Config struct {
 	NodeID        uint64 // Identity of raft server instance.
 	WalPath       string // Path of WAL(Write after Log)
-	HeartbeatPort string
-	ReplicatePort string
 }
 
 // PartitionConfig defined necessary configuration properties for raft store partition.

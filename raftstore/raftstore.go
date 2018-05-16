@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"fmt"
 )
 
 type RaftStore interface {
@@ -44,8 +45,8 @@ func NewRaftStore(cfg *Config) (mr RaftStore, err error) {
 	rc := raft.DefaultConfig()
 	rc.NodeID = cfg.NodeID
 	rc.LeaseCheck = true
-	rc.HeartbeatAddr = cfg.HeartbeatPort
-	rc.ReplicateAddr = cfg.ReplicatePort
+	rc.HeartbeatAddr = fmt.Sprintf(":%d", HeartbeatPort)
+	rc.ReplicateAddr = fmt.Sprintf(":%d", ReplicatePort)
 	rc.Resolver = resolver
 	rs, err := raft.NewRaftServer(rc)
 	if err != nil {

@@ -81,8 +81,6 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 	for n := 1; n <= 3; n++ {
 		cfg.NodeID = uint64(n)
 		cfg.WalPath = fmt.Sprintf("wal%d", n)
-		cfg.HeartbeatPort = fmt.Sprintf(":99%d1", n)
-		cfg.ReplicatePort = fmt.Sprintf(":99%d2", n)
 
 		raftServer, err := NewRaftStore(&cfg)
 		if err != nil {
