@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/sdk/stream"
-	"sync"
 )
 
 const defaultBTreeDegree = 32
@@ -24,7 +24,7 @@ var (
 )
 
 /* MetRangeConfig used by create metaPartition and serialize
-*  ID:		Consist with 'namespace_ID'. (Required when initialize)
+*  ID:		Consist with. (Required when initialize)
 *  Start:	Start inode ID of this range. (Required when initialize)
 *  End:		End inode ID of this range. (Required when initialize)
 *  Cursor:	Cursor ID value of inode what have been already assigned.
@@ -60,36 +60,52 @@ type MetaPartition struct {
 }
 
 func NewMetaPartition(conf MetaPartitionConfig) *MetaPartition {
-	mr := &MetaPartition{
+	mp := &MetaPartition{
 		MetaPartitionConfig: conf,
 		dentryTree:          btree.New(defaultBTreeDegree),
 		inodeTree:           btree.New(defaultBTreeDegree),
 	}
-	return mr
+	return mp
+}
+
+func (mp *MetaPartition) isLeader() (leaderAddr string, ok bool) {
+	ok = mp.RaftPartition.IsLeader()
+	leaderID := mp.LeaderID
+	if leaderID == 0 {
+		return
+	}
+	for _, peer := range mp.Peers {
+		if leaderID == peer.ID {
+			leaderAddr = peer.Addr
+			return
+		}
+	}
+
+	return
 }
 
 // Load used when metaNode start and recover data from snapshot
-func (mr *MetaPartition) Load() (err error) {
-	if err = mr.LoadMeta(); err != nil {
+func (mp *MetaPartition) Load() (err error) {
+	if err = mp.LoadMeta(); err != nil {
 		return
 	}
-	if err = mr.LoadInode(); err != nil {
+	if err = mp.LoadInode(); err != nil {
 		return
 	}
-	if err = mr.LoadDentry(); err != nil {
+	if err = mp.LoadDentry(); err != nil {
 		return
 	}
 	// Restore ApplyID
-	if err = mr.LoadApplyID(); err != nil {
+	if err = mp.LoadApplyID(); err != nil {
 		return
 	}
 	return
 }
 
 // Load range meta from meta snapshot file.
-func (mr *MetaPartition) LoadMeta() (err error) {
+func (mp *MetaPartition) LoadMeta() (err error) {
 	// Load struct from meta
-	metaFile := path.Join(mr.RootDir, "meta")
+	metaFile := path.Join(mp.RootDir, "meta")
 	fp, err := os.OpenFile(metaFile, os.O_RDONLY, 0655)
 	if err != nil {
 		return
@@ -103,13 +119,13 @@ func (mr *MetaPartition) LoadMeta() (err error) {
 	if err = json.Unmarshal(data, &mConf); err != nil {
 		return
 	}
-	mr.MetaPartitionConfig = mConf
+	mp.MetaPartitionConfig = mConf
 	return
 }
 
-func (mr *MetaPartition) StoreMeta() (err error) {
+func (mp *MetaPartition) StoreMeta() (err error) {
 	// Store Meta to file
-	metaFile := path.Join(mr.RootDir, "_meta")
+	metaFile := path.Join(mp.RootDir, "_meta")
 	fp, err := os.OpenFile(metaFile, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE,
 		0655)
 	if err != nil {
@@ -121,7 +137,7 @@ func (mr *MetaPartition) StoreMeta() (err error) {
 			os.Remove(metaFile)
 		}
 	}()
-	data, err := json.Marshal(mr)
+	data, err := json.Marshal(mp)
 	if err != nil {
 		return
 	}
@@ -131,88 +147,88 @@ func (mr *MetaPartition) StoreMeta() (err error) {
 	return
 }
 
-func (mr *MetaPartition) StartStoreSchedule() {
+func (mp *MetaPartition) StartStoreSchedule() {
 	t := time.NewTicker(5 * time.Minute)
 	next := time.Now().Add(time.Hour)
-	curApplyID := mr.applyID
+	curApplyID := mp.applyID
 	for {
 		select {
 		case <-t.C:
 			now := time.Now()
 			if now.After(next) {
 				next = now.Add(time.Hour)
-				if (mr.applyID - curApplyID) > 0 {
-					curApplyID = mr.applyID
+				if (mp.applyID - curApplyID) > 0 {
+					curApplyID = mp.applyID
 					goto store
 				}
 				goto end
-			} else if (mr.applyID - curApplyID) > 20000 {
+			} else if (mp.applyID - curApplyID) > 20000 {
 				next = now.Add(time.Hour)
-				curApplyID = mr.applyID
+				curApplyID = mp.applyID
 				goto store
 			}
 			goto end
 		}
 	store:
 		// 1st: load applyID
-		if err := mr.StoreApplyID(); err != nil {
+		if err := mp.StoreApplyID(); err != nil {
 			//TODO: Log
 			goto end
 		}
 		// 2st: load ino tree
-		if err := mr.StoreInodeTree(); err != nil {
+		if err := mp.StoreInodeTree(); err != nil {
 			//TODO: Log
 			goto end
 		}
 		// 3st: load dentry tree
-		if err := mr.StoreDentryTree(); err != nil {
+		if err := mp.StoreDentryTree(); err != nil {
 			//TODO: Log
 			goto end
 
 		}
 		// rename
-		if err := os.Rename(path.Join(mr.RootDir, "_inode"), path.Join(mr.RootDir, "inode")); err != nil {
+		if err := os.Rename(path.Join(mp.RootDir, "_inode"), path.Join(mp.RootDir, "inode")); err != nil {
 			//TODO: Log
 			goto end
 		}
-		if err := os.Rename(path.Join(mr.RootDir, "_dentry"), path.Join(mr.RootDir, "dentry")); err != nil {
+		if err := os.Rename(path.Join(mp.RootDir, "_dentry"), path.Join(mp.RootDir, "dentry")); err != nil {
 			//TODO: Log
 			goto end
 		}
-		if err := os.Rename(path.Join(mr.RootDir, "_applyid"), path.Join(mr.RootDir, "applyid")); err != nil {
+		if err := os.Rename(path.Join(mp.RootDir, "_applyid"), path.Join(mp.RootDir, "applyid")); err != nil {
 			//TODO: Log
 			goto end
 		}
 	end:
-		os.Remove(path.Join(mr.RootDir, "_applyid"))
-		os.Remove(path.Join(mr.RootDir, "_inode"))
-		os.Remove(path.Join(mr.RootDir, "_dentry"))
+		os.Remove(path.Join(mp.RootDir, "_applyid"))
+		os.Remove(path.Join(mp.RootDir, "_inode"))
+		os.Remove(path.Join(mp.RootDir, "_dentry"))
 	}
 	return
 }
 
 // UpdatePeers
-func (mr *MetaPartition) UpdatePeers(peers []proto.Peer) {
-	mr.Peers = peers
+func (mp *MetaPartition) UpdatePeers(peers []proto.Peer) {
+	mp.Peers = peers
 }
 
 // NextInodeId returns a new ID value of inode and update offset.
 // If inode ID is out of this MetaPartition limit then return ErrInodeOutOfRange error.
-func (mr *MetaPartition) nextInodeID() (inodeId uint64, err error) {
+func (mp *MetaPartition) nextInodeID() (inodeId uint64, err error) {
 	for {
-		cur := mr.Cursor
-		end := mr.End
+		cur := mp.Cursor
+		end := mp.End
 		if cur >= end {
 			return 0, ErrInodeOutOfRange
 		}
 		newId := cur + 1
-		if atomic.CompareAndSwapUint64(&mr.Cursor, cur, newId) {
+		if atomic.CompareAndSwapUint64(&mp.Cursor, cur, newId) {
 			return newId, nil
 		}
 	}
 }
 
-func (mr *MetaPartition) CreateDentry(req *CreateDentryReq, p *Packet) (err error) {
+func (mp *MetaPartition) CreateDentry(req *CreateDentryReq, p *Packet) (err error) {
 	dentry := &Dentry{
 		ParentId: req.ParentID,
 		Name:     req.Name,
@@ -223,7 +239,7 @@ func (mr *MetaPartition) CreateDentry(req *CreateDentryReq, p *Packet) (err erro
 	if err != nil {
 		return
 	}
-	resp, err := mr.Put(opCreateDentry, val)
+	resp, err := mp.Put(opCreateDentry, val)
 	if err != nil {
 		return
 	}
@@ -231,7 +247,7 @@ func (mr *MetaPartition) CreateDentry(req *CreateDentryReq, p *Packet) (err erro
 	return
 }
 
-func (mr *MetaPartition) DeleteDentry(req *DeleteDentryReq, p *Packet) (err error) {
+func (mp *MetaPartition) DeleteDentry(req *DeleteDentryReq, p *Packet) (err error) {
 	var resp *DeleteDentryResp
 	dentry := &Dentry{
 		ParentId: req.ParentID,
@@ -242,7 +258,7 @@ func (mr *MetaPartition) DeleteDentry(req *DeleteDentryReq, p *Packet) (err erro
 		p.ResultCode = proto.OpErr
 		return
 	}
-	r, err := mr.Put(opDeleteDentry, val)
+	r, err := mp.Put(opDeleteDentry, val)
 	if err != nil {
 		p.ResultCode = proto.OpErr
 		return
@@ -257,8 +273,8 @@ func (mr *MetaPartition) DeleteDentry(req *DeleteDentryReq, p *Packet) (err erro
 	return
 }
 
-func (mr *MetaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
-	inoID, err := mr.nextInodeID()
+func (mp *MetaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
+	inoID, err := mp.nextInodeID()
 	if err != nil {
 		err = nil
 		p.ResultCode = proto.OpInodeFullErr
@@ -278,7 +294,7 @@ func (mr *MetaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 		p.ResultCode = proto.OpErr
 		return
 	}
-	r, err := mr.Put(opCreateInode, val)
+	r, err := mp.Put(opCreateInode, val)
 	if err != nil {
 		return
 	}
@@ -302,7 +318,7 @@ func (mr *MetaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 	return
 }
 
-func (mr *MetaPartition) DeleteInode(req *DeleteInoReq, p *Packet) (err error) {
+func (mp *MetaPartition) DeleteInode(req *DeleteInoReq, p *Packet) (err error) {
 	ino := &Inode{
 		Inode: req.Inode,
 	}
@@ -311,7 +327,7 @@ func (mr *MetaPartition) DeleteInode(req *DeleteInoReq, p *Packet) (err error) {
 		p.ResultCode = proto.OpErr
 		return
 	}
-	r, err := mr.Put(opDeleteInode, val)
+	r, err := mp.Put(opDeleteInode, val)
 	if err != nil {
 		p.ResultCode = proto.OpErr
 		return
@@ -332,18 +348,18 @@ func (mr *MetaPartition) DeleteInode(req *DeleteInoReq, p *Packet) (err error) {
 	return
 }
 
-func (mr *MetaPartition) PutStreamKey() {
+func (mp *MetaPartition) PutStreamKey() {
 	return
 }
 
-func (mr *MetaPartition) ReadDir(req *ReadDirReq, p *Packet) (err error) {
+func (mp *MetaPartition) ReadDir(req *ReadDirReq, p *Packet) (err error) {
 	// TODO: Implement read dir operation.
 	val, err := json.Marshal(req)
 	if err != nil {
 		p.ResultCode = proto.OpErr
 		return
 	}
-	resp, err := mr.Put(opReadDir, val)
+	resp, err := mp.Put(opReadDir, val)
 	if err != nil {
 		p.ResultCode = proto.OpErr
 		return
@@ -358,14 +374,14 @@ func (mr *MetaPartition) ReadDir(req *ReadDirReq, p *Packet) (err error) {
 	return
 }
 
-func (mr *MetaPartition) Open(req *OpenReq, p *Packet) (err error) {
+func (mp *MetaPartition) Open(req *OpenReq, p *Packet) (err error) {
 	// TODO: Implement open operation.
 	val, err := json.Marshal(req)
 	if err != nil {
 		p.ResultCode = proto.OpErr
 		return
 	}
-	resp, err := mr.Put(opOpen, val)
+	resp, err := mp.Put(opOpen, val)
 	if err != nil {
 		p.ResultCode = proto.OpErr
 		return
