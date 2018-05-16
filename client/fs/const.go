@@ -1,7 +1,7 @@
 package fs
 
 import (
-	"fmt"
+	"syscall"
 
 	"bazil.org/fuse"
 
@@ -32,23 +32,20 @@ const (
 	StatusNoEnt = int(proto.OpNotExistErr)
 )
 
-// TODO: log error
-func ParseResult(status int, err error) error {
-	if err != nil {
-		fmt.Println(err)
-		return fuse.EIO
-	}
-
-	var ret error
-	switch status {
-	case StatusOK:
-		ret = nil
-	case StatusExist:
-		ret = fuse.EEXIST
-	case StatusNoEnt:
-		ret = fuse.ENOENT
+func ParseError(err error) fuse.Errno {
+	switch v := err.(type) {
+	case syscall.Errno:
+		return fuse.Errno(v)
 	default:
-		ret = fuse.EPERM
+		return fuse.ENOSYS
 	}
-	return ret
+}
+
+func ParseMode(mode uint32) fuse.DirentType {
+	switch mode {
+	case ModeDir:
+		return fuse.DT_Dir
+	default:
+		return fuse.DT_File
+	}
 }

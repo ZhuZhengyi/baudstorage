@@ -5,12 +5,12 @@ import (
 	"bazil.org/fuse/fs"
 	"golang.org/x/net/context"
 
-	"github.com/tiglabs/baudstorage/sdk"
+	"github.com/tiglabs/baudstorage/sdk/meta"
 )
 
 type Super struct {
 	name string
-	meta *sdk.MetaWrapper
+	mw   *meta.MetaWrapper
 }
 
 //functions that Super needs to implement
@@ -21,7 +21,7 @@ var (
 
 func NewSuper(namespace, master string) (s *Super, err error) {
 	s = new(Super)
-	s.meta, err = sdk.NewMetaWrapper(namespace, master)
+	s.mw, err = meta.NewMetaWrapper(namespace, master)
 	if err != nil {
 		return nil, err
 	}
