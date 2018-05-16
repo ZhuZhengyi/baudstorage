@@ -133,18 +133,22 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 	fmt.Printf("==========encode kv end ===========\n")
 
-	var Server *raft.RaftServer
-	Server = partitions[1].raft
+	for k := range raftServers{
+		fmt.Printf("==raftServer %d==nodeid %d==\n", k, raftServers[k].nodeId)
 
-	leader, _ := Server.LeaderTerm(1)
+		for kp := range partitions{
+			leader, term := partitions[kp].LeaderTerm()
 
-	fmt.Printf("==========leader is %d=============\n", leader)
+			fmt.Printf("==========leader %d term %d=============\n", leader, term)
 
-	_, err = partitions[uint64(1)].Submit(data)
-	if err != nil {
-		t.Fatal(err)
+			if partitions[kp].IsLeader(){
+				_, err = partitions[kp].Submit(data)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				t.Log("==========submit ok===========")
+			}
+		}
 	}
-
-	fmt.Printf("==========submit ok===========\n")
-
 }
