@@ -4,6 +4,7 @@ import (
 	"github.com/juju/errors"
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
+	"fmt"
 )
 
 // Error definitions for raft store partition.
@@ -105,6 +106,7 @@ func (p *partition) AppliedIndex() (applied uint64) {
 }
 
 func (p *partition) Submit(cmd []byte) (resp interface{}, err error) {
+	fmt.Printf("isLeader %d", p.IsLeader())
 	if !p.IsLeader() {
 		err = ErrNotLeader
 		return
