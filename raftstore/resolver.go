@@ -48,6 +48,7 @@ type nodeResolver struct {
 func (r *nodeResolver) NodeAddress(nodeID uint64, stype raft.SocketType) (addr string, err error) {
 	val, ok := r.nodeMap.Load(nodeID)
 	if !ok {
+		fmt.Printf("not find %d addr\n", nodeID)
 		err = ErrNoSuchNode
 		return
 	}
