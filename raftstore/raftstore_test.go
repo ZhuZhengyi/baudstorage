@@ -100,6 +100,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 				ID:      uint64(i),
 				Applied: 0,
 				Leader:  uint64(n),
+				Term:    10,
 				SM:      &testFsm,
 				Peers:   peers,
 			}
