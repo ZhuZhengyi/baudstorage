@@ -80,6 +80,13 @@ func (r *nodeResolver) AddNode(nodeId uint64, addr string) {
 		if !ok {
 			fmt.Printf("what happened?\n")
 		}
+
+		address, ok := val.(*nodeAddress)
+		if !ok {
+			fmt.Printf("address invalid\n")
+		}
+
+		fmt.Printf("h %s r %s", address.Heartbeat, address.Replicate)
 	}
 }
 
