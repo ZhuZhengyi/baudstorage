@@ -19,7 +19,7 @@ type ExtentReader struct {
 	cache            *CacheBuffer
 	vol              *sdk.VolGroup
 	key              ExtentKey
-	wraper           *sdk.VolGroupWraper
+	wrapper          *sdk.VolGroupWrapper
 	exitCh           chan bool
 	cacheReferCh     chan bool
 	lastReadOffset   int
@@ -31,9 +31,9 @@ const (
 )
 
 func NewExtentReader(inode uint64, inInodeOffset int, key ExtentKey,
-	wraper *sdk.VolGroupWraper) (reader *ExtentReader, err error) {
+	wrapper *sdk.VolGroupWrapper) (reader *ExtentReader, err error) {
 	reader = new(ExtentReader)
-	reader.vol, err = wraper.GetVol(key.VolId)
+	reader.vol, err = wrapper.GetVol(key.VolId)
 	if err != nil {
 		return
 	}
@@ -42,7 +42,7 @@ func NewExtentReader(inode uint64, inInodeOffset int, key ExtentKey,
 	reader.cache = NewCacheBuffer()
 	reader.startInodeOffset = inInodeOffset
 	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
-	reader.wraper = wraper
+	reader.wrapper = wrapper
 	reader.exitCh = make(chan bool, 2)
 	reader.cacheReferCh = make(chan bool, 10)
 	reader.cacheReferCh <- true
@@ -99,7 +99,7 @@ FORLOOP:
 
 func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte) (acatualReadSize int, err error) {
 	expectReadSize := int(p.Size)
-	conn, err := reader.wraper.GetConnect(host)
+	conn, err := reader.wrapper.GetConnect(host)
 	if err != nil {
 		return 0, errors.Annotatef(err, reader.toString()+
 			"readDataFromHost vol[%v] cannot get  connect from host[%v] request[%v] ",
@@ -111,7 +111,7 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 			log.LogError(err.Error())
 			conn.Close()
 		} else {
-			reader.wraper.PutConnect(conn)
+			reader.wrapper.PutConnect(conn)
 		}
 	}()
 	if err = p.WriteToConn(conn); err != nil {
@@ -127,7 +127,7 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 			return acatualReadSize, err
 
 		}
-		if p.Resultcode != proto.OpOk {
+		if p.ResultCode != proto.OpOk {
 			err = errors.Annotatef(fmt.Errorf(string(p.Data[:p.Size])),
 				reader.toString()+"readDataFromHost host [%v] request[%v] reply[%v]",
 				host, p.GetUniqLogId(), p.GetUniqLogId())

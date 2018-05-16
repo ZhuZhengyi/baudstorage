@@ -36,7 +36,7 @@ type ExtentWriter struct {
 	requestQueue     *list.List //sendPacketList
 	requestQueueLock sync.Mutex
 	volGroup         *sdk.VolGroup
-	wraper           *sdk.VolGroupWraper
+	wrapper          *sdk.VolGroupWrapper
 	extentId         uint64 //current ExtentId
 	currentPacket    *Packet
 	seqNo            uint64 //Current Send Packet Seq
@@ -51,15 +51,15 @@ type ExtentWriter struct {
 	flushLock sync.Mutex
 }
 
-func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wraper *sdk.VolGroupWraper, extentId uint64) (writer *ExtentWriter, err error) {
+func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wrapper *sdk.VolGroupWrapper, extentId uint64) (writer *ExtentWriter, err error) {
 	writer = new(ExtentWriter)
 	writer.requestQueue = list.New()
 	writer.handleCh = make(chan bool, DefaultWriteBufferSize/(64*util.KB))
 	writer.extentId = extentId
 	writer.volGroup = vol
 	writer.inode = inode
-	writer.wraper = wraper
-	writer.connect, err = wraper.GetConnect(vol.Hosts[0])
+	writer.wrapper = wrapper
+	writer.connect, err = wrapper.GetConnect(vol.Hosts[0])
 	if err != nil {
 		return
 	}
@@ -178,7 +178,7 @@ func (writer *ExtentWriter) recover() (sucess bool) {
 
 	}()
 	//get connect from volGroupWraper
-	if connect, err = writer.wraper.GetConnect(writer.volGroup.Hosts[0]); err != nil {
+	if connect, err = writer.wrapper.GetConnect(writer.volGroup.Hosts[0]); err != nil {
 		return
 	}
 	writer.setConnect(connect)
@@ -287,7 +287,7 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 		return errors.Annotatef(fmt.Errorf("processReply recive [%v] but actual recive [%v]",
 			request.GetUniqLogId(), reply.GetUniqLogId()), "writer[%v]", writer.toString())
 	}
-	if reply.Resultcode != proto.OpOk {
+	if reply.ResultCode != proto.OpOk {
 		writer.connect.Close()
 		return errors.Annotatef(fmt.Errorf("processReply recive [%v] error [%v]", request.GetUniqLogId(),
 			string(reply.Data[:reply.Size])), "writer[%v]", writer.toString())

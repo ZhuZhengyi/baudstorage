@@ -7,6 +7,7 @@ import (
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/baudstorage/util/pool"
 )
 
 // Configuration keys
@@ -27,23 +28,24 @@ const (
 	sRunning
 )
 
-// The MetaNode manage Dentry and Inode information in multiple MetaRange, and
+// The MetaNode manage Dentry and Inode information in multiple MetaPartition, and
 // through the Raft algorithm and other MetaNodes in the RageGroup for reliable
 // data synchronization to maintain data consistency within the MetaGroup.
 type MetaNode struct {
-	nodeId           uint64
-	listen           int
-	metaDir          string //metaNode store root dir
-	logDir           string
-	raftDir          string //raft log store base dir
-	masterAddr       string
-	metaRangeManager *MetaRangeManager
-	raftStore        raftstore.RaftStore
-	httpStopC        chan uint8
-	log              *log.Log
-	state            nodeState
-	stateMutex       sync.RWMutex
-	wg               sync.WaitGroup
+	nodeId      uint64
+	listen      int
+	metaDir     string //metaNode store root dir
+	logDir      string
+	raftDir     string //raft log store base dir
+	masterAddr  string
+	proxyPool   *pool.ConnPool
+	metaManager *MetaManager
+	raftStore   raftstore.RaftStore
+	httpStopC   chan uint8
+	log         *log.Log
+	state       nodeState
+	stateMutex  sync.RWMutex
+	wg          sync.WaitGroup
 }
 
 // Start this MeteNode with specified configuration.
@@ -71,12 +73,8 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 		return
 	}
 
-	// start raft server
+	// Start raft server
 	if err = m.startRaftServer(); err != nil {
-		return
-	}
-	// Start MetaRanges Store Schedule
-	if err = m.startStoreSchedule(); err != nil {
 		return
 	}
 	// Start tcp server
@@ -86,13 +84,6 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	// Start reply
 	m.state = sRunning
 	m.wg.Add(1)
-	return
-}
-
-func (m *MetaNode) startStoreSchedule() (err error) {
-	for _, mr := range m.metaRangeManager.metaRangeMap {
-		go mr.StartStoreSchedule()
-	}
 	return
 }
 
@@ -130,14 +121,15 @@ func (m *MetaNode) prepareConfig(cfg *config.Config) (err error) {
 }
 
 func (m *MetaNode) load() (err error) {
-	// Load metaRangeManager
-	err = m.metaRangeManager.LoadMetaManagers(m.metaDir)
+	// Load metaManager
+	err = m.metaManager.LoadMetaManagers(m.metaDir)
 	return
 }
 
 // NewServer create an new MetaNode instance.
 func NewServer() *MetaNode {
 	return &MetaNode{
-		metaRangeManager: NewMetaRangeManager(),
+		metaManager: NewMetaRangeManager(),
+		proxyPool:   pool.NewConnPool(),
 	}
 }

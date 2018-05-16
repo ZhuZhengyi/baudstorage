@@ -1,5 +1,6 @@
 package proto
 
+
 /*
  this struct is used to master send command to metanode
   or send command to datanode
@@ -59,12 +60,13 @@ type File struct {
 	NeedleCnt int
 }
 
-type LoadMetaRangeMetricRequest struct {
-	Start uint64
-	End   uint64
+type LoadMetaPartitionMetricRequest struct {
+	PartitionID uint64
+	Start       uint64
+	End         uint64
 }
 
-type LoadMetaRangeMetricResponse struct {
+type LoadMetaPartitionMetricResponse struct {
 	Start    uint64
 	End      uint64
 	MaxInode uint64
@@ -93,19 +95,19 @@ type DataNodeHeartBeatResponse struct {
 	Result             string
 }
 
-type MetaRangeReport struct {
-	GroupId uint64
-	Status  int
-	Used    uint64
+type MetaPartitionReport struct {
+	GroupId  uint64
+	Status   int
+	Used     uint64
 	IsLeader bool
 }
 
 type MetaNodeHeartbeatResponse struct {
-	Total         uint64
-	Used          uint64
-	MetaRangeInfo []*MetaRangeReport
-	Status        uint8
-	Result        string
+	Total             uint64
+	Used              uint64
+	MetaPartitionInfo []*MetaPartitionReport
+	Status            uint8
+	Result            string
 }
 
 type DeleteFileRequest struct {
@@ -120,27 +122,38 @@ type DeleteFileResponse struct {
 	Name   string
 }
 
-type DeleteMetaRangeRequest struct {
+type DeleteMetaPartitionRequest struct {
 	GroupId uint64
 }
 
-type DeleteMetaRangeResponse struct {
+type DeleteMetaPartitionResponse struct {
 	GroupId uint64
 	Status  uint8
 	Result  string
 }
 
-type UpdateMetaRangeRequest struct {
+type UpdateMetaPartitionRequest struct {
 	GroupId uint64
-	NsName string
+	NsName  string
 	Start   uint64
 	End     uint64
 }
 
-type UpdateMetaRangeResponse struct {
+type UpdateMetaPartitionResponse struct {
 	GroupId uint64
-	NsName string
+	NsName  string
 	End     uint64
+	Status  uint8
+	Result  string
+}
+
+type MetaPartitionOfflineRequest struct {
+	PartitionID uint64
+	NewPeers    []Peer
+}
+
+type MetaPartitionOfflineResponse struct {
+	PartitionID uint64
 	Status  uint8
 	Result  string
 }

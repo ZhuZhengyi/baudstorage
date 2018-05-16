@@ -168,9 +168,9 @@ func (c *Cluster) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error) {
 	return
 }
 
-func (c *Cluster) getMetaGroupByID(id uint64) (mg *MetaGroup, err error) {
+func (c *Cluster) getMetaPartitionByID(id uint64) (mp *MetaPartition, err error) {
 	for _, ns := range c.namespaces {
-		if mg, err = ns.getMetaGroupById(id); err == nil {
+		if mp, err = ns.getMetaPartitionById(id); err == nil {
 			return
 		}
 	}
@@ -334,14 +334,21 @@ func (c *Cluster) volOffline(offlineAddr string, vg *VolGroup, errMsg string) {
 	c.putDataNodeTasks(tasks)
 	goto errDeal
 errDeal:
-	msg = fmt.Sprintf(errMsg+" vol:%v  on Node:%v  "+
+	msg = fmt.Sprintf(errMsg + " vol:%v  on Node:%v  "+
 		"DiskError  TimeOut Report Then Fix It on newHost:%v   Err:%v , PersistenceHosts:%v  ",
 		vg.VolID, offlineAddr, newAddr, err, vg.PersistenceHosts)
 	log.LogWarn(msg)
 }
 
 func (c *Cluster) metaNodeOffLine(metaNode *MetaNode) {
-
+	msg := fmt.Sprintf("action[metaNodeOffLine], Node[%v] OffLine", metaNode.Addr)
+	log.LogWarn(msg)
+	for _, ns := range c.namespaces {
+		for _, mp := range ns.MetaPartitions {
+			c.metaPartitionOffline(ns.Name, metaNode.Addr, mp.PartitionID)
+		}
+	}
+	c.metaNodes.Delete(metaNode.Addr)
 }
 
 func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {
@@ -357,7 +364,7 @@ func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {
 	ns = NewNameSpace(name, replicaNum)
 
 	c.namespaces[name] = ns
-	if err = c.CreateMetaGroup(name, 0, DefaultMaxMetaTabletRange); err != nil {
+	if err = c.CreateMetaPartition(name, 0, DefaultMaxMetaPartitionRange); err != nil {
 		delete(c.namespaces, name)
 		goto errDeal
 	}
@@ -368,10 +375,10 @@ errDeal:
 	return
 }
 
-func (c *Cluster) CreateMetaGroup(nsName string, start, end uint64) (err error) {
+func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err error) {
 	var (
 		ns      *NameSpace
-		mg      *MetaGroup
+		mp      *MetaPartition
 		hosts   []string
 		groupId uint64
 		peers   []proto.Peer
@@ -384,15 +391,15 @@ func (c *Cluster) CreateMetaGroup(nsName string, start, end uint64) (err error) 
 	if groupId, err = c.getMaxID(); err != nil {
 		return
 	}
-	mg = NewMetaGroup(groupId, start, end)
-	if hosts, peers, err = c.ChooseTargetMetaHosts(int(ns.mrReplicaNum)); err != nil {
+	mp = NewMetaPartition(groupId, start, end)
+	if hosts, peers, err = c.ChooseTargetMetaHosts(int(ns.mpReplicaNum)); err != nil {
 		return
 	}
-	mg.PersistenceHosts = hosts
-	mg.peers = peers
+	mp.PersistenceHosts = hosts
+	mp.peers = peers
 	//todo sync namespace and metaGroup
-	ns.AddMetaGroup(mg)
-	c.putMetaNodeTasks(mg.generateCreateMetaGroupTasks(nil))
+	ns.AddMetaPartition(mp)
+	c.putMetaNodeTasks(mp.generateCreateMetaPartitionTasks(nil))
 	return
 }
 

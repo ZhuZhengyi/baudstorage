@@ -2,7 +2,6 @@ package pool
 
 import (
 	"net"
-	"strings"
 	"sync"
 	"time"
 )
@@ -62,7 +61,7 @@ func (connP *ConnPool) Get(targetAddr string) (c net.Conn, err error) {
 }
 
 func (connP *ConnPool) Put(c net.Conn) {
-	addr := strings.Split(c.LocalAddr().String(), ":")[0]
+	addr := c.RemoteAddr().String()
 	connP.Lock()
 	pool, ok := connP.pools[addr]
 	connP.Unlock()
@@ -71,6 +70,5 @@ func (connP *ConnPool) Put(c net.Conn) {
 		return
 	}
 	pool.Put(c)
-
 	return
 }

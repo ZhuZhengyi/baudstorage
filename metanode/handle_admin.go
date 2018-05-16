@@ -2,15 +2,25 @@ package metanode
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net"
+	"os"
+	"path"
 
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util"
+)
+
+const (
+	// Operation response
+	metaNodeResponse = "metaNode/response" // Method: 'POST', ContentType: 'application/json'
 )
 
 // Handle OpCreateMetaRange
 func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
-	remoteAddr := conn.RemoteAddr()
-	m.masterAddr = net.ParseIP(remoteAddr.String()).String()
+	// Ack to master
+	go m.ackAdmin(conn, p)
 	// Get task from packet.
 	adminTask := &proto.AdminTask{}
 	if err = json.Unmarshal(p.Data, adminTask); err != nil {
@@ -18,7 +28,7 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 	}
 	defer func() {
 		// Response task result to master.
-		resp := &proto.CreateMetaRangeResponse{}
+		resp := &proto.CreateMetaPartitionResponse{}
 		if err != nil {
 			// Operation failure.
 			resp.Status = proto.OpErr
@@ -28,6 +38,7 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 			resp.Status = proto.OpOk
 		}
 		adminTask.Response = resp
+		adminTask.Request = nil
 		m.replyToMaster(m.masterAddr, adminTask)
 	}()
 	// Marshal request body.
@@ -36,31 +47,85 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	// Unmarshal request to entity
-	req := &proto.CreateMetaRangeRequest{}
+	req := &proto.CreateMetaPartitionRequest{}
 	if err := json.Unmarshal(requestJson, req); err != nil {
 		return
 	}
-	// Create new  MetaRange.
-	mConf := MetaRangeConfig{
-		ID:          req.MetaId,
+	// Create new  MetaPartition.
+	id := fmt.Sprintf("%d", req.GroupId)
+	mConf := MetaPartitionConfig{
+		ID:          id,
 		Start:       req.Start,
 		End:         req.End,
 		Cursor:      req.Start,
 		RaftGroupID: req.GroupId,
 		Peers:       req.Members,
+		RootDir:     path.Join(m.metaDir, id),
 	}
-	mr := NewMetaRange(mConf)
-	if err = m.metaRangeManager.SetMetaRange(mr); err != nil {
+	mr := NewMetaPartition(mConf)
+	if err = m.metaManager.SetMetaRange(mr); err != nil {
 		return
 	}
 	defer func() {
 		if err != nil {
-			m.metaRangeManager.DeleteMetaRange(mr.ID)
+			m.metaManager.DeleteMetaRange(mr.ID)
 		}
 	}()
-	//TODO: Write to File
-
+	// Create metaPartition base dir
+	if _, err = os.Stat(mr.RootDir); err == nil {
+		err = errors.New(fmt.Sprint("metaPartition root dir '%s' is exsited!",
+			mr.RootDir))
+		return
+	}
+	os.MkdirAll(mr.RootDir, 0755)
+	defer func() {
+		if err != nil {
+			os.RemoveAll(mr.RootDir)
+		}
+	}()
+	// Write metaPartition to file
+	if err = mr.StoreMeta(); err != nil {
+		return
+	}
 	//TODO: create Raft
+	if err = m.createPartition(mr); err != nil {
+		return
+	}
+	go mr.StartStoreSchedule()
+	return
+}
 
+func (m *MetaNode) opHeartBeatRequest(conn net.Conn, p *Packet) (err error) {
+	// Ack from Master Request
+
+	return
+}
+
+// ReplyToMaster reply operation result to master by sending http request.
+func (m *MetaNode) replyAdmin(ip string, data interface{}) (err error) {
+	// Handle panic
+	defer func() {
+		if r := recover(); r != nil {
+			switch data := r.(type) {
+			case error:
+				err = data
+			default:
+				err = errors.New(data.(string))
+			}
+		}
+	}()
+	// Process data and send reply though http specified remote address.
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		return
+	}
+	url := fmt.Sprintf("http://%s%s", ip, metaNodeResponse)
+	util.PostToNode(jsonBytes, url)
+	return
+}
+
+func (m *MetaNode) ackAdmin(conn net.Conn, p *Packet) (err error) {
+	p.PackOkReply()
+	err = p.WriteToConn(conn)
 	return
 }

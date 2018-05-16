@@ -28,6 +28,7 @@ var (
 	NoAnyMetaNodeForCreateVol       = errors.New("no have enough meta server for create meta range")
 	MetaGroupReplicationExcessError = errors.New("meta group Replication Excess error")
 	MetaGroupReplicationLackError   = errors.New("meta group Replication Lack error")
+	NoHaveMajorityReplica           = errors.New("no have majority replica error")
 
 	NoLeader = errors.New("no leader")
 )
@@ -44,11 +45,11 @@ func taskNotFound(id string) (err error) {
 	return elementNotFound(fmt.Sprintf("task %v", id))
 }
 
-func metaGroupNotFound(id uint64) (err error) {
+func metaPartitionNotFound(id uint64) (err error) {
 	return elementNotFound(fmt.Sprintf("meta group %v", id))
 }
 
-func metaRangeNotFound(addr string) (err error) {
+func metaReplicaNotFound(addr string) (err error) {
 	return elementNotFound(fmt.Sprintf("meta range %v", addr))
 }
 

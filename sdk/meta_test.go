@@ -97,16 +97,16 @@ func init() {
 
 func (nv *NamespaceView) update(partitions []MetaPartition) {
 	for _, p := range partitions {
-		mp := newMetaPartition(p.GroupID, p.Start, p.End)
+		mp := newMetaPartition(p.PartitionID, p.Start, p.End)
 		nv.MetaPartitions = append(nv.MetaPartitions, mp)
 	}
 }
 
-func newMetaPartition(gid string, start, end uint64) *MetaPartition {
+func newMetaPartition(id string, start, end uint64) *MetaPartition {
 	return &MetaPartition{
-		GroupID: gid,
-		Start:   start,
-		End:     end,
+		PartitionID: id,
+		Start:       start,
+		End:         end,
 	}
 }
 
@@ -231,7 +231,7 @@ func checkResult(mp *MetaPartition, result string) int {
 	if mp == nil {
 		toCompare = ""
 	} else {
-		toCompare = mp.GroupID
+		toCompare = mp.PartitionID
 	}
 	return strings.Compare(toCompare, result)
 }

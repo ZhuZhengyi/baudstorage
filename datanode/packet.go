@@ -67,13 +67,13 @@ func (p *Packet) actionMesg(action, remote string, start int64, err error) (m st
 	if err == nil {
 		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[%v] size[%v] "+
 			" cost[%v] isTransite[%v] ",
-			p.GetUniqLogId(), action, remote, proto.GetOpMesg(p.Opcode), proto.GetOpMesg(p.Resultcode), p.Size,
+			p.GetUniqLogId(), action, remote, proto.GetOpMesg(p.Opcode), proto.GetOpMesg(p.ResultCode), p.Size,
 			(time.Now().UnixNano()-start)/1e6, p.IsTransitPkg())
 
 	} else {
 		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[%v] size[%v] "+
 			", err[%v] isTransite[%v]", p.GetUniqLogId(), action,
-			remote, proto.GetOpMesg(p.Opcode), proto.GetOpMesg(p.Resultcode), p.Size, err.Error(),
+			remote, proto.GetOpMesg(p.Opcode), proto.GetOpMesg(p.ResultCode), p.Size, err.Error(),
 			p.IsTransitPkg())
 	}
 

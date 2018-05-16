@@ -323,6 +323,62 @@ errDeal:
 	return
 }
 
+func (m *Master) metaPartitionOffline(w http.ResponseWriter, r *http.Request) {
+	var (
+		partitionID      uint64
+		nsName, nodeAddr string
+		msg              string
+		err              error
+	)
+	if nodeAddr, nsName, partitionID, err = parseMetaPartitionOffline(r); err != nil {
+		goto errDeal
+	}
+
+	if err = m.cluster.metaPartitionOffline(nsName, nodeAddr, partitionID); err != nil {
+		goto errDeal
+	}
+	msg = fmt.Sprintf(AdminLoadMetaPartition+"partitionID :%v  metaPartitionOffline success", partitionID)
+	io.WriteString(w, msg)
+	return
+errDeal:
+	logMsg := getReturnMessage(AdminMetaPartitionOffline, r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	HandleError(logMsg, http.StatusBadRequest, w)
+	return
+}
+
+func (m *Master) loadMetaPartition(w http.ResponseWriter, r *http.Request) {
+	var (
+		nsName      string
+		ns          *NameSpace
+		msg         string
+		mp          *MetaPartition
+		partitionID uint64
+		err         error
+	)
+
+	if partitionID, nsName, err = parsePartitionIDAndNamespace(r); err != nil {
+		goto errDeal
+	}
+
+	if ns, err = m.cluster.getNamespace(nsName); err != nil {
+		goto errDeal
+	}
+	if mp, err = ns.getMetaPartitionById(partitionID); err != nil {
+		goto errDeal
+	}
+
+	m.cluster.loadMetaPartitionAndCheckResponse(mp, false)
+	msg = fmt.Sprintf(AdminLoadMetaPartition+"partitionID :%v  LoadVol success", partitionID)
+	io.WriteString(w, msg)
+	log.LogInfo(msg)
+
+	return
+errDeal:
+	logMsg := getReturnMessage(AdminLoadMetaPartition, r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	HandleError(logMsg, http.StatusBadRequest, w)
+	return
+}
+
 func (m *Master) metaNodeOffline(w http.ResponseWriter, r *http.Request) {
 	var (
 		metaNode    *MetaNode
@@ -472,6 +528,31 @@ func parseVolOfflinePara(r *http.Request) (nodeAddr string, volID uint64, name s
 func checkNodeAddr(r *http.Request) (nodeAddr string, err error) {
 	if nodeAddr = r.FormValue(ParaNodeAddr); nodeAddr == "" {
 		err = paraNotFound(ParaNodeAddr)
+		return
+	}
+	return
+}
+
+func parsePartitionIDAndNamespace(r *http.Request) (partitionID uint64, nsName string, err error) {
+	r.ParseForm()
+	if partitionID, err = checkMetaPartitionID(r); err != nil {
+		return
+	}
+	if nsName, err = checkNamespace(r); err != nil {
+		return
+	}
+	return
+}
+
+func parseMetaPartitionOffline(r *http.Request) (nsName, nodeAddr string, partitionID uint64, err error) {
+	r.ParseForm()
+	if partitionID, err = checkMetaPartitionID(r); err != nil {
+		return
+	}
+	if nsName, err = checkNamespace(r); err != nil {
+		return
+	}
+	if nodeAddr, err = checkNodeAddr(r); err != nil {
 		return
 	}
 	return

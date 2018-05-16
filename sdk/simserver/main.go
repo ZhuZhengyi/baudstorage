@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"runtime"
@@ -19,14 +19,22 @@ const (
 	SimNamespace  = "simserver"
 	SimMasterPort = "8900"
 	SimMetaAddr   = "localhost"
-	SimMetaPort   = "8910"
+
+	SimLogFlags = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile
 )
 
-var globalMP = []MetaPartition{
-	{"mp001", 1, 100, nil},
-	{"mp002", 101, 200, nil},
-	{"mp003", 210, 300, nil},
-	{"mp004", 301, 400, nil},
+type MetaNodeDesc struct {
+	id    string
+	start uint64
+	end   uint64
+	port  string
+}
+
+var globalMetaDesc = []MetaNodeDesc{
+	{"mp001", 1, 100, "8910"},
+	{"mp002", 101, 200, "8911"},
+	{"mp003", 210, 300, "8912"},
+	{"mp004", 301, 400, "8913"},
 }
 
 type MasterServer struct {
@@ -35,6 +43,9 @@ type MasterServer struct {
 
 type MetaServer struct {
 	sync.RWMutex
+	start   uint64
+	end     uint64
+	port    string
 	inodes  map[uint64]*Inode
 	currIno uint64
 }
@@ -53,13 +64,19 @@ type Dentry struct {
 }
 
 func main() {
-	fmt.Println("Staring Sim Server ...")
+	log.SetFlags(SimLogFlags)
+	log.Println("Staring Sim Server ...")
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	var wg sync.WaitGroup
 
 	ms := NewMasterServer()
 	ms.Start(&wg)
+
+	for _, desc := range globalMetaDesc {
+		mt := NewMetaServer(desc.start, desc.end, desc.port)
+		mt.Start(&wg)
+	}
 
 	wg.Wait()
 }
@@ -78,8 +95,8 @@ func (m *MasterServer) Start(wg *sync.WaitGroup) {
 		MetaPartitions: make([]*MetaPartition, 0),
 	}
 
-	for _, p := range globalMP {
-		mp := NewMetaPartition(p.GroupID, p.Start, p.End, SimMetaAddr+":"+SimMetaPort)
+	for _, desc := range globalMetaDesc {
+		mp := NewMetaPartition(desc.id, desc.start, desc.end, SimMetaAddr+":"+desc.port)
 		nv.MetaPartitions = append(nv.MetaPartitions, mp)
 	}
 
@@ -90,9 +107,9 @@ func (m *MasterServer) Start(wg *sync.WaitGroup) {
 		defer wg.Done()
 		http.HandleFunc("/client/namespace", m.handleClientNS)
 		if err := http.ListenAndServe(":"+SimMasterPort, nil); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		} else {
-			fmt.Println("Done!")
+			log.Println("Done!")
 		}
 	}()
 }
@@ -114,21 +131,24 @@ func (m *MasterServer) handleClientNS(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func NewMetaPartition(gid string, start, end uint64, member string) *MetaPartition {
+func NewMetaPartition(id string, start, end uint64, member string) *MetaPartition {
 	return &MetaPartition{
-		GroupID: gid,
-		Start:   start,
-		End:     end,
-		Members: []string{member, member, member},
+		PartitionID: id,
+		Start:       start,
+		End:         end,
+		Members:     []string{member, member, member},
 	}
 }
 
 // Meta Server
 
-func NewMetaServer() *MetaServer {
+func NewMetaServer(start, end uint64, port string) *MetaServer {
 	return &MetaServer{
+		start:   start,
+		end:     end,
+		port:    port,
 		inodes:  make(map[uint64]*Inode),
-		currIno: proto.ROOT_INO,
+		currIno: start - 1,
 	}
 }
 
@@ -150,10 +170,13 @@ func NewDentry(name string, ino uint64, mode uint32) *Dentry {
 
 func (m *MetaServer) Start(wg *sync.WaitGroup) {
 	// Create root inode
-	i := NewInode(proto.ROOT_INO, proto.ModeDir)
-	m.inodes[i.ino] = i
+	if m.start == proto.ROOT_INO {
+		m.allocIno()
+		i := NewInode(proto.ROOT_INO, proto.ModeDir)
+		m.inodes[i.ino] = i
+	}
 
-	ln, err := net.Listen("tcp", ":"+SimMetaPort)
+	ln, err := net.Listen("tcp", ":"+m.port)
 	if err != nil {
 		return
 	}
@@ -177,13 +200,13 @@ func (m *MetaServer) servConn(conn net.Conn) {
 
 	for {
 		p := &proto.Packet{}
-		if err := p.ReadFromConn(conn, 0); err != nil {
-			fmt.Println("servConn:", err)
+		if err := p.ReadFromConn(conn, proto.NoReadDeadlineTime); err != nil {
+			log.Println("servConn ReadFromConn:", err)
 			return
 		}
 
 		if err := m.handlePacket(conn, p); err != nil {
-			fmt.Println("servConn:", err)
+			log.Println("servConn handlePacket:", err)
 			return
 		}
 	}
@@ -192,56 +215,245 @@ func (m *MetaServer) servConn(conn net.Conn) {
 func (m *MetaServer) handlePacket(conn net.Conn, p *proto.Packet) (err error) {
 	switch p.Opcode {
 	case proto.OpMetaCreateInode:
-		err = m.opCreateInode(conn, p)
-		//	case proto.OpMetaCreateDentry:
-		//		err = m.opCreateDentry(conn, p)
-		//	case proto.OpMetaDeleteInode:
-		//		err = m.opDeleteInode(conn, p)
-		//	case proto.OpMetaDeleteDentry:
-		//		err = m.opDeleteDentry(conn, p)
-		//	case proto.OpMetaReadDir:
-		//		err = m.opReadDir(conn, p)
-		//	case proto.OpMetaOpen:
-		//		err = m.opOpen(conn, p)
-		//	case proto.OpMetaCreateMetaRange:
-		//		err = m.opCreateMetaRange(conn, p)
+		err = m.handleCreateInode(conn, p)
+	case proto.OpMetaCreateDentry:
+		err = m.handleCreateDentry(conn, p)
+	case proto.OpMetaDeleteInode:
+		err = m.handleDeleteInode(conn, p)
+	case proto.OpMetaDeleteDentry:
+		err = m.handleDeleteDentry(conn, p)
+	case proto.OpMetaLookup:
+		err = m.handleLookup(conn, p)
+	case proto.OpMetaReadDir:
+		err = m.handleReadDir(conn, p)
+	case proto.OpMetaInodeGet:
+		err = m.handleInodeGet(conn, p)
 	default:
 		err = errors.New("unknown Opcode: ")
 	}
 	return
 }
 
-func (m *MetaServer) opCreateInode(conn net.Conn, p *proto.Packet) error {
+func (m *MetaServer) handleCreateInode(conn net.Conn, p *proto.Packet) error {
+	var (
+		data  []byte
+		inode *Inode
+	)
+
+	resp := &proto.CreateInodeResponse{}
 	req := &proto.CreateInodeRequest{}
 	err := json.Unmarshal(p.Data, req)
 	if err != nil {
 		return err
 	}
 
-	ino := m.allocIno()
-	i := NewInode(ino, req.Mode)
-	m.addInode(i)
-
-	resp := &proto.CreateInodeResponse{
-		Info: NewInodeInfo(ino, req.Mode),
+	ino, ok := m.allocIno()
+	if !ok {
+		p.ResultCode = proto.OpInodeFullErr
+		goto out
 	}
-	resp.Status = proto.OpOk
 
-	data, err := json.Marshal(resp)
+	inode = NewInode(ino, req.Mode)
+	resp.Info = NewInodeInfo(ino, req.Mode)
+
+	data, err = json.Marshal(resp)
 	if err != nil {
-		goto errOut
+		p.ResultCode = proto.OpErr
+		goto out
 	}
 
+	m.addInode(inode)
+	p.ResultCode = proto.OpOk
+
+out:
 	p.Data = data
+	p.Size = uint32(len(data))
 	err = p.WriteToConn(conn)
+	return err
+}
+
+func (m *MetaServer) handleCreateDentry(conn net.Conn, p *proto.Packet) error {
+	req := &proto.CreateDentryRequest{}
+	err := json.Unmarshal(p.Data, req)
 	if err != nil {
-		goto errOut
+		return err
 	}
 
-	return nil
+	dentry := NewDentry(req.Name, req.Inode, req.Mode)
 
-errOut:
-	m.deleteInode(i)
+	parent := m.getInode(req.ParentID)
+	if parent == nil {
+		p.ResultCode = proto.OpNotExistErr
+		log.Printf("Parent(%v) Not Exist", req.ParentID)
+		goto out
+	}
+
+	if found := parent.addDentry(dentry); found != nil {
+		p.ResultCode = proto.OpExistErr
+		log.Printf("Parent(%v) Exist", req.ParentID)
+		goto out
+	}
+
+	p.ResultCode = proto.OpOk
+out:
+	p.Data = nil
+	p.Size = 0
+	err = p.WriteToConn(conn)
+	return err
+}
+
+func (m *MetaServer) handleDeleteInode(conn net.Conn, p *proto.Packet) error {
+	req := &proto.DeleteInodeRequest{}
+	err := json.Unmarshal(p.Data, req)
+	if err != nil {
+		return err
+	}
+
+	ino := req.Inode
+	p.Data = nil
+	p.Size = 0
+
+	inode := m.deleteInode(ino)
+	if inode == nil {
+		p.ResultCode = proto.OpNotExistErr
+	} else {
+		p.ResultCode = proto.OpOk
+	}
+
+	err = p.WriteToConn(conn)
+	return err
+}
+
+func (m *MetaServer) handleDeleteDentry(conn net.Conn, p *proto.Packet) error {
+	var (
+		data  []byte
+		child *Dentry
+	)
+
+	resp := &proto.DeleteDentryResponse{}
+	req := &proto.DeleteDentryRequest{}
+	err := json.Unmarshal(p.Data, req)
+	if err != nil {
+		return err
+	}
+
+	parent := m.getInode(req.ParentID)
+	if parent == nil {
+		p.ResultCode = proto.OpErr
+		goto out
+	}
+
+	child = parent.deleteDentry(req.Name)
+	if child == nil {
+		p.ResultCode = proto.OpNotExistErr
+		goto out
+	}
+
+	resp.Inode = child.ino
+	data, err = json.Marshal(resp)
+
+out:
+	p.Data = data
+	p.Size = uint32(len(data))
+	err = p.WriteToConn(conn)
+	return err
+}
+
+func (m *MetaServer) handleLookup(conn net.Conn, p *proto.Packet) error {
+	var (
+		data   []byte
+		dentry *Dentry
+	)
+
+	resp := &proto.LookupResponse{}
+	req := &proto.LookupRequest{}
+	err := json.Unmarshal(p.Data, req)
+	if err != nil {
+		return err
+	}
+
+	parent := m.getInode(req.ParentID)
+	if parent == nil {
+		p.ResultCode = proto.OpErr
+		goto out
+	}
+
+	dentry = parent.getDentry(req.Name)
+	if dentry == nil {
+		p.ResultCode = proto.OpNotExistErr
+		goto out
+	}
+
+	resp.Inode = dentry.ino
+	resp.Mode = dentry.mode
+	data, _ = json.Marshal(resp)
+	p.ResultCode = proto.OpOk
+
+out:
+	p.Data = data
+	p.Size = uint32(len(data))
+	err = p.WriteToConn(conn)
+	return err
+}
+
+func (m *MetaServer) handleReadDir(conn net.Conn, p *proto.Packet) error {
+	var (
+		data []byte
+	)
+
+	resp := &proto.ReadDirResponse{}
+	req := &proto.ReadDirRequest{}
+	err := json.Unmarshal(p.Data, req)
+	if err != nil {
+		return err
+	}
+
+	parent := m.getInode(req.ParentID)
+	if parent == nil {
+		p.ResultCode = proto.OpNotExistErr
+		goto out
+	}
+
+	resp.Children = parent.listDentry()
+	data, _ = json.Marshal(resp)
+	p.ResultCode = proto.OpOk
+
+out:
+	p.Data = data
+	p.Size = uint32(len(data))
+	err = p.WriteToConn(conn)
+	return err
+}
+
+func (m *MetaServer) handleInodeGet(conn net.Conn, p *proto.Packet) error {
+	var data []byte
+
+	resp := &proto.InodeGetResponse{}
+	req := &proto.InodeGetRequest{}
+	err := json.Unmarshal(p.Data, req)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	inode := m.getInode(req.Inode)
+	if inode == nil {
+		p.ResultCode = proto.OpNotExistErr
+		goto out
+	}
+
+	resp.Info = NewInodeInfo(inode.ino, inode.mode)
+	if data, err = json.Marshal(resp); err != nil {
+		log.Println(err)
+		p.ResultCode = proto.OpErr
+	} else {
+		p.ResultCode = proto.OpOk
+	}
+
+out:
+	p.Data = data
+	p.Size = uint32(len(data))
+	err = p.WriteToConn(conn)
 	return err
 }
 
@@ -257,18 +469,94 @@ func NewInodeInfo(ino uint64, mode uint32) *proto.InodeInfo {
 	}
 }
 
-func (m *MetaServer) addInode(i *Inode) {
+func NewDentryInfo(name string, ino uint64, mode uint32) *proto.Dentry {
+	return &proto.Dentry{
+		Name:  name,
+		Inode: ino,
+		Type:  mode,
+	}
+}
+
+func (m *MetaServer) addInode(i *Inode) *Inode {
 	m.Lock()
 	defer m.Unlock()
+	inode, ok := m.inodes[i.ino]
+	if ok {
+		return inode
+	}
 	m.inodes[i.ino] = i
+	return nil
 }
 
-func (m *MetaServer) deleteInode(i *Inode) {
+func (m *MetaServer) deleteInode(ino uint64) *Inode {
 	m.Lock()
 	defer m.Unlock()
-	delete(m.inodes, i.ino)
+	inode, ok := m.inodes[ino]
+	if ok {
+		delete(m.inodes, ino)
+		return inode
+	}
+	return nil
 }
 
-func (m *MetaServer) allocIno() uint64 {
-	return atomic.AddUint64(&m.currIno, 1)
+func (m *MetaServer) getInode(ino uint64) *Inode {
+	m.RLock()
+	defer m.RUnlock()
+	i, ok := m.inodes[ino]
+	if !ok {
+		return nil
+	}
+	return i
+}
+
+func (m *MetaServer) allocIno() (uint64, bool) {
+	ino := atomic.AddUint64(&m.currIno, 1)
+	if ino < m.start || ino > m.end {
+		return 0, false
+	}
+	return ino, true
+}
+
+func (i *Inode) addDentry(d *Dentry) *Dentry {
+	i.Lock()
+	defer i.Unlock()
+	log.Printf("Adding Dentry %v", *d)
+	dentry, ok := i.dents[d.name]
+	if ok {
+		return dentry
+	}
+	i.dents[d.name] = d
+	return nil
+}
+
+func (i *Inode) deleteDentry(name string) *Dentry {
+	i.Lock()
+	defer i.Unlock()
+	dentry, ok := i.dents[name]
+	if ok {
+		delete(i.dents, name)
+		return dentry
+	}
+	return nil
+}
+
+func (i *Inode) getDentry(name string) *Dentry {
+	i.Lock()
+	defer i.Unlock()
+	dentry, ok := i.dents[name]
+	if ok {
+		return dentry
+	}
+	return nil
+}
+
+func (i *Inode) listDentry() []proto.Dentry {
+	dentries := make([]proto.Dentry, 0)
+	i.RLock()
+	i.RUnlock()
+	for _, d := range i.dents {
+		dentry := NewDentryInfo(d.name, d.ino, d.mode)
+		dentries = append(dentries, *dentry)
+	}
+	return dentries
 }

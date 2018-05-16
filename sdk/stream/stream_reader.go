@@ -11,7 +11,7 @@ import (
 
 type StreamReader struct {
 	inode          uint64
-	wraper         *sdk.VolGroupWraper
+	wrapper        *sdk.VolGroupWrapper
 	readers        []*ExtentReader
 	getExtentKeyFn func(inode uint64) (sk *StreamKey, err error)
 	extents        *StreamKey
@@ -19,11 +19,11 @@ type StreamReader struct {
 	sync.Mutex
 }
 
-func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, getExtentKeyFn func(inode uint64) (sk *StreamKey,
+func NewStreamReader(inode uint64, wrapper *sdk.VolGroupWrapper, getExtentKeyFn func(inode uint64) (sk *StreamKey,
 	err error)) (stream *StreamReader, err error) {
 	stream = new(StreamReader)
 	stream.inode = inode
-	stream.wraper = wraper
+	stream.wrapper = wrapper
 	stream.getExtentKeyFn = getExtentKeyFn
 	stream.extents = NewStreamKey(inode)
 	stream.extents, err = stream.getExtentKeyFn(inode)
@@ -33,7 +33,7 @@ func NewStreamReader(inode uint64, wraper *sdk.VolGroupWraper, getExtentKeyFn fu
 	var offset int
 	var reader *ExtentReader
 	for _, key := range stream.extents.Extents {
-		if reader, err = NewExtentReader(inode, offset, key, stream.wraper); err != nil {
+		if reader, err = NewExtentReader(inode, offset, key, stream.wrapper); err != nil {
 			return nil, errors.Annotatef(err, "NewStreamReader inode[%v] "+
 				"key[%v] vol not found error", inode, key)
 		}
@@ -98,7 +98,7 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err erro
 				stream.inode, newOffSet)
 			continue
 		} else if index > oldReaderCnt-1 {
-			if r, err = NewExtentReader(stream.inode, newOffSet, key, stream.wraper); err != nil {
+			if r, err = NewExtentReader(stream.inode, newOffSet, key, stream.wrapper); err != nil {
 				return errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] "+
 					"vol not found error", stream.inode, key)
 			}
