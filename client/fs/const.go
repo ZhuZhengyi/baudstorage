@@ -26,12 +26,6 @@ const (
 	ModeDir     = proto.ModeDir
 )
 
-const (
-	StatusOK    = int(proto.OpOk)
-	StatusExist = int(proto.OpExistErr)
-	StatusNoEnt = int(proto.OpNotExistErr)
-)
-
 func ParseError(err error) fuse.Errno {
 	switch v := err.(type) {
 	case syscall.Errno:
