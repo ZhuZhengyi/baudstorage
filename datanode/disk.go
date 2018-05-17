@@ -57,6 +57,7 @@ func NewDisk(path string) (d *Disk) {
 	d.Path = path
 	d.VolsName = make([]string, 0)
 	d.RestSize = util.GB * 1
+	d.MaxErrs=2000
 	d.DiskUsage()
 	d.compactCh = make(chan *CompactTask, CompactThreadNum)
 	for i := 0; i < CompactThreadNum; i++ {
@@ -151,9 +152,9 @@ func (d *Disk) UpdateSpaceInfo(localIp string) (err error) {
 	}
 
 	currErrs := d.ReadErrs + d.WriteErrs
-	if currErrs >= d.MaxErrs {
+	if currErrs >= uint64(d.MaxErrs) {
 		d.Status = storage.DiskErrStore
-	} else if d.Free < 0 {
+	} else if d.Free <= 0 {
 		d.Status = storage.ReadOnlyStore
 	} else {
 		d.Status = storage.ReadWriteStore
