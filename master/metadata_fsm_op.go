@@ -1,38 +1,78 @@
 package master
 
-import "github.com/tiglabs/baudstorage/proto"
+import (
+	"encoding/json"
+	"strconv"
+)
 
-func (mf *MetadataFsm) CreateNameSpace(request proto.CreateNameSpaceRequest) (response proto.CreateNameSpaceResponse) {
-	//	var (
-	//		data     []byte
-	//		err      error
-	//		raftResp *raft.Future
-	//	)
-	//	//key:ns#name,value:nil
-	//	kv := &kvp.Kv{Opt: OptSetNamespace}
-	//	kv.K = encodeNameSpaceKey(request.Name)
-	//	if data, err = pbproto.Marshal(kv); err != nil {
-	//		err = fmt.Errorf("action[CreateNameSpace],marshal kv:%v,err:%v", kv, err.Error())
-	//		goto errDeal
-	//	}
-	//	raftResp = mf.RaftStoreFsm.GetRaftServer().Submit(ClusterGroupID, data)
-	//	if _, err = raftResp.Response(); err != nil {
-	//		err = fmt.Errorf("action[CreateNameSpace],raft submit err:%v", err.Error())
-	//		goto errDeal
-	//	}
-	//	response.Status = OK
-	//	return
-	//errDeal:
-	//	response.Status = Failed
-	//	response.Result = err.Error()
-	return
+const (
+	OpSyncAddMetaNode  uint32 = 0x01
+	OpSyncAddDataNode  uint32 = 0x02
+	OpSyncAddVolHosts  uint32 = 0x03
+	OpSyncAddNamespace uint32 = 0x04
+)
 
+const (
+	MetaNodePrefix  = "#mn#"
+	DataNodePrefix  = "#dn#"
+	VolGroupPrefix  = "#vg#"
+	NamespacePrefix = "#ns#"
+)
+
+type Metadata struct {
+	Op uint32 `json:"op"`
+	K  string `json:"k"`
+	V  []byte `json:"v"`
 }
 
-func encodeNameSpaceKey(name string) string {
-	return PrefixNameSpace + KeySeparator + name
+func (m *Metadata) Marshal() ([]byte, error) {
+	return json.Marshal(m)
 }
 
-func (mf *MetadataFsm) CreateMetaRange(request proto.CreateMetaPartitionRequest) (response proto.CreateMetaPartitionResponse) {
+func (m *Metadata) Unmarshal(data []byte) (err error) {
+	return json.Unmarshal(data, m)
+}
+
+/**
+key=#vg#nsName#volID,value=replicaNum#hosts
+*/
+func (c *Cluster) syncAddVolGroup(nsName string, vg *VolGroup) (err error) {
+	metadata := new(Metadata)
+	metadata.Op = OpSyncAddVolHosts
+	metadata.K = VolGroupPrefix + nsName + KeySeparator + strconv.FormatUint(vg.VolID, 10)
+	metadata.V = []byte(strconv.FormatUint(uint64(vg.replicaNum), 10) + KeySeparator + vg.VolHostsToString())
+	return c.submit(metadata)
+}
+
+func (c *Cluster) submit(metadata *Metadata) (err error) {
+	cmd, err := metadata.Marshal()
+	if err != nil {
+		return
+	}
+	if _, err := c.partition.Submit(cmd); err != nil {
+		return
+	}
 	return
+}
+
+func (c *Cluster) syncNamespace(ns *NameSpace) (err error) {
+	metadata := new(Metadata)
+	metadata.Op = OpSyncAddNamespace
+	metadata.K = NamespacePrefix + ns.Name
+	return c.submit(metadata)
+}
+
+func (c *Cluster) syncAddMetaNode(metaNode *MetaNode) (err error) {
+	metadata := new(Metadata)
+	metadata.Op = OpSyncAddMetaNode
+	metadata.K = MetaNodePrefix + strconv.FormatUint(metaNode.id, 10)
+	metadata.V = []byte(metaNode.Addr)
+	return c.submit(metadata)
+}
+
+func (c *Cluster) syncAddDataNode(dataNode *DataNode) (err error) {
+	metadata := new(Metadata)
+	metadata.Op = OpSyncAddDataNode
+	metadata.K = DataNodePrefix + dataNode.HttpAddr
+	return c.submit(metadata)
 }

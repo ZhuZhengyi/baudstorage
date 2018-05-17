@@ -38,7 +38,7 @@ const (
 func (m *Master) startHttpService() (err error) {
 	go func() {
 		m.handleFunctions()
-		http.ListenAndServe(m.config.GetString(HttpPort), nil)
+		http.ListenAndServe(m.port, nil)
 	}()
 	return
 }

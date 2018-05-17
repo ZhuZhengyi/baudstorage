@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
@@ -18,6 +19,10 @@ const (
 var (
 	configFile = flag.String("c", "", "FUSE client config file")
 )
+
+func init() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
+}
 
 func main() {
 	flag.Parse()

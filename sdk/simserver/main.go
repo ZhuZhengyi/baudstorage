@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/tiglabs/baudstorage/proto"
-	. "github.com/tiglabs/baudstorage/sdk"
+	. "github.com/tiglabs/baudstorage/sdk/meta"
 )
 
 const (

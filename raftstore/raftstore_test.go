@@ -12,8 +12,7 @@ import (
 )
 
 type raftAddr struct {
-	heartbeat string
-	replicate string
+	ip        string
 }
 
 type testKV struct {
@@ -22,18 +21,8 @@ type testKV struct {
 	V   []byte `json:"v"`
 }
 
-var raftAddresses = make(map[uint64]*raftAddr)
+var TestAddresses = make(map[uint64]*raftAddr)
 var maxVolId uint64 = 1
-
-// 三个本地节点
-func init() {
-	for i := 1; i <= 3; i++ {
-		raftAddresses[uint64(i)] = &raftAddr{
-			heartbeat: fmt.Sprintf(":99%d1", i),
-			replicate: fmt.Sprintf(":99%d2", i),
-		}
-	}
-}
 
 type testSM struct {
 	dir string
@@ -70,45 +59,66 @@ func (*testSM) HandleLeaderChange(leader uint64) {
 
 func TestRaftStore_CreateRaftStore(t *testing.T) {
 
-	var cfg Config
-	partitions := make(map[uint64]*partition)
+	var (
+		cfg     Config
+		err     error
+		testFsm TestFsm
+		peers   []proto.Peer
+		data    []byte
+	)
 
-	cfg.NodeID = 1
-	cfg.WalPath = "wal"
-
-	raftStore, err := NewRaftStore(&cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var testFsm TestFsm
-	var peers []proto.Peer
-	for k := range raftAddresses {
-		peers = append(peers, proto.Peer{ID: k})
-	}
-	for i := 1; i <= 5; i++ {
-		partitionCfg := &PartitionConfig{
-			ID:      uint64(i),
-			Applied: 0,
-			SM:      &testFsm,
-			Peers:   peers,
+	for nid := 1; nid <= 3; nid++ {
+		TestAddresses[uint64(nid)] = &raftAddr{
+			ip:        fmt.Sprintf("172.0.0.%d", nid),
 		}
 
-		var p Partition
-		p, err = raftStore.CreatePartition(partitionCfg)
+		fmt.Println(TestAddresses[uint64(nid)])
+	}
 
-		partitions[uint64(i)] = p.(*partition)
+	raftServers := make(map[uint64]*raftStore)
+	partitions := make(map[uint64]*partition)
 
-		fmt.Printf("new partition %d\n", i)
+	for n := 1; n <= 3; n++ {
+		cfg.NodeID = uint64(n)
+		cfg.WalPath = fmt.Sprintf("wal%d", n)
 
+		raftServer, err := NewRaftStore(&cfg)
 		if err != nil {
 			t.Fatal(err)
 		}
-	}
 
-	var (
-		data []byte
-	)
+		raftServers[uint64(n)] = raftServer.(*raftStore)
+
+		peers = append(peers, proto.Peer{ID: uint64(n)})
+
+		for k, v := range TestAddresses{
+			raftServer.AddNode(uint64(k), v.ip)
+		}
+
+		fmt.Printf("================new raft store %d\n", n)
+
+		for i := 1; i <= 5; i++ {
+			partitionCfg := &PartitionConfig{
+				ID:      uint64(i),
+				Applied: 0,
+				Leader:  3,
+				Term:    10,
+				SM:      &testFsm,
+				Peers:   peers,
+			}
+
+			var p Partition
+			p, err = raftServer.CreatePartition(partitionCfg)
+
+			partitions[uint64(i)] = p.(*partition)
+
+			fmt.Printf("==========new partition %d\n", i)
+
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 
 	kv := &testKV{Opt: 1}
 	atomic.AddUint64(&maxVolId, 1)
@@ -125,11 +135,24 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 	fmt.Printf("==========encode kv end ===========\n")
 
-	_, err = partitions[uint64(1)].Submit(data)
-	if err != nil {
-		t.Fatal(err)
+	for k := range raftServers {
+		fmt.Printf("==raftServer %d==nodeid %d==\n", k, raftServers[k].nodeId)
+
+		for kp := range partitions {
+			leader, term := partitions[kp].LeaderTerm()
+
+			fmt.Printf("==partition %d==leader %d term %d==\n", kp, leader, term)
+			isLeader := partitions[kp].IsLeader()
+			fmt.Printf("==isLeader %t\n", isLeader)
+			if partitions[kp].IsLeader() {
+				fmt.Printf("==partition can submit==\n")
+				_, err = partitions[kp].Submit(data)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				t.SkipNow()
+			}
+		}
 	}
-
-	fmt.Printf("==========submit ok===========\n")
-
 }

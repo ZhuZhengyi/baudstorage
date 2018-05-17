@@ -1,6 +1,5 @@
 package proto
 
-
 /*
  this struct is used to master send command to metanode
   or send command to datanode
@@ -75,7 +74,8 @@ type LoadMetaPartitionMetricResponse struct {
 }
 
 type HeartBeatRequest struct {
-	CurrTime int64
+	CurrTime   int64
+	MasterAddr string
 }
 
 type VolReport struct {
@@ -149,11 +149,12 @@ type UpdateMetaPartitionResponse struct {
 
 type MetaPartitionOfflineRequest struct {
 	PartitionID uint64
+	RemovePeer  Peer
 	NewPeers    []Peer
 }
 
 type MetaPartitionOfflineResponse struct {
 	PartitionID uint64
-	Status  uint8
-	Result  string
+	Status      uint8
+	Result      string
 }

@@ -9,20 +9,23 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
+type SaveExtentKeyFunc func(inode uint64, key ExtentKey) error
+type UpdateExtentKeyFunc func(inode uint64) (*StreamKey, error)
+
 type ExtentClient struct {
-	wrapper           *sdk.VolGroupWrapper
-	writers           map[uint64]*StreamWriter
-	writerLock        sync.RWMutex
-	readers           map[uint64]*StreamReader
-	readerLock        sync.RWMutex
-	referCnt          map[uint64]uint64
-	referLock         sync.Mutex
-	saveExtentKeyFn   func(inode uint64, key ExtentKey) (err error)
-	updateExtentKeyFn func(inode uint64) (streamKey *StreamKey, err error)
+	wrapper         *sdk.VolGroupWrapper
+	writers         map[uint64]*StreamWriter
+	writerLock      sync.RWMutex
+	readers         map[uint64]*StreamReader
+	readerLock      sync.RWMutex
+	referCnt        map[uint64]uint64
+	referLock       sync.Mutex
+	saveExtentKey   SaveExtentKeyFunc
+	updateExtentKey UpdateExtentKeyFunc
 }
 
-func NewExtentClient(logdir string, master string, saveExtentKeyFn func(inode uint64, key ExtentKey) (err error),
-	updateExtentKeyFn func(inode uint64) (streamKey *StreamKey, err error)) (client *ExtentClient, err error) {
+func NewExtentClient(logdir string, master string, saveExtentKey SaveExtentKeyFunc,
+	updateExtentKey UpdateExtentKeyFunc) (client *ExtentClient, err error) {
 	client = new(ExtentClient)
 	_, err = log.NewLog(logdir, "extentclient", log.DebugLevel)
 	if err != nil {
@@ -35,14 +38,14 @@ func NewExtentClient(logdir string, master string, saveExtentKeyFn func(inode ui
 	client.writers = make(map[uint64]*StreamWriter)
 	client.readers = make(map[uint64]*StreamReader)
 	client.referCnt = make(map[uint64]uint64)
-	client.saveExtentKeyFn = saveExtentKeyFn
-	client.updateExtentKeyFn = updateExtentKeyFn
+	client.saveExtentKey = saveExtentKey
+	client.updateExtentKey = updateExtentKey
 
 	return
 }
 
 func (client *ExtentClient) InitWriteStream(inode uint64) (stream *StreamWriter) {
-	stream = NewStreamWriter(client.wrapper, inode, client.saveExtentKeyFn)
+	stream = NewStreamWriter(client.wrapper, inode, client.saveExtentKey)
 	client.writerLock.Lock()
 	client.writers[inode] = stream
 	client.writerLock.Unlock()
@@ -51,7 +54,7 @@ func (client *ExtentClient) InitWriteStream(inode uint64) (stream *StreamWriter)
 }
 
 func (client *ExtentClient) InitReadStream(inode uint64) (stream *StreamReader, err error) {
-	stream, err = NewStreamReader(inode, client.wrapper, client.updateExtentKeyFn)
+	stream, err = NewStreamReader(inode, client.wrapper, client.updateExtentKey)
 	if err != nil {
 		return
 	}

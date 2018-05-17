@@ -28,14 +28,14 @@ type StreamWriter struct {
 	currentExtentId uint64        //current ExtentId
 	currentInode    uint64        //inode
 	flushLock       sync.Mutex
-	saveExtentKeyFn func(inode uint64, key ExtentKey) (err error)
+	saveExtentKey   SaveExtentKeyFunc
 }
 
-func NewStreamWriter(wrapper *sdk.VolGroupWrapper, inode uint64, saveExtentKeyFn func(inode uint64, key ExtentKey) (err error)) (stream *StreamWriter) {
+func NewStreamWriter(wrapper *sdk.VolGroupWrapper, inode uint64, saveExtentKey SaveExtentKeyFunc) (stream *StreamWriter) {
 	stream = new(StreamWriter)
 	stream.excludeVols = make([]uint32, 0)
 	stream.wrapper = wrapper
-	stream.saveExtentKeyFn = saveExtentKeyFn
+	stream.saveExtentKey = saveExtentKey
 	stream.currentInode = inode
 	go stream.autoFlushThread()
 
@@ -144,7 +144,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 	}
 	ek := writer.toKey()
 	if ek.Size != 0 {
-		err = stream.saveExtentKeyFn(stream.currentInode, ek)
+		err = stream.saveExtentKey(stream.currentInode, ek)
 	}
 	if err != nil {
 		return err
@@ -171,7 +171,7 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 	}
 	ek := stream.getWriter().toKey()
 	if ek.Size != 0 {
-		err = stream.saveExtentKeyFn(stream.currentInode, ek)
+		err = stream.saveExtentKey(stream.currentInode, ek)
 		fmt.Printf("update2 to %v\n", ek.Size)
 	}
 	if err != nil {
