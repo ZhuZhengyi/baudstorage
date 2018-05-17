@@ -204,7 +204,7 @@ func (c *Cluster) checkMetaGroups(ns *NameSpace) {
 	var tasks []*proto.AdminTask
 	for _, mp := range ns.MetaPartitions {
 		mp.checkStatus(true, int(ns.mpReplicaNum))
-		mp.checkReplicas()
+		mp.checkReplicas(c,nsName)
 		tasks = append(tasks, mp.generateReplicaTask()...)
 		tasks = append(tasks, mp.checkThreshold(ns.threshold, ns.mpSize))
 	}
@@ -273,7 +273,8 @@ func (c *Cluster) dealOfflineMetaPartition(nodeAddr string, resp *proto.MetaPart
 	if err != nil {
 		goto errDeal
 	}
-	if err = mp.removePersistenceHosts(nodeAddr); err != nil {
+	//todo
+	if err = mp.removePersistenceHosts(nodeAddr,c,nsName); err != nil {
 		goto errDeal
 	}
 	mp.RemoveReplicaByAddr(nodeAddr)
@@ -356,7 +357,7 @@ func (c *Cluster) dealCreateMetaPartition(nodeAddr string, resp *proto.CreateMet
 	mr = NewMetaReplica(mp.Start, mp.End, metaNode)
 	mr.status = MetaPartitionReadWrite
 	mp.AddReplica(mr)
-	mp.AddHostsByReplica(mr)
+	mp.AddHostsByReplica(mr,c,nsName)
 	mp.Lock()
 	mp.checkAndRemoveMissMetaReplica(mr.Addr)
 	mp.Unlock()

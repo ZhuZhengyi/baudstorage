@@ -7,6 +7,7 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 	"time"
+	"strings"
 )
 
 type MetaReplica struct {
@@ -50,6 +51,10 @@ func NewMetaPartition(partitionID, start, end uint64) (mp *MetaPartition) {
 	return
 }
 
+func (mp *MetaPartition) hostsToString() (hosts string) {
+	return strings.Join(mp.PersistenceHosts, UnderlineSeparator)
+}
+
 func (mp *MetaPartition) AddReplica(mr *MetaReplica) {
 	mp.Lock()
 	defer mp.Unlock()
@@ -62,14 +67,14 @@ func (mp *MetaPartition) AddReplica(mr *MetaReplica) {
 	return
 }
 
-func (mp *MetaPartition) AddHostsByReplica(mr *MetaReplica) {
+func (mp *MetaPartition) AddHostsByReplica(mr *MetaReplica, c *Cluster, nsName string) {
 	mp.Lock()
 	defer mp.Unlock()
 	for _, m := range mp.Replicas {
 		if m.Addr == mr.Addr {
 			continue
 		}
-		if err := mp.addVolHosts(mr.Addr); err != nil {
+		if err := mp.addVolHosts(mr.Addr, c, nsName); err != nil {
 			log.LogError(fmt.Sprintf("meta partitionID:%v,add host:%v err:%v", mp.PartitionID, mr.Addr, err.Error()))
 		}
 	}
@@ -178,11 +183,11 @@ func (mp *MetaPartition) addMissNode(addr string, lastReportTime int64) {
 	}
 }
 
-func (mp *MetaPartition) checkReplicas() {
+func (mp *MetaPartition) checkReplicas(c *Cluster,nsName string) {
 	if int(mp.replicaNum) != len(mp.PersistenceHosts) {
 		orgReplicaNum := mp.replicaNum
 		mp.replicaNum = (uint8)(len(mp.PersistenceHosts))
-		mp.updateHosts()
+		mp.updateHosts(c,nsName)
 		msg := fmt.Sprintf("meta PartitionID:%v orgReplicaNum:%v locations:%v",
 			mp.PartitionID, orgReplicaNum, mp.PersistenceHosts)
 		log.LogWarn(msg)
@@ -237,9 +242,8 @@ func (mp *MetaPartition) getLackReplication() (lackAddrs []string) {
 	return
 }
 
-func (mp *MetaPartition) updateHosts() (err error) {
-	//todo
-	return
+func (mp *MetaPartition) updateHosts(c *Cluster, nsName string) (err error) {
+	return c.syncUpdateMetaPartition(nsName, mp)
 }
 
 func (mp *MetaPartition) updateMetaPartition(mgr *proto.MetaPartitionReport, metaNode *MetaNode) {
@@ -299,7 +303,7 @@ func (mp *MetaPartition) getLiveReplica() (liveReplicas []*MetaReplica) {
 	return
 }
 
-func (mp *MetaPartition) removePersistenceHosts(addr string) (err error) {
+func (mp *MetaPartition) removePersistenceHosts(addr string,c *Cluster,nsName string) (err error) {
 
 	orgVolHosts := make([]string, len(mp.PersistenceHosts))
 	copy(orgVolHosts, mp.PersistenceHosts)
@@ -307,7 +311,7 @@ func (mp *MetaPartition) removePersistenceHosts(addr string) (err error) {
 	if ok := mp.removeHostsOnUnderStore(addr); !ok {
 		return
 	}
-	if err = mp.updateHosts(); err != nil {
+	if err = mp.updateHosts(c,nsName); err != nil {
 		mp.PersistenceHosts = orgVolHosts
 	}
 
@@ -332,7 +336,7 @@ func (mp *MetaPartition) removeHostsOnUnderStore(host string) (ok bool) {
 	return
 }
 
-func (mp *MetaPartition) addVolHosts(addAddr string) (err error) {
+func (mp *MetaPartition) addVolHosts(addAddr string, c *Cluster, nsName string) (err error) {
 	orgVolHosts := make([]string, len(mp.PersistenceHosts))
 	orgGoal := len(mp.PersistenceHosts)
 	copy(orgVolHosts, mp.PersistenceHosts)
@@ -343,7 +347,7 @@ func (mp *MetaPartition) addVolHosts(addAddr string) (err error) {
 	}
 	mp.PersistenceHosts = append(mp.PersistenceHosts, addAddr)
 	mp.replicaNum = uint8(len(mp.PersistenceHosts))
-	if err = mp.updateHosts(); err != nil {
+	if err = mp.updateHosts(c, nsName); err != nil {
 		mp.PersistenceHosts = orgVolHosts
 		mp.replicaNum = uint8(orgGoal)
 		return
