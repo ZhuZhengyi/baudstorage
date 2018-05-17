@@ -115,7 +115,7 @@ func (c *Cluster) submit(metadata *Metadata) (err error) {
 func (c *Cluster) syncAddNamespace(ns *NameSpace) (err error) {
 	metadata := new(Metadata)
 	metadata.Op = OpSyncAddNamespace
-	metadata.K = NamespacePrefix + ns.Name + strconv.FormatUint(uint64(ns.volReplicaNum), 10)
+	metadata.K = NamespacePrefix + ns.Name + KeySeparator + strconv.FormatUint(uint64(ns.volReplicaNum), 10)
 	return c.submit(metadata)
 }
 
@@ -225,4 +225,163 @@ func (c *Cluster) applyAddVolGroup(cmd *Metadata) {
 		ns.volGroups.volGroups = append(ns.volGroups.volGroups, vg)
 
 	}
+}
+
+func (c *Cluster) decodeVolGroupKey(key string) (acronym, nsName string) {
+	return c.decodeAcronymAndNsName(key)
+}
+
+func (c *Cluster) decodeMetaPartitionKey(key string) (acronym, nsName string) {
+	return c.decodeAcronymAndNsName(key)
+}
+
+func (c *Cluster) decodeNamespaceKey(key string) (acronym, nsName string, replicaNum uint8, err error) {
+	arr := strings.Split(key, KeySeparator)
+	acronym = arr[1]
+	nsName = arr[2]
+	replicaNumUint8, err := strconv.ParseUint(arr[3], 10, 8)
+	replicaNum = uint8(replicaNumUint8)
+	return
+}
+
+func (c *Cluster) decodeAcronymAndNsName(key string) (acronym, nsName string) {
+	arr := strings.Split(key, KeySeparator)
+	acronym = arr[1]
+	nsName = arr[2]
+	return
+}
+
+func (c *Cluster) loadDataNodes() (err error) {
+	snapshot := c.fsm.store.RocksDBSnapshot()
+	it := c.fsm.store.Iterator(snapshot)
+	defer func() {
+		it.Close()
+		c.fsm.store.ReleaseSnapshot(snapshot)
+	}()
+	prefixKey := []byte(NamespacePrefix)
+	it.Seek(prefixKey)
+
+	for ; it.ValidForPrefix(prefixKey); it.Next() {
+		encodedKey := it.Key()
+		keys := strings.Split(string(encodedKey.Data()), KeySeparator)
+		dataNode := NewDataNode(keys[2])
+		c.dataNodes.Store(dataNode.HttpAddr, dataNode)
+		encodedKey.Free()
+	}
+	return
+}
+
+func (c *Cluster) decodeMetaNodeKey(key string) (nodeID uint64, addr string, err error) {
+	keys := strings.Split(key, KeySeparator)
+	addr = keys[2]
+	nodeID, err = strconv.ParseUint(keys[1], 10, 64)
+	return
+}
+
+func (c *Cluster) loadMetaNodes() (err error) {
+	snapshot := c.fsm.store.RocksDBSnapshot()
+	it := c.fsm.store.Iterator(snapshot)
+	defer func() {
+		it.Close()
+		c.fsm.store.ReleaseSnapshot(snapshot)
+	}()
+	prefixKey := []byte(NamespacePrefix)
+	it.Seek(prefixKey)
+
+	for ; it.ValidForPrefix(prefixKey); it.Next() {
+		encodedKey := it.Key()
+		nodeID, addr, err := c.decodeMetaNodeKey(string(encodedKey.Data()))
+		if err != nil {
+			return
+		}
+		metaNode := NewMetaNode(addr)
+		metaNode.id = nodeID
+		c.metaNodes.Store(addr, metaNode)
+		encodedKey.Free()
+	}
+	return
+}
+
+func (c *Cluster) loadNamespaces() (err error) {
+	snapshot := c.fsm.store.RocksDBSnapshot()
+	it := c.fsm.store.Iterator(snapshot)
+	defer func() {
+		it.Close()
+		c.fsm.store.ReleaseSnapshot(snapshot)
+	}()
+	prefixKey := []byte(NamespacePrefix)
+	it.Seek(prefixKey)
+	for ; it.ValidForPrefix(prefixKey); it.Next() {
+		encodedKey := it.Key()
+		_, nsName, replicaNum, err := c.decodeNamespaceKey(string(encodedKey.Data()))
+		if err != nil {
+			return
+		}
+		ns := NewNameSpace(nsName, replicaNum)
+		c.namespaces[nsName] = ns
+		encodedKey.Free()
+	}
+	return
+}
+
+func (c *Cluster) loadMetaPartitions() (err error) {
+	snapshot := c.fsm.store.RocksDBSnapshot()
+	it := c.fsm.store.Iterator(snapshot)
+	defer func() {
+		it.Close()
+		c.fsm.store.ReleaseSnapshot(snapshot)
+	}()
+	prefixKey := []byte(MetaPartitionPrefix)
+	it.Seek(prefixKey)
+	for ; it.ValidForPrefix(prefixKey); it.Next() {
+		encodedKey := it.Key()
+		encodedValue := it.Value()
+		_, nsName := c.decodeMetaPartitionKey(string(encodedKey.Data()))
+		ns, err := c.getNamespace(nsName)
+		if err != nil {
+			return
+		}
+		mpv := &MetaPartitionValue{}
+		if err = json.Unmarshal(encodedValue.Data(), mpv); err != nil {
+			err = fmt.Errorf("action[decodeMetaPartitionValue],value:%v,err:%v", encodedValue.Data(), err)
+			return
+		}
+		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End)
+		mp.PersistenceHosts = strings.Split(mpv.Hosts, UnderlineSeparator)
+		ns.MetaPartitions[mp.PartitionID] = mp
+		encodedKey.Free()
+		encodedValue.Free()
+	}
+	return
+}
+
+func (c *Cluster) loadVolGroups() (err error) {
+	snapshot := c.fsm.store.RocksDBSnapshot()
+	it := c.fsm.store.Iterator(snapshot)
+	defer func() {
+		it.Close()
+		c.fsm.store.ReleaseSnapshot(snapshot)
+	}()
+	prefixKey := []byte(VolGroupPrefix)
+	it.Seek(prefixKey)
+	for ; it.ValidForPrefix(prefixKey); it.Next() {
+		encodedKey := it.Key()
+		encodedValue := it.Value()
+		_, nsName := c.decodeVolGroupKey(string(encodedKey.Data()))
+		ns, err := c.getNamespace(nsName)
+		if err != nil {
+			return
+		}
+		vgv := &VolGroupValue{}
+		if err = json.Unmarshal(encodedValue.Data(), vgv); err != nil {
+			err = fmt.Errorf("action[decodeVolValue],value:%v,err:%v", encodedValue.Data(), err)
+			return
+		}
+		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum)
+		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
+		ns.volGroups.volGroups = append(ns.volGroups.volGroups, vg)
+		encodedKey.Free()
+		encodedValue.Free()
+	}
+	return
 }
