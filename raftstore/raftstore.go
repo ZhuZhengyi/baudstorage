@@ -45,8 +45,8 @@ func NewRaftStore(cfg *Config) (mr RaftStore, err error) {
 	rc := raft.DefaultConfig()
 	rc.NodeID = cfg.NodeID
 	rc.LeaseCheck = true
-	rc.HeartbeatAddr = fmt.Sprintf(":%d", HeartbeatPort)
-	rc.ReplicateAddr = fmt.Sprintf(":%d", ReplicatePort)
+	rc.HeartbeatAddr = fmt.Sprintf("%s:%d", cfg.IpAddr, HeartbeatPort)
+	rc.ReplicateAddr = fmt.Sprintf("%s:%d", cfg.IpAddr, ReplicatePort)
 	rc.Resolver = resolver
 	rs, err := raft.NewRaftServer(rc)
 	if err != nil {
