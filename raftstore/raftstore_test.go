@@ -69,7 +69,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 	for nid := 1; nid <= 3; nid++ {
 		TestAddresses[uint64(nid)] = &raftAddr{
-			ip: fmt.Sprintf("172.0.0.%d", nid),
+			ip: fmt.Sprintf("localhost"),
 		}
 
 		fmt.Println(TestAddresses[uint64(nid)])

@@ -71,8 +71,8 @@ func (r *nodeResolver) NodeAddress(nodeID uint64, stype raft.SocketType) (addr s
 func (r *nodeResolver) AddNode(nodeId uint64, addr string) {
 	if len(strings.TrimSpace(addr)) != 0 {
 		r.nodeMap.Store(nodeId, &nodeAddress{
-			Heartbeat: fmt.Sprintf("%s:%d", addr, HeartbeatPort),
-			Replicate: fmt.Sprintf("%s:%d", addr, ReplicatePort),
+			Heartbeat: fmt.Sprintf("%s:99%d1", addr, nodeId),
+			Replicate: fmt.Sprintf("%s:99%d2", addr, nodeId),
 		})
 	}
 }
