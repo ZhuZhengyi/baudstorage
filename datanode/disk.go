@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/storage"
+	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 	"io"
 	"io/ioutil"
@@ -55,6 +56,7 @@ func NewDisk(path string) (d *Disk) {
 	d = new(Disk)
 	d.Path = path
 	d.VolsName = make([]string, 0)
+	d.RestSize = util.GB * 1
 	d.DiskUsage()
 	d.compactCh = make(chan *CompactTask, CompactThreadNum)
 	for i := 0; i < CompactThreadNum; i++ {
