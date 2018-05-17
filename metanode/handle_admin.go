@@ -10,6 +10,7 @@ import (
 
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"
+	raftproto "github.com/tiglabs/raft/proto"
 )
 
 const (
@@ -68,7 +69,7 @@ func (m *MetaNode) opCreateMetaRange(conn net.Conn, p *Packet) (err error) {
 	}
 	defer func() {
 		if err != nil {
-			m.metaManager.DeleteMetaRange(mr.ID)
+			m.metaManager.DeleteMetaPartition(mr.ID)
 		}
 	}()
 	// Create metaPartition base dir
@@ -121,7 +122,7 @@ func (m *MetaNode) opMetaNodeHeartbeat(conn net.Conn, p *Packet) (err error) {
 		m.masterAddr = req.MasterAddr
 	}
 	// collect used info
-	{
+	if true {
 		resp := &proto.MetaNodeHeartbeatResponse{}
 		// machine mem total and used
 		resp.Total, resp.Used, err = util.GetMemInfo()
@@ -143,10 +144,6 @@ func (m *MetaNode) opMetaNodeHeartbeat(conn net.Conn, p *Packet) (err error) {
 	}
 
 end:
-	if m.masterAddr == "" {
-		err = ErrNotLeader
-		return
-	}
 	err = m.replyToMaster(m.masterAddr, adminTask)
 	return
 }
@@ -178,22 +175,64 @@ func (m *MetaNode) opDeleteMetaPartition(conn net.Conn, p *Packet) (err error) {
 			adminTask.Status = proto.TaskFail
 			goto end
 		}
-		mp.Stop()
-		m.metaManager.DeleteMetaRange(fmt.Sprintf("%d", req.GroupId))
+		if ok := m.ProxyServe(conn, mp, p); !ok {
+			return
+		}
+		if err = mp.DeletePartition(); err != nil {
+			adminTask.Status = proto.TaskFail
+			goto end
+		}
 		resp.GroupId = mp.RaftGroupID
 		resp.Status = 1
 		adminTask.Response = resp
 	}
 end:
-	if m.masterAddr == "" {
-		err = ErrNotLeader
-		return
-	}
 	err = m.replyToMaster(m.masterAddr, adminTask)
 	return
 }
 
 func (m *MetaNode) opUpdateMetaPartition(conn net.Conn, p *Packet) (err error) {
+	adminTask := &proto.AdminTask{}
+	if err = json.Unmarshal(p.Data, adminTask); err != nil {
+		adminTask.Status = proto.TaskFail
+		err = m.replyToMaster(m.masterAddr, adminTask)
+		return
+	}
+	var (
+		reqData []byte
+		req     = &proto.UpdateMetaPartitionRequest{}
+		resp    = &proto.UpdateMetaPartitionResponse{}
+	)
+	reqData, err = json.Marshal(adminTask.Request)
+	if err != nil {
+		adminTask.Status = proto.TaskFail
+		err = m.replyToMaster(m.masterAddr, adminTask)
+		return
+	}
+	if err = json.Unmarshal(reqData, req); err != nil {
+		adminTask.Status = proto.TaskFail
+		err = m.replyToMaster(m.masterAddr, adminTask)
+		return
+	}
+	var mp *MetaPartition
+	mp, err = m.metaManager.LoadMetaPartition(fmt.Sprintf("%d", req.GroupId))
+	if err != nil {
+		adminTask.Status = proto.TaskFail
+		err = m.replyToMaster(m.masterAddr, adminTask)
+		return
+	}
+	if err = mp.UpdatePartition(req); err != nil {
+		adminTask.Status = proto.TaskFail
+		err = m.replyToMaster(m.masterAddr, adminTask)
+		return
+	}
+	adminTask.Status = proto.TaskSuccess
+	resp.GroupId = req.GroupId
+	resp.NsName = req.NsName
+	resp.End = req.End
+	resp.Status = 1
+	adminTask.Response = resp
+	err = m.replyToMaster(m.masterAddr, adminTask)
 	return
 }
 
@@ -232,15 +271,61 @@ func (m *MetaNode) opLoadMetaPartition(conn net.Conn, p *Packet) (err error) {
 		adminTask.Response = resp
 	}
 end:
-	if m.masterAddr == "" {
-		err = ErrNotLeader
-		return
-	}
 	err = m.replyToMaster(m.masterAddr, adminTask)
 	return
 }
 
 func (m *MetaNode) opOfflineMetaPartition(conn net.Conn, p *Packet) (err error) {
+	var (
+		mp      *MetaPartition
+		reqData []byte
+		req     = &proto.MetaPartitionOfflineRequest{}
+	)
+	adminTask := &proto.AdminTask{
+		Status: proto.TaskFail,
+	}
+	if err = json.Unmarshal(p.Data, adminTask); err != nil {
+		goto end
+	}
+	reqData, err = json.Marshal(adminTask.Request)
+	if err != nil {
+		goto end
+	}
+	if err = json.Unmarshal(reqData, req); err != nil {
+		goto end
+	}
+	mp, err = m.metaManager.LoadMetaPartition(fmt.Sprintf("%d", req.PartitionID))
+	if err != nil {
+		goto end
+	}
+	mp.RaftPartition.AddNode(req.NewPeers.ID, req.NewPeers.Addr)
+	// add peer
+	reqData, err = json.Marshal(req.NewPeers)
+	if err != nil {
+		goto end
+	}
+	_, err = mp.RaftPartition.ChangeMember(raftproto.ConfAddNode,
+		raftproto.Peer{ID: req.NewPeers.ID}, reqData)
+	if err != nil {
+		goto end
+	}
+	// delete peer
+	reqData, err = json.Marshal(req.RemovePeer)
+	if err != nil {
+		goto end
+	}
+	_, err = mp.RaftPartition.ChangeMember(raftproto.ConfRemoveNode,
+		raftproto.Peer{ID: req.RemovePeer.ID}, reqData)
+	if err != nil {
+		goto end
+	}
+	adminTask.Status = proto.TaskSuccess
+	adminTask.Response = proto.MetaPartitionOfflineResponse{
+		PartitionID: req.PartitionID,
+		Status:      1,
+	}
+end:
+	m.replyToMaster(m.masterAddr, adminTask)
 	return
 }
 

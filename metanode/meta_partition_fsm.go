@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/raft"
 	raftproto "github.com/tiglabs/raft/proto"
 )
@@ -52,7 +53,14 @@ func (mp *MetaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 			goto end
 		}
 		resp = mp.readDir(req)
-	case opCreateMetaRange:
+	case opUpdatePartition:
+		req := &proto.UpdateMetaPartitionRequest{}
+		if err = json.Unmarshal(msg.V, req); err != nil {
+			goto end
+		}
+		err = mp.updatePartition(req.Start, req.End)
+	case opDeletePartition:
+		mp.deletePartition()
 	}
 end:
 	mp.applyID = index
@@ -60,20 +68,34 @@ end:
 }
 
 func (mp *MetaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, index uint64) (interface{}, error) {
-	// Write Disk
-	// Rename
+	var err error
+	peer := &proto.Peer{}
+	if err = json.Unmarshal(confChange.Context, peer); err != nil {
+		return nil, err
+	}
+
 	// Change memory state
 	switch confChange.Type {
 	case raftproto.ConfAddNode:
-		//TODO
+		mp.Peers = append(mp.Peers, *peer)
 	case raftproto.ConfRemoveNode:
-		//TODO
+		for i, p := range mp.Peers {
+			if p.ID == peer.ID {
+				mp.Peers = append(mp.Peers[:i], mp.Peers[i+1:]...)
+			}
+		}
+		// TODO:
+		// mp.Stop()
+		mp.MetaManager.DeleteMetaPartition(mp.ID)
 	case raftproto.ConfUpdateNode:
 		//TODO
-
+	}
+	// Write Disk
+	if err = mp.StoreMeta(); err != nil {
+		return nil, err
 	}
 	mp.applyID = index
-	return nil, nil
+	return nil, err
 }
 
 func (mp *MetaPartition) Snapshot() (raftproto.Snapshot, error) {

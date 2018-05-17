@@ -151,6 +151,10 @@ func (m *MetaNode) replyToMaster(ip string, data interface{}) (err error) {
 			}
 		}
 	}()
+	if ip == "" {
+		err = ErrNotLeader
+		return
+	}
 	// Process data and send reply though http specified remote address.
 	jsonBytes, err := json.Marshal(data)
 	if err != nil {

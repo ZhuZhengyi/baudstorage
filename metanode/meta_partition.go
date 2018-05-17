@@ -42,6 +42,7 @@ type MetaPartitionConfig struct {
 	RaftGroupID   uint64              `json:"raftGroupID"`
 	LeaderID      uint64              `json:"-"`
 	RaftPartition raftstore.Partition `json:"-"`
+	MetaManager   *MetaManager        `json:"-"`
 }
 
 // MetaPartition manages necessary information of meta range, include ID, boundary of range and raft identity.
@@ -405,17 +406,21 @@ func (mp *MetaPartition) Open(req *OpenReq, p *Packet) (err error) {
 	return
 }
 
-func (mp *MetaPartition) DeletePartition(req []byte) (err error) {
-	_, err = mp.Put(opDeletePartition, req)
+func (mp *MetaPartition) DeletePartition() (err error) {
+	_, err = mp.Put(opDeletePartition, nil)
 	return
 }
 
-func (mp *MetaPartition) UpdatePartition(req []byte) (err error) {
-	_, err = mp.Put(opUpdatePartition, req)
+func (mp *MetaPartition) UpdatePartition(req *proto.UpdateMetaPartitionRequest) (err error) {
+	reqData, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
+	_, err = mp.Put(opUpdatePartition, reqData)
 	return
 }
 
 func (mp *MetaPartition) OfflienPartition(req []byte) (err error) {
-	_, err = mp.Put(opOfflineRequest, req)
+	_, err = mp.Put(opOfflinePartition, req)
 	return
 }

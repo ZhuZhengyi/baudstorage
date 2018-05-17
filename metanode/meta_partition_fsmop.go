@@ -171,6 +171,7 @@ func (mp *MetaPartition) updatePartition(start, end uint64) (err error) {
 
 func (mp *MetaPartition) deletePartition() (err error) {
 	mp.Stop()
+	mp.MetaManager.DeleteMetaPartition(mp.ID)
 	err = os.RemoveAll(mp.RootDir)
 	return
 }

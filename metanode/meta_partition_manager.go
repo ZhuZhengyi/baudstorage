@@ -99,7 +99,7 @@ func (m *MetaManager) LoadMetaManagers(metaDir string) (err error) {
 	return
 }
 
-func (m *MetaManager) DeleteMetaRange(id string) {
+func (m *MetaManager) DeleteMetaPartition(id string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	delete(m.partitions, id)
