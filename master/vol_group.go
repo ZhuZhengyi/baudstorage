@@ -289,7 +289,7 @@ func (vg *VolGroup) VolHostsToString() (hosts string) {
 }
 
 func (vg *VolGroup) UpdateVolHosts(c *Cluster, nsName string) error {
-	return c.syncUpdateVolGroupHosts(nsName, vg)
+	return c.syncUpdateVolGroup(nsName, vg)
 }
 
 func (vg *VolGroup) setVolToNormal() {
@@ -505,7 +505,7 @@ func (vg *VolGroup) removeVolHostOnUnderStore(removeAddr string) (ok bool) {
 	return
 }
 
-func (vg *VolGroup) addVolHosts(addAddr string) (err error) {
+func (vg *VolGroup) addVolHosts(addAddr string, c *Cluster, nsName string) (err error) {
 	orgVolHosts := make([]string, len(vg.PersistenceHosts))
 	orgGoal := len(vg.PersistenceHosts)
 	copy(orgVolHosts, vg.PersistenceHosts)

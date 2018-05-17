@@ -24,7 +24,6 @@ const (
 	DeleteFileInCoreInfo        = "DeleteFileInCoreInfo "
 	GetVolLocationFileCountInfo = "GetVolLocationFileCountInfo "
 	DataNodeOfflineInfo         = "dataNodeOfflineInfo"
-	MetaNodeOfflineInfo         = "metaNodeOfflineInfo"
 )
 
 const (
@@ -73,11 +72,6 @@ const (
 	OpUpdateMetaPartition  = 0x0A
 	OpLoadMetaPartition    = 0x0B
 	OpOfflineMetaPartition = 0x0C
-)
-
-const (
-	PrefixNameSpace = "ns"
-	KeySeparator    = "#"
 )
 
 const (

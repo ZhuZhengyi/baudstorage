@@ -319,7 +319,7 @@ func (c *Cluster) volOffline(offlineAddr, nsName string, vg *VolGroup, errMsg st
 		goto errDeal
 	}
 	newAddr = newHosts[0]
-	if err = vg.addVolHosts(newAddr); err != nil {
+	if err = vg.addVolHosts(newAddr, c, nsName); err != nil {
 		goto errDeal
 	}
 	vg.volOffLineInMem(offlineAddr)
@@ -358,14 +358,12 @@ func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {
 		goto errDeal
 	}
 	ns = NewNameSpace(name, replicaNum)
-
+	if err = c.syncAddNamespace(ns); err != nil {
+		goto errDeal
+	}
 	c.namespaces[name] = ns
 	if err = c.CreateMetaPartition(name, 0, DefaultMaxMetaPartitionRange); err != nil {
 		delete(c.namespaces, name)
-		goto errDeal
-	}
-
-	if err = c.syncAddNamespace(ns); err != nil {
 		goto errDeal
 	}
 	return
