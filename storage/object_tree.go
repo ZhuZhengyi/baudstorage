@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"io"
 	"math"
-	"os"
 	"sync"
 
 	"github.com/google/btree"
