@@ -7,13 +7,12 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/tiglabs/baudstorage/proto"
 )
 
 type ExtentKey struct {
-	VolId    uint32
-	ExtentId uint64
-	Size     uint32
-	Crc      uint32
+	proto.ExtentKey
 }
 
 type StreamKey struct {

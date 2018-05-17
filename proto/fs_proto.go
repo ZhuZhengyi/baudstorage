@@ -22,6 +22,13 @@ type InodeInfo struct {
 	AccessTime time.Time `json:"access_time"`
 }
 
+type ExtentKey struct {
+	VolId    uint32
+	ExtentId uint64
+	Size     uint32
+	Crc      uint32
+}
+
 type Dentry struct {
 	Name  string `json:"name"`
 	Inode uint64 `json:"inode"`
@@ -30,7 +37,7 @@ type Dentry struct {
 
 type CreateInodeRequest struct {
 	Namespace   string `json:"namespace"`
-	PartitionID string
+	PartitionID string `json:"partitionID"`
 	Mode        uint32 `json:"mode"`
 }
 
@@ -40,13 +47,13 @@ type CreateInodeResponse struct {
 
 type DeleteInodeRequest struct {
 	Namespace   string `json:"namespace"`
-	PartitionID string
+	PartitionID string `json:"partitionID"`
 	Inode       uint64 `json:"inode"`
 }
 
 type CreateDentryRequest struct {
 	Namespace   string `json:"namespace"`
-	PartitionID string
+	PartitionID string `json:"partitionID"`
 	ParentID    uint64 `json:"parentID"`
 	Inode       uint64 `json:"inode"`
 	Name        string `json:"name"`
@@ -55,7 +62,7 @@ type CreateDentryRequest struct {
 
 type DeleteDentryRequest struct {
 	Namespace   string `json:"namespace"`
-	PartitionID string
+	PartitionID string `json:"partitionID"`
 	ParentID    uint64 `json:"parentID"`
 	Name        string `json:"name"`
 }
@@ -66,13 +73,13 @@ type DeleteDentryResponse struct {
 
 type OpenRequest struct {
 	Namespace   string `json:"namespace"`
-	PartitionID string
+	PartitionID string `json:"partitionID"`
 	Inode       uint64 `json:"inode"`
 }
 
 type LookupRequest struct {
 	Namespace   string `json:"namespace"`
-	PartitionID string
+	PartitionID string `json:"partitionID"`
 	ParentID    uint64 `json:"parentID"`
 	Name        string `json:"name"`
 }
@@ -84,7 +91,7 @@ type LookupResponse struct {
 
 type InodeGetRequest struct {
 	Namespace   string `json:"namespace"`
-	PartitionID string
+	PartitionID string `json:"partitionID"`
 	Inode       uint64 `json:"inode"`
 }
 
@@ -94,10 +101,27 @@ type InodeGetResponse struct {
 
 type ReadDirRequest struct {
 	Namespace   string `json:"namespace"`
-	PartitionID string
+	PartitionID string `json:"partitionID"`
 	ParentID    uint64 `json:"parentID"`
 }
 
 type ReadDirResponse struct {
 	Children []Dentry `json:"children"`
+}
+
+type AppendExtentKeyRequest struct {
+	Namespace   string `json:"namespace"`
+	PartitionID string `json:"partitionID"`
+	Inode       uint64 `json:"inode"`
+	Extents     []ExtentKey
+}
+
+type GetExtentsRequest struct {
+	Namespace   string `json:"namespace"`
+	PartitionID string `json:"partitionID"`
+	Inode       uint64 `json:"inode"`
+}
+
+type GetExtentsResponse struct {
+	Extents []ExtentKey
 }
