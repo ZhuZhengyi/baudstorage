@@ -12,7 +12,6 @@ import (
 	"github.com/tiglabs/baudstorage/util/pool"
 	"net"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -46,7 +45,7 @@ type DataNode struct {
 	localIp         string
 }
 
-func (s *DataNode) checkConfig(cfg *config.Config) (err error) {
+func (s *DataNode) checkConfigAndLoadVol(cfg *config.Config) (err error) {
 	s.port = cfg.GetString("Port")
 	s.clusterId = cfg.GetString("ClusterID")
 	s.logdir = cfg.GetString("LogDir")
@@ -107,6 +106,10 @@ func (s *DataNode) getIpFromMaster() error {
 
 func (s *DataNode) Start(cfg *config.Config) error {
 	s.space = NewSpaceManager()
+	err:=s.checkConfigAndLoadVol(cfg)
+	if err!=nil {
+
+	}
 
 	panic("implement me")
 }
@@ -120,7 +123,7 @@ func (s *DataNode) StartRestService() {
 	go s.handleCmds()
 	go s.handleCmdResps()
 	go func() {
-		err := http.ListenAndServe(s.ip+":"+s.restport, nil)
+		err := http.ListenAndServe(s.localIp+":"+s.restport, nil)
 		if err != nil {
 			println("Failed to start rest service")
 			s.Shutdown()

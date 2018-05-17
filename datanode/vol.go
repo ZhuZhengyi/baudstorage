@@ -23,6 +23,8 @@ type Vol struct {
 	store    interface{}
 	status   int
 	isLeader bool
+
+	server *DataNode
 }
 
 func NewVol(volId uint32, volMode, name, diskPath string, storeMode bool, storeSize int) (v *Vol, err error) {
