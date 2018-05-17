@@ -42,7 +42,6 @@ type MetaNode struct {
 	metaManager *MetaManager
 	raftStore   raftstore.RaftStore
 	httpStopC   chan uint8
-	log         *log.Log
 	state       nodeState
 	stateMutex  sync.RWMutex
 	wg          sync.WaitGroup
@@ -65,18 +64,18 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 		return
 	}
 	// Init logging
-	if m.log, err = log.NewLog(m.logDir, "MetaNode", log.DebugLevel); err != nil {
+	if _, err = log.NewLog(m.logDir, "MetaNode", log.DebugLevel); err != nil {
 		return
 	}
-	// Load metaRanges relation from file and start raft
-	if err = m.load(); err != nil {
-		return
-	}
-
 	// Start raft server
 	if err = m.startRaftServer(); err != nil {
 		return
 	}
+	// Load and start metaManager relation from file and start raft
+	if err = m.startMetaManager(); err != nil {
+		return
+	}
+
 	// Start tcp server
 	if err = m.startServer(); err != nil {
 		return
@@ -97,7 +96,7 @@ func (m *MetaNode) Shutdown() {
 		return
 	}
 	// Shutdown node and release resource.
-	m.stopTcpServer()
+	m.stopServer()
 	m.state = sReady
 	m.wg.Done()
 }
@@ -120,9 +119,16 @@ func (m *MetaNode) prepareConfig(cfg *config.Config) (err error) {
 	return
 }
 
-func (m *MetaNode) load() (err error) {
+func (m *MetaNode) startMetaManager() (err error) {
 	// Load metaManager
 	err = m.metaManager.LoadMetaManagers(m.metaDir)
+	// Start Raft
+	m.metaManager.Range(func(id string, mp *MetaPartition) bool {
+		if err = m.createPartition(mp); err != nil {
+			return false
+		}
+		return true
+	})
 	return
 }
 

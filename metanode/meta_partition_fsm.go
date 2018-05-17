@@ -58,7 +58,7 @@ func (mp *MetaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 		if err = json.Unmarshal(msg.V, req); err != nil {
 			goto end
 		}
-		err = mp.updatePartition(req.Start, req.End)
+		err = mp.updatePartition(req.End)
 	case opDeletePartition:
 		mp.deletePartition()
 	}
@@ -149,7 +149,9 @@ func (mp *MetaPartition) HandleLeaderChange(leader uint64) {
 func (mp *MetaPartition) Put(key, val interface{}) (resp interface{}, err error) {
 	snap := NewMetaPartitionSnapshot(0, nil, nil)
 	snap.Op = key.(uint32)
-	snap.V = val.([]byte)
+	if val != nil {
+		snap.V = val.([]byte)
+	}
 	cmd, err := json.Marshal(snap)
 	if err != nil {
 		return

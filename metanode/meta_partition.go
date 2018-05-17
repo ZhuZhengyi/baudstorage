@@ -16,7 +16,9 @@ import (
 	"github.com/tiglabs/baudstorage/sdk/stream"
 )
 
-const defaultBTreeDegree = 32
+const (
+	defaultBTreeDegree = 32
+)
 
 // Errors
 var (
@@ -133,7 +135,7 @@ func (mp *MetaPartition) LoadMeta() (err error) {
 
 func (mp *MetaPartition) StoreMeta() (err error) {
 	// Store Meta to file
-	metaFile := path.Join(mp.RootDir, "_meta")
+	metaFile := path.Join(mp.RootDir, ".meta")
 	fp, err := os.OpenFile(metaFile, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE,
 		0655)
 	if err != nil {

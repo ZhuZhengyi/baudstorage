@@ -16,11 +16,6 @@ func (m *MetaNode) startRaftServer() (err error) {
 	if err != nil {
 		return
 	}
-	for _, mr := range m.metaManager.partitions {
-		if err = m.createPartition(mr); err != nil {
-			return
-		}
-	}
 	return
 }
 
