@@ -1,12 +1,12 @@
 package raftstore
 
 import (
-	"fmt"
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/storage/wal"
 	"os"
 	"path"
 	"strconv"
+	"fmt"
 )
 
 type RaftStore interface {
@@ -77,6 +77,8 @@ func (s *raftStore) CreatePartition(cfg *PartitionConfig) (p Partition, err erro
 	rc := &raft.RaftConfig{
 		ID:           cfg.ID,
 		Peers:        cfg.Peers,
+		Leader:       cfg.Leader,
+		Term:         cfg.Term,
 		Storage:      ws,
 		StateMachine: cfg.SM,
 		Applied:      cfg.Applied,

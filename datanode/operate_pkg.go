@@ -43,7 +43,7 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 	case proto.OpRead:
 		s.read(pkg)
 	case proto.OpCRepairRead:
-		s.repairChunkRead(pkg, c)
+		s.repairObjectRead(pkg, c)
 	case proto.OpERepairRead:
 		s.repairExtentRead(pkg)
 	case proto.OpSyncDelNeedle:
@@ -69,7 +69,7 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 	case proto.OpDeleteVol:
 		s.deleteVol(pkg)
 	default:
-		pkg.PackErrorBody(ErrorUnknowOp.Error(), ErrorUnknowOp.Error()+strconv.Itoa(int(pkg.orgOpcode)))
+		pkg.PackErrorBody(ErrorUnknowOp.Error(), ErrorUnknowOp.Error()+strconv.Itoa(int(pkg.Opcode)))
 	}
 
 	return
@@ -110,7 +110,6 @@ func (s *DataNode) markDel(pkg *Packet) {
 }
 
 func (s *DataNode) append(pkg *Packet) {
-	start := time.Now()
 	var err error
 	switch pkg.StoreType {
 	case proto.TinyStoreMode:
@@ -123,32 +122,24 @@ func (s *DataNode) append(pkg *Packet) {
 		pkg.PackErrorBody(LogMarkDel, err.Error())
 	} else {
 		pkg.PackOkReply()
-		pkg.vol.RecordWriteInfo(TakeTime(&start), int64(pkg.Size))
 	}
-
-	return
-}
-
-func (s *DataNode) rd(pkg *Packet, sucPrefix, errPrefix string) (err error) {
-	start := time.Now()
-	pkg.Crc, err = pkg.vol.store.(*storage.ExtentStore).Read(pkg.FileID, int64(pkg.Offset), int64(pkg.Size), pkg.Data)
-	if err != nil {
-		pkg.PackErrorBody(LogRead, err.Error())
-		s.AddDiskErrs(pkg.VolID, err, ReadFlag)
-		return
-	}
-	t := TakeTime(&start)
-	pkg.vol.RecordReadInfo(t, int64(pkg.Size))
 
 	return
 }
 
 func (s *DataNode) read(pkg *Packet) {
 	pkg.Data = make([]byte, pkg.Size)
-	if err := s.rd(pkg, LogRead, LogRead); err != nil {
-		return
+	var err error
+	pkg.Crc, err = pkg.vol.store.(*storage.TinyStore).Read(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data)
+	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] Read Error", pkg.GetUniqLogId())
 	}
-	pkg.PackOkReadReply()
+	if err == nil {
+		pkg.PackOkReadReply()
+	} else {
+		pkg.PackErrorBody(LogRead, err.Error())
+	}
+
 	return
 }
 
@@ -177,31 +168,6 @@ func (s *DataNode) repairExtentRead(pkg *Packet) {
 		return
 	}
 	pkg.PackOkReadReply()
-
-	return
-}
-
-func (s *DataNode) repairChunkRead(pkg *Packet, conn *net.TCPConn) {
-	var (
-		err        error
-		localOid   uint64
-		requireOid uint64
-		chunkID    uint32
-	)
-	chunkID = uint32(pkg.FileID)
-	requireOid = uint64(pkg.Offset + 1)
-	localOid, err = pkg.vol.store.(*storage.TinyStore).GetLastOid(chunkID)
-	log.LogWrite(pkg.actionMesg(ActionLeaderToFollowerOpCRepairReadPackResponse,
-		fmt.Sprintf("follower require Oid[%v] localOid[%v]", requireOid, localOid), pkg.startT, err))
-	if localOid < requireOid {
-		err = fmt.Errorf(" requireOid[%v] but localOid[%v]", requireOid, localOid)
-		pkg.PackErrorBody(ActionLeaderToFollowerOpCRepairReadPackResponse, err.Error())
-		return
-	}
-	err = syncData(chunkID, requireOid, localOid, pkg, conn)
-	if err != nil {
-		pkg.PackErrorBody(ActionLeaderToFollowerOpCRepairReadPackResponse, err.Error())
-	}
 
 	return
 }
@@ -293,20 +259,6 @@ func (s *DataNode) compactChunk(pkg *Packet) {
 		pkg.PackErrorBody(LogCompactChunk, err.Error())
 		return
 	}
-	pkg.PackOkReply()
-
-	return
-}
-
-func (s *DataNode) repairChunk(pkg *Packet) {
-	chunkId := uint32(pkg.FileID)
-	addr, remoteLastOid, err := getRepairInfo(pkg.Data[:pkg.Size])
-	if err != nil {
-		pkg.PackErrorBody(LogRepair, err.Error())
-		return
-	}
-	log.LogWrite(pkg.actionMesg(ActionFollowerToLeaderOpCRepairReadSendRequest, addr, pkg.startT, err))
-	doRepairChunk(uint64(remoteLastOid), pkg.vol, chunkId, addr, pkg.ReqID)
 	pkg.PackOkReply()
 
 	return

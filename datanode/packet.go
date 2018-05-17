@@ -88,9 +88,13 @@ func (p *Packet) IsReadReq() bool {
 	return p.Opcode == proto.OpStreamRead || p.Opcode == proto.OpRead
 }
 
+func (p *Packet) IsMarkDeleteReq() bool {
+	return p.Opcode == proto.OpMarkDelete
+}
+
 func (p *Packet) isHeadNode() (ok bool) {
 	if p.goals == p.Nodes && (p.IsWriteOperation() || p.Opcode == proto.OpCreateFile ||
-		(p.Opcode == proto.OpMarkDelete && p.StoreType == proto.TinyStoreMode)) {
+		(p.Opcode == proto.OpMarkDelete)) {
 		ok = true
 	}
 
@@ -99,6 +103,10 @@ func (p *Packet) isHeadNode() (ok bool) {
 
 func (p *Packet) IsErrPack() bool {
 	return p.ResultCode == proto.OpOk
+}
+
+func (p *Packet) getErr() (m string) {
+	return fmt.Sprintf("req[%v] err[%v]", p.GetUniqLogId(), string(p.Data[:p.Size]))
 }
 
 func (p *Packet) actionMesg(action, remote string, start int64, err error) (m string) {
