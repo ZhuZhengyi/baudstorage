@@ -22,7 +22,7 @@ type StreamKey struct {
 	sync.Mutex
 }
 
-func (ek *ExtentKey) isEquare(k ExtentKey) (equare bool) {
+func (ek *ExtentKey) isEquare(k ExtentKey) bool {
 	return ek.VolId == k.VolId && ek.ExtentId == k.ExtentId
 }
 
