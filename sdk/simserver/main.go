@@ -1,5 +1,13 @@
 package main
 
+//
+// Usage: nohup ./simserver &
+//
+// This will simulate one master server and four meta nodes in localhost
+// with "namespace", "ports" and "inode ranges" hardcoded
+// for testing purpose.
+//
+
 import (
 	"encoding/json"
 	"errors"
