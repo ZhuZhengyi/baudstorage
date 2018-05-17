@@ -12,12 +12,14 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/tiglabs/baudstorage/proto"
 )
 
 var aalock sync.Mutex
 var allKeys map[uint64]*StreamKey
 
-func saveExtentKey(inode uint64, k ExtentKey) (err error) {
+func saveExtentKey(inode uint64, k proto.ExtentKey) (err error) {
 	aalock.Lock()
 	defer aalock.Unlock()
 	sk := allKeys[inode]
@@ -36,10 +38,10 @@ func randSeq(n int) string {
 	return string(b)
 }
 
-func updateKey(inode uint64) (sk *StreamKey, err error) {
+func updateKey(inode uint64) (extents []proto.ExtentKey, err error) {
 	aalock.Lock()
 	defer aalock.Unlock()
-	sk = (allKeys[inode])
+	extents = allKeys[inode].Extents
 	return
 }
 

@@ -9,8 +9,8 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
-type AppendExtentKeyFunc func(inode uint64, key ExtentKey) error
-type GetExtentsFunc func(inode uint64) (*StreamKey, error)
+type AppendExtentKeyFunc func(inode uint64, key proto.ExtentKey) error
+type GetExtentsFunc func(inode uint64) ([]proto.ExtentKey, error)
 
 type ExtentClient struct {
 	wrapper         *sdk.VolGroupWrapper
@@ -176,7 +176,7 @@ func (client *ExtentClient) Read(inode uint64, data []byte, offset int, size int
 	return stream.read(data, offset, size)
 }
 
-func (client *ExtentClient) Delete(keys []ExtentKey) (err error) {
+func (client *ExtentClient) Delete(keys []proto.ExtentKey) (err error) {
 	for _, k := range keys {
 		vol, err := client.wrapper.GetVol(k.VolId)
 		if err != nil {
