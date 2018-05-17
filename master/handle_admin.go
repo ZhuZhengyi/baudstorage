@@ -10,7 +10,12 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 	"io/ioutil"
+	"strings"
 )
+
+func (m *Master) getIp(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(strings.Split(r.RemoteAddr, ":")[0]))
+}
 
 func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 	var (

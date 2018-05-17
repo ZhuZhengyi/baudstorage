@@ -14,6 +14,7 @@ const (
 	AdminCreateVol       = "admin/createVol"
 	AdminVolOffline      = "admin/volOffline"
 	AdminCreateNamespace = "admin/createNamespace"
+	AdminGetIp           = "admin/getIp"
 
 	// Client APIs
 	ClientVols      = "client/vols"
@@ -44,6 +45,7 @@ func (m *Master) startHttpService() (err error) {
 }
 
 func (m *Master) handleFunctions() (err error) {
+	http.HandleFunc(AdminGetIp, m.getIp)
 	http.Handle(RootUrlPath, m.handlerWithInterceptor())
 	return
 }
