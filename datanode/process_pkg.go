@@ -256,14 +256,14 @@ func (s *DataNode) statsFlow(pkg *Packet, flag bool) {
 		return
 	}
 	if flag == OutFlow {
-		s.stats.AddInDataSize(uint64(pkg.Size + pkg.Arglen ))
+		s.stats.AddInDataSize(uint64(pkg.Size + pkg.Arglen))
 		return
 	}
 
 	if pkg.IsReadReq() {
-		s.stats.AddInDataSize(uint64(pkg.Arglen ))
+		s.stats.AddInDataSize(uint64(pkg.Arglen))
 	} else {
-		s.stats.AddInDataSize(uint64(pkg.Size + pkg.Arglen ))
+		s.stats.AddInDataSize(uint64(pkg.Size + pkg.Arglen))
 	}
 
 }

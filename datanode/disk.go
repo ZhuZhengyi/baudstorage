@@ -52,12 +52,14 @@ type Disk struct {
 	space     *SpaceManager
 }
 
-func NewDisk(path string) (d *Disk) {
+func NewDisk(path string, restSize uint64, maxErrs int) (d *Disk) {
 	d = new(Disk)
 	d.Path = path
+	d.RestSize = restSize
+	d.MaxErrs = maxErrs
 	d.VolsName = make([]string, 0)
 	d.RestSize = util.GB * 1
-	d.MaxErrs=2000
+	d.MaxErrs = 2000
 	d.DiskUsage()
 	d.compactCh = make(chan *CompactTask, CompactThreadNum)
 	for i := 0; i < CompactThreadNum; i++ {
@@ -267,9 +269,9 @@ func IsDiskErr(errMsg string) bool {
 	return true
 }
 
-func LoadFromDisk(path string, space *SpaceManager) (d *Disk, err error) {
+func LoadFromDisk(path string, restSize uint64, maxErrs int, space *SpaceManager) (d *Disk, err error) {
 	if d, err = space.getDisk(path); err != nil {
-		d = NewDisk(path)
+		d = NewDisk(path, restSize, maxErrs)
 		d.loadVol(space)
 		space.putDisk(d)
 	}

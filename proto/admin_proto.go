@@ -10,6 +10,11 @@ const (
 	CmdSuccess = 1
 )
 
+type ClusterInfo struct {
+	Cluster string
+	Ip      string
+}
+
 type CreateVolRequest struct {
 	VolType string
 	VolId   uint64

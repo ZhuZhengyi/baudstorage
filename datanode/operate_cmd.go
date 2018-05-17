@@ -77,7 +77,7 @@ func (s *DataNode) createVol(cmd *Cmd) (resp *CmdResp) {
 			continue
 		}
 		vol, err := NewVolAgent(cmd.VolID, cmd.VolSize, path, JoinVolName(cmd.VolID, cmd.VolSize),
-			s.clusterID, s.ip+":"+s.port, s.chunkCheckerInterval, s.storeType, s, NewStoreMode)
+			s.clusterId, s.ip+":"+s.port, s.chunkCheckerInterval, s.storeType, s, NewStoreMode)
 		if err != nil {
 			glog.LogError(LogCreateVol+":"+cmd.GetIDInfo()+" err:", err)
 			continue
