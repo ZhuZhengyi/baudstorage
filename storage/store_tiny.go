@@ -464,6 +464,20 @@ func (s *TinyStore) DoCompactWork(chunkID int) (err error, released uint64) {
 	return nil, released
 }
 
+func (s *TinyStore) MoveChunkToUnavailChan() {
+	if s.GetStoreStatus() == ReadWriteStore {
+		return
+	}
+	for i := 0; i < 3; i++ {
+		select {
+		case chunkId := <-s.availChunkCh:
+			s.unavailChunkCh <- chunkId
+		default:
+			return
+		}
+	}
+}
+
 func (s *TinyStore) doCompactAndCommit(chunkID int) (err error, released uint64) {
 	cc := s.chunks[chunkID]
 	// prevent write and delete operations

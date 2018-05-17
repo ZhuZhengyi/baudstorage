@@ -72,8 +72,6 @@ func (s *DataNode) handleReqs(msgH *MessageHandler) {
 
 		case <-msgH.exitCh:
 			return
-		case <-s.shutdownCh:
-			return
 		}
 	}
 }
@@ -258,14 +256,14 @@ func (s *DataNode) statsFlow(pkg *Packet, flag bool) {
 		return
 	}
 	if flag == OutFlow {
-		s.stats.AddInDataSize(uint64(pkg.Size + pkg.Arglen + HeaderSize))
+		s.stats.AddInDataSize(uint64(pkg.Size + pkg.Arglen ))
 		return
 	}
 
 	if pkg.IsReadReq() {
-		s.stats.AddInDataSize(uint64(pkg.Arglen + HeaderSize))
+		s.stats.AddInDataSize(uint64(pkg.Arglen ))
 	} else {
-		s.stats.AddInDataSize(uint64(pkg.Size + pkg.Arglen + HeaderSize))
+		s.stats.AddInDataSize(uint64(pkg.Size + pkg.Arglen ))
 	}
 
 }
