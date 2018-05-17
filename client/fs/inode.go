@@ -21,13 +21,12 @@ type InodeCommon struct {
 }
 
 type Inode struct {
-	ino     uint64
-	size    uint64
-	mode    uint32 //Inode Type
-	extents []string
-	ctime   time.Time
-	mtime   time.Time
-	atime   time.Time
+	ino   uint64
+	size  uint64
+	mode  uint32 //Inode Type
+	ctime time.Time
+	mtime time.Time
+	atime time.Time
 }
 
 func (s *Super) InodeGet(ino uint64, inode *Inode) error {
@@ -45,9 +44,8 @@ func (s *Super) InodeGet(ino uint64, inode *Inode) error {
 
 func fillInode(inode *Inode, info *proto.InodeInfo) {
 	inode.ino = info.Inode
-	inode.mode = info.Type
+	inode.mode = info.Mode
 	inode.size = info.Size
-	inode.extents = info.Extents
 	inode.ctime = info.CreateTime
 	inode.atime = info.AccessTime
 	inode.mtime = info.ModifyTime

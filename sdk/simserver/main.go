@@ -460,12 +460,11 @@ out:
 func NewInodeInfo(ino uint64, mode uint32) *proto.InodeInfo {
 	return &proto.InodeInfo{
 		Inode:      ino,
-		Type:       mode,
+		Mode:       mode,
 		Size:       0,
 		ModifyTime: time.Now(),
 		AccessTime: time.Now(),
 		CreateTime: time.Now(),
-		Extents:    make([]string, 0),
 	}
 }
 
