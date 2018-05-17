@@ -25,7 +25,7 @@ func NewStreamReader(inode uint64, wrapper *sdk.VolGroupWrapper, getExtents GetE
 	stream.wrapper = wrapper
 	stream.getExtents = getExtents
 	stream.extents = NewStreamKey(inode)
-	stream.extents, err = stream.getExtents(inode)
+	stream.extents.Extents, err = stream.getExtents(inode)
 	if err != nil {
 		return
 	}
@@ -59,8 +59,8 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	if offset+size < int(stream.fileSize) {
 		return size, nil
 	}
-	var newStreamKey *StreamKey
-	newStreamKey, err = stream.getExtents(stream.inode)
+	newStreamKey := NewStreamKey(stream.inode)
+	newStreamKey.Extents, err = stream.getExtents(stream.inode)
 
 	if err == nil {
 		err = stream.updateLocalReader(newStreamKey)

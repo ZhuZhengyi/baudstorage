@@ -18,7 +18,7 @@ type ExtentReader struct {
 	endInodeOffset   int
 	cache            *CacheBuffer
 	vol              *sdk.VolGroup
-	key              ExtentKey
+	key              proto.ExtentKey
 	wrapper          *sdk.VolGroupWrapper
 	exitCh           chan bool
 	cacheReferCh     chan bool
@@ -30,7 +30,7 @@ const (
 	DefaultReadBufferSize = 10 * util.MB
 )
 
-func NewExtentReader(inode uint64, inInodeOffset int, key ExtentKey,
+func NewExtentReader(inode uint64, inInodeOffset int, key proto.ExtentKey,
 	wrapper *sdk.VolGroupWrapper) (reader *ExtentReader, err error) {
 	reader = new(ExtentReader)
 	reader.vol, err = wrapper.GetVol(key.VolId)
@@ -143,7 +143,7 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 	return acatualReadSize, nil
 }
 
-func (reader *ExtentReader) updateKey(key ExtentKey) (update bool) {
+func (reader *ExtentReader) updateKey(key proto.ExtentKey) (update bool) {
 	reader.Lock()
 	defer reader.Unlock()
 	if !(key.VolId == reader.key.VolId && key.ExtentId == reader.key.ExtentId) {

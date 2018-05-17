@@ -299,8 +299,8 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 	return nil
 }
 
-func (writer *ExtentWriter) toKey() (k ExtentKey) {
-	k = ExtentKey{}
+func (writer *ExtentWriter) toKey() (k proto.ExtentKey) {
+	k = proto.ExtentKey{}
 	k.VolId = writer.volGroup.VolId
 	k.Size = uint32(writer.getByteAck())
 	k.ExtentId = writer.extentId
