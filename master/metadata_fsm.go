@@ -73,24 +73,22 @@ func (mf *MetadataFsm) restoreApplied() {
 	mf.applied = applied
 }
 
-func (mf *MetadataFsm) Apply(command []byte, index uint64) (interface{}, error) {
-	var err error
+func (mf *MetadataFsm) Apply(command []byte, index uint64) (resp interface{}, err error) {
 	cmd := new(Metadata)
 	if err = cmd.Unmarshal(command); err != nil {
-		err = fmt.Errorf("action[fsmApply],unmarshal data:%v, err:%v", command, err.Error())
-		return nil, err
+		return nil, fmt.Errorf("action[fsmApply],unmarshal data:%v, err:%v", command, err.Error())
 	}
 	if _, err = mf.Put(cmd.K, cmd.V); err != nil {
-		return nil, err
+		return
 	}
 	if _, err = mf.Put(Applied, index); err != nil {
-		return nil, err
+		return
 	}
 	if err = mf.applyHandler(cmd); err != nil {
-		return nil, err
+		return
 	}
 	mf.applied = index
-	return nil, nil
+	return
 }
 
 func (mf *MetadataFsm) ApplyMemberChange(confChange *proto.ConfChange, index uint64) (interface{}, error) {

@@ -2,28 +2,15 @@ package stream
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
-	"strconv"
-	"strings"
 	"sync"
-)
 
-type ExtentKey struct {
-	VolId    uint32
-	ExtentId uint64
-	Size     uint32
-	Crc      uint32
-}
+	"github.com/tiglabs/baudstorage/proto"
+)
 
 type StreamKey struct {
 	Inode   uint64
-	Extents []ExtentKey
+	Extents []proto.ExtentKey
 	sync.Mutex
-}
-
-func (ek *ExtentKey) isEquare(k ExtentKey) (equare bool) {
-	return ek.VolId == k.VolId && ek.ExtentId == k.ExtentId
 }
 
 func NewStreamKey(ino uint64) *StreamKey {
@@ -40,7 +27,7 @@ func (sk *StreamKey) UnMarshal(data []byte) {
 	json.Unmarshal(data, sk)
 }
 
-func (sk *StreamKey) Put(k ExtentKey) {
+func (sk *StreamKey) Put(k proto.ExtentKey) {
 	sk.Lock()
 	defer sk.Unlock()
 	isFound := false
@@ -75,7 +62,7 @@ func (sk *StreamKey) GetExtentLen() int {
 
 // Range calls f sequentially for each key and value present in the extent key collection.
 // If f returns false, range stops the iteration.
-func (sk *StreamKey) Range(f func(i int, v ExtentKey) bool) {
+func (sk *StreamKey) Range(f func(i int, v proto.ExtentKey) bool) {
 	sk.Lock()
 	defer sk.Unlock()
 	for i, v := range sk.Extents {
@@ -83,36 +70,4 @@ func (sk *StreamKey) Range(f func(i int, v ExtentKey) bool) {
 			return
 		}
 	}
-}
-
-var (
-	InvalidKey = errors.New("invalid key error")
-)
-
-func (k *ExtentKey) Marshal() (m string) {
-	return fmt.Sprintf("%v_%v_%v_%v", k.VolId, k.ExtentId, k.Size, k.Crc)
-}
-
-func (k *ExtentKey) UnMarshal(m string) (err error) {
-	var (
-		size uint64
-		crc  uint64
-	)
-	err = InvalidKey
-	keyArr := strings.Split(m, "_")
-	size, err = strconv.ParseUint(keyArr[2], 10, 64)
-	if err != nil {
-		return
-	}
-	crc, err = strconv.ParseUint(keyArr[3], 10, 64)
-	if err != nil {
-		return
-	}
-	vId, _ := strconv.ParseUint(keyArr[0], 10, 32)
-	k.ExtentId, _ = strconv.ParseUint(keyArr[1], 10, 64)
-	k.VolId = uint32(vId)
-	k.Size = uint32(size)
-	k.Crc = uint32(crc)
-
-	return nil
 }

@@ -10,6 +10,11 @@ const (
 	CmdSuccess = 1
 )
 
+type ClusterInfo struct {
+	Cluster string
+	Ip      string
+}
+
 type CreateVolRequest struct {
 	VolType string
 	VolId   uint64
@@ -149,12 +154,14 @@ type UpdateMetaPartitionResponse struct {
 
 type MetaPartitionOfflineRequest struct {
 	PartitionID uint64
+	NsName      string
 	RemovePeer  Peer
-	NewPeers    Peer
+	AddPeer     Peer
 }
 
 type MetaPartitionOfflineResponse struct {
 	PartitionID uint64
+	NsName      string
 	Status      uint8
 	Result      string
 }

@@ -321,7 +321,7 @@ func (mp *MetaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 		var reply []byte
 		resp := &CreateInoResp{}
 		resp.Info.Inode = ino.Inode
-		resp.Info.Type = ino.Type
+		resp.Info.Mode = ino.Type
 		resp.Info.CreateTime = ino.CreateTime
 		resp.Info.ModifyTime = ino.ModifyTime
 		resp.Info.AccessTime = ino.AccessTime

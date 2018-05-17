@@ -348,19 +348,19 @@ func (m *MetaNode) opOfflineMetaPartition(conn net.Conn, p *Packet) (err error) 
 		p.PackOkReply()
 		m.ackAdmin(conn, p)
 	}()
-	mp.RaftPartition.AddNode(req.NewPeers.ID, req.NewPeers.Addr)
+	mp.RaftPartition.AddNode(req.AddPeer.ID, req.AddPeer.Addr)
 	resp := proto.MetaPartitionOfflineResponse{
 		PartitionID: req.PartitionID,
 		Status:      proto.OpErr,
 	}
 	// add peer
-	reqData, err = json.Marshal(req.NewPeers)
+	reqData, err = json.Marshal(req.AddPeer)
 	if err != nil {
 		resp.Result = err.Error()
 		goto end
 	}
 	_, err = mp.RaftPartition.ChangeMember(raftproto.ConfAddNode,
-		raftproto.Peer{ID: req.NewPeers.ID}, reqData)
+		raftproto.Peer{ID: req.AddPeer.ID}, reqData)
 	if err != nil {
 		resp.Result = err.Error()
 		goto end

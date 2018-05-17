@@ -10,22 +10,22 @@ import (
 )
 
 type StreamReader struct {
-	inode        uint64
-	wrapper      *sdk.VolGroupWrapper
-	readers      []*ExtentReader
-	getExtentKey UpdateExtentKeyFunc
-	extents      *StreamKey
-	fileSize     uint64
+	inode      uint64
+	wrapper    *sdk.VolGroupWrapper
+	readers    []*ExtentReader
+	getExtents GetExtentsFunc
+	extents    *StreamKey
+	fileSize   uint64
 	sync.Mutex
 }
 
-func NewStreamReader(inode uint64, wrapper *sdk.VolGroupWrapper, getExtentKey UpdateExtentKeyFunc) (stream *StreamReader, err error) {
+func NewStreamReader(inode uint64, wrapper *sdk.VolGroupWrapper, getExtents GetExtentsFunc) (stream *StreamReader, err error) {
 	stream = new(StreamReader)
 	stream.inode = inode
 	stream.wrapper = wrapper
-	stream.getExtentKey = getExtentKey
+	stream.getExtents = getExtents
 	stream.extents = NewStreamKey(inode)
-	stream.extents, err = stream.getExtentKey(inode)
+	stream.extents.Extents, err = stream.getExtents(inode)
 	if err != nil {
 		return
 	}
@@ -59,8 +59,8 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	if offset+size < int(stream.fileSize) {
 		return size, nil
 	}
-	var newStreamKey *StreamKey
-	newStreamKey, err = stream.getExtentKey(stream.inode)
+	newStreamKey := NewStreamKey(stream.inode)
+	newStreamKey.Extents, err = stream.getExtents(stream.inode)
 
 	if err == nil {
 		err = stream.updateLocalReader(newStreamKey)

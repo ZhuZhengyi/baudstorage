@@ -10,7 +10,12 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 	"io/ioutil"
+	"strings"
 )
+
+func (m *Master) getIp(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(strings.Split(r.RemoteAddr, ":")[0]))
+}
 
 func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -132,7 +137,7 @@ func (m *Master) volOffline(w http.ResponseWriter, r *http.Request) {
 	if vg, err = ns.getVolGroupByVolID(volID); err != nil {
 		goto errDeal
 	}
-	m.cluster.volOffline(addr, vg, HandleVolOfflineErr)
+	m.cluster.volOffline(addr, nsName, vg, HandleVolOfflineErr)
 	rstMsg = fmt.Sprintf(AdminVolOffline+"volID :%v  on node:%v  has offline success", volID, addr)
 	io.WriteString(w, rstMsg)
 	log.LogWarn(rstMsg)

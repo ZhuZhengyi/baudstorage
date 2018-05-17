@@ -82,8 +82,8 @@ func TestLookup(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if mode != info.Type {
-		t.Fatalf("dentry mode(%v), inode mode(%v)", mode, info.Type)
+	if mode != info.Mode {
+		t.Fatalf("dentry mode(%v), inode mode(%v)", mode, info.Mode)
 	}
 }
 

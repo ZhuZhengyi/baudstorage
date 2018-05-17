@@ -9,8 +9,8 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
-type SaveExtentKeyFunc func(inode uint64, key ExtentKey) error
-type UpdateExtentKeyFunc func(inode uint64) (*StreamKey, error)
+type AppendExtentKeyFunc func(inode uint64, key proto.ExtentKey) error
+type GetExtentsFunc func(inode uint64) ([]proto.ExtentKey, error)
 
 type ExtentClient struct {
 	wrapper         *sdk.VolGroupWrapper
@@ -20,12 +20,11 @@ type ExtentClient struct {
 	readerLock      sync.RWMutex
 	referCnt        map[uint64]uint64
 	referLock       sync.Mutex
-	saveExtentKey   SaveExtentKeyFunc
-	updateExtentKey UpdateExtentKeyFunc
+	appendExtentKey AppendExtentKeyFunc
+	getExtents      GetExtentsFunc
 }
 
-func NewExtentClient(logdir string, master string, saveExtentKey SaveExtentKeyFunc,
-	updateExtentKey UpdateExtentKeyFunc) (client *ExtentClient, err error) {
+func NewExtentClient(logdir string, master string, appendExtentKey AppendExtentKeyFunc, getExtents GetExtentsFunc) (client *ExtentClient, err error) {
 	client = new(ExtentClient)
 	_, err = log.NewLog(logdir, "extentclient", log.DebugLevel)
 	if err != nil {
@@ -38,14 +37,13 @@ func NewExtentClient(logdir string, master string, saveExtentKey SaveExtentKeyFu
 	client.writers = make(map[uint64]*StreamWriter)
 	client.readers = make(map[uint64]*StreamReader)
 	client.referCnt = make(map[uint64]uint64)
-	client.saveExtentKey = saveExtentKey
-	client.updateExtentKey = updateExtentKey
-
+	client.appendExtentKey = appendExtentKey
+	client.getExtents = getExtents
 	return
 }
 
 func (client *ExtentClient) InitWriteStream(inode uint64) (stream *StreamWriter) {
-	stream = NewStreamWriter(client.wrapper, inode, client.saveExtentKey)
+	stream = NewStreamWriter(client.wrapper, inode, client.appendExtentKey)
 	client.writerLock.Lock()
 	client.writers[inode] = stream
 	client.writerLock.Unlock()
@@ -54,7 +52,7 @@ func (client *ExtentClient) InitWriteStream(inode uint64) (stream *StreamWriter)
 }
 
 func (client *ExtentClient) InitReadStream(inode uint64) (stream *StreamReader, err error) {
-	stream, err = NewStreamReader(inode, client.wrapper, client.updateExtentKey)
+	stream, err = NewStreamReader(inode, client.wrapper, client.getExtents)
 	if err != nil {
 		return
 	}
@@ -178,7 +176,7 @@ func (client *ExtentClient) Read(inode uint64, data []byte, offset int, size int
 	return stream.read(data, offset, size)
 }
 
-func (client *ExtentClient) Delete(keys []ExtentKey) (err error) {
+func (client *ExtentClient) Delete(keys []proto.ExtentKey) (err error) {
 	for _, k := range keys {
 		vol, err := client.wrapper.GetVol(k.VolId)
 		if err != nil {

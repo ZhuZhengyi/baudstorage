@@ -27,7 +27,6 @@ var (
 	NoAnyDataNodeForCreateVol       = errors.New("no have enough data server for create vol")
 	NoAnyMetaNodeForCreateVol       = errors.New("no have enough meta server for create meta range")
 	MetaGroupReplicationExcessError = errors.New("meta group Replication Excess error")
-	MetaGroupReplicationLackError   = errors.New("meta group Replication Lack error")
 	NoHaveMajorityReplica           = errors.New("no have majority replica error")
 	NoLeader                        = errors.New("no leader")
 	ErrBadConfFile                  = errors.New("BadConfFile")

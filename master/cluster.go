@@ -278,14 +278,14 @@ func (c *Cluster) dataNodeOffLine(dataNode *DataNode) {
 	log.LogWarn(msg)
 	for _, ns := range c.namespaces {
 		for _, vg := range ns.volGroups.volGroups {
-			c.volOffline(dataNode.HttpAddr, vg, DataNodeOfflineInfo)
+			c.volOffline(dataNode.HttpAddr, ns.Name, vg, DataNodeOfflineInfo)
 		}
 	}
 	c.dataNodes.Delete(dataNode.HttpAddr)
 
 }
 
-func (c *Cluster) volOffline(offlineAddr string, vg *VolGroup, errMsg string) {
+func (c *Cluster) volOffline(offlineAddr, nsName string, vg *VolGroup, errMsg string) {
 	var (
 		newHosts []string
 		newAddr  string
@@ -315,11 +315,11 @@ func (c *Cluster) volOffline(offlineAddr string, vg *VolGroup, errMsg string) {
 	if newHosts, err = c.getAvailDataNodeHosts(dataNode.RackName, vg.PersistenceHosts, 1); err != nil {
 		goto errDeal
 	}
-	if err = vg.removeVolHosts(offlineAddr); err != nil {
+	if err = vg.removeVolHosts(offlineAddr, c, nsName); err != nil {
 		goto errDeal
 	}
 	newAddr = newHosts[0]
-	if err = vg.addVolHosts(newAddr); err != nil {
+	if err = vg.addVolHosts(newAddr, c, nsName); err != nil {
 		goto errDeal
 	}
 	vg.volOffLineInMem(offlineAddr)
@@ -358,7 +358,9 @@ func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {
 		goto errDeal
 	}
 	ns = NewNameSpace(name, replicaNum)
-
+	if err = c.syncAddNamespace(ns); err != nil {
+		goto errDeal
+	}
 	c.namespaces[name] = ns
 	if err = c.CreateMetaPartition(name, 0, DefaultMaxMetaPartitionRange); err != nil {
 		delete(c.namespaces, name)
@@ -393,8 +395,9 @@ func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err err
 	}
 	mp.PersistenceHosts = hosts
 	mp.peers = peers
-	//todo sync namespace and metaGroup
-	c.syncNamespace(ns)
+	if err = c.syncAddMetaPartition(nsName, mp); err != nil {
+		return
+	}
 	ns.AddMetaPartition(mp)
 	c.putMetaNodeTasks(mp.generateCreateMetaPartitionTasks(nil))
 	return
