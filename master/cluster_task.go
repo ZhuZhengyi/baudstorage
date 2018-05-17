@@ -45,14 +45,14 @@ func (c *Cluster) checkVolGroups(ns *NameSpace) {
 		vg.checkLocationStatus(c.cfg.VolTimeOutSec)
 		vg.checkStatus(true, c.cfg.VolTimeOutSec)
 		vg.checkVolGroupMiss(c.cfg.VolMissSec, c.cfg.VolWarnInterval)
-		vg.checkReplicaNum()
+		vg.checkReplicaNum(c, ns.Name)
 		if vg.status == VolReadWrite {
 			newReadWriteVolGroups++
 		}
 		volDiskErrorAddrs := vg.checkVolDiskError()
 		if volDiskErrorAddrs != nil {
 			for _, addr := range volDiskErrorAddrs {
-				c.volOffline(addr, vg, CheckVolDiskErrorErr)
+				c.volOffline(addr, ns.Name, vg, CheckVolDiskErrorErr)
 			}
 		}
 		volTasks := vg.checkVolReplicationTask()
@@ -116,14 +116,15 @@ func (c *Cluster) loadVolAndCheckResponse(v *VolGroup, isRecover bool) {
 
 func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint64) (err error) {
 	var (
-		ns       *NameSpace
-		mp       *MetaPartition
-		t        *proto.AdminTask
-		tasks    []*proto.AdminTask
-		racks    []string
-		hosts    []string
-		newHosts []string
-		peers    []proto.Peer
+		ns         *NameSpace
+		mp         *MetaPartition
+		t          *proto.AdminTask
+		tasks      []*proto.AdminTask
+		racks      []string
+		hosts      []string
+		newHosts   []string
+		peers      []proto.Peer
+		removePeer proto.Peer
 	)
 	if ns, err = c.getNamespace(nsName); err != nil {
 		goto errDeal
@@ -148,13 +149,15 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 	}
 
 	for _, mr := range mp.Replicas {
-		if mr.Addr != nodeAddr {
+		if mr.Addr == nodeAddr {
+			removePeer = proto.Peer{ID: mr.nodeId, Addr: mr.Addr}
+		} else {
 			peers = append(peers, proto.Peer{ID: mr.nodeId, Addr: mr.Addr})
 		}
 	}
 	mp.peers = peers
 	tasks = mp.generateCreateMetaPartitionTasks(newHosts)
-	if t, err = mp.generateOfflineTask(); err != nil {
+	if t, err = mp.generateOfflineTask(nsName, removePeer, peers[0]); err != nil {
 		goto errDeal
 	}
 	tasks = append(tasks, t)
@@ -204,7 +207,7 @@ func (c *Cluster) checkMetaGroups(ns *NameSpace) {
 	var tasks []*proto.AdminTask
 	for _, mp := range ns.MetaPartitions {
 		mp.checkStatus(true, int(ns.mpReplicaNum))
-		mp.checkReplicas(c,nsName)
+		mp.checkReplicas(c, ns.Name)
 		tasks = append(tasks, mp.generateReplicaTask()...)
 		tasks = append(tasks, mp.checkThreshold(ns.threshold, ns.mpSize))
 	}
@@ -273,8 +276,7 @@ func (c *Cluster) dealOfflineMetaPartition(nodeAddr string, resp *proto.MetaPart
 	if err != nil {
 		goto errDeal
 	}
-	//todo
-	if err = mp.removePersistenceHosts(nodeAddr,c,nsName); err != nil {
+	if err = mp.removePersistenceHosts(nodeAddr, c, resp.NsName); err != nil {
 		goto errDeal
 	}
 	mp.RemoveReplicaByAddr(nodeAddr)
@@ -357,7 +359,7 @@ func (c *Cluster) dealCreateMetaPartition(nodeAddr string, resp *proto.CreateMet
 	mr = NewMetaReplica(mp.Start, mp.End, metaNode)
 	mr.status = MetaPartitionReadWrite
 	mp.AddReplica(mr)
-	mp.AddHostsByReplica(mr,c,nsName)
+	mp.AddHostsByReplica(mr, c, resp.NsName)
 	mp.Lock()
 	mp.checkAndRemoveMissMetaReplica(mr.Addr)
 	mp.Unlock()

@@ -278,14 +278,14 @@ func (c *Cluster) dataNodeOffLine(dataNode *DataNode) {
 	log.LogWarn(msg)
 	for _, ns := range c.namespaces {
 		for _, vg := range ns.volGroups.volGroups {
-			c.volOffline(dataNode.HttpAddr, vg, DataNodeOfflineInfo)
+			c.volOffline(dataNode.HttpAddr, ns.Name, vg, DataNodeOfflineInfo)
 		}
 	}
 	c.dataNodes.Delete(dataNode.HttpAddr)
 
 }
 
-func (c *Cluster) volOffline(offlineAddr string, vg *VolGroup, errMsg string) {
+func (c *Cluster) volOffline(offlineAddr, nsName string, vg *VolGroup, errMsg string) {
 	var (
 		newHosts []string
 		newAddr  string
@@ -315,7 +315,7 @@ func (c *Cluster) volOffline(offlineAddr string, vg *VolGroup, errMsg string) {
 	if newHosts, err = c.getAvailDataNodeHosts(dataNode.RackName, vg.PersistenceHosts, 1); err != nil {
 		goto errDeal
 	}
-	if err = vg.removeVolHosts(offlineAddr); err != nil {
+	if err = vg.removeVolHosts(offlineAddr, c, nsName); err != nil {
 		goto errDeal
 	}
 	newAddr = newHosts[0]
@@ -330,7 +330,7 @@ func (c *Cluster) volOffline(offlineAddr string, vg *VolGroup, errMsg string) {
 	c.putDataNodeTasks(tasks)
 	goto errDeal
 errDeal:
-	msg = fmt.Sprintf(errMsg + " vol:%v  on Node:%v  "+
+	msg = fmt.Sprintf(errMsg+" vol:%v  on Node:%v  "+
 		"DiskError  TimeOut Report Then Fix It on newHost:%v   Err:%v , PersistenceHosts:%v  ",
 		vg.VolID, offlineAddr, newAddr, err, vg.PersistenceHosts)
 	log.LogWarn(msg)

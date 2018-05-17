@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
-	"time"
 	"strings"
+	"time"
 )
 
 type MetaReplica struct {
@@ -183,11 +183,11 @@ func (mp *MetaPartition) addMissNode(addr string, lastReportTime int64) {
 	}
 }
 
-func (mp *MetaPartition) checkReplicas(c *Cluster,nsName string) {
+func (mp *MetaPartition) checkReplicas(c *Cluster, nsName string) {
 	if int(mp.replicaNum) != len(mp.PersistenceHosts) {
 		orgReplicaNum := mp.replicaNum
 		mp.replicaNum = (uint8)(len(mp.PersistenceHosts))
-		mp.updateHosts(c,nsName)
+		mp.updateHosts(c, nsName)
 		msg := fmt.Sprintf("meta PartitionID:%v orgReplicaNum:%v locations:%v",
 			mp.PartitionID, orgReplicaNum, mp.PersistenceHosts)
 		log.LogWarn(msg)
@@ -303,7 +303,7 @@ func (mp *MetaPartition) getLiveReplica() (liveReplicas []*MetaReplica) {
 	return
 }
 
-func (mp *MetaPartition) removePersistenceHosts(addr string,c *Cluster,nsName string) (err error) {
+func (mp *MetaPartition) removePersistenceHosts(addr string, c *Cluster, nsName string) (err error) {
 
 	orgVolHosts := make([]string, len(mp.PersistenceHosts))
 	copy(orgVolHosts, mp.PersistenceHosts)
@@ -311,7 +311,7 @@ func (mp *MetaPartition) removePersistenceHosts(addr string,c *Cluster,nsName st
 	if ok := mp.removeHostsOnUnderStore(addr); !ok {
 		return
 	}
-	if err = mp.updateHosts(c,nsName); err != nil {
+	if err = mp.updateHosts(c, nsName); err != nil {
 		mp.PersistenceHosts = orgVolHosts
 	}
 
@@ -405,12 +405,12 @@ func (mp *MetaPartition) generateAddLackMetaReplicaTask(addrs []string) (tasks [
 	return mp.generateCreateMetaPartitionTasks(addrs)
 }
 
-func (mp *MetaPartition) generateOfflineTask() (t *proto.AdminTask, err error) {
+func (mp *MetaPartition) generateOfflineTask(nsName string, removePeer proto.Peer, addPeer proto.Peer) (t *proto.AdminTask, err error) {
 	mr, err := mp.getLeaderMetaReplica()
 	if err != nil {
 		return
 	}
-	req := &proto.MetaPartitionOfflineRequest{PartitionID: mp.PartitionID, NewPeers: mp.peers}
+	req := &proto.MetaPartitionOfflineRequest{PartitionID: mp.PartitionID, NsName: nsName, RemovePeer: removePeer, AddPeer: addPeer}
 	t = proto.NewAdminTask(OpOfflineMetaPartition, mr.Addr, req)
 	return
 }

@@ -271,13 +271,13 @@ func (vg *VolGroup) IsInVolLocs(host string) (volLoc *Vol, ok bool) {
 	return
 }
 
-func (vg *VolGroup) checkReplicaNum() {
+func (vg *VolGroup) checkReplicaNum(c *Cluster, nsName string) {
 	vg.Lock()
 	defer vg.Unlock()
 	if int(vg.replicaNum) != len(vg.PersistenceHosts) {
 		orgGoal := vg.replicaNum
 		vg.replicaNum = (uint8)(len(vg.PersistenceHosts))
-		vg.UpdateVolHosts()
+		vg.UpdateVolHosts(c, nsName)
 		msg := fmt.Sprintf("FIX VOL GOAL,vol:%v orgGoal:%v volHOST:%v",
 			vg.VolID, orgGoal, vg.VolHostsToString())
 		log.LogWarn(msg)
@@ -288,14 +288,8 @@ func (vg *VolGroup) VolHostsToString() (hosts string) {
 	return strings.Join(vg.PersistenceHosts, UnderlineSeparator)
 }
 
-func (vg *VolGroup) UpdateVolHosts() error {
-	return vg.PutVolHosts()
-}
-
-func (vg *VolGroup) PutVolHosts() (err error) {
-
-	//todo sync vol hosts by raft
-	return
+func (vg *VolGroup) UpdateVolHosts(c *Cluster, nsName string) error {
+	return c.syncUpdateVolGroupHosts(nsName, vg)
 }
 
 func (vg *VolGroup) setVolToNormal() {
@@ -476,7 +470,7 @@ func (vg *VolGroup) DeleteFileOnNode(delAddr, FileID string) {
 	return
 }
 
-func (vg *VolGroup) removeVolHosts(removeAddr string) (err error) {
+func (vg *VolGroup) removeVolHosts(removeAddr string, c *Cluster, nsName string) (err error) {
 	orgGoal := len(vg.PersistenceHosts)
 	orgVolHosts := make([]string, len(vg.PersistenceHosts))
 	copy(orgVolHosts, vg.PersistenceHosts)
@@ -485,7 +479,7 @@ func (vg *VolGroup) removeVolHosts(removeAddr string) (err error) {
 		return
 	}
 	vg.replicaNum = (uint8)(len(vg.PersistenceHosts))
-	if err = vg.UpdateVolHosts(); err != nil {
+	if err = vg.UpdateVolHosts(c, nsName); err != nil {
 		vg.replicaNum = (uint8)(orgGoal)
 		vg.PersistenceHosts = orgVolHosts
 	}
@@ -522,7 +516,7 @@ func (vg *VolGroup) addVolHosts(addAddr string) (err error) {
 	}
 	vg.PersistenceHosts = append(vg.PersistenceHosts, addAddr)
 	vg.replicaNum = uint8(len(vg.PersistenceHosts))
-	if err = vg.UpdateVolHosts(); err != nil {
+	if err = vg.UpdateVolHosts(c, nsName); err != nil {
 		vg.PersistenceHosts = orgVolHosts
 		vg.replicaNum = uint8(orgGoal)
 		return

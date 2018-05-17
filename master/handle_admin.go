@@ -132,7 +132,7 @@ func (m *Master) volOffline(w http.ResponseWriter, r *http.Request) {
 	if vg, err = ns.getVolGroupByVolID(volID); err != nil {
 		goto errDeal
 	}
-	m.cluster.volOffline(addr, vg, HandleVolOfflineErr)
+	m.cluster.volOffline(addr, nsName, vg, HandleVolOfflineErr)
 	rstMsg = fmt.Sprintf(AdminVolOffline+"volID :%v  on node:%v  has offline success", volID, addr)
 	io.WriteString(w, rstMsg)
 	log.LogWarn(rstMsg)
