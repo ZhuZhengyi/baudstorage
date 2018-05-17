@@ -6,6 +6,7 @@ import (
 	"math"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type SpaceManager struct {
@@ -13,6 +14,28 @@ type SpaceManager struct {
 	vols     map[uint32]*Vol
 	diskLock sync.RWMutex
 	volLock  sync.RWMutex
+}
+
+func NewSpaceManager() (space *SpaceManager) {
+	space = new(SpaceManager)
+	space.disks = make(map[string]*Disk)
+	space.vols = make(map[uint32]*Vol)
+	go func() {
+		ticker := time.Tick(time.Second * 10)
+		for {
+			select {
+			case <-ticker:
+				space.diskLock.RLocker()
+				for _, d := range space.disks {
+					d.recomputeVolCnt()
+				}
+				space.diskLock.RUnlock()
+			}
+
+		}
+	}()
+
+	return
 }
 
 func (space *SpaceManager) getDisk(path string) (d *Disk, err error) {
@@ -67,7 +90,7 @@ func (space *SpaceManager) chooseDiskAndCreateVol(volId uint32, volMode string, 
 		return
 	}
 	d := space.getMinVolCntDisk()
-	v, err = NewVol(volId, volMode, d.Path, storage.NewStoreMode, storeSize)
+	v, err = NewVol(volId, volMode, "", d.Path, storage.NewStoreMode, storeSize)
 	if err == nil {
 		space.putVol(v)
 	}

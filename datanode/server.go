@@ -1,8 +1,12 @@
 package datanode
 
 import (
+	"fmt"
 	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util/config"
+	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/baudstorage/util/pool"
 )
 
@@ -48,4 +52,67 @@ func (s *DataNode) AddCompactTask(t *CompactTask) (err error) {
 	}
 
 	return
+}
+
+func (s *DataNode) checkChunkInfo(pkg *Packet) (err error) {
+	chunkInfo, _ := pkg.vol.store.(*storage.TinyStore).GetWatermark(pkg.FileID)
+	leaderObjId := uint64(pkg.Offset)
+	localObjId := chunkInfo.Size
+	if (leaderObjId - 1) != chunkInfo.Size {
+		err = ErrChunkOffsetUnmatch
+		mesg := fmt.Sprintf("Err[%v] leaderObjId[%v] localObjId[%v]", err, leaderObjId, localObjId)
+		log.LogWarn(pkg.actionMesg(ActionCheckChunkInfo, LocalProcessAddr, pkg.StartT, fmt.Errorf(mesg)))
+	}
+
+	return
+}
+
+func (s *DataNode) handleChunkInfo(pkg *Packet) (err error) {
+	if !pkg.IsWriteOperation() {
+		return
+	}
+
+	if !pkg.isHeadNode() {
+		err = s.checkChunkInfo(pkg)
+	} else {
+		err = s.headNodeSetChunkInfo(pkg)
+	}
+	if err != nil {
+		pkg.PackErrorBody(ActionCheckChunkInfo, err.Error())
+	}
+
+	return
+}
+
+func (s *DataNode) headNodeSetChunkInfo(pkg *Packet) (err error) {
+	var (
+		chunkId int
+	)
+	store := pkg.vol.store.(*storage.TinyStore)
+	chunkId, err = store.GetChunkForWrite()
+	if err != nil {
+		pkg.vol.status = storage.ReadOnlyStore
+		return
+	}
+	pkg.FileID = uint64(chunkId)
+	objectId, _ := store.AllocObjectId(uint32(pkg.FileID))
+	pkg.Offset = int64(objectId)
+
+	return
+}
+
+func (s *DataNode) headNodePutChunk(pkg *Packet) {
+	if pkg == nil || pkg.FileID <= 0 || pkg.isReturn {
+		return
+	}
+	if pkg.StoreType != proto.TinyStoreMode || !pkg.isHeadNode() || !pkg.IsWriteOperation() || !pkg.IsTransitPkg() {
+		return
+	}
+	store := pkg.vol.store.(*storage.TinyStore)
+	if pkg.IsErrPack() {
+		store.PutUnAvailChunk(int(pkg.FileID))
+	} else {
+		store.PutAvailChunk(int(pkg.FileID))
+	}
+	pkg.isReturn = true
 }
