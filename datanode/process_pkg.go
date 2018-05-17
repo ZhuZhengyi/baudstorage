@@ -4,8 +4,10 @@ import (
 	"container/list"
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util/log"
 	"golang.org/x/text/cmd/gotext/examples/extract_http/pkg"
+	"hash/crc32"
 	"io"
 	"net"
 	"time"
@@ -43,6 +45,19 @@ errDeal:
 
 }
 
+func (s *DataNode) checkAndAddInfos(pkg *Packet) error {
+	var err error
+	switch pkg.StoreType {
+	case proto.TinyStoreMode:
+		err = s.handleChunkInfo(pkg)
+	case proto.ExtentStoreMode:
+		if pkg.isHeadNode() && pkg.Opcode == proto.OpCreateFile {
+			pkg.FileID = pkg.vol.store.(*storage.ExtentStore).GetExtentId()
+		}
+	}
+	return err
+}
+
 func (s *DataNode) handleReqs(msgH *MessageHandler) {
 	for {
 		select {
@@ -76,7 +91,7 @@ func (s *DataNode) doRequestCh(req *Packet, msgH *MessageHandler) {
 	} else {
 		log.LogError(req.actionMesg(ActionSendToNext, req.nextAddr,
 			req.StartT, fmt.Errorf("failed to send to : %v", req.nextAddr)))
-		if req.IsMarkDelPkg() {
+		if req.IsMarkDeleteReq() {
 			s.operatePacket(req, msgH.inConn)
 		}
 	}
@@ -113,8 +128,6 @@ func (s *DataNode) writeToCli(msgH *MessageHandler) {
 			s.doReplyCh(reply, msgH)
 		case <-msgH.exitCh:
 			msgH.ClearReqs(s)
-			return
-		case <-s.shutdownCh:
 			return
 		}
 	}
@@ -195,19 +208,17 @@ func (s *DataNode) sendToNext(pkg *Packet, msgH *MessageHandler) error {
 	return err
 }
 
-func (s *DataNode) CheckStoreType(p *Packet) (err error) {
-	if (s.storeType == ChunkStoreType && !p.IsChunkStoreType()) || (s.storeType == ExtentStoreType && p.IsChunkStoreType()) {
-		log.LogWarn("server store type:", p.GetUniqLogId(), "req fileID:", p.FileID)
-		err = ErrStoreTypeUnmatch
+func (s *DataNode) CheckStoreMode(p *Packet) (err error) {
+	if p.StoreType == proto.TinyStoreMode || p.StoreType == proto.ExtentStoreMode {
+		return nil
 	}
-
-	return
+	return ErrStoreTypeUnmatch
 }
 
 func (s *DataNode) CheckPacket(pkg *Packet) error {
 	var err error
 	pkg.StartT = time.Now().UnixNano()
-	if err = s.CheckStoreType(pkg); err != nil {
+	if err = s.CheckStoreMode(pkg); err != nil {
 		return err
 	}
 
@@ -221,13 +232,25 @@ func (s *DataNode) CheckPacket(pkg *Packet) error {
 	if err != nil {
 		return err
 	}
-
-	var ok bool
-	if pkg.vol, ok = s.smMgr.IsExistVol(pkg.VolID); !ok {
-		err = ErrBadVolID
+	pkg.vol = s.space.getVol(pkg.VolID)
+	if pkg.vol == nil {
+		return ErrVolNotExist
 	}
 
-	return err
+	return nil
+}
+
+func CheckCrc(p *Packet) (err error) {
+	if !p.IsWriteOperation() {
+		return
+	}
+
+	crc := crc32.ChecksumIEEE(p.Data[:p.Size])
+	if crc == p.Crc {
+		return
+	}
+
+	return storage.ErrPkgCrcUnmatch
 }
 
 func (s *DataNode) statsFlow(pkg *Packet, flag bool) {

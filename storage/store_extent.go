@@ -65,11 +65,14 @@ func (s *ExtentStore) DeleteStore() {
 	return
 }
 
-func (s *ExtentStore) Create() (extentId uint64, err error) {
+func (s *ExtentStore) GetExtentId() (extentId uint64) {
+	return atomic.AddUint64(&s.baseExtentId, 1)
+}
+
+func (s *ExtentStore) Create(extentId uint64) (err error) {
 	var e *Extent
-	fileId := atomic.AddUint64(&s.baseExtentId, 1)
 	emptyCrc := crc32.ChecksumIEEE(make([]byte, BlockSize))
-	if e, err = s.createExtent(fileId); err != nil {
+	if e, err = s.createExtent(extentId); err != nil {
 		return
 	}
 
@@ -84,7 +87,6 @@ func (s *ExtentStore) Create() (extentId uint64, err error) {
 		return
 	}
 	s.addExtentToCache(e)
-	extentId = fileId
 
 	return
 }

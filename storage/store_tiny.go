@@ -16,6 +16,7 @@ const (
 	ChunkOpenOpt      = os.O_CREATE | os.O_RDWR | os.O_APPEND
 	ReadOnlyStore     = 1
 	ReadWriteStore    = 2
+	DiskErrStore      = -1
 	CompactThreshold  = 40
 	CompactMaxWait    = time.Second * 10
 	ReBootStoreMode   = false
@@ -245,7 +246,7 @@ func (s *TinyStore) GetAllWatermark() (chunks []*FileInfo, err error) {
 	return
 }
 
-func (s *TinyStore) GetWatermark(fileId uint32) (chunkInfo *FileInfo, err error) {
+func (s *TinyStore) GetWatermark(fileId uint64) (chunkInfo *FileInfo, err error) {
 	chunkId := (int)(fileId)
 	c, ok := s.chunks[chunkId]
 	if !ok {
@@ -273,6 +274,23 @@ func (s *TinyStore) GetAvailChunk() (chunkId int, err error) {
 	case chunkId = <-s.availChunkCh:
 	default:
 		err = ErrorNoAvaliFile
+	}
+
+	return
+}
+
+func (s *TinyStore) GetChunkForWrite() (chunkId int, err error) {
+	chLen := len(s.availChunkCh)
+	for i := 0; i < chLen; i++ {
+		select {
+		case chunkId = <-s.availChunkCh:
+			if s.fullChunks.Has(chunkId) {
+				continue
+			}
+			return chunkId, nil
+		default:
+			return -1, ErrorNoAvaliFile
+		}
 	}
 
 	return

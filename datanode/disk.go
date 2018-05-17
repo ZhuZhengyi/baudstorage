@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/storage"
+	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 	"io"
 	"io/ioutil"
@@ -34,15 +35,18 @@ var (
 )
 
 type Disk struct {
-	Path     string
-	ReadErr  uint64
-	WriteErr uint64
-	All      uint64
-	Used     uint64
-	Free     uint64
-	VolCnt   uint64
-	VolsName []string
-	RestSize uint64
+	Path      string
+	ReadErrs  uint64
+	WriteErrs uint64
+	All       uint64
+	Used      uint64
+	Free      uint64
+	VolCnt    uint64
+	VolFree   uint64
+	MaxErrs   int
+	Status    int
+	VolsName  []string
+	RestSize  uint64
 	sync.Mutex
 	compactCh chan *CompactTask
 	space     *SpaceManager
@@ -52,6 +56,7 @@ func NewDisk(path string) (d *Disk) {
 	d = new(Disk)
 	d.Path = path
 	d.VolsName = make([]string, 0)
+	d.RestSize = util.GB * 1
 	d.DiskUsage()
 	d.compactCh = make(chan *CompactTask, CompactThreadNum)
 	for i := 0; i < CompactThreadNum; i++ {
@@ -84,7 +89,7 @@ func (d *Disk) addTask(t *CompactTask) (err error) {
 }
 
 func (d *Disk) addReadErr() {
-	atomic.AddUint64(&d.ReadErr, 1)
+	atomic.AddUint64(&d.ReadErrs, 1)
 }
 
 func (d *Disk) compact() {
@@ -106,20 +111,26 @@ func (d *Disk) compact() {
 }
 
 func (d *Disk) addWriteErr() {
-	atomic.AddUint64(&d.WriteErr, 1)
+	atomic.AddUint64(&d.WriteErrs, 1)
 }
 
 func (d *Disk) recomputeVolCnt() {
+	d.DiskUsage()
 	finfos, err := ioutil.ReadDir(d.Path)
 	if err != nil {
 		return
 	}
 	var count uint64
+	volSize := 0
 	volnames := make([]string, 0)
 	for _, finfo := range finfos {
 		if finfo.IsDir() && strings.HasPrefix(finfo.Name(), VolPrefix) {
 			arr := strings.Split(finfo.Name(), "_")
 			if len(arr) != 4 {
+				continue
+			}
+			_, volSize, _, err = UnmarshVolName(finfo.Name())
+			if err != nil {
 				continue
 			}
 			count += 1
@@ -129,7 +140,30 @@ func (d *Disk) recomputeVolCnt() {
 	d.Lock()
 	atomic.StoreUint64(&d.VolCnt, count)
 	d.VolsName = volnames
+	d.VolFree = (d.All - d.RestSize - uint64(len(d.VolsName)*volSize))
 	d.Unlock()
+}
+
+func (d *Disk) UpdateSpaceInfo(localIp string) (err error) {
+	var statsInfo syscall.Statfs_t
+	if err = syscall.Statfs(d.Path, &statsInfo); err != nil {
+		d.addReadErr()
+	}
+
+	currErrs := d.ReadErrs + d.WriteErrs
+	if currErrs >= d.MaxErrs {
+		d.Status = storage.DiskErrStore
+	} else if d.Free < 0 {
+		d.Status = storage.ReadOnlyStore
+	} else {
+		d.Status = storage.ReadWriteStore
+	}
+	mesg := fmt.Sprintf("node[%v] Path[%v] total[%v] realAvail[%v] volsAvail[%v]"+
+		"MinRestSize[%v] maxErrs[%v] ReadErrs[%v] WriteErrs[%v] status[%v]", localIp, d.Path,
+		d.All, d.Free, d.VolFree, d.RestSize, d.MaxErrs, d.ReadErrs, d.WriteErrs, d.Status)
+	log.LogInfo(mesg)
+
+	return
 }
 
 func (d *Disk) addVol(v *Vol) {
@@ -138,30 +172,62 @@ func (d *Disk) addVol(v *Vol) {
 	defer d.Unlock()
 	d.VolsName = append(d.VolsName, name)
 	atomic.AddUint64(&d.VolCnt, 1)
+	d.VolFree = (d.All - d.RestSize - uint64(len(d.VolsName)*v.volSize))
+}
+
+func (d *Disk) getVols() (volIds []uint32) {
+	d.Lock()
+	defer d.Unlock()
+	volIds = make([]uint32, 0)
+	for _, name := range d.VolsName {
+		vid, _, _, err := UnmarshVolName(name)
+		if err != nil {
+			continue
+		}
+		volIds = append(volIds, vid)
+	}
+	return
+}
+
+func UnmarshVolName(name string) (volId uint32, volSize int, volMode string, err error) {
+	arr := strings.Split(name, "_")
+	if len(arr) != 4 {
+		err = fmt.Errorf("error vol name[%v]", name)
+		return
+	}
+	var (
+		vId int
+	)
+	if vId, err = strconv.Atoi(arr[2]); err != nil {
+		return
+	}
+	if volSize, err = strconv.Atoi(arr[3]); err != nil {
+		return
+	}
+	volId = uint32(vId)
+	volMode = arr[1]
+	return
 }
 
 func (d *Disk) loadVol(space *SpaceManager) {
 	d.Lock()
 	defer d.Unlock()
 	for _, name := range d.VolsName {
-		arr := strings.Split(name, "_")
-		var (
-			vId, vSize int
-			err        error
-			v          *Vol
-		)
-		if vId, err = strconv.Atoi(arr[2]); err != nil {
-			continue
-		}
-		if vSize, err = strconv.Atoi(arr[3]); err != nil {
-			continue
-		}
-		v, err = NewVol(uint32(vId), arr[1], path.Join(d.Path, name), storage.ReBootStoreMode, vSize)
+		var v *Vol
+		volId, volSize, volMode, err := UnmarshVolName(name)
 		if err != nil {
-			log.LogError(fmt.Sprintf("LoadVol[%v] from Disk[%v] Err[%v] ", vId, d.Path, err.Error()))
+			log.LogError(fmt.Sprintf("LoadVol[%v] from Disk[%v] Err[%v] ", volId, d.Path, err.Error()))
 			continue
 		}
-		space.putVol(v)
+		v, err = NewVol(volId, volMode, path.Join(d.Path, name), d.Path, storage.ReBootStoreMode, volSize)
+		if err != nil {
+			log.LogError(fmt.Sprintf("LoadVol[%v] from Disk[%v] Err[%v] ", volId, d.Path, err.Error()))
+			continue
+		}
+		if space.getVol(v.volId) == nil {
+			space.putVol(v)
+		}
+
 	}
 }
 
