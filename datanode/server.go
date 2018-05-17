@@ -19,6 +19,9 @@ var (
 type DataNode struct {
 	ConnPool *pool.ConnPool
 	space    *SpaceManager
+	masterAddrs []string
+	masterAddrIndex uint32
+	stats       *Stats
 }
 
 func (n *DataNode) Start(cfg *config.Config) error {
