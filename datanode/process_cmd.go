@@ -32,7 +32,7 @@ func (s *DataNode) replyCmdResp(resp *CmdResp) (msg []byte, err error) {
 	}
 
 	glog.LogInfo("reply cmdresp, response data: ", string(data))
-	msg, err = PostToMaster(data, "/node/taskresponse?cluster="+s.clusterID)
+	msg, err = PostToMaster(data, "/node/taskresponse?cluster="+s.clusterId)
 
 	return
 }

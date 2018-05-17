@@ -154,14 +154,11 @@ func (mp *MetaPartition) offlinePartition() (err error) {
 	return
 }
 
-func (mp *MetaPartition) updatePartition(start, end uint64) (err error) {
-	oldStart := mp.Start
+func (mp *MetaPartition) updatePartition(end uint64) (err error) {
 	oldEnd := mp.End
-	mp.Start = start
 	mp.End = end
 	defer func() {
 		if err != nil {
-			mp.Start = oldStart
 			mp.End = oldEnd
 		}
 	}()
@@ -171,6 +168,7 @@ func (mp *MetaPartition) updatePartition(start, end uint64) (err error) {
 
 func (mp *MetaPartition) deletePartition() (err error) {
 	mp.Stop()
+	mp.MetaManager.DeleteMetaPartition(mp.ID)
 	err = os.RemoveAll(mp.RootDir)
 	return
 }

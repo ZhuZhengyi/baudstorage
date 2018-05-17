@@ -20,7 +20,7 @@ type MetaManager struct {
 }
 
 // StoreMeteRange try make mapping between meta range ID and MetaPartition.
-func (m *MetaManager) SetMetaRange(mr *MetaPartition) (err error) {
+func (m *MetaManager) SetMetaPartition(mr *MetaPartition) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if _, ok := m.partitions[mr.ID]; ok {
@@ -43,7 +43,7 @@ func (m *MetaManager) LoadMetaPartition(id string) (mr *MetaPartition, err error
 	return
 }
 
-func (m *MetaManager) Range(f func(id string, mr *MetaPartition) bool) {
+func (m *MetaManager) Range(f func(id string, mp *MetaPartition) bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	for id, m := range m.partitions {
@@ -81,14 +81,15 @@ func (m *MetaManager) LoadMetaManagers(metaDir string) (err error) {
 			go func(metaID string, fileInfo os.FileInfo) {
 				/* Create MetaPartition and add metaManager */
 				mr := NewMetaPartition(MetaPartitionConfig{
-					ID:      metaID,
-					RootDir: path.Join(metaDir, fileInfo.Name()),
+					ID:          metaID,
+					MetaManager: m,
+					RootDir:     path.Join(metaDir, fileInfo.Name()),
 				})
 				if err = mr.Load(); err != nil {
 					// TODO: log
 					return
 				}
-				if err = m.SetMetaRange(mr); err != nil {
+				if err = m.SetMetaPartition(mr); err != nil {
 					go mr.StartStoreSchedule()
 				}
 				wg.Done()
@@ -99,7 +100,7 @@ func (m *MetaManager) LoadMetaManagers(metaDir string) (err error) {
 	return
 }
 
-func (m *MetaManager) DeleteMetaRange(id string) {
+func (m *MetaManager) DeleteMetaPartition(id string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	delete(m.partitions, id)

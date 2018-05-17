@@ -1,6 +1,7 @@
 package meta
 
 import (
+	"errors"
 	"syscall"
 
 	"github.com/tiglabs/baudstorage/proto"
@@ -166,4 +167,13 @@ func (mw *MetaWrapper) ReadDir_ll(parentID uint64) (children []proto.Dentry, err
 
 	children, err = mw.readdir(mc, parentID)
 	return
+}
+
+// Used as a callback by stream sdk
+func (mw *MetaWrapper) AppendExtentKey(inode uint64, ek proto.ExtentKey) error {
+	return errors.New("Not implemented yet")
+}
+
+func (mw *MetaWrapper) GetExtents(inode uint64) ([]proto.ExtentKey, error) {
+	return nil, errors.New("Not implemented yet")
 }

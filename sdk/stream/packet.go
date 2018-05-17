@@ -30,7 +30,7 @@ func NewWritePacket(vol *sdk.VolGroup, extentId, seqNo uint64, offset int) (p *P
 	return
 }
 
-func NewReadPacket(key ExtentKey, offset, size int) (p *Packet) {
+func NewReadPacket(key proto.ExtentKey, offset, size int) (p *Packet) {
 	p = new(Packet)
 	p.FileID = key.ExtentId
 	p.VolID = key.VolId

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util/log"
 	"io/ioutil"
@@ -11,10 +12,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
-)
-
-var (
-	masterAddr string
 )
 
 type VolStat struct {
@@ -195,7 +192,7 @@ func (s *Stats) GetStat(space *SpaceManager) ([]byte, error) {
 				s.VolsInfo = append(s.VolsInfo, volrpt)
 			}
 		}
-		s.TotalWeight+=d.All
+		s.TotalWeight += d.All
 		avaliVolWeight += uint64(d.VolFree)
 		if s.MaxDiskAvailWeight < int64(d.VolFree) && d.Status == storage.ReadWriteStore {
 			s.MaxDiskAvailWeight = int64(d.VolFree)
@@ -223,45 +220,47 @@ func post(data []byte, url string) (*http.Response, error) {
 	return client.Do(req)
 }
 
-func (s *DataNode)PostToMaster(data []byte, url string) (msg []byte, err error) {
-	success:=false
-	for i:=0;i<len(s.masterAddrs);i++{
+func (s *DataNode) PostToMaster(data []byte, url string) (msg []byte, err error) {
+	success := false
+	var err1 error
+	for i := 0; i < len(s.masterAddrs); i++ {
 		var resp *http.Response
-		if masterAddr=="" {
-			index:=atomic.AddUint32(&s.masterAddrIndex,1)
-			if index>=uint32(len(s.masterAddrs)){
-				index=0
+		if masterAddr == "" {
+			index := atomic.AddUint32(&s.masterAddrIndex, 1)
+			if index >= uint32(len(s.masterAddrs)) {
+				index = 0
 			}
-			masterAddr=s.masterAddrs[index]
+			masterAddr = s.masterAddrs[index]
 		}
-		err=nil
+		err = nil
 		resp, err = post(data, "http://"+masterAddr+url)
 		if err != nil {
-			index:=atomic.AddUint32(&s.masterAddrIndex,1)
-			if index>=uint32(len(s.masterAddrs)){
-				index=0
+			index := atomic.AddUint32(&s.masterAddrIndex, 1)
+			if index >= uint32(len(s.masterAddrs)) {
+				index = 0
 			}
-			masterAddr=s.masterAddrs[index]
+			masterAddr = s.masterAddrs[index]
+			err = errors.Annotatef(err, ActionPostToMaster+" url[%v] index[%v]", url, i)
 			continue
 		}
 		scode := resp.StatusCode
 		msg, _ = ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
-		if scode == http.StatusForbidden{
+		if scode == http.StatusForbidden {
 			masterAddr = string(msg)
 			masterAddr = strings.Replace(masterAddr, "\n", "", -1)
 			log.LogWarn(fmt.Sprintf("%v master Addr change to %v, retry post to master", ActionPostToMaster, string(msg)))
 			continue
 		}
 		if scode != http.StatusOK {
-			return nil,fmt.Errorf("postTo %v scode %v msg %v", url, scode, string(msg))
+			return nil, fmt.Errorf("postTo %v scode %v msg %v", url, scode, string(msg))
 		}
-		success=true
+		success = true
 		break
 	}
-	if !success{
-		return nil,fmt.Errorf("PostToMaster err[%v]",err)
+	if !success {
+		return nil, fmt.Errorf("PostToMaster err[%v]", err)
 	}
 
-	return
+	return msg, err1
 }

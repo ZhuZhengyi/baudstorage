@@ -7,13 +7,12 @@ const (
 	RepairDataSplit      = "/"
 	InOutFlowSplit       = "/"
 	LogModule            = "datanode"
-	DefaultClusterUmpKey = "ds_image"
 )
 
 //ump
 const (
 	AliveTimeInterval = 5 //second
-	DefaultUmpAppName = "ump.jfs.jd.com"
+	DefaultUmpAppName = "ump.baud.storage"
 )
 
 const (

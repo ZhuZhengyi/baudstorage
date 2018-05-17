@@ -45,7 +45,7 @@ func (mp *MetaPartition) LoadInode() (err error) {
 			return
 		}
 		if mp.createInode(ino) != proto.OpOk {
-			err = errors.New("load inode info error!")
+			err = errors.New("load inode info error")
 			return
 		}
 		if mp.Cursor < ino.Inode {
@@ -85,7 +85,7 @@ func (mp *MetaPartition) LoadDentry() (err error) {
 			return
 		}
 		if mp.createDentry(dentry) != proto.OpOk {
-			err = errors.New("load dentry info error!")
+			err = errors.New("load dentry info error")
 			return
 		}
 	}

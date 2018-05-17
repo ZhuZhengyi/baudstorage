@@ -60,11 +60,17 @@ func (space *SpaceManager) getMinVolCntDisk() (d *Disk) {
 	defer space.diskLock.RUnlock()
 	var minVolCnt uint64
 	minVolCnt = math.MaxUint64
-	for _, d = range space.disks {
-		if atomic.LoadUint64(&d.VolCnt) < minVolCnt {
-			minVolCnt = atomic.LoadUint64(&d.VolCnt)
+	var path string
+	for index, disk := range space.disks {
+		if atomic.LoadUint64(&disk.VolCnt) < minVolCnt {
+			minVolCnt = atomic.LoadUint64(&disk.VolCnt)
+			path = index
 		}
 	}
+	if path == "" {
+		return nil
+	}
+	d = space.disks[path]
 
 	return
 }
@@ -90,6 +96,9 @@ func (space *SpaceManager) chooseDiskAndCreateVol(volId uint32, volMode string, 
 		return
 	}
 	d := space.getMinVolCntDisk()
+	if d == nil || d.Free < uint64(storeSize*2) {
+		return nil, ErrNoDiskForCreateVol
+	}
 	v, err = NewVol(volId, volMode, "", d.Path, storage.NewStoreMode, storeSize)
 	if err == nil {
 		space.putVol(v)

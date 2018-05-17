@@ -1,16 +1,20 @@
 package fs
 
 import (
+	"log"
+
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"golang.org/x/net/context"
 
 	"github.com/tiglabs/baudstorage/sdk/meta"
+	"github.com/tiglabs/baudstorage/sdk/stream"
 )
 
 type Super struct {
 	name string
 	mw   *meta.MetaWrapper
+	ec   *stream.ExtentClient
 }
 
 //functions that Super needs to implement
@@ -26,6 +30,12 @@ func NewSuper(namespace, master string) (s *Super, err error) {
 		return nil, err
 	}
 	s.name = namespace
+	s.ec, err = stream.NewExtentClient("/tmp", master, s.mw.AppendExtentKey, s.mw.GetExtents)
+	if err != nil {
+		log.Printf("NewExtentClient failed! %v", err.Error())
+		//FIXME
+		//return nil, err
+	}
 	return s, nil
 }
 
