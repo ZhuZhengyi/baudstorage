@@ -2,6 +2,7 @@ package datanode
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
@@ -21,9 +22,6 @@ func (v *Vol) tinyRepair() {
 	err = v.NotifyRepair(allMembers)
 	if err != nil {
 		log.LogError(errors.ErrorStack(err))
-	}
-	for _, fixExtentFile := range allMembers[0].NeedFixFileSizeTasks {
-		v.server.streamRepairObjects(fixExtentFile, v)
 	}
 }
 
@@ -145,66 +143,99 @@ func (s *DataNode) repairTiny(pkg *Packet) {
 
 }
 
-func (s *DataNode) streamRepairObjects(remoteExtentInfo *storage.FileInfo, v *Vol) (err error) {
-	return
+type RepairChunkTask struct {
+	ChunkId  int
+	StartObj uint64
+	EndObj   uint64
 }
 
-//
-//func doRepairChunk(task *RepairTask, notifyReqId int64) error {
-//	start := time.Now().UnixNano()
-//	var (
-//		err error
-//	)
-//	pkg := NewCRepairePacket(chunkId, vol.volID, notifyReqId)
-//	defer repairChunkLog(pkg, dstAddr, err)
-//	chunkID := pkg.FileID
-//	startObjId, _ := vol.Store.GetLastOid(chunkID)
-//	pkg.Offset = int64(startObjId)
-//	pkg.Opcode = OpCRepairRead
-//	pkg.orgOpcode = pkg.Opcode
-//	pkg.FileID = chunkID
-//	conn, err := dialWithRetry(-1, dstAddr)
-//	if err != nil {
-//		return err
-//	}
-//	defer conn.Close()
-//	glog.LogWrite(fmt.Sprintf(pkg.actionMesg(ActionFollowerToLeaderOpCRepairReadSendRequest, dstAddr, pkg.startT, err)))
-//	if err = pkg.WriteToConn(conn, FreeBodySpace); err != nil {
-//		return err
-//	}
-//	for {
-//		localOid, _ := vol.Store.GetLastOid(chunkID)
-//		if localOid >= remoteLastOid {
-//			break
-//		}
-//		if err = pkg.ReadFromConn(conn, NoReadDeadlineTime, PkgRepairCReadRespMaxSize); err != nil {
-//			return err
-//		}
-//		glog.LogWrite(pkg.actionMesg(ActionLeaderToFollowerOpCRepairReadRecvResponse, dstAddr, pkg.startT, err))
-//		if pkg.IsErrPack() {
-//			err = fmt.Errorf(" remote [%v] do failed [%v]", dstAddr, string(pkg.Data[:pkg.Size]))
-//			return err
-//		}
-//		newlastOid := uint64(pkg.Offset)
-//		if newlastOid > remoteLastOid {
-//			err = fmt.Errorf("invalid offset of OpCRepairReadResp:"+
-//				" %v, expect max objid is %v", pkg.Offset, remoteLastOid)
-//			return err
-//		}
-//		glog.LogWrite(fmt.Sprintf("vol [%v] chunk[%v] doRepairChunk start fix oid [%v]-[%v]",
-//			vol.volID, chunkId, startObjId, newlastOid))
-//		if err = applyRepairData(startObjId, newlastOid, chunkID, pkg, vol); err != nil {
-//			glog.LogWrite(err.Error())
-//			return err
-//		}
-//		if newlastOid >= remoteLastOid {
-//			break
-//		}
-//		pkg.Data = nil
-//		glog.LogWrite(pkg.actionMesg(ActionDoRepairChunk, dstAddr, start, err))
-//		startObjId = newlastOid
-//	}
-//
-//	return err
-//
-//}
+func (v *Vol) applyRepairObjects(chunkId int, data []byte, endObjectId uint64) (err error) {
+	offset := 0
+	store := v.store.(*storage.TinyStore)
+	var applyObjectId uint64
+	dataLen := len(data)
+	for {
+		if offset+storage.ObjectHeaderSize > len(data) {
+			break
+		}
+		if applyObjectId >= endObjectId {
+			break
+		}
+		o := &storage.Object{}
+		o.Unmarshal(data[offset : offset+storage.ObjectHeaderSize])
+		offset += storage.ObjectHeaderSize
+		if o.Size == storage.TombstoneFileSize {
+			err = store.WriteDeleteDentry(o.Oid, chunkId, o.Crc)
+		}
+		if err != nil {
+			return errors.Annotatef(err, "vol[%v] chunkId[%v] oid[%v] writeDeleteDentry failed", v.volId, chunkId, o.Oid)
+		}
+		if offset+int(o.Size) > dataLen {
+			return errors.Annotatef(err, "vol[%v] chunkId[%v] oid[%v] no body"+
+				" expect[%v] actual[%v] failed", v.volId, chunkId, o.Oid, o.Size, dataLen-(offset))
+		}
+		ndata := data[offset : offset+int(o.Size)]
+		offset += int(o.Size)
+		ncrc := crc32.ChecksumIEEE(ndata)
+		if ncrc != o.Crc {
+			return errors.Annotatef(err, "vol[%v] chunkId[%v] oid[%v] "+
+				"repair data crc  failed,expectCrc[%v] actualCrc[%v]", v.volId, chunkId, o.Oid, o.Crc, ncrc)
+		}
+		err = store.Write(uint32(chunkId), int64(o.Oid), int64(o.Size), ndata, o.Crc)
+		if err != nil {
+			return errors.Annotatef(err, "vol[%v] chunkId[%v] oid[%v] write failed", v.volId, chunkId, o.Oid)
+		}
+		applyObjectId = o.Oid
+	}
+}
+
+func (s *DataNode) streamRepairObjects(remoteFileInfo *storage.FileInfo, v *Vol) (err error) {
+	store := v.store.(*storage.TinyStore)
+	localChunkInfo, err := store.GetWatermark(uint64(remoteFileInfo.FileIdId))
+	if err != nil {
+		return errors.Annotatef(err, "streamRepairObjects GetWatermark error")
+	}
+	task := &RepairChunkTask{ChunkId: remoteFileInfo.FileIdId, StartObj: localChunkInfo.Size + 1, EndObj: remoteFileInfo.Size}
+	request := NewStreamChunkRepairReadPacket(v.volId, remoteFileInfo.FileIdId)
+	request.Data, _ = json.Marshal(task)
+	var conn net.Conn
+	conn, err = s.ConnPool.Get(remoteFileInfo.Source)
+	if err != nil {
+		return errors.Annotatef(err, "streamRepairObjects get conn from host[%v] error", remoteFileInfo.Source)
+	}
+	err = request.WriteToConn(conn)
+	if err != nil {
+		conn.Close()
+		return errors.Annotatef(err, "streamRepairObjects send streamRead to host[%v] error", remoteFileInfo.Source)
+	}
+	for {
+		localExtentInfo, err := store.GetWatermark(uint64(remoteFileInfo.FileIdId))
+		if err != nil {
+			conn.Close()
+			return errors.Annotatef(err, "streamRepairObjects GetWatermark error")
+		}
+		if localExtentInfo.Size >= remoteFileInfo.Size {
+			s.ConnPool.Put(conn)
+			break
+		}
+		err = request.ReadFromConn(conn, proto.ReadDeadlineTime)
+		if err != nil {
+			conn.Close()
+			return errors.Annotatef(err, "streamRepairObjects recive data error")
+		}
+		newlastOid := uint64(request.Offset)
+		if newlastOid > uint64(remoteFileInfo.FileIdId) {
+			conn.Close()
+			err = fmt.Errorf("invalid offset of OpCRepairReadResp:"+
+				" %v, expect max objid is %v", newlastOid, remoteFileInfo.FileIdId)
+			return err
+		}
+		err = v.applyRepairObjects(remoteFileInfo.FileIdId, request.Data, newlastOid)
+		if err != nil {
+			conn.Close()
+			err = errors.Annotatef(err, "streamRepairObjects apply data failed")
+			return
+		}
+	}
+	return
+}

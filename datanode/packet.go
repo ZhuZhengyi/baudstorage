@@ -96,6 +96,18 @@ func NewStreamReadPacket(volId uint32, extentId, offset, size int) (p *Packet) {
 	return
 }
 
+func NewStreamChunkRepairReadPacket(volId uint32, chunkId int) (p *Packet) {
+	p = new(Packet)
+	p.FileID = uint64(chunkId)
+	p.VolID = volId
+	p.Magic = proto.ProtoMagic
+	p.Opcode = proto.OpCRepairRead
+	p.StoreMode = proto.TinyStoreMode
+	p.ReqID = proto.GetReqID()
+
+	return
+}
+
 func NewNotifyRepair(volId uint32, storeMode int) (p *Packet) {
 	p = new(Packet)
 	p.Opcode = proto.OpNotifyRepair

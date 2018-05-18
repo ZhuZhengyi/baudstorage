@@ -308,5 +308,6 @@ func (s *DataNode) streamRepairExtent(remoteExtentInfo *storage.FileInfo, v *Vol
 			return errors.Annotatef(err, "streamRepairExtent repair data error")
 		}
 	}
+	return
 
 }
