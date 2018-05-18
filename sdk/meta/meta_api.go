@@ -164,8 +164,8 @@ func (mw *MetaWrapper) ReadDir_ll(parentID uint64) ([]proto.Dentry, error) {
 	}
 	defer mw.putConn(mc, err)
 
-	children, err := mw.readdir(mc, parentID)
-	if err != nil {
+	status, children, err := mw.readdir(mc, parentID)
+	if err != nil || status != statusOK {
 		return nil, syscall.EPERM
 	}
 	return children, nil

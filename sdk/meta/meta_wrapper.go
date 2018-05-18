@@ -289,17 +289,18 @@ func parseStatus(status uint8) (ret int) {
 
 func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *proto.InodeInfo, err error) {
 	req := &proto.CreateInodeRequest{
-		Namespace: mw.namespace,
-		Mode:      mode,
+		Namespace:   mw.namespace,
+		PartitionID: mc.id,
+		Mode:        mode,
 	}
+
 	packet := proto.NewPacket()
 	packet.Opcode = proto.OpMetaCreateInode
-	packet.Data, err = json.Marshal(req)
+	err = packet.MarshalData(req)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {
@@ -313,76 +314,74 @@ func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *pro
 	}
 
 	resp := new(proto.CreateInodeResponse)
-	err = json.Unmarshal(packet.Data, &resp)
+	err = packet.UnmarshalData(resp)
 	if err != nil {
 		log.Println(err)
 		log.Printf("data = [%v]\n", string(packet.Data))
 		return
 	}
-
-	return status, resp.Info, nil
+	return statusOK, resp.Info, nil
 }
 
 func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, err error) {
 	req := &proto.DeleteInodeRequest{
-		Namespace: mw.namespace,
-		Inode:     inode,
+		Namespace:   mw.namespace,
+		PartitionID: mc.id,
+		Inode:       inode,
 	}
+
 	packet := proto.NewPacket()
 	packet.Opcode = proto.OpMetaDeleteInode
-	packet.Data, err = json.Marshal(req)
+	err = packet.MarshalData(req)
 	if err != nil {
 		return
 	}
-	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {
 		return
 	}
-
-	status = parseStatus(packet.ResultCode)
-	return status, nil
+	return parseStatus(packet.ResultCode), nil
 }
 
 func (mw *MetaWrapper) dcreate(mc *MetaConn, parentID uint64, name string, inode uint64, mode uint32) (status int, err error) {
 	req := &proto.CreateDentryRequest{
-		Namespace: mw.namespace,
-		ParentID:  parentID,
-		Inode:     inode,
-		Name:      name,
-		Mode:      mode,
+		Namespace:   mw.namespace,
+		PartitionID: mc.id,
+		ParentID:    parentID,
+		Inode:       inode,
+		Name:        name,
+		Mode:        mode,
 	}
+
 	packet := proto.NewPacket()
 	packet.Opcode = proto.OpMetaCreateDentry
-	packet.Data, err = json.Marshal(req)
+	err = packet.MarshalData(req)
 	if err != nil {
 		return
 	}
-	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {
 		return
 	}
-
-	status = parseStatus(packet.ResultCode)
-	return status, nil
+	return parseStatus(packet.ResultCode), nil
 }
 
 func (mw *MetaWrapper) ddelete(mc *MetaConn, parentID uint64, name string) (status int, inode uint64, err error) {
 	req := &proto.DeleteDentryRequest{
-		Namespace: mw.namespace,
-		ParentID:  parentID,
-		Name:      name,
+		Namespace:   mw.namespace,
+		PartitionID: mc.id,
+		ParentID:    parentID,
+		Name:        name,
 	}
+
 	packet := proto.NewPacket()
 	packet.Opcode = proto.OpMetaDeleteDentry
-	packet.Data, err = json.Marshal(req)
+	err = packet.MarshalData(req)
 	if err != nil {
 		return
 	}
-	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {
@@ -395,27 +394,26 @@ func (mw *MetaWrapper) ddelete(mc *MetaConn, parentID uint64, name string) (stat
 	}
 
 	resp := new(proto.DeleteDentryResponse)
-	err = json.Unmarshal(packet.Data, &resp)
+	err = packet.UnmarshalData(resp)
 	if err != nil {
 		return
 	}
-
-	return status, resp.Inode, nil
+	return statusOK, resp.Inode, nil
 }
 
 func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (status int, inode uint64, mode uint32, err error) {
 	req := &proto.LookupRequest{
-		Namespace: mw.namespace,
-		ParentID:  parentID,
-		Name:      name,
+		Namespace:   mw.namespace,
+		PartitionID: mc.id,
+		ParentID:    parentID,
+		Name:        name,
 	}
 	packet := proto.NewPacket()
 	packet.Opcode = proto.OpMetaLookup
-	packet.Data, err = json.Marshal(req)
+	err = packet.MarshalData(req)
 	if err != nil {
 		return
 	}
-	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {
@@ -428,27 +426,27 @@ func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (statu
 	}
 
 	resp := new(proto.LookupResponse)
-	err = json.Unmarshal(packet.Data, &resp)
+	err = packet.UnmarshalData(resp)
 	if err != nil {
 		return
 	}
-
-	return status, resp.Inode, resp.Mode, nil
+	return statusOK, resp.Inode, resp.Mode, nil
 }
 
 func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto.InodeInfo, err error) {
 	req := &proto.InodeGetRequest{
-		Namespace: mw.namespace,
-		Inode:     inode,
+		Namespace:   mw.namespace,
+		PartitionID: mc.id,
+		Inode:       inode,
 	}
+
 	packet := proto.NewPacket()
 	packet.Opcode = proto.OpMetaInodeGet
-	packet.Data, err = json.Marshal(req)
+	err = packet.MarshalData(req)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {
@@ -462,52 +460,102 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 	}
 
 	resp := new(proto.InodeGetResponse)
-	err = json.Unmarshal(packet.Data, resp)
+	err = packet.UnmarshalData(resp)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-
-	return status, resp.Info, nil
+	return statusOK, resp.Info, nil
 }
 
-func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (children []proto.Dentry, err error) {
+func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (status int, children []proto.Dentry, err error) {
 	req := &proto.ReadDirRequest{
-		Namespace: mw.namespace,
-		ParentID:  parentID,
+		Namespace:   mw.namespace,
+		PartitionID: mc.id,
+		ParentID:    parentID,
 	}
 
 	packet := proto.NewPacket()
 	packet.Opcode = proto.OpMetaReadDir
-	packet.Data, err = json.Marshal(req)
+	err = packet.MarshalData(req)
 	if err != nil {
 		return
 	}
-	packet.Size = uint32(len(packet.Data))
 
 	packet, err = mc.send(packet)
 	if err != nil {
 		return
 	}
 
-	status := parseStatus(packet.ResultCode)
+	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
 		children = make([]proto.Dentry, 0)
 		return
 	}
 
 	resp := new(proto.ReadDirResponse)
-	err = json.Unmarshal(packet.Data, &resp)
+	err = packet.UnmarshalData(resp)
 	if err != nil {
 		return
 	}
-	return resp.Children, nil
+	return statusOK, resp.Children, nil
 }
 
 func (mw *MetaWrapper) appendextents(mc *MetaConn, inode uint64, extents []proto.ExtentKey) (status int, err error) {
-	return
+	req := &proto.AppendExtentKeyRequest{
+		Namespace:   mw.namespace,
+		PartitionID: mc.id,
+		Inode:       inode,
+		Extents:     extents,
+	}
+
+	packet := proto.NewPacket()
+	packet.Opcode = proto.OpMetaExtentsAdd
+	err = packet.MarshalData(req)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	packet, err = mc.send(packet)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	return parseStatus(packet.ResultCode), nil
 }
 
 func (mw *MetaWrapper) getextents(mc *MetaConn, inode uint64) (status int, extents []proto.ExtentKey, err error) {
-	return
+	req := &proto.GetExtentsRequest{
+		Namespace:   mw.namespace,
+		PartitionID: mc.id,
+		Inode:       inode,
+	}
+
+	packet := proto.NewPacket()
+	packet.Opcode = proto.OpMetaExtentsList
+	err = packet.MarshalData(req)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	packet, err = mc.send(packet)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	status = parseStatus(packet.ResultCode)
+	if status != statusOK {
+		extents = make([]proto.ExtentKey, 0)
+		return
+	}
+
+	resp := new(proto.GetExtentsResponse)
+	err = packet.UnmarshalData(resp)
+	if err != nil {
+		return
+	}
+	return statusOK, resp.Extents, nil
 }

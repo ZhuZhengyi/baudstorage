@@ -2,6 +2,7 @@ package proto
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -66,11 +67,9 @@ const (
 	OpLoadMetaPartition    uint8 = 0x24
 	OpOfflineMetaPartition uint8 = 0x25
 
-
-	OpCreateVol			uint8=0x26
-	OpDeleteVol			uint8=0x27
-	OpLoadVol			uint8=0x28
-
+	OpCreateVol uint8 = 0x26
+	OpDeleteVol uint8 = 0x27
+	OpLoadVol   uint8 = 0x28
 
 	// Commons
 	OpIntraGroupNetErr uint8 = 0xF3
@@ -82,7 +81,7 @@ const (
 	OpAgain            uint8 = 0xF9
 	OpExistErr         uint8 = 0xFA
 	OpInodeFullErr     uint8 = 0xFB
-	OpArgUnmatchErr		uint8=0xFC
+	OpArgUnmatchErr    uint8 = 0xFC
 	OpOk               uint8 = 0x00
 )
 
@@ -216,6 +215,19 @@ func (p *Packet) UnmarshalHeader(in []byte) error {
 	return nil
 }
 
+func (p *Packet) MarshalData(v interface{}) error {
+	data, err := json.Marshal(v)
+	if err == nil {
+		p.Data = data
+		p.Size = uint32(len(p.Data))
+	}
+	return err
+}
+
+func (p *Packet) UnmarshalData(v interface{}) error {
+	return json.Unmarshal(p.Data, v)
+}
+
 func (p *Packet) WriteToNoDeadLineConn(c net.Conn) (err error) {
 	header := make([]byte, HeaderSize)
 
@@ -335,8 +347,6 @@ func (p *Packet) GetUniqLogId() (m string) {
 
 	return
 }
-
-
 
 func (p *Packet) IsTransitPkg() bool {
 	return p.Nodes > 0
