@@ -36,6 +36,7 @@ type Vol struct {
 	isLeader bool
 	members  *VolMembers
 	server   *DataNode
+	exitCh   chan bool
 }
 
 type VolMembers struct {
@@ -51,6 +52,7 @@ func NewVol(volId uint32, volMode, name, diskPath string, storeMode bool, storeS
 	v.volMode = volMode
 	v.diskPath = diskPath
 	v.path = name
+	v.exitCh = make(chan bool, 10)
 	if name == EmptyVolName {
 		v.path = path.Join(v.diskPath, v.toName())
 	}

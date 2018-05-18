@@ -105,3 +105,23 @@ func (space *SpaceManager) chooseDiskAndCreateVol(volId uint32, volMode string, 
 	}
 	return
 }
+
+func (space *SpaceManager) deleteVol(vodId uint32) {
+	v := space.getVol(vodId)
+	if v == nil {
+		return
+	}
+	space.volLock.Lock()
+	delete(space.vols, vodId)
+	space.volLock.Unlock()
+	v.exitCh <- true
+	switch v.volMode {
+	case ExtentVol:
+		store := v.store.(*storage.ExtentStore)
+		store.ClostAll()
+
+	case TinyVol:
+		store := v.store.(*storage.TinyStore)
+		store.CloseAll()
+	}
+}

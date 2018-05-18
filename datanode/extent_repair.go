@@ -21,6 +21,8 @@ func (v *Vol) checkExtent() {
 		select {
 		case <-ticker:
 			v.extentsRepair()
+		case <-v.exitCh:
+			return
 		}
 	}
 }

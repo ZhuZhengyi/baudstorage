@@ -311,6 +311,16 @@ func (s *ExtentStore) SyncAll() { /*notici this function must called on program 
 	}
 }
 
+func (s *ExtentStore) ClostAll() { /*notici this function must called on program exit or kill */
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	for _, v := range s.extents {
+		v.readlock()
+		v.file.Close()
+		v.readUnlock()
+	}
+}
+
 func (s *ExtentStore) GetBlockCrcBuffer(extentId uint64, headerBuff []byte) (err error) {
 	var e *Extent
 	if e, err = s.getExtent(extentId); err != nil {

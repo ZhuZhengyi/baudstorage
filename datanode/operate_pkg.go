@@ -91,12 +91,55 @@ func (s *DataNode) createFile(pkg *Packet) {
 func (s *DataNode) createVol(pkg *Packet) {
 	task := &proto.AdminTask{}
 	json.Unmarshal(pkg.Data, task)
+	pkg.PackOkReply()
+	response := &proto.CreateVolResponse{}
+	request := task.Request.(*proto.CreateVolRequest)
+	response.VolId = uint64(request.VolId)
 	if task.OpCode == proto.OpCreateVol {
-		request := task.Request.(*proto.CreateVolRequest)
-		s.space.chooseDiskAndCreateVol(request.VolId, request.VolType, request.VolSize)
+		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
+		if err != nil {
+			response.Status = proto.OpErr
+			response.Result = err.Error()
+		}
+		response.Status = proto.OpOk
 	} else {
-		data, _ := json.Marshal(task)
-		s.PostToMaster(data, "/node/report")
+		response.Status = proto.OpErr
+		response.Result = "unavali opcode "
+	}
+	task.Response = response
+	data, _ := json.Marshal(task)
+	_, err := s.PostToMaster(data, "/node/Repost")
+	if err != nil {
+		err = errors.Annotatef(err, "create vol failed,volId[%v]", request.VolId)
+		log.LogError(errors.ErrorStack(err))
+	}
+}
+
+func (s *DataNode) deleteVol(pkg *Packet) {
+	task := &proto.AdminTask{}
+	json.Unmarshal(pkg.Data, task)
+	pkg.PackOkReply()
+	request := &proto.DeleteVolRequest{}
+	response := &proto.DeleteVolResponse{}
+	response.VolId = uint64(request.VolId)
+	if task.OpCode == proto.OpCreateVol {
+		request = task.Request.(*proto.DeleteVolRequest)
+		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
+		if err != nil {
+			response.Status = proto.OpErr
+			response.Result = err.Error()
+		}
+		response.Status = proto.OpOk
+	} else {
+		response.Status = proto.OpErr
+		response.Result = "unavali opcode "
+	}
+	task.Response = response
+	data, _ := json.Marshal(task)
+	_, err := s.PostToMaster(data, "/node/Repost")
+	if err != nil {
+		err = errors.Annotatef(err, "create vol failed,volId[%v]", request.VolId)
+		log.LogError(errors.ErrorStack(err))
 	}
 }
 

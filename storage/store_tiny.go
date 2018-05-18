@@ -302,6 +302,12 @@ func (s *TinyStore) SyncAll() {
 		chunkFp.file.Sync()
 	}
 }
+func (s *TinyStore) CloseAll() {
+	for _, chunkFp := range s.chunks {
+		chunkFp.tree.idxFile.Close()
+		chunkFp.file.Close()
+	}
+}
 
 func (s *TinyStore) PutAvailChunk(chunkId int) {
 	s.availChunkCh <- chunkId
