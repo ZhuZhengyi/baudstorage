@@ -1,13 +1,13 @@
 package datanode
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/storage"
+	"github.com/tiglabs/baudstorage/util/log"
 	"os"
 	"path"
-	"encoding/json"
-	"github.com/juju/errors"
-	"github.com/tiglabs/baudstorage/util/log"
 )
 
 const (
@@ -18,13 +18,12 @@ const (
 )
 
 var (
-	GetVolMember = "/datanode/member"
-	ErrNotLeader=errors.New("not leader")
-	LeastGoalNum=2
-	ErrLackOfGoal=errors.New("volGoal is not equare volhosts")
-	ErrVolOnBadDisk=errors.New("error bad disk")
+	GetVolMember    = "/datanode/member"
+	ErrNotLeader    = errors.New("not leader")
+	LeastGoalNum    = 2
+	ErrLackOfGoal   = errors.New("volGoal is not equare volhosts")
+	ErrVolOnBadDisk = errors.New("error bad disk")
 )
-
 
 type Vol struct {
 	volId    uint32
@@ -35,8 +34,8 @@ type Vol struct {
 	store    interface{}
 	status   int
 	isLeader bool
-	members *VolMembers
-	server *DataNode
+	members  *VolMembers
+	server   *DataNode
 }
 
 type VolMembers struct {
@@ -71,19 +70,17 @@ func (v *Vol) toName() (m string) {
 	return fmt.Sprintf(VolPrefix+v.volMode+"_%v_%v", v.volId, v.volSize)
 }
 
-
-
 func (v *Vol) parseVolMember() (err error) {
-	if v.status==storage.DiskErrStore{
+	if v.status == storage.DiskErrStore {
 		return
 	}
-	v.isLeader=false
-	isLeader,members,err:=v.getMembers()
-	if !isLeader{
+	v.isLeader = false
+	isLeader, members, err := v.getMembers()
+	if !isLeader {
 		return
 	}
-	v.isLeader=isLeader
-	v.members=members
+	v.isLeader = isLeader
+	v.members = members
 	return nil
 }
 
@@ -105,7 +102,7 @@ func (v *Vol) getMembers() (bool, *VolMembers, error) {
 	}
 
 	if len(members.VolHosts) >= 1 && members.VolHosts[0] != v.server.localServAddr {
-		err = errors.Annotatef(ErrNotLeader,"vol[%v] current LocalIP[%v]",v.volId,v.server.localServAddr)
+		err = errors.Annotatef(ErrNotLeader, "vol[%v] current LocalIP[%v]", v.volId, v.server.localServAddr)
 		return false, nil, err
 	}
 
@@ -121,4 +118,3 @@ func (v *Vol) getMembers() (bool, *VolMembers, error) {
 
 	return true, members, nil
 }
-

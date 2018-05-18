@@ -99,7 +99,7 @@ func (s *DataNode) getIpFromMaster() error {
 	json.Unmarshal(data, cInfo)
 	s.localIp = string(cInfo.Ip)
 	s.clusterId = cInfo.Cluster
-	s.localServAddr=fmt.Sprintf("%s:%v",s.localIp,s.port)
+	s.localServAddr = fmt.Sprintf("%s:%v", s.localIp, s.port)
 	if !util.IP(s.localIp) {
 		panic(fmt.Sprintf("unavalid ip from master[%v] err[%v]", s.masterAddrs, s.localIp))
 	}
