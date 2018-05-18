@@ -99,7 +99,7 @@ const (
 
 type Packet struct {
 	Magic      uint8
-	StoreType  uint8
+	StoreMode  uint8
 	Opcode     uint8
 	ResultCode uint8
 	Nodes      uint8
@@ -180,7 +180,7 @@ func GetOpMesg(opcode uint8) (m string) {
 
 func (p *Packet) MarshalHeader(out []byte) {
 	out[0] = p.Magic
-	out[1] = p.StoreType
+	out[1] = p.StoreMode
 	out[2] = p.Opcode
 	out[3] = p.ResultCode
 	out[4] = p.Nodes
@@ -201,7 +201,7 @@ func (p *Packet) UnmarshalHeader(in []byte) error {
 		return errors.New("Bad Magic " + strconv.Itoa(int(p.Magic)))
 	}
 
-	p.StoreType = in[1]
+	p.StoreMode = in[1]
 	p.Opcode = in[2]
 	p.ResultCode = in[3]
 	p.Nodes = in[4]

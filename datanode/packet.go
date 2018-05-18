@@ -71,9 +71,22 @@ func (p *Packet) IsTransitPkg() bool {
 	return r
 }
 
+
+func NewGetAllWaterMarker(volId uint32,storeMode uint8)(p *Packet){
+	p=new(Packet)
+	p.Opcode=proto.OpGetAllWatermark
+	p.VolID=volId
+	p.Magic=proto.ProtoMagic
+	p.ReqID=proto.GetReqID()
+	p.StoreMode =storeMode
+
+	return
+}
+
+
 func (p *Packet) IsTailNode() (ok bool) {
 	if p.Nodes == 0 && (p.IsWriteOperation() || p.Opcode == proto.OpCreateFile ||
-		(p.Opcode == proto.OpMarkDelete && p.StoreType == proto.TinyStoreMode)) {
+		(p.Opcode == proto.OpMarkDelete && p.StoreMode == proto.TinyStoreMode)) {
 		return true
 	}
 

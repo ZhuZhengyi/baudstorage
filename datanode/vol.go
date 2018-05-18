@@ -5,6 +5,9 @@ import (
 	"github.com/tiglabs/baudstorage/storage"
 	"os"
 	"path"
+	"encoding/json"
+	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 const (
@@ -13,6 +16,15 @@ const (
 	TinyVol      = "tiny"
 	EmptyVolName = ""
 )
+
+var (
+	GetVolMember = "/datanode/member"
+	ErrNotLeader=errors.New("not leader")
+	LeastGoalNum=2
+	ErrLackOfGoal=errors.New("volGoal is not equare volhosts")
+	ErrVolOnBadDisk=errors.New("error bad disk")
+)
+
 
 type Vol struct {
 	volId    uint32
@@ -23,8 +35,15 @@ type Vol struct {
 	store    interface{}
 	status   int
 	isLeader bool
-
+	members *VolMembers
 	server *DataNode
+}
+
+type VolMembers struct {
+	VolStatus int32
+	VolId     int
+	VolGoal   int
+	VolHosts  []string
 }
 
 func NewVol(volId uint32, volMode, name, diskPath string, storeMode bool, storeSize int) (v *Vol, err error) {
@@ -51,3 +70,55 @@ func NewVol(volId uint32, volMode, name, diskPath string, storeMode bool, storeS
 func (v *Vol) toName() (m string) {
 	return fmt.Sprintf(VolPrefix+v.volMode+"_%v_%v", v.volId, v.volSize)
 }
+
+
+
+func (v *Vol) parseVolMember() (err error) {
+	if v.status==storage.DiskErrStore{
+		return
+	}
+	v.isLeader=false
+	isLeader,members,err:=v.getMembers()
+	if !isLeader{
+		return
+	}
+	v.isLeader=isLeader
+	v.members=members
+	return nil
+}
+
+func (v *Vol) getMembers() (bool, *VolMembers, error) {
+	var (
+		volHostsBuf []byte
+		err         error
+	)
+
+	url := fmt.Sprintf(GetVolMember+"?vol=%v", v.volId)
+	if volHostsBuf, err = v.server.PostToMaster(nil, url); err != nil {
+		return false, nil, err
+	}
+	members := new(VolMembers)
+
+	if err = json.Unmarshal(volHostsBuf, &members); err != nil {
+		log.LogError(fmt.Sprintf(ActionGetFoolwers+" v[%v] json unmarshal [%v] err[%v]", v.volId, string(volHostsBuf), err))
+		return false, nil, err
+	}
+
+	if len(members.VolHosts) >= 1 && members.VolHosts[0] != v.server.localServAddr {
+		err = errors.Annotatef(ErrNotLeader,"vol[%v] current LocalIP[%v]",v.volId,v.server.localServAddr)
+		return false, nil, err
+	}
+
+	if members.VolGoal < LeastGoalNum || len(members.VolHosts) < members.VolGoal {
+		err = ErrLackOfGoal
+		return false, nil, err
+	}
+
+	if members.VolStatus == storage.DiskErrStore || v.status == storage.DiskErrStore {
+		err = ErrVolOnBadDisk
+		return false, nil, err
+	}
+
+	return true, members, nil
+}
+

@@ -47,7 +47,7 @@ errDeal:
 
 func (s *DataNode) checkAndAddInfos(pkg *Packet) error {
 	var err error
-	switch pkg.StoreType {
+	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
 		err = s.handleChunkInfo(pkg)
 	case proto.ExtentStoreMode:
@@ -207,7 +207,7 @@ func (s *DataNode) sendToNext(pkg *Packet, msgH *MessageHandler) error {
 }
 
 func (s *DataNode) CheckStoreMode(p *Packet) (err error) {
-	if p.StoreType == proto.TinyStoreMode || p.StoreType == proto.ExtentStoreMode {
+	if p.StoreMode == proto.TinyStoreMode || p.StoreMode == proto.ExtentStoreMode {
 		return nil
 	}
 	return ErrStoreTypeUnmatch

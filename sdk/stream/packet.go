@@ -19,7 +19,7 @@ func NewWritePacket(vol *sdk.VolGroup, extentId, seqNo uint64, offset int) (p *P
 	p.VolID = vol.VolId
 	p.Magic = proto.ProtoMagic
 	p.Data = make([]byte, 0)
-	p.StoreType = proto.ExtentStoreMode
+	p.StoreMode = proto.ExtentStoreMode
 	p.FileID = extentId
 	p.Offset = int64(offset)
 	p.Arg = ([]byte)(vol.GetAllAddrs())
@@ -38,7 +38,7 @@ func NewReadPacket(key proto.ExtentKey, offset, size int) (p *Packet) {
 	p.Offset = int64(offset)
 	p.Size = uint32(size)
 	p.Opcode = proto.OpStreamRead
-	p.StoreType = proto.ExtentStoreMode
+	p.StoreMode = proto.ExtentStoreMode
 	p.ReqID = proto.GetReqID()
 
 	return
@@ -49,7 +49,7 @@ func NewCreateExtentPacket(vol *sdk.VolGroup) (p *Packet) {
 	p.Magic = proto.ProtoMagic
 	p.Opcode = proto.OpCreateFile
 	p.VolID = vol.VolId
-	p.StoreType = proto.ExtentStoreMode
+	p.StoreMode = proto.ExtentStoreMode
 	p.ReqID = proto.GetReqID()
 	p.Arg = ([]byte)(vol.GetAllAddrs())
 	p.Arglen = uint32(len(p.Arg))
@@ -60,7 +60,7 @@ func NewDeleteExtentPacket(vol *sdk.VolGroup, extentId uint64) (p *Packet) {
 	p = new(Packet)
 	p.Magic = proto.ProtoMagic
 	p.Opcode = proto.OpMarkDelete
-	p.StoreType = proto.ExtentStoreMode
+	p.StoreMode = proto.ExtentStoreMode
 	p.VolID = vol.VolId
 	p.FileID = extentId
 	p.Arg = ([]byte)(vol.GetAllAddrs())
@@ -74,7 +74,7 @@ func NewReply(reqId int64, volId uint32, extentId uint64) (p *Packet) {
 	p.VolID = volId
 	p.FileID = extentId
 	p.Magic = proto.ProtoMagic
-	p.StoreType = proto.ExtentStoreMode
+	p.StoreMode = proto.ExtentStoreMode
 
 	return
 }

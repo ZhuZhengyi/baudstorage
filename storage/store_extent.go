@@ -39,13 +39,19 @@ type ExtentStore struct {
 	fdlist       *list.List
 	baseExtentId uint64
 	storeSize    int
+	deleteFp    *FileSimulator
 }
 
 func NewExtentStore(dataDir string, storeSize int, newMode bool) (s *ExtentStore, err error) {
 	s = new(ExtentStore)
 	s.dataDir = dataDir
+	s.deleteFp=&FileSimulator{}
 	if err = CheckAndCreateSubdir(dataDir, newMode); err != nil {
 		return nil, fmt.Errorf("NewExtentStore [%v] err[%v]", dataDir, err)
+	}
+
+	if err=s.deleteFp.OpenFile("delete.index",ChunkOpenOpt,0666);err!=nil {
+		return nil, fmt.Errorf("NewExtentStore [%v] create deleteIndex err[%v]", dataDir, err)
 	}
 
 	s.extents = make(map[uint64]*Extent, 0)
@@ -255,22 +261,6 @@ func (s *ExtentStore) Read(extentId uint64, offset, size int64, nbuf []byte) (cr
 func (s *ExtentStore) MarkDelete(extentId uint64, offset, size int64) (err error) {
 	var e *Extent
 	if e, err = s.getExtent(extentId); err != nil {
-		return
-	}
-
-	e.readlock()
-	defer e.readUnlock()
-	e.blocksCrc[MarkDeleteIndex] = MarkDelete
-	if _, err = e.file.WriteAt(e.blocksCrc, 0); err != nil {
-		return
-	}
-
-	return
-}
-
-func (s *ExtentStore) Delete(extentId uint64) (err error) {
-	var e *Extent
-	if e, err = s.getExtent(extentId); err != nil {
 		return nil
 	}
 
@@ -278,19 +268,16 @@ func (s *ExtentStore) Delete(extentId uint64) (err error) {
 	if err = e.deleteExtent(); err != nil {
 		return nil
 	}
+	buf:=make([]byte,8)
+	binary.BigEndian.PutUint64(buf,extentId)
+	s.deleteFp.Write(buf)
+	s.deleteFp.Sync()
 
 	return
 }
 
-func (s *ExtentStore) IsMarkDelete(extentId uint64) (isMarkDelete bool, err error) {
-	var e *Extent
-	if e, err = s.getExtent(extentId); err != nil {
-		return
-	}
-	isMarkDelete = e.blocksCrc[MarkDeleteIndex] == MarkDelete
 
-	return
-}
+
 
 func (s *ExtentStore) Sync(extentId uint64) (err error) {
 	var e *Extent

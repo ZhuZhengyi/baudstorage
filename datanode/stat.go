@@ -15,7 +15,7 @@ import (
 )
 
 type VolStat struct {
-	ID     uint32 `json:"VolID"`
+	ID     uint32 `json:"VolId"`
 	Status int32  `json:"VolStat"`
 
 	//report to monitor
