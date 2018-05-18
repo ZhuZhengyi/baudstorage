@@ -228,7 +228,7 @@ func (c *Cluster) applyAddMetaPartition(cmd *Metadata) {
 	if keys[1] == MetaPartitionAcronym {
 		mpv := &MetaPartitionValue{}
 		json.Unmarshal(cmd.V, mpv)
-		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End)
+		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End, keys[2])
 		ns, _ := c.getNamespace(keys[2])
 		ns.MetaPartitions[mp.PartitionID] = mp
 	}
@@ -365,7 +365,7 @@ func (c *Cluster) loadMetaPartitions() (err error) {
 			err = fmt.Errorf("action[decodeMetaPartitionValue],value:%v,err:%v", encodedValue.Data(), err)
 			return
 		}
-		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End)
+		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End, nsName)
 		mp.PersistenceHosts = strings.Split(mpv.Hosts, UnderlineSeparator)
 		ns.MetaPartitions[mp.PartitionID] = mp
 		encodedKey.Free()

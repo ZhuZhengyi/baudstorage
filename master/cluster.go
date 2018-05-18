@@ -410,7 +410,7 @@ func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err err
 	if partitionID, err = c.idAlloc.allocatorPartitionID(); err != nil {
 		return
 	}
-	mp = NewMetaPartition(partitionID, start, end)
+	mp = NewMetaPartition(partitionID, start, end, nsName)
 	if hosts, peers, err = c.ChooseTargetMetaHosts(int(ns.mpReplicaNum)); err != nil {
 		return
 	}
