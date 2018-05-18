@@ -140,3 +140,33 @@ func doReadDir(t *testing.T, ino uint64) {
 		t.Log(child)
 	}
 }
+
+func TestExtents(t *testing.T) {
+	uuid := uuid.New()
+	info, err := gMetaWrapper.Create_ll(proto.ROOT_INO, uuid.String(), proto.ModeRegular)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Create a file ino(%v) name(%v)", info.Inode, uuid.String())
+
+	ek := proto.ExtentKey{VolId: 1, ExtentId: 2, Size: 3, Crc: 4}
+	t.Logf("ExtentKey append: %v", ek)
+	err = gMetaWrapper.AppendExtentKey(info.Inode, ek)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ek = proto.ExtentKey{VolId: 5, ExtentId: 6, Size: 7, Crc: 8}
+	t.Logf("ExtentKey append: %v", ek)
+	err = gMetaWrapper.AppendExtentKey(info.Inode, ek)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	extents, err := gMetaWrapper.GetExtents(info.Inode)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("Extents received: %v", extents)
+}

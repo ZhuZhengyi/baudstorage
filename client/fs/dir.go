@@ -23,8 +23,9 @@ var (
 	_ fs.NodeFsyncer         = (*Dir)(nil)
 	_ fs.NodeRequestLookuper = (*Dir)(nil)
 	_ fs.HandleReadDirAller  = (*Dir)(nil)
+	_ fs.NodeRenamer         = (*Dir)(nil)
 
-	//TODO:NodeRenamer, NodeSymlinker
+	//TODO: NodeSymlinker
 )
 
 func NewDir(s *Super, p *Dir) *Dir {
@@ -123,4 +124,17 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 		dirents = append(dirents, dentry)
 	}
 	return dirents, nil
+}
+
+func (d *Dir) Rename(ctx context.Context, req *fuse.RenameRequest, newDir fs.Node) error {
+	dstDir, ok := newDir.(*Dir)
+	if !ok {
+		return fuse.ENOTSUP
+	}
+
+	err := d.super.mw.Rename_ll(d.inode.ino, req.OldName, dstDir.inode.ino, req.NewName)
+	if err != nil {
+		return ParseError(err)
+	}
+	return nil
 }

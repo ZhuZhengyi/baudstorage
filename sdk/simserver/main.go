@@ -1,5 +1,13 @@
 package main
 
+//
+// Usage: nohup ./simserver &
+//
+// This will simulate one master server and four meta nodes in localhost
+// with "namespace", "ports" and "inode ranges" hardcoded
+// for testing purpose.
+//
+
 import (
 	"encoding/json"
 	"errors"
@@ -52,9 +60,10 @@ type MetaServer struct {
 
 type Inode struct {
 	sync.RWMutex
-	ino   uint64
-	mode  uint32
-	dents map[string]*Dentry
+	ino     uint64
+	mode    uint32
+	extents []proto.ExtentKey
+	dents   map[string]*Dentry
 }
 
 type Dentry struct {
@@ -154,9 +163,10 @@ func NewMetaServer(start, end uint64, port string) *MetaServer {
 
 func NewInode(ino uint64, mode uint32) *Inode {
 	return &Inode{
-		ino:   ino,
-		mode:  mode,
-		dents: make(map[string]*Dentry),
+		ino:     ino,
+		mode:    mode,
+		extents: make([]proto.ExtentKey, 0),
+		dents:   make(map[string]*Dentry),
 	}
 }
 
@@ -228,6 +238,10 @@ func (m *MetaServer) handlePacket(conn net.Conn, p *proto.Packet) (err error) {
 		err = m.handleReadDir(conn, p)
 	case proto.OpMetaInodeGet:
 		err = m.handleInodeGet(conn, p)
+	case proto.OpMetaExtentsAdd:
+		err = m.handleAppendExtents(conn, p)
+	case proto.OpMetaExtentsList:
+		err = m.handleGetExtents(conn, p)
 	default:
 		err = errors.New("unknown Opcode: ")
 	}
@@ -449,6 +463,67 @@ func (m *MetaServer) handleInodeGet(conn net.Conn, p *proto.Packet) error {
 	} else {
 		p.ResultCode = proto.OpOk
 	}
+
+out:
+	p.Data = data
+	p.Size = uint32(len(data))
+	err = p.WriteToConn(conn)
+	return err
+}
+
+func (m *MetaServer) handleAppendExtents(conn net.Conn, p *proto.Packet) error {
+	var data []byte
+
+	req := &proto.AppendExtentKeyRequest{}
+	err := json.Unmarshal(p.Data, req)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	inode := m.getInode(req.Inode)
+	if inode == nil {
+		p.ResultCode = proto.OpNotExistErr
+		goto out
+	}
+
+	inode.Lock()
+	inode.extents = append(inode.extents, req.Extents...)
+	inode.Unlock()
+
+out:
+	p.Data = data
+	p.Size = uint32(len(data))
+	err = p.WriteToConn(conn)
+	return err
+}
+
+func (m *MetaServer) handleGetExtents(conn net.Conn, p *proto.Packet) error {
+	var data []byte
+
+	resp := &proto.GetExtentsResponse{}
+	req := &proto.GetExtentsRequest{}
+	err := json.Unmarshal(p.Data, req)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	inode := m.getInode(req.Inode)
+	if inode == nil {
+		p.ResultCode = proto.OpNotExistErr
+		goto out
+	}
+
+	inode.RLock()
+	resp.Extents = inode.extents
+	if data, err = json.Marshal(resp); err != nil {
+		log.Println(err)
+		p.ResultCode = proto.OpErr
+	} else {
+		p.ResultCode = proto.OpOk
+	}
+	inode.RUnlock()
 
 out:
 	p.Data = data
