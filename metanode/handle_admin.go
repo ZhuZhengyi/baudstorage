@@ -19,7 +19,7 @@ const (
 	metaNodeResponse = "metaNode/response" // Method: 'POST', ContentType: 'application/json'
 )
 
-// Handle OpCreateMetaRange
+// Handle OpCreateMetaPartition
 func (m *MetaNode) opCreateMetaPartition(conn net.Conn, p *Packet) (err error) {
 	// Get task from packet.
 	adminTask := &proto.AdminTask{}

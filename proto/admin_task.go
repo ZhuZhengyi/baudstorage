@@ -33,7 +33,7 @@ type AdminTask struct {
 
 
 func (t *AdminTask) ToString() (msg string) {
-	msg = fmt.Sprintf("Id[%v] Status[%d] LastSendTime[%v]  SendCount[%v] ",
+	msg = fmt.Sprintf("ExtentId[%v] Status[%d] LastSendTime[%v]  SendCount[%v] ",
 		t.ID, t.Status, t.SendTime, t.SendCount)
 
 	return

@@ -42,17 +42,11 @@ func (mp *MetaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 		}
 		resp = mp.deleteDentry(den)
 	case opOpen:
-		req := &OpenReq{}
-		if err = json.Unmarshal(msg.V, req); err != nil {
+		ino := &Inode{}
+		if err = json.Unmarshal(msg.V, ino); err != nil {
 			goto end
 		}
-		resp = mp.openFile(req)
-	case opReadDir:
-		req := &ReadDirReq{}
-		if err = json.Unmarshal(msg.V, req); err != nil {
-			goto end
-		}
-		resp = mp.readDir(req)
+		resp = mp.openFile(ino)
 	case opUpdatePartition:
 		req := &proto.UpdateMetaPartitionRequest{}
 		if err = json.Unmarshal(msg.V, req); err != nil {
@@ -61,6 +55,13 @@ func (mp *MetaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 		err = mp.updatePartition(req.End)
 	case opDeletePartition:
 		mp.deletePartition()
+
+	case opExtentsAdd:
+		ino := &Inode{}
+		if err = json.Unmarshal(msg.V, ino); err != nil {
+			goto end
+		}
+		mp.AppendExtents(ino)
 	}
 end:
 	mp.applyID = index

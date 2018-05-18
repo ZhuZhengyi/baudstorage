@@ -107,7 +107,7 @@ func TestExtentClient_Write(t *testing.T) {
 	client.Open(inode)
 	client.Open(inode)
 	for seqNo := 0; seqNo < CFSBLOCKSIZE; seqNo++ {
-		writeStr := randSeq(rand.Intn(CFSBLOCKSIZE*5))
+		writeStr := randSeq(rand.Intn(CFSBLOCKSIZE * 5))
 		ndata := ([]byte)(writeStr)
 		write, err := client.Write(inode, ndata)
 		if err != nil || write != len(ndata) {

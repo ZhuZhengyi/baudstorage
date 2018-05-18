@@ -82,6 +82,17 @@ func NewGetAllWaterMarker(volId uint32, storeMode uint8) (p *Packet) {
 	return
 }
 
+func NewNotifyRepair(volId uint32,storeMode uint8) (p *Packet){
+	p = new(Packet)
+	p.Opcode = proto.OpNotifyRepair
+	p.VolID = volId
+	p.Magic = proto.ProtoMagic
+	p.ReqID = proto.GetReqID()
+	p.StoreMode = storeMode
+
+	return
+}
+
 func (p *Packet) IsTailNode() (ok bool) {
 	if p.Nodes == 0 && (p.IsWriteOperation() || p.Opcode == proto.OpCreateFile ||
 		(p.Opcode == proto.OpMarkDelete && p.StoreMode == proto.TinyStoreMode)) {

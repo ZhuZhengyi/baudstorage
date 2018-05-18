@@ -23,7 +23,7 @@ const (
 	NotRecive              = false
 	ExtentWriterRecoverCnt = 1
 
-	DefaultWriteBufferSize = 1280 * util.KB
+	DefaultWriteBufferSize = 2 * util.MB
 )
 
 var (
@@ -76,7 +76,7 @@ func (writer *ExtentWriter) flushWait() {
 	go func() {
 		writer.cond.L.Lock()
 		for {
-			if time.Now().UnixNano()-start > int64(time.Second*2) || writer.isAllFlushed() {
+			if writer.isAllFlushed() || time.Now().UnixNano()-start > int64(time.Second) {
 				writer.cond.Signal()
 				break
 			}
@@ -95,7 +95,7 @@ func (writer *ExtentWriter) write(data []byte, size int) (total int, err error) 
 		if err != nil {
 			writer.getConnect().Close()
 			writer.cleanHandleCh()
-			err = errors.Annotatef(err, "writer[%v] operator", writer.toString())
+			err = errors.Annotatef(err, "writer[%v] write failed", writer.toString())
 		}
 	}()
 	for total < size && !writer.isFullExtent() {
@@ -148,7 +148,7 @@ func (writer *ExtentWriter) sendCurrPacket() (err error) {
 	} else {
 		writer.cleanHandleCh() //if send packet failed,clean handleCh
 	}
-	err = errors.Annotatef(err, "extentWriter[%v] sendCurrentPacket", writer.toString())
+	err = errors.Annotatef(err, "sendCurrentPacket Failed")
 	log.LogError(err.Error())
 
 	return err
@@ -236,14 +236,14 @@ func (writer *ExtentWriter) checkIsStopReciveGoRoutine() {
 }
 
 func (writer *ExtentWriter) flush() (err error) {
-	err = errors.Annotatef(FlushErr, "cannot backEndlush writer [%v]", writer.toString())
-	log.LogInfo(fmt.Sprintf("ActionFlushExtent [%v] start", writer.toString()))
+	err = errors.Annotatef(FlushErr, "cannot backEndlush writer")
 	defer func() {
 		writer.flushLock.Unlock()
 		writer.checkIsStopReciveGoRoutine()
 		if err == nil {
 			return
 		}
+		err = errors.Annotatef(err, "flush Failed")
 		if !writer.recover() {
 			return
 		}
@@ -265,7 +265,7 @@ func (writer *ExtentWriter) flush() (err error) {
 	}
 	writer.flushWait()
 	if !writer.isAllFlushed() {
-		err = errors.Annotatef(FlushErr, "cannot backEndlush writer [%v]", writer.toString())
+		err = errors.Annotatef(FlushErr, "cannot backEndlush writer")
 		return err
 	}
 

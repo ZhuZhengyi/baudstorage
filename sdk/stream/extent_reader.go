@@ -43,33 +43,33 @@ func NewExtentReader(inode uint64, inInodeOffset int, key proto.ExtentKey,
 	reader.startInodeOffset = inInodeOffset
 	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
 	reader.wrapper = wrapper
-	reader.exitCh = make(chan bool, 2)
-	reader.cacheReferCh = make(chan bool, 10)
-	reader.cacheReferCh <- true
-	go reader.asyncFillCache()
+	//reader.exitCh = make(chan bool, 2)
+	//reader.cacheReferCh = make(chan bool, 10)
+	//reader.cacheReferCh <- true
+	//go reader.asyncFillCache()
 
 	return
 }
 
 func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
-	if reader.getCacheStatus() == AvaliBuffer && offset+size <= reader.cache.getBufferEndOffset() {
-		reader.cache.copyData(data, offset, size)
-		return
-	}
+	//if reader.getCacheStatus() == AvaliBuffer && offset+size <= reader.cache.getBufferEndOffset() {
+	//	reader.cache.copyData(data, offset, size)
+	//	return
+	//}
 	reader.Lock()
 	p := NewReadPacket(reader.key, offset, size)
 	reader.Unlock()
 	err = reader.readDataFromVol(p, data)
-	reader.setCacheToUnavali()
-	if err == nil {
-		select {
-		case reader.cacheReferCh <- true:
-			reader.lastReadOffset = offset
-		default:
-			return
-		}
-
-	}
+	//reader.setCacheToUnavali()
+	//if err == nil {
+	//	select {
+	//	case reader.cacheReferCh <- true:
+	//		reader.lastReadOffset = offset
+	//	default:
+	//		return
+	//	}
+	//
+	//}
 
 	return
 }
