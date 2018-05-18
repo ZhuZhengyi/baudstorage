@@ -36,26 +36,32 @@ type TestFsm struct {
 }
 
 func (*testSM) Apply(command []byte, index uint64) (interface{}, error) {
+	fmt.Printf("===test raft apply index %d\n", index)
 	return nil, nil
 }
 
 func (*testSM) ApplyMemberChange(confChange *proto.ConfChange, index uint64) (interface{}, error) {
+	fmt.Printf("===tet raft member change index %d===\n", index)
 	return nil, nil
 }
 
 func (*testSM) Snapshot() (proto.Snapshot, error) {
+	fmt.Printf("===test raft snapshot===\n")
 	return nil, nil
 }
 
 func (*testSM) ApplySnapshot(peers []proto.Peer, iter proto.SnapIterator) error {
+	fmt.Printf("===tet raft apply snapshot===\n")
 	return nil
 }
 
 func (*testSM) HandleFatalEvent(err *raft.FatalError) {
+	fmt.Printf("===tet raft fatal event===\n")
 	return
 }
 
 func (*testSM) HandleLeaderChange(leader uint64) {
+	fmt.Printf("===tet raft leader change===\n")
 	return
 }
 
