@@ -2,7 +2,9 @@ package master
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/tiglabs/raft/proto"
 	"strconv"
 	"strings"
 )
@@ -154,6 +156,24 @@ func (c *Cluster) syncAddDataNode(dataNode *DataNode) (err error) {
 	metadata.Op = OpSyncAddDataNode
 	metadata.K = DataNodePrefix + dataNode.HttpAddr
 	return c.submit(metadata)
+}
+
+func (c *Cluster) addRaftNode(nodeID uint64, addr string) (err error) {
+	peer := proto.Peer{ID: nodeID}
+	_, err = c.partition.ChangeMember(proto.ConfAddNode, peer, []byte(addr))
+	if err != nil {
+		return errors.New("action[addRaftNode] error: " + err.Error())
+	}
+	return nil
+}
+
+func (c *Cluster) removeRaftNode(nodeID uint64, addr string) (err error) {
+	peer := proto.Peer{ID: nodeID}
+	_, err = c.partition.ChangeMember(proto.ConfRemoveNode, peer, []byte(addr))
+	if err != nil {
+		return errors.New("action[removeRaftNode] error: " + err.Error())
+	}
+	return nil
 }
 
 func (c *Cluster) handleApply(cmd *Metadata) (err error) {

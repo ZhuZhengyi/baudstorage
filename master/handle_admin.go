@@ -449,6 +449,67 @@ errDeal:
 	return
 }
 
+func (m *Master) handleAddRaftNode(w http.ResponseWriter, r *http.Request) {
+	var msg string
+	id, addr, err := parseRaftNodePara(r)
+	if err != nil {
+		goto errDeal
+	}
+
+	if err = m.cluster.addRaftNode(id, addr); err != nil {
+		goto errDeal
+	}
+	msg = fmt.Sprintf("add  raft node id :%v, addr:%v successed \n", id, addr)
+	io.WriteString(w, msg)
+	return
+errDeal:
+	logMsg := getReturnMessage("add raft node", r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	HandleError(logMsg, http.StatusBadRequest, w)
+	return
+}
+
+func (m *Master) handleRemoveRaftNode(w http.ResponseWriter, r *http.Request) {
+	var msg string
+	id, addr, err := parseRaftNodePara(r)
+	if err != nil {
+		goto errDeal
+	}
+	err = m.cluster.removeRaftNode(id, addr)
+	if err != nil {
+		goto errDeal
+	}
+	msg = fmt.Sprintf("remove  raft node id :%v,adr:%v successed\n", id, addr)
+	io.WriteString(w, msg)
+	return
+errDeal:
+	logMsg := getReturnMessage("remove raft node", r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	HandleError(logMsg, http.StatusBadRequest, w)
+	return
+}
+
+func parseRaftNodePara(r *http.Request) (id uint64, host string, err error) {
+	r.ParseForm()
+	var idStr string
+	if idStr = r.FormValue(ParaId); idStr == "" {
+		err = paraNotFound(ParaId)
+		return
+	}
+
+	if id, err = strconv.ParseUint(idStr, 10, 64); err != nil {
+		return
+	}
+	if host = r.FormValue(ParaNodeAddr); host == "" {
+		err = paraNotFound(ParaNodeAddr)
+		return
+	}
+
+	if arr := strings.Split(host, ColonSplit); len(arr) < 2 {
+		err = UnMatchPara
+		return
+	}
+	return
+}
+
 func parseGetMetaNodePara(r *http.Request) (nodeAddr string, err error) {
 	r.ParseForm()
 	return checkNodeAddr(r)
