@@ -25,6 +25,7 @@ type Chunk struct {
 }
 
 type FileInfo struct {
+	Source  string
 	FileId int
 	Size   uint64
 }

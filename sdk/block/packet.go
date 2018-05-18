@@ -23,7 +23,7 @@ func allocReqId() int64 {
 func newWritePacket(data []byte, vol *sdk.VolGroup) (pkg *proto.Packet) {
 	pkg = proto.NewPacket()
 	pkg.Opcode = proto.OpWrite
-	pkg.StoreType = proto.TinyStoreMode
+	pkg.StoreMode = proto.TinyStoreMode
 	pkg.Nodes = 1
 	pkg.Size = uint32(len(data))
 	pkg.Data = data
@@ -39,7 +39,7 @@ func newWritePacket(data []byte, vol *sdk.VolGroup) (pkg *proto.Packet) {
 func newReadPacket(vid, size uint32, fid uint64, ofs int64) (pkg *proto.Packet) {
 	pkg = proto.NewPacket()
 	pkg.Opcode = proto.OpRead
-	pkg.StoreType = proto.TinyStoreMode
+	pkg.StoreMode = proto.TinyStoreMode
 	pkg.Nodes = 0
 	pkg.Size = size
 	pkg.FileID = fid
@@ -53,7 +53,7 @@ func newReadPacket(vid, size uint32, fid uint64, ofs int64) (pkg *proto.Packet) 
 func newDelPacket(fid uint64, size uint32, ofs int64, vol *sdk.VolGroup) (pkg *proto.Packet) {
 	pkg = proto.NewPacket()
 	pkg.Opcode = proto.OpMarkDelete
-	pkg.StoreType = proto.TinyStoreMode
+	pkg.StoreMode = proto.TinyStoreMode
 	pkg.Nodes = 1
 	pkg.Size = size
 	argstr := vol.Hosts[1] + proto.AddrSplit + vol.Hosts[2]
