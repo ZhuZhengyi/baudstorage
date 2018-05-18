@@ -3,7 +3,6 @@ package raftstore
 import (
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/storage/wal"
-	"os"
 	"path"
 	"strconv"
 	"fmt"
@@ -38,15 +37,12 @@ func (s *raftStore) Stop() {
 }
 
 func NewRaftStore(cfg *Config) (mr RaftStore, err error) {
-	if err = os.MkdirAll(cfg.WalPath, os.ModeDir); err != nil {
-		return
-	}
 	resolver := NewNodeResolver()
 	rc := raft.DefaultConfig()
 	rc.NodeID = cfg.NodeID
 	rc.LeaseCheck = true
-	rc.HeartbeatAddr = fmt.Sprintf(":%d", HeartbeatPort)
-	rc.ReplicateAddr = fmt.Sprintf(":%d", ReplicatePort)
+	rc.HeartbeatAddr = fmt.Sprintf("%s:%d", cfg.IpAddr, HeartbeatPort)
+	rc.ReplicateAddr = fmt.Sprintf("%s:%d", cfg.IpAddr, ReplicatePort)
 	rc.Resolver = resolver
 	rs, err := raft.NewRaftServer(rc)
 	if err != nil {
@@ -57,6 +53,7 @@ func NewRaftStore(cfg *Config) (mr RaftStore, err error) {
 		resolver:   resolver,
 		raftConfig: rc,
 		raftServer: rs,
+		walPath:    cfg.WalPath,
 	}
 	return
 }

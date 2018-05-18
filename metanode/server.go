@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util"
-	"github.com/tiglabs/baudstorage/util/log"
 	"io"
 	"net"
 	"strconv"
+
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 // StartTcpService bind and listen specified port and accept tcp connections.
@@ -99,6 +100,16 @@ func (m *MetaNode) handlePacket(conn net.Conn, p *Packet) (err error) {
 	case proto.OpMetaOpen:
 		// Client → MetaNode
 		err = m.opOpen(conn, p)
+	case proto.OpMetaInodeGet:
+		err = m.opMetaInodeGet(conn, p)
+	case proto.OpMetaExtentsAdd:
+		err = m.opMetaExtentsAdd(conn, p)
+	case proto.OpMetaExtentsList:
+		err = m.opMetaExtentsList(conn, p)
+	case proto.OpMetaExtentsDel:
+		err = m.opMetaExtentsDel(conn, p)
+	case proto.OpMetaLookup:
+		err = m.opMetaLookup(conn, p)
 	case proto.OpCreateMetaPartition:
 		// Mater → MetaNode
 		err = m.opCreateMetaPartition(conn, p)
@@ -133,7 +144,9 @@ func (m *MetaNode) replyClient(conn net.Conn, p *Packet) (err error) {
 		}
 	}()
 	// Process data and send reply though specified tcp connection.
-	err = p.WriteToConn(conn)
+	if err = p.WriteToConn(conn); err != nil {
+		log.LogError(err.Error())
+	}
 	return
 }
 
@@ -160,6 +173,10 @@ func (m *MetaNode) replyToMaster(ip string, data interface{}) (err error) {
 		return
 	}
 	url := fmt.Sprintf("http://%s/%s", ip, metaNodeResponse)
-	util.PostToNode(jsonBytes, url)
+	resp, err := util.PostToNode(jsonBytes, url)
+	if err != nil {
+		log.LogError(err.Error())
+	}
+	log.Debug(string(resp))
 	return
 }

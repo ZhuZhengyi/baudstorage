@@ -1,12 +1,11 @@
 package metanode
 
 import (
+	"os"
 	"time"
 
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk/stream"
-	"os"
 )
 
 // GetDentry query dentry from DentryTree with specified dentry info;
@@ -64,7 +63,7 @@ func (mp *MetaPartition) deleteDentry(dentry *Dentry) (status uint8) {
 	item := mp.dentryTree.Delete(dentry)
 	mp.dentryMu.Unlock()
 	if item == nil {
-		status = proto.OpExistErr
+		status = proto.OpNotExistErr
 		return
 	}
 	dentry = item.(*Dentry)
@@ -105,15 +104,13 @@ func (mp *MetaPartition) deleteInode(ino *Inode) (status uint8) {
 	return
 }
 
-func (mp *MetaPartition) openFile(req *OpenReq) (status uint8) {
-	item := mp.inodeTree.Get(&Inode{
-		Inode: req.Inode,
-	})
+func (mp *MetaPartition) openFile(ino *Inode) (status uint8) {
+	item := mp.inodeTree.Get(ino)
 	if item == nil {
 		status = proto.OpNotExistErr
 		return
 	}
-	item.(*Inode).AccessTime = time.Now()
+	item.(*Inode).AccessTime = time.Now().Unix()
 	status = proto.OpOk
 	return
 }
@@ -137,7 +134,8 @@ func (mp *MetaPartition) readDir(req *ReadDirReq) (resp *ReadDirResp) {
 	return
 }
 
-func (mp *MetaPartition) putStreamKey(ino *Inode, k stream.ExtentKey) (status uint8) {
+func (mp *MetaPartition) AppendExtents(ino *Inode) (status uint8) {
+	exts := ino.Extents
 	status = proto.OpOk
 	item := mp.inodeTree.Get(ino)
 	if item == nil {
@@ -145,7 +143,8 @@ func (mp *MetaPartition) putStreamKey(ino *Inode, k stream.ExtentKey) (status ui
 		return
 	}
 	ino = item.(*Inode)
-	ino.Stream.Put(k)
+	ino.AppendExtents(exts)
+	ino.ModifyTime = time.Now().Unix()
 	return
 }
 

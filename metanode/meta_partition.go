@@ -13,7 +13,6 @@ import (
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
-	"github.com/tiglabs/baudstorage/sdk/stream"
 )
 
 const (
@@ -255,13 +254,15 @@ func (mp *MetaPartition) CreateDentry(req *CreateDentryReq, p *Packet) (err erro
 	}
 	val, err := json.Marshal(dentry)
 	if err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
 	resp, err := mp.Put(opCreateDentry, val)
 	if err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
-	p.ResultCode = resp.(uint8)
+	p.PackErrorWithBody(resp.(uint8), nil)
 	return
 }
 
@@ -295,97 +296,63 @@ func (mp *MetaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 	inoID, err := mp.nextInodeID()
 	if err != nil {
 		err = nil
-		p.ResultCode = proto.OpInodeFullErr
+		p.PackErrorWithBody(proto.OpInodeFullErr, nil)
 		return
 	}
-	ts := time.Now()
-	ino := &Inode{
-		Inode:      inoID,
-		Type:       req.Mode,
-		CreateTime: ts,
-		AccessTime: ts,
-		ModifyTime: ts,
-		Stream:     stream.NewStreamKey(inoID),
-	}
+	ino := NewInode(inoID, req.Mode)
 	val, err := json.Marshal(ino)
 	if err != nil {
-		p.ResultCode = proto.OpErr
+		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
 	r, err := mp.Put(opCreateInode, val)
 	if err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
-	p.ResultCode = r.(uint8)
-	if p.ResultCode == proto.OpOk {
-		var reply []byte
+	var (
+		status = r.(uint8)
+		reply  []byte
+	)
+	if status == proto.OpOk {
 		resp := &CreateInoResp{}
 		resp.Info.Inode = ino.Inode
 		resp.Info.Mode = ino.Type
-		resp.Info.CreateTime = ino.CreateTime
-		resp.Info.ModifyTime = ino.ModifyTime
-		resp.Info.AccessTime = ino.AccessTime
 		resp.Info.Size = ino.Size
+		resp.Info.CreateTime = time.Unix(ino.CreateTime, 0)
+		resp.Info.ModifyTime = time.Unix(ino.ModifyTime, 0)
+		resp.Info.AccessTime = time.Unix(ino.AccessTime, 0)
 		reply, err = json.Marshal(resp)
 		if err != nil {
-			p.ResultCode = proto.OpErr
-			return
+			status = proto.OpErr
 		}
-		p.PackOkWithBody(reply)
 	}
+	p.PackErrorWithBody(status, reply)
 	return
 }
 
 func (mp *MetaPartition) DeleteInode(req *DeleteInoReq, p *Packet) (err error) {
-	ino := &Inode{
-		Inode: req.Inode,
-	}
+	ino := NewInode(req.Inode, 0)
 	val, err := json.Marshal(ino)
 	if err != nil {
-		p.ResultCode = proto.OpErr
+		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
 	r, err := mp.Put(opDeleteInode, val)
 	if err != nil {
-		p.ResultCode = proto.OpErr
+		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
-	p.ResultCode = r.(uint8)
-	if p.ResultCode == proto.OpOk {
-		var reply []byte
-		resp := &DeleteDentryResp{
-			Inode: ino.Inode,
-		}
-		reply, err = json.Marshal(resp)
-		if err != nil {
-			p.ResultCode = proto.OpErr
-			return
-		}
-		p.PackOkWithBody(reply)
-	}
-	return
-}
-
-func (mp *MetaPartition) PutStreamKey() {
+	p.PackErrorWithBody(r.(uint8), nil)
 	return
 }
 
 func (mp *MetaPartition) ReadDir(req *ReadDirReq, p *Packet) (err error) {
 	// TODO: Implement read dir operation.
-	val, err := json.Marshal(req)
+	resp := mp.readDir(req)
+	reply, err := json.Marshal(resp)
 	if err != nil {
-		p.ResultCode = proto.OpErr
-		return
-	}
-	resp, err := mp.Put(opReadDir, val)
-	if err != nil {
-		p.ResultCode = proto.OpErr
-		return
-	}
-	var reply []byte
-	reply, err = json.Marshal(resp)
-	if err != nil {
-		p.ResultCode = proto.OpErr
+		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
 	p.PackOkWithBody(reply)
@@ -394,17 +361,77 @@ func (mp *MetaPartition) ReadDir(req *ReadDirReq, p *Packet) (err error) {
 
 func (mp *MetaPartition) Open(req *OpenReq, p *Packet) (err error) {
 	// TODO: Implement open operation.
-	val, err := json.Marshal(req)
+	ino := NewInode(req.Inode, 0)
+	val, err := json.Marshal(ino)
 	if err != nil {
-		p.ResultCode = proto.OpErr
+		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
 	resp, err := mp.Put(opOpen, val)
+	p.PackErrorWithBody(resp.(uint8), nil)
+	return
+}
+
+func (mp *MetaPartition) InodeGet(req *proto.InodeGetRequest,
+	p *Packet) (err error) {
+	ino := NewInode(req.Inode, 0)
 	if err != nil {
-		p.ResultCode = proto.OpErr
+		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
-	p.ResultCode = resp.(uint8)
+	status := mp.getInode(ino)
+	var reply []byte
+	if status == proto.OpOk {
+		resp := &proto.InodeGetResponse{
+			Info: &proto.InodeInfo{},
+		}
+		resp.Info.Inode = ino.Inode
+		resp.Info.Mode = ino.Type
+		resp.Info.Size = ino.Size
+		resp.Info.CreateTime = time.Unix(ino.CreateTime, 0)
+		resp.Info.AccessTime = time.Unix(ino.AccessTime, 0)
+		resp.Info.ModifyTime = time.Unix(ino.ModifyTime, 0)
+		reply, err = json.Marshal(resp)
+		if err != nil {
+			status = proto.OpErr
+		}
+	}
+	p.PackErrorWithBody(status, reply)
+	return
+}
+
+func (mp *MetaPartition) ExtentAppend(req *proto.AppendExtentKeyRequest, p *Packet) (err error) {
+	ino := NewInode(req.Inode, 0)
+	ino.Extents = req.Extents
+	val, err := json.Marshal(ino)
+	if err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		return
+	}
+	resp, err := mp.Put(opExtentsAdd, val)
+	if err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		return
+	}
+	p.PackErrorWithBody(resp.(uint8), nil)
+	return
+}
+
+func (mp *MetaPartition) ExtentsList(req *proto.GetExtentsRequest,
+	p *Packet) (err error) {
+	ino := NewInode(req.Inode, 0)
+	status := mp.getInode(ino)
+	var reply []byte
+	if status == proto.OpOk {
+		resp := &proto.GetExtentsResponse{
+			Extents: ino.Extents,
+		}
+		reply, err = json.Marshal(resp)
+		if err != nil {
+			status = proto.OpErr
+		}
+	}
+	p.PackErrorWithBody(status, reply)
 	return
 }
 

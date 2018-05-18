@@ -2,12 +2,12 @@ package metanode
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
-	"strconv"
-
 	"github.com/google/btree"
-	"github.com/tiglabs/baudstorage/sdk/stream"
+	"github.com/tiglabs/baudstorage/proto"
+	"strings"
 )
 
 // Dentry wraps necessary properties of `dentry` information in file system.
@@ -74,22 +74,22 @@ type Inode struct {
 	Inode      uint64 // Inode ID
 	Type       uint32
 	Size       uint64
-	CreateTime time.Time
-	AccessTime time.Time
-	ModifyTime time.Time
-	Stream     *stream.StreamKey
+	CreateTime int64
+	AccessTime int64
+	ModifyTime int64
+	Extents    []proto.ExtentKey
 }
 
 // NewInode returns a new inode instance pointer with specified inode ID, name and inode type code.
 // The AccessTime and ModifyTime of new instance will be set to current time.
 func NewInode(ino uint64, t uint32) *Inode {
-	ts := time.Now()
+	ts := time.Now().Unix()
 	return &Inode{
 		Inode:      ino,
 		Type:       t,
+		CreateTime: ts,
 		AccessTime: ts,
 		ModifyTime: ts,
-		Stream:     stream.NewStreamKey(ino),
 	}
 }
 
@@ -124,16 +124,13 @@ func (i *Inode) ParseKeyBytes(k []byte) (err error) {
 // GetValue returns string value of this Inode which consists of Name, Size, AccessTime and
 // ModifyTime properties and connected by '*'.
 func (i *Inode) GetValue() (m string) {
-	s := fmt.Sprintf("%d*%d*%d*%d", i.Type, i.Size, i.AccessTime, i.ModifyTime)
-	i.Stream.Range(func(index int, extentKey stream.ExtentKey) bool {
-		if uint64(index) == i.Stream.Size() {
-			s += extentKey.Marshal()
-		} else {
-			s += "*"
-			s += extentKey.Marshal()
-		}
-		return true
-	})
+	s := fmt.Sprintf("%d*%d*%d*%d*%d", i.Type, i.Size, i.CreateTime, i.AccessTime, i.ModifyTime)
+	var exts []string
+	exts = append(exts, s)
+	for _, ext := range i.Extents {
+		exts = append(exts, ext.Marshal())
+	}
+	s = strings.Join(exts, "*")
 	return s
 }
 
@@ -144,6 +141,48 @@ func (i *Inode) GetValueBytes() (m []byte) {
 
 func (i *Inode) ParseValueBytes(val []byte) (err error) {
 	value := string(val)
-	_, err = fmt.Sscanf(value, "%d*%d*%d*%d", &i.Type, &i.Size, &i.AccessTime, &i.ModifyTime)
+	valSlice := strings.Split(value, "*")
+	ttype, err := strconv.ParseUint(valSlice[0], 10, 32)
+	if err != nil {
+		return
+	}
+	size, err := strconv.ParseUint(valSlice[1], 10, 64)
+	if err != nil {
+		return
+	}
+	ctime, err := strconv.ParseInt(valSlice[2], 10, 64)
+	if err != nil {
+		return
+	}
+	atime, err := strconv.ParseInt(valSlice[3], 10, 64)
+	if err != nil {
+		return
+	}
+	mtime, err := strconv.ParseInt(valSlice[4], 10, 64)
+	if err != nil {
+		return
+	}
+	i.Type = uint32(ttype)
+	i.Size = size
+	i.CreateTime = ctime
+	i.AccessTime = atime
+	i.ModifyTime = mtime
+	if len(valSlice) <= 5 {
+		return
+	}
+	for _, value = range valSlice[6:] {
+		var ext proto.ExtentKey
+		if err = ext.UnMarshal(value); err != nil {
+			return
+		}
+		i.Extents = append(i.Extents, ext)
+	}
 	return
+}
+
+func (i *Inode) AppendExtents(exts []proto.ExtentKey) {
+	i.Extents = append(i.Extents, exts...)
+	for _, ext := range exts {
+		i.Size += uint64(ext.Size)
+	}
 }

@@ -37,12 +37,11 @@ const (
 	opDeleteInode
 	opCreateDentry
 	opDeleteDentry
-	opReadDir
 	opOpen
-	opCreateMetaRange
 	opDeletePartition
 	opUpdatePartition
 	opOfflinePartition
+	opExtentsAdd
 )
 
 var (
