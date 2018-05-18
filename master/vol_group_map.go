@@ -35,7 +35,7 @@ func (vm *VolGroupMap) getVol(volID uint64) (*VolGroup, error) {
 	if v, ok := vm.volGroupMap[volID]; ok {
 		return v, nil
 	}
-	log.LogError(fmt.Sprintf("action[getVol],VolID:%v,err:%v", volID, VolNotFound))
+	log.LogError(fmt.Sprintf("action[getVol],VolId:%v,err:%v", volID, VolNotFound))
 	return nil, VolNotFound
 }
 

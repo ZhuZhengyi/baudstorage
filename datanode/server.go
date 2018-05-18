@@ -43,6 +43,7 @@ type DataNode struct {
 	profport        string
 	clusterId       string
 	localIp         string
+	localServAddr   string
 }
 
 func (s *DataNode) checkConfigAndLoadVol(cfg *config.Config) (err error) {
@@ -98,6 +99,7 @@ func (s *DataNode) getIpFromMaster() error {
 	json.Unmarshal(data, cInfo)
 	s.localIp = string(cInfo.Ip)
 	s.clusterId = cInfo.Cluster
+	s.localServAddr = fmt.Sprintf("%s:%v", s.localIp, s.port)
 	if !util.IP(s.localIp) {
 		panic(fmt.Sprintf("unavalid ip from master[%v] err[%v]", s.masterAddrs, s.localIp))
 	}
@@ -106,8 +108,8 @@ func (s *DataNode) getIpFromMaster() error {
 
 func (s *DataNode) Start(cfg *config.Config) error {
 	s.space = NewSpaceManager()
-	err:=s.checkConfigAndLoadVol(cfg)
-	if err!=nil {
+	err := s.checkConfigAndLoadVol(cfg)
+	if err != nil {
 
 	}
 
@@ -260,7 +262,7 @@ func (s *DataNode) headNodePutChunk(pkg *Packet) {
 	if pkg == nil || pkg.FileID <= 0 || pkg.isReturn {
 		return
 	}
-	if pkg.StoreType != proto.TinyStoreMode || !pkg.isHeadNode() || !pkg.IsWriteOperation() || !pkg.IsTransitPkg() {
+	if pkg.StoreMode != proto.TinyStoreMode || !pkg.isHeadNode() || !pkg.IsWriteOperation() || !pkg.IsTransitPkg() {
 		return
 	}
 	store := pkg.vol.store.(*storage.TinyStore)

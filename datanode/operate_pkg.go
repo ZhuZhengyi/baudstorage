@@ -77,7 +77,7 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 
 func (s *DataNode) createFile(pkg *Packet) {
 	var err error
-	switch pkg.StoreType {
+	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
 		err = errors.Annotatef(ErrStoreTypeUnmatch, " CreateFile only support ExtentMode Vol")
 	case proto.ExtentStoreMode:
@@ -94,7 +94,7 @@ func (s *DataNode) createFile(pkg *Packet) {
 
 func (s *DataNode) markDel(pkg *Packet) {
 	var err error
-	switch pkg.StoreType {
+	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
 		err = pkg.vol.store.(*storage.TinyStore).MarkDelete(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size))
 	case proto.ExtentStoreMode:
@@ -111,7 +111,7 @@ func (s *DataNode) markDel(pkg *Packet) {
 
 func (s *DataNode) append(pkg *Packet) {
 	var err error
-	switch pkg.StoreType {
+	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
 		err = pkg.vol.store.(*storage.TinyStore).Write(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
 		s.AddDiskErrs(pkg.VolID, err, WriteFlag)
@@ -209,7 +209,7 @@ func (s *DataNode) getWatermark(pkg *Packet) {
 		finfo *storage.FileInfo
 		err   error
 	)
-	switch pkg.StoreType {
+	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
 		finfo, err = pkg.vol.store.(*storage.TinyStore).GetWatermark(uint32(pkg.FileID))
 	case proto.ExtentStoreMode:
@@ -231,7 +231,7 @@ func (s *DataNode) getAllWatermark(pkg *Packet) {
 		finfos []*storage.FileInfo
 		err    error
 	)
-	switch pkg.StoreType {
+	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
 		finfos, err = pkg.vol.store.(*storage.TinyStore).GetAllWatermark()
 	case proto.ExtentStoreMode:
