@@ -1,13 +1,14 @@
 package master
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/tiglabs/baudstorage/raftstore"
+	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
+	"io"
 	"strconv"
-	"github.com/tiglabs/baudstorage/util/log"
-	"encoding/json"
 )
 
 const (
@@ -22,13 +23,16 @@ type RaftCmdApplyHandler func(cmd *Metadata) (err error)
 
 type RaftRestoreHandler func()
 
+type RaftApplySnapshotHandler func() (err error)
+
 type MetadataFsm struct {
-	store               *raftstore.RocksDBStore
-	applied             uint64
-	leaderChangeHandler RaftLeaderChangeHandler
-	peerChangeHandler   RaftPeerChangeHandler
-	applyHandler        RaftCmdApplyHandler
-	restoreHandler      RaftRestoreHandler
+	store                *raftstore.RocksDBStore
+	applied              uint64
+	leaderChangeHandler  RaftLeaderChangeHandler
+	peerChangeHandler    RaftPeerChangeHandler
+	applyHandler         RaftCmdApplyHandler
+	restoreHandler       RaftRestoreHandler
+	applySnapshotHandler RaftApplySnapshotHandler
 }
 
 func newMetadataFsm(dir string) (fsm *MetadataFsm) {
@@ -50,6 +54,10 @@ func (mf *MetadataFsm) RegisterApplyHandler(handler RaftCmdApplyHandler) {
 }
 func (mf *MetadataFsm) RegisterRestoreHandler(handler RaftRestoreHandler) {
 	mf.restoreHandler = handler
+}
+
+func (mf *MetadataFsm) RegisterApplySnapshotHandler(handler RaftApplySnapshotHandler) {
+	mf.applySnapshotHandler = handler
 }
 
 func (mf *MetadataFsm) restore() {
@@ -124,14 +132,18 @@ func (mf *MetadataFsm) ApplySnapshot(peers []proto.Peer, iterator proto.SnapIter
 		if err = json.Unmarshal(data, cmd); err != nil {
 			goto errDeal
 		}
-
-		switch cmd.Op {
-
+		if _, err = mf.store.Put(cmd.K, cmd.V); err != nil {
+			goto errDeal
 		}
 	}
+	if err = mf.applySnapshotHandler(); err != nil {
+		goto errDeal
+	}
 	return
-
 errDeal:
+	if err == io.EOF {
+		return
+	}
 	log.LogError(fmt.Sprintf("action[ApplySnapshot] failed,err:%v", err.Error()))
 	return err
 }

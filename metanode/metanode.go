@@ -1,10 +1,18 @@
 package metanode
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"math/rand"
+	"net"
+	"strings"
 	"sync"
+	"time"
 
+	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
+	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/baudstorage/util/pool"
@@ -12,11 +20,15 @@ import (
 
 // Configuration keys
 const (
-	cfgNodeId  = "nodeID"
-	cfgListen  = "listen"
-	cfgLogDir  = "logDir"
-	cfgMetaDir = "metaDir"
-	cfgRaftDir = "raftDir"
+	cfgListen     = "listen"
+	cfgLogDir     = "logDir"
+	cfgMetaDir    = "metaDir"
+	cfgRaftDir    = "raftDir"
+	cfgMasterAddr = "masterAddrs"
+)
+
+const (
+	metaNodeURL = "metaNode/add"
 )
 
 // State type definition
@@ -38,7 +50,8 @@ type MetaNode struct {
 	logDir      string
 	raftDir     string //raft log store base dir
 	masterAddr  string
-	proxyPool   *pool.ConnPool
+	masterAddrs string
+	pool        *pool.ConnPool
 	metaManager *MetaManager
 	raftStore   raftstore.RaftStore
 	httpStopC   chan uint8
@@ -48,9 +61,9 @@ type MetaNode struct {
 }
 
 // Start this MeteNode with specified configuration.
-//  1. Start tcp server and accept connection from master and clients.
-//  2. Restore each meta range from snapshot.
-//  3. Restore raft fsm of each meta range.
+//  1. Start and load each meta range from snapshot.
+//  2. Restore raft fsm of each meta range.
+//  3. Start tcp server and accept connection from master and clients.
 func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	// Parallel safe.
 	m.stateMutex.Lock()
@@ -67,6 +80,10 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	if _, err = log.NewLog(m.logDir, "MetaNode", log.DebugLevel); err != nil {
 		return
 	}
+	// Check and Valid NodeID
+	if err = m.ValidNodeID(); err != nil {
+		return
+	}
 	// Start raft server
 	if err = m.startRaftServer(); err != nil {
 		return
@@ -76,7 +93,7 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 		return
 	}
 
-	// Start tcp server
+	// Start and listen server
 	if err = m.startServer(); err != nil {
 		return
 	}
@@ -111,11 +128,11 @@ func (m *MetaNode) prepareConfig(cfg *config.Config) (err error) {
 		err = errors.New("invalid configuration")
 		return
 	}
-	m.nodeId = uint64(cfg.GetInt(cfgNodeId))
 	m.listen = int(cfg.GetInt(cfgListen))
 	m.logDir = cfg.GetString(cfgLogDir)
 	m.metaDir = cfg.GetString(cfgMetaDir)
 	m.raftDir = cfg.GetString(cfgRaftDir)
+	m.masterAddrs = cfg.GetString(cfgMasterAddr)
 	return
 }
 
@@ -132,10 +149,41 @@ func (m *MetaNode) startMetaManager() (err error) {
 	return
 }
 
+func (m *MetaNode) ValidNodeID() (err error) {
+	// Register and Get NodeID
+	if m.masterAddrs == "" {
+		err = errors.New("masterAddrs is empty")
+		return
+	}
+	mAddrSlice := strings.Split(m.masterAddrs, ";")
+	rand.Seed(time.Now().Unix())
+	i := rand.Intn(len(mAddrSlice))
+	var localAddr string
+	conn, _ := net.DialTimeout("tcp", mAddrSlice[i], time.Second)
+	defer func() {
+		if conn != nil {
+			conn.Close()
+		}
+	}()
+	localAddr = strings.Split(conn.LocalAddr().String(), ":")[0]
+	masterURL := fmt.Sprintf("http://%s/%s?addr=%s", mAddrSlice[i],
+		metaNodeURL, fmt.Sprintf("%s:%d", localAddr, m.listen))
+	data, err := util.PostToNode(nil, masterURL)
+	if err != nil {
+		return
+	}
+	node := &proto.RegisterMetaNodeResp{}
+	if err = json.Unmarshal(data, node); err != nil {
+		return
+	}
+	m.nodeId = node.ID
+	return
+}
+
 // NewServer create an new MetaNode instance.
 func NewServer() *MetaNode {
 	return &MetaNode{
 		metaManager: NewMetaRangeManager(),
-		proxyPool:   pool.NewConnPool(),
+		pool:        pool.NewConnPool(),
 	}
 }

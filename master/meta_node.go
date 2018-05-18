@@ -7,9 +7,9 @@ import (
 )
 
 type MetaNode struct {
-	id                uint64
-	Addr              string
-	metaPartitions    []*MetaReplica
+	id   uint64
+	Addr string
+	//metaPartitions    []*MetaReplica
 	isActive          bool
 	sender            *AdminTaskSender
 	RackName          string `json:"Rack"`
@@ -19,7 +19,7 @@ type MetaNode struct {
 	selectCount       uint64
 	carry             float64
 	reportTime        time.Time
-	metaRangeInfo     []*proto.MetaPartitionReport
+	metaRangeInfos    []*proto.MetaPartitionReport
 	metaRangeCount    int
 	sync.Mutex
 }

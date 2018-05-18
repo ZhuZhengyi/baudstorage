@@ -23,6 +23,7 @@ func (m MetaNode) createPartition(mp *MetaPartition) (err error) {
 	var peers []proto.Peer
 	for _, peer := range mp.Peers {
 		m.raftStore.AddNode(peer.ID, peer.Addr)
+		peers = append(peers, proto.Peer{ID: peer.ID})
 	}
 	partitionConf := &raftstore.PartitionConfig{
 		ID:      mp.RaftGroupID,

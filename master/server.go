@@ -20,7 +20,6 @@ const (
 	LogLevel    = "logLevel"
 	WalDir      = "walDir"
 	StoreDir    = "storeDir"
-	RootUrlPath = "/"
 	GroupId     = 1
 	LogModule   = "master"
 )
