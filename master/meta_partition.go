@@ -30,6 +30,7 @@ type MetaPartition struct {
 	Replicas         []*MetaReplica
 	CurReplicaNum    uint8
 	status           uint8
+	nsName           string
 	PersistenceHosts []string
 	peers            []proto.Peer
 	MissNodes        map[string]int64
@@ -44,8 +45,8 @@ func NewMetaReplica(start, end uint64, metaNode *MetaNode) (mr *MetaReplica) {
 	return
 }
 
-func NewMetaPartition(partitionID, start, end uint64) (mp *MetaPartition) {
-	mp = &MetaPartition{PartitionID: partitionID, Start: start, End: end}
+func NewMetaPartition(partitionID, start, end uint64, nsName string) (mp *MetaPartition) {
+	mp = &MetaPartition{PartitionID: partitionID, Start: start, End: end, nsName: nsName}
 	mp.Replicas = make([]*MetaReplica, 0)
 	mp.status = MetaPartitionUnavailable
 	return
@@ -155,18 +156,6 @@ func (mp *MetaPartition) checkStatus(writeLog bool, replicaNum int) {
 	}
 }
 
-func (mp *MetaPartition) checkThreshold(threshold float32, size uint64) (t *proto.AdminTask) {
-	mr, err := mp.getLeaderMetaReplica()
-	if err != nil {
-		log.LogError(fmt.Sprintf("meta group %v no leader", mp.PartitionID))
-		return
-	}
-	if float32(mr.Used/size) > threshold {
-		t = mr.generateUpdateMetaReplicaTask(mp.PartitionID)
-	}
-	return
-}
-
 func (mp *MetaPartition) getLeaderMetaReplica() (mr *MetaReplica, err error) {
 	for _, mr = range mp.Replicas {
 		if mr.isLeader {
@@ -260,7 +249,6 @@ func (mp *MetaPartition) updateMetaPartition(mgr *proto.MetaPartitionReport, met
 		mp.AddReplica(mr)
 	}
 	mr.status = (uint8)(mgr.Status)
-	mr.Used = mgr.Used
 	mr.isLeader = mgr.IsLeader
 	mr.setLastReportTime()
 	mp.Lock()
@@ -425,8 +413,13 @@ func (mp *MetaPartition) generateLoadMetaPartitionTasks() (tasks []*proto.AdminT
 	return
 }
 
-func (mr *MetaReplica) generateUpdateMetaReplicaTask(groupId uint64) (t *proto.AdminTask) {
-	req := &proto.DeleteMetaPartitionRequest{GroupId: groupId}
+func (mp *MetaPartition) generateUpdateMetaReplicaTask(groupId uint64, end uint64) (t *proto.AdminTask) {
+	mr, err := mp.getLeaderMetaReplica()
+	if err != nil {
+		log.LogError(fmt.Sprintf("meta group %v no leader", mp.PartitionID))
+		return
+	}
+	req := &proto.UpdateMetaPartitionRequest{GroupId: groupId, End: end, NsName: mp.nsName}
 	t = proto.NewAdminTask(OpUpdateMetaPartition, mr.Addr, req)
 	return
 }

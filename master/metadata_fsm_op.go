@@ -2,7 +2,9 @@ package master
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/tiglabs/raft/proto"
 	"strconv"
 	"strings"
 )
@@ -156,6 +158,24 @@ func (c *Cluster) syncAddDataNode(dataNode *DataNode) (err error) {
 	return c.submit(metadata)
 }
 
+func (c *Cluster) addRaftNode(nodeID uint64, addr string) (err error) {
+	peer := proto.Peer{ID: nodeID}
+	_, err = c.partition.ChangeMember(proto.ConfAddNode, peer, []byte(addr))
+	if err != nil {
+		return errors.New("action[addRaftNode] error: " + err.Error())
+	}
+	return nil
+}
+
+func (c *Cluster) removeRaftNode(nodeID uint64, addr string) (err error) {
+	peer := proto.Peer{ID: nodeID}
+	_, err = c.partition.ChangeMember(proto.ConfRemoveNode, peer, []byte(addr))
+	if err != nil {
+		return errors.New("action[removeRaftNode] error: " + err.Error())
+	}
+	return nil
+}
+
 func (c *Cluster) handleApply(cmd *Metadata) (err error) {
 	if cmd == nil {
 		return fmt.Errorf("metadata can't be null")
@@ -208,7 +228,7 @@ func (c *Cluster) applyAddMetaPartition(cmd *Metadata) {
 	if keys[1] == MetaPartitionAcronym {
 		mpv := &MetaPartitionValue{}
 		json.Unmarshal(cmd.V, mpv)
-		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End)
+		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End, keys[2])
 		ns, _ := c.getNamespace(keys[2])
 		ns.MetaPartitions[mp.PartitionID] = mp
 	}
@@ -345,7 +365,7 @@ func (c *Cluster) loadMetaPartitions() (err error) {
 			err = fmt.Errorf("action[decodeMetaPartitionValue],value:%v,err:%v", encodedValue.Data(), err)
 			return
 		}
-		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End)
+		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End, nsName)
 		mp.PersistenceHosts = strings.Split(mpv.Hosts, UnderlineSeparator)
 		ns.MetaPartitions[mp.PartitionID] = mp
 		encodedKey.Free()

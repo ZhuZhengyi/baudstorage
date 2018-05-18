@@ -107,7 +107,7 @@ type DataNodeHeartBeatResponse struct {
 type MetaPartitionReport struct {
 	GroupId  uint64
 	Status   int
-	Used     uint64
+	MaxInodeID uint64
 	IsLeader bool
 }
 

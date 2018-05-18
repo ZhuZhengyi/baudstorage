@@ -209,7 +209,6 @@ func (c *Cluster) checkMetaGroups(ns *NameSpace) {
 		mp.checkStatus(true, int(ns.mpReplicaNum))
 		mp.checkReplicas(c, ns.Name)
 		tasks = append(tasks, mp.generateReplicaTask()...)
-		tasks = append(tasks, mp.checkThreshold(ns.threshold, ns.mpSize))
 	}
 	c.putMetaNodeTasks(tasks)
 
@@ -371,9 +370,10 @@ errDeal:
 
 func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHeartbeatResponse) {
 	var (
-		metaNode *MetaNode
-		err      error
-		logMsg   string
+		metaNode  *MetaNode
+		err       error
+		logMsg    string
+		threshold bool
 	)
 
 	if metaNode, err = c.getMetaNode(nodeAddr); err != nil {
@@ -383,10 +383,11 @@ func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHea
 	logMsg = fmt.Sprintf("action[dealMetaNodeHeartbeat],metaNode:%v ReportTime:%v  success", metaNode.Addr, time.Now().Unix())
 	log.LogDebug(logMsg)
 	metaNode.setNodeAlive()
-	metaNode.metaRangeInfo = resp.MetaPartitionInfo
-	c.UpdateMetaNode(metaNode)
-	metaNode.metaRangeCount = len(metaNode.metaRangeInfo)
-	metaNode.metaRangeInfo = nil
+	metaNode.metaRangeInfos = resp.MetaPartitionInfo
+	threshold = metaNode.Used/metaNode.Total < DefaultMetaPartitionThreshold
+	c.UpdateMetaNode(metaNode, threshold)
+	metaNode.metaRangeCount = len(metaNode.metaRangeInfos)
+	metaNode.metaRangeInfos = nil
 
 	return
 errDeal:
@@ -564,13 +565,21 @@ func (c *Cluster) UpdateDataNode(dataNode *DataNode) {
 	}
 }
 
-func (c *Cluster) UpdateMetaNode(metaNode *MetaNode) {
-	for _, mr := range metaNode.metaRangeInfo {
+func (c *Cluster) UpdateMetaNode(metaNode *MetaNode, threshold bool) {
+	tasks := make([]*proto.AdminTask, 0)
+	for _, mr := range metaNode.metaRangeInfos {
 		if mr == nil {
 			continue
 		}
+
 		if mp, err := c.getMetaPartitionByID(mr.GroupId); err == nil {
 			mp.updateMetaPartition(mr, metaNode)
+			if threshold {
+				end := mr.MaxInodeID + DefaultMinMetaPartitionRange
+				t := mp.generateUpdateMetaReplicaTask(mp.PartitionID, end)
+				tasks = append(tasks, t)
+			}
 		}
 	}
+	c.putMetaNodeTasks(tasks)
 }
