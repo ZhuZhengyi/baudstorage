@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/config"
@@ -60,9 +61,9 @@ type MetaNode struct {
 }
 
 // Start this MeteNode with specified configuration.
-//  1. Start tcp server and accept connection from master and clients.
-//  2. Restore each meta range from snapshot.
-//  3. Restore raft fsm of each meta range.
+//  1. Start and load each meta range from snapshot.
+//  2. Restore raft fsm of each meta range.
+//  3. Start tcp server and accept connection from master and clients.
 func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	// Parallel safe.
 	m.stateMutex.Lock()
@@ -92,7 +93,7 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 		return
 	}
 
-	// Start tcp server
+	// Start and listen server
 	if err = m.startServer(); err != nil {
 		return
 	}
