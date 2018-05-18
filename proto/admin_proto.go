@@ -161,7 +161,7 @@ type MetaPartitionOfflineRequest struct {
 
 type MetaPartitionOfflineResponse struct {
 	PartitionID uint64
-	NsName string
+	NsName      string
 	Status      uint8
 	Result      string
 }

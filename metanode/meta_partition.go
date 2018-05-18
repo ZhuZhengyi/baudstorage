@@ -16,7 +16,9 @@ import (
 	"github.com/tiglabs/baudstorage/sdk/stream"
 )
 
-const defaultBTreeDegree = 32
+const (
+	defaultBTreeDegree = 32
+)
 
 // Errors
 var (
@@ -42,6 +44,7 @@ type MetaPartitionConfig struct {
 	RaftGroupID   uint64              `json:"raftGroupID"`
 	LeaderID      uint64              `json:"-"`
 	RaftPartition raftstore.Partition `json:"-"`
+	MetaManager   *MetaManager        `json:"-"`
 }
 
 // MetaPartition manages necessary information of meta range, include ID, boundary of range and raft identity.
@@ -132,7 +135,7 @@ func (mp *MetaPartition) LoadMeta() (err error) {
 
 func (mp *MetaPartition) StoreMeta() (err error) {
 	// Store Meta to file
-	metaFile := path.Join(mp.RootDir, "_meta")
+	metaFile := path.Join(mp.RootDir, ".meta")
 	fp, err := os.OpenFile(metaFile, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE,
 		0655)
 	if err != nil {
@@ -318,7 +321,7 @@ func (mp *MetaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 		var reply []byte
 		resp := &CreateInoResp{}
 		resp.Info.Inode = ino.Inode
-		resp.Info.Type = ino.Type
+		resp.Info.Mode = ino.Type
 		resp.Info.CreateTime = ino.CreateTime
 		resp.Info.ModifyTime = ino.ModifyTime
 		resp.Info.AccessTime = ino.AccessTime
@@ -405,17 +408,21 @@ func (mp *MetaPartition) Open(req *OpenReq, p *Packet) (err error) {
 	return
 }
 
-func (mp *MetaPartition) DeletePartition(req []byte) (err error) {
-	_, err = mp.Put(opDeletePartition, req)
+func (mp *MetaPartition) DeletePartition() (err error) {
+	_, err = mp.Put(opDeletePartition, nil)
 	return
 }
 
-func (mp *MetaPartition) UpdatePartition(req []byte) (err error) {
-	_, err = mp.Put(opUpdatePartition, req)
+func (mp *MetaPartition) UpdatePartition(req *proto.UpdateMetaPartitionRequest) (err error) {
+	reqData, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
+	_, err = mp.Put(opUpdatePartition, reqData)
 	return
 }
 
 func (mp *MetaPartition) OfflienPartition(req []byte) (err error) {
-	_, err = mp.Put(opOfflineRequest, req)
+	_, err = mp.Put(opOfflinePartition, req)
 	return
 }

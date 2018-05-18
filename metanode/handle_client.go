@@ -2,12 +2,9 @@ package metanode
 
 import (
 	"encoding/json"
-	"errors"
-	"net"
-	"time"
-
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/raft/util/log"
+	"net"
 )
 
 // Handle OpCreate Inode
@@ -20,7 +17,7 @@ func (m *MetaNode) opCreateInode(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	if ok := m.ProxyServe(conn, mp, p); !ok {
+	if m.ProxyServe(conn, mp, p) {
 		return
 	}
 	if err = mp.CreateInode(req, p); err != nil {
@@ -41,7 +38,7 @@ func (m *MetaNode) opCreateDentry(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return err
 	}
-	if ok := m.ProxyServe(conn, mp, p); !ok {
+	if m.ProxyServe(conn, mp, p) {
 		return
 	}
 	err = mp.CreateDentry(req, p)
@@ -63,7 +60,7 @@ func (m *MetaNode) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	if ok := m.ProxyServe(conn, mp, p); !ok {
+	if m.ProxyServe(conn, mp, p) {
 		return
 	}
 	err = mp.DeleteDentry(req, p)
@@ -84,7 +81,7 @@ func (m *MetaNode) opDeleteInode(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	if ok := m.ProxyServe(conn, mp, p); !ok {
+	if m.ProxyServe(conn, mp, p) {
 		return
 	}
 	err = mp.DeleteInode(req, p)
@@ -105,7 +102,7 @@ func (m *MetaNode) opReadDir(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	if ok := m.ProxyServe(conn, mp, p); !ok {
+	if m.ProxyServe(conn, mp, p) {
 		return
 	}
 	err = mp.ReadDir(req, p)
@@ -127,7 +124,7 @@ func (m *MetaNode) opOpen(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	if ok := m.ProxyServe(conn, mp, p); !ok {
+	if m.ProxyServe(conn, mp, p) {
 		return
 	}
 	err = mp.Open(req, p)
@@ -139,65 +136,46 @@ func (m *MetaNode) opOpen(conn net.Conn, p *Packet) (err error) {
 	return
 }
 
-// ReplyToClient send reply data though tcp connection to client.
-func (m *MetaNode) replyClient(conn net.Conn, p *Packet) (err error) {
-	// Handle panic
-	defer func() {
-		if r := recover(); r != nil {
-			switch data := r.(type) {
-			case error:
-				err = data
-			default:
-				err = errors.New(data.(string))
-			}
-		}
-	}()
-	// Process data and send reply though specified tcp connection.
-	err = p.WriteToConn(conn)
-	return
-}
-
 func (m *MetaNode) ProxyServe(conn net.Conn, mp *MetaPartition,
-	p *Packet) (ok bool) {
+	p *Packet) bool {
 	var (
 		mConn      net.Conn
-		status     uint8
 		leaderAddr string
 		err        error
 	)
-	if leaderAddr, ok = mp.isLeader(); ok {
-		return
+	leaderAddr, ok := mp.isLeader()
+	if ok {
+		return false
 	}
 	if leaderAddr == "" {
 		err = ErrNonLeader
-		status = proto.OpErr
-		goto end
+		goto errEnd
 	}
 	// Get Master Conn
 	mConn, err = m.proxyPool.Get(leaderAddr)
 	if err != nil {
-		status = proto.OpErr
-		goto end
+		goto errEnd
 	}
 	defer func() {
 		m.proxyPool.Put(mConn)
 	}()
 	// Send Master Conn
 	if err = p.WriteToConn(mConn); err != nil {
-		status = proto.OpErr
-		goto end
+		goto errEnd
 	}
 	// Read conn from master
-	if err = p.ReadFromConn(mConn, proto.ReadDeadlineTime*time.
-		Second); err != nil {
-		status = proto.OpErr
-		goto end
+	if err = p.ReadFromConn(mConn, proto.NoReadDeadlineTime); err != nil {
+		goto errEnd
 	}
-end:
-	p.PackErrorWithBody(status, nil)
+	if err = p.WriteToConn(conn); err != nil {
+		log.Error("send to client: %s", err.Error())
+		return false
+	}
+errEnd:
+	p.PackErrorWithBody(proto.OpErr, nil)
 	p.WriteToConn(conn)
 	if err != nil {
 		log.Error("proxy to master: %s", err.Error())
 	}
-	return
+	return false
 }

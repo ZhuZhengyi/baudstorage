@@ -4,14 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net"
-	"strconv"
-	"time"
-
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
+	"io"
+	"net"
+	"strconv"
 )
 
 // StartTcpService bind and listen specified port and accept tcp connections.
@@ -42,7 +40,7 @@ func (m *MetaNode) startServer() (err error) {
 	return
 }
 
-func (m *MetaNode) stopTcpServer() {
+func (m *MetaNode) stopServer() {
 	if m.httpStopC != nil {
 		defer func() {
 			if r := recover(); r != nil {
@@ -64,8 +62,10 @@ func (m *MetaNode) servConn(conn net.Conn, stopC chan uint8) {
 		default:
 		}
 		p := &Packet{}
-		if err := p.ReadFromConn(conn, proto.ReadDeadlineTime*time.Second); err != nil && err != io.EOF {
-			log.LogError("serve MetaNode: ", err.Error())
+		if err := p.ReadFromConn(conn, proto.NoReadDeadlineTime); err != nil {
+			if err != io.EOF {
+				log.LogError("serve MetaNode: ", err.Error())
+			}
 			return
 		}
 		// Start a goroutine for packet handling. Do not block connection read goroutine.
@@ -101,7 +101,7 @@ func (m *MetaNode) handlePacket(conn net.Conn, p *Packet) (err error) {
 		err = m.opOpen(conn, p)
 	case proto.OpCreateMetaPartition:
 		// Mater → MetaNode
-		err = m.opCreateMetaRange(conn, p)
+		err = m.opCreateMetaPartition(conn, p)
 	case proto.OpMetaNodeHeartbeat:
 		err = m.opMetaNodeHeartbeat(conn, p)
 	case proto.OpDeleteMetaPartition:
@@ -120,7 +120,7 @@ func (m *MetaNode) handlePacket(conn net.Conn, p *Packet) (err error) {
 }
 
 // ReplyToClient send reply data though tcp connection to client.
-func (m *MetaNode) replyToClient(conn net.Conn, p *Packet, data []byte) (err error) {
+func (m *MetaNode) replyClient(conn net.Conn, p *Packet) (err error) {
 	// Handle panic
 	defer func() {
 		if r := recover(); r != nil {
@@ -133,7 +133,6 @@ func (m *MetaNode) replyToClient(conn net.Conn, p *Packet, data []byte) (err err
 		}
 	}()
 	// Process data and send reply though specified tcp connection.
-	p.Data = data
 	err = p.WriteToConn(conn)
 	return
 }
@@ -151,6 +150,10 @@ func (m *MetaNode) replyToMaster(ip string, data interface{}) (err error) {
 			}
 		}
 	}()
+	if ip == "" {
+		err = ErrNotLeader
+		return
+	}
 	// Process data and send reply though http specified remote address.
 	jsonBytes, err := json.Marshal(data)
 	if err != nil {
