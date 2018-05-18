@@ -10,7 +10,7 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
-func (v *Vol) check() {
+func (v *Vol) checkExtent() {
 	ticker := time.Tick(time.Second * 100)
 	for {
 		select {

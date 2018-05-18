@@ -18,7 +18,6 @@ import (
 	"time"
 	"path"
 	"github.com/tiglabs/baudstorage/util"
-	"go/token"
 )
 
 var (
