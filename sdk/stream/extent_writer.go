@@ -243,7 +243,7 @@ func (writer *ExtentWriter) flush() (err error) {
 		if err == nil {
 			return
 		}
-		err = errors.Annotatef(err, "writer[%v] flush Failed", writer.toString())
+		err = errors.Annotatef(err, "flush Failed")
 		if !writer.recover() {
 			return
 		}

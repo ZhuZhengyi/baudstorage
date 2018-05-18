@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
 	"github.com/tiglabs/baudstorage/util/log"
-	"github.com/juju/errors"
 )
 
 type AppendExtentKeyFunc func(inode uint64, key proto.ExtentKey) error
@@ -110,8 +110,8 @@ func (client *ExtentClient) Write(inode uint64, data []byte) (write int, err err
 	if stream == nil {
 		return 0, fmt.Errorf("cannot init write stream")
 	}
-	write,err=stream.write(data, len(data))
-	if err!=nil {
+	write, err = stream.write(data, len(data))
+	if err != nil {
 		log.LogError(errors.ErrorStack(err))
 	}
 	return

@@ -8,7 +8,6 @@ import (
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
-	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
@@ -84,14 +83,14 @@ func (stream *StreamWriter) init() (err error) {
 		err = stream.flushCurrExtentWriter()
 	}
 	if err != nil {
-		return errors.Annotatef(err, "StreamInfo[%v] WriteInit", stream.toString())
+		return errors.Annotatef(err, "WriteInit")
 	}
 	if stream.getWriter() != nil {
 		return
 	}
 	err = stream.allocateNewExtentWriter()
 	if err != nil {
-		errors.Annotatef(err, "StreamInfo[%v] WriteInit AllocNewExtentFailed", stream.toString())
+		errors.Annotatef(err, "WriteInit AllocNewExtentFailed")
 		return
 	}
 
@@ -167,12 +166,6 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 }
 
 func (stream *StreamWriter) recoverExtent() (err error) {
-	defer func() {
-		if err != nil {
-			log.LogError(fmt.Sprintf(ActionRecoverExtent+stream.currentWriter.toString()+" failed[%v]", errors.ErrorStack(err)))
-		}
-	}()
-
 	sendList := stream.getWriter().getNeedRetrySendPackets()
 	if err = stream.allocateNewExtentWriter(); err != nil {
 		err = errors.Annotatef(err, "RecoverExtent Failed")
@@ -233,7 +226,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 func (stream *StreamWriter) createExtent(vol *sdk.VolGroup) (extentId uint64, err error) {
 	connect, err := stream.wrapper.GetConnect(vol.Hosts[0])
 	if err != nil {
-		err = errors.Annotatef(err, " streamWriter[%v] get connect from volhosts[%v]", stream.toString(), vol.Hosts[0])
+		err = errors.Annotatef(err, " get connect from volhosts[%v]", vol.Hosts[0])
 		return
 	}
 	defer func() {
