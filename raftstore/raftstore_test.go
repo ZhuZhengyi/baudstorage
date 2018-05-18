@@ -1,11 +1,13 @@
 package raftstore
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
-	"sync/atomic"
 	"testing"
+	"time"
+	"path"
+	"sync/atomic"
+	"encoding/json"
 
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
@@ -69,7 +71,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 	for nid := 1; nid <= 3; nid++ {
 		TestAddresses[uint64(nid)] = &raftAddr{
-			ip: fmt.Sprintf("localhost"),
+			ip: fmt.Sprintf("127.0.0.%d", nid),
 		}
 
 		fmt.Println(TestAddresses[uint64(nid)])
@@ -80,7 +82,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 	for n := 1; n <= 3; n++ {
 		cfg.NodeID = uint64(n)
-		cfg.WalPath = fmt.Sprintf("wal")
+		cfg.WalPath = path.Join("wal", strconv.FormatUint(cfg.NodeID, 10))
 		cfg.IpAddr = TestAddresses[uint64(n)].ip
 
 		raftServer, err := NewRaftStore(&cfg)
@@ -152,6 +154,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 					t.Fatal(err)
 				}
 
+				time.Sleep(5 * time.Second)
 				t.SkipNow()
 			}
 		}
