@@ -16,6 +16,8 @@ const (
 	ActionGetConnect       = "ActionGetConnect"
 	ActionStreamWriteWrite = "ActionStreamWriteWrite"
 	ActionRecoverExtent    = "ActionRecoverExtent"
+	IsFlushIng = 1
+	NoFlushIng=-1
 )
 
 type StreamWriter struct {
@@ -29,6 +31,7 @@ type StreamWriter struct {
 	currentInode    uint64        //inode
 	flushLock       sync.Mutex
 	appendExtentKey AppendExtentKeyFunc
+	isFlushIng      int32
 }
 
 func NewStreamWriter(wrapper *sdk.VolGroupWrapper, inode uint64, appendExtentKey AppendExtentKeyFunc) (stream *StreamWriter) {
@@ -37,6 +40,7 @@ func NewStreamWriter(wrapper *sdk.VolGroupWrapper, inode uint64, appendExtentKey
 	stream.wrapper = wrapper
 	stream.appendExtentKey = appendExtentKey
 	stream.currentInode = inode
+	stream.isFlushIng=NoFlushIng
 	go stream.autoFlushThread()
 
 	return
@@ -120,6 +124,7 @@ func (stream *StreamWriter) write(data []byte, size int) (total int, err error) 
 
 func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 	defer func() {
+		stream.isFlushIng=NoFlushIng
 		stream.flushLock.Unlock()
 		if err == nil {
 			stream.errCount = 0
@@ -133,6 +138,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 			}
 		}
 	}()
+	stream.isFlushIng=IsFlushIng
 	stream.flushLock.Lock()
 	writer := stream.getWriter()
 	if writer == nil {
@@ -251,6 +257,9 @@ func (stream *StreamWriter) autoFlushThread() {
 		select {
 		case <-ticker:
 			if stream.getWriter() == nil {
+				continue
+			}
+			if stream.isFlushIng==IsFlushIng{
 				continue
 			}
 			stream.flushCurrExtentWriter()
