@@ -27,19 +27,19 @@ const (
 	DefaultEveryReleaseVolCount          = 10
 	DefaultReleaseVolAfterLoadVolSeconds = 5 * 60
 	DefaultReleaseVolInternalSeconds     = 10
-	DefaultCheckHeartBeatIntervalSeconds = 60
-	DefaultFileDelayCheckLackSec         = 5 * DefaultCheckHeartBeatIntervalSeconds
-	DefaultFileDelayCheckCrcSec          = 20 * DefaultCheckHeartBeatIntervalSeconds
+	DefaultCheckHeartbeatIntervalSeconds = 60
+	DefaultFileDelayCheckLackSec         = 5 * DefaultCheckHeartbeatIntervalSeconds
+	DefaultFileDelayCheckCrcSec          = 20 * DefaultCheckHeartbeatIntervalSeconds
 	NoHeartBeatTimes                     = 3
-	DefaultNodeTimeOutSec                = NoHeartBeatTimes * DefaultCheckHeartBeatIntervalSeconds
-	DefaultVolTimeOutSec                 = 5 * DefaultCheckHeartBeatIntervalSeconds
+	DefaultNodeTimeOutSec                = NoHeartBeatTimes * DefaultCheckHeartbeatIntervalSeconds
+	DefaultVolTimeOutSec                 = 5 * DefaultCheckHeartbeatIntervalSeconds
 	DefaultVolMissSec                    = 24 * 3600
 	DefaultCheckVolIntervalSeconds       = 60
 	DefaultVolWarnInterval               = 60 * 60
 	LoadVolWaitTime                      = 100
 	DefaultLoadVolFrequencyTime          = 60 * 60
 	DefaultEveryLoadVolCount             = 10
-	DefaultMetaPartitionTimeOutSec       = 5 * DefaultCheckHeartBeatIntervalSeconds
+	DefaultMetaPartitionTimeOutSec       = 5 * DefaultCheckHeartbeatIntervalSeconds
 	DefaultMetaPartitionThreshold        = 0.75
 	DefaultMetaPartitionMemSize          = 16 * util.GB
 )

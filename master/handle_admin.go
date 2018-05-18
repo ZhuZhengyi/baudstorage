@@ -14,7 +14,7 @@ import (
 )
 
 func (m *Master) getIpAndClusterName(w http.ResponseWriter, r *http.Request) {
-	cInfo := &proto.ClusterInfo{Cluster: m.cluster.Name, Ip: strings.Split(r.RemoteAddr, ":")[0],}
+	cInfo := &proto.ClusterInfo{Cluster: m.cluster.Name, Ip: strings.Split(r.RemoteAddr, ":")[0]}
 	bytes, err := json.Marshal(cInfo)
 	if err != nil {
 		goto errDeal

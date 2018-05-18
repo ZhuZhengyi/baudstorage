@@ -16,30 +16,38 @@ type Cluster struct {
 	metaNodes     sync.Map
 	createVolLock sync.Mutex
 	createNsLock  sync.Mutex
+	leaderInfo    *LeaderInfo
 	cfg           *ClusterConfig
 	fsm           *MetadataFsm
 	idAlloc       *IDAllocator
 	partition     raftstore.Partition
 }
 
-func NewCluster(name string) (c *Cluster) {
+func newCluster(name string, leaderInfo *LeaderInfo) (c *Cluster) {
 	c = new(Cluster)
 	c.Name = name
+	c.leaderInfo = leaderInfo
 	c.cfg = NewClusterConfig()
 	c.idAlloc = newIDAllocator(c.fsm.store, c.partition)
 	c.startCheckVolGroups()
 	c.startCheckBackendLoadVolGroups()
 	c.startCheckReleaseVolGroups()
-	c.startCheckHearBeat()
+	c.startCheckHeartbeat()
 	c.startCheckMetaGroups()
 	return
+}
+
+func (c *Cluster) getMasterAddr() (addr string) {
+	return c.leaderInfo.addr
 }
 
 func (c *Cluster) startCheckVolGroups() {
 	go func() {
 		for {
-			for _, ns := range c.namespaces {
-				c.checkVolGroups(ns)
+			if c.partition.IsLeader() {
+				for _, ns := range c.namespaces {
+					c.checkVolGroups(ns)
+				}
 			}
 			time.Sleep(time.Second * time.Duration(c.cfg.CheckVolIntervalSeconds))
 		}
@@ -49,9 +57,10 @@ func (c *Cluster) startCheckVolGroups() {
 func (c *Cluster) startCheckBackendLoadVolGroups() {
 	go func() {
 		for {
-
-			for _, ns := range c.namespaces {
-				c.backendLoadVolGroup(ns)
+			if c.partition.IsLeader() {
+				for _, ns := range c.namespaces {
+					c.backendLoadVolGroup(ns)
+				}
 			}
 			time.Sleep(time.Second)
 		}
@@ -61,49 +70,61 @@ func (c *Cluster) startCheckBackendLoadVolGroups() {
 func (c *Cluster) startCheckReleaseVolGroups() {
 	go func() {
 		for {
-			for _, ns := range c.namespaces {
-				c.processReleaseVolAfterLoadVolGroup(ns)
+			if c.partition.IsLeader() {
+				for _, ns := range c.namespaces {
+					c.processReleaseVolAfterLoadVolGroup(ns)
+				}
 			}
 			time.Sleep(time.Second * DefaultReleaseVolInternalSeconds)
 		}
 	}()
 }
 
-func (c *Cluster) startCheckHearBeat() {
+func (c *Cluster) startCheckHeartbeat() {
 	go func() {
 		for {
-			tasks := make([]*proto.AdminTask, 0)
-			c.dataNodes.Range(func(addr, dataNode interface{}) bool {
-				node := dataNode.(*DataNode)
-				task := node.generateHeartbeatTask()
-				tasks = append(tasks, task)
-				return true
-			})
-			c.putDataNodeTasks(tasks)
-			time.Sleep(time.Second * DefaultCheckHeartBeatIntervalSeconds)
+			c.checkDataNodeHeartbeat()
+			time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
 		}
 	}()
 
 	go func() {
 		for {
-			tasks := make([]*proto.AdminTask, 0)
-			c.metaNodes.Range(func(addr, metaNode interface{}) bool {
-				node := metaNode.(*MetaNode)
-				task := node.generateHeartbeatTask()
-				tasks = append(tasks, task)
-				return true
-			})
-			c.putMetaNodeTasks(tasks)
-			time.Sleep(time.Second * DefaultCheckHeartBeatIntervalSeconds)
+			c.checkMetaNodeHeartbeat()
+			time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
 		}
 	}()
+}
+
+func (c *Cluster) checkDataNodeHeartbeat() {
+	tasks := make([]*proto.AdminTask, 0)
+	c.dataNodes.Range(func(addr, dataNode interface{}) bool {
+		node := dataNode.(*DataNode)
+		task := node.generateHeartbeatTask(c.getMasterAddr())
+		tasks = append(tasks, task)
+		return true
+	})
+	c.putDataNodeTasks(tasks)
+}
+
+func (c *Cluster) checkMetaNodeHeartbeat() {
+	tasks := make([]*proto.AdminTask, 0)
+	c.metaNodes.Range(func(addr, metaNode interface{}) bool {
+		node := metaNode.(*MetaNode)
+		task := node.generateHeartbeatTask(c.getMasterAddr())
+		tasks = append(tasks, task)
+		return true
+	})
+	c.putMetaNodeTasks(tasks)
 }
 
 func (c *Cluster) startCheckMetaGroups() {
 	go func() {
 		for {
-			for _, ns := range c.namespaces {
-				c.checkMetaGroups(ns)
+			if c.partition.IsLeader() {
+				for _, ns := range c.namespaces {
+					c.checkMetaGroups(ns)
+				}
 			}
 			time.Sleep(time.Second * time.Duration(c.cfg.CheckVolIntervalSeconds))
 		}

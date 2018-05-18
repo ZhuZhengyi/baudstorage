@@ -390,7 +390,7 @@ func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHea
 
 	return
 errDeal:
-	logMsg = fmt.Sprintf("nodeAddr %v hearbeat error :%v", nodeAddr, err.Error())
+	logMsg = fmt.Sprintf("nodeAddr %v heartbeat error :%v", nodeAddr, err.Error())
 	log.LogError(logMsg)
 	return
 }
@@ -547,7 +547,7 @@ func (c *Cluster) dealDataNodeHeartbeat(nodeAddr string, resp *proto.DataNodeHea
 
 	return
 errDeal:
-	logMsg = fmt.Sprintf("nodeAddr %v hearbeat error :%v", nodeAddr, err.Error())
+	logMsg = fmt.Sprintf("nodeAddr %v heartbeat error :%v", nodeAddr, err.Error())
 	log.LogError(logMsg)
 	return
 }
