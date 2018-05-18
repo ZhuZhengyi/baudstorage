@@ -51,8 +51,8 @@ func (m *MetaNode) opCreateMetaPartition(conn net.Conn, p *Packet) (err error) {
 	defer func() {
 		// Response task result to master.
 		resp := &proto.CreateMetaPartitionResponse{
-			NsName:  req.NsName,
-			GroupId: req.GroupId,
+			NsName:      req.NsName,
+			PartitionID: req.PartitionID,
 		}
 		if err != nil {
 			// Operation failure.
@@ -67,13 +67,13 @@ func (m *MetaNode) opCreateMetaPartition(conn net.Conn, p *Packet) (err error) {
 		m.replyToMaster(m.masterAddr, adminTask)
 	}()
 	// Create new  MetaPartition.
-	id := fmt.Sprintf("%d", req.GroupId)
+	id := fmt.Sprintf("%d", req.PartitionID)
 	mConf := MetaPartitionConfig{
 		ID:          id,
 		Start:       req.Start,
 		End:         req.End,
 		Cursor:      req.Start,
-		RaftGroupID: req.GroupId,
+		RaftGroupID: req.PartitionID,
 		Peers:       req.Members,
 		RootDir:     path.Join(m.metaDir, id),
 		MetaManager: m.metaManager,
@@ -147,7 +147,7 @@ func (m *MetaNode) opMetaNodeHeartbeat(conn net.Conn, p *Packet) (err error) {
 		// every partition used
 		m.metaManager.Range(func(id string, mp *MetaPartition) bool {
 			mpr := &proto.MetaPartitionReport{}
-			mpr.GroupId = mp.RaftGroupID
+			mpr.PartitionID = mp.RaftGroupID
 			mpr.IsLeader = mp.RaftPartition.IsLeader()
 			mpr.Status = 1
 			mpr.Used = mp.Sizeof()
@@ -186,10 +186,10 @@ func (m *MetaNode) opDeleteMetaPartition(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	resp := &proto.DeleteMetaPartitionResponse{
-		GroupId: req.GroupId,
-		Status:  proto.OpErr,
+		PartitionID: req.PartitionID,
+		Status:      proto.OpErr,
 	}
-	mp, err = m.metaManager.LoadMetaPartition(fmt.Sprintf("%d", req.GroupId))
+	mp, err = m.metaManager.LoadMetaPartition(fmt.Sprintf("%d", req.PartitionID))
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		m.ackAdmin(conn, p)
@@ -238,7 +238,7 @@ func (m *MetaNode) opUpdateMetaPartition(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	var mp *MetaPartition
-	mp, err = m.metaManager.LoadMetaPartition(fmt.Sprintf("%d", req.GroupId))
+	mp, err = m.metaManager.LoadMetaPartition(fmt.Sprintf("%d", req.PartitionID))
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		m.ackAdmin(conn, p)
@@ -252,10 +252,10 @@ func (m *MetaNode) opUpdateMetaPartition(conn net.Conn, p *Packet) (err error) {
 		p.WriteToConn(conn)
 	}()
 	resp := &proto.UpdateMetaPartitionResponse{
-		NsName:  req.NsName,
-		GroupId: req.GroupId,
-		End:     req.End,
-		Status:  proto.OpOk,
+		NsName:      req.NsName,
+		PartitionID: req.PartitionID,
+		End:         req.End,
+		Status:      proto.OpOk,
 	}
 	if err = mp.UpdatePartition(req); err != nil {
 		resp.Status = proto.OpErr

@@ -122,23 +122,23 @@ func getMetaPartitionView(mp *MetaPartition) (mpView *MetaPartitionView) {
 
 func (m *Master) getMetaPartition(w http.ResponseWriter, r *http.Request) {
 	var (
-		body      []byte
-		code      int
-		err       error
-		name      string
-		groupId   uint64
-		namespace *NameSpace
-		metaGroup *MetaPartition
-		ok        bool
+		body        []byte
+		code        int
+		err         error
+		name        string
+		partitionID uint64
+		namespace   *NameSpace
+		metaGroup   *MetaPartition
+		ok          bool
 	)
-	if name, groupId, err = parseGetMetaPartitionPara(r); err != nil {
+	if name, partitionID, err = parseGetMetaPartitionPara(r); err != nil {
 		goto errDeal
 	}
 	if namespace, ok = m.cluster.namespaces[name]; !ok {
 		err = NamespaceNotFound
 		goto errDeal
 	}
-	if metaGroup, ok = namespace.MetaPartitions[groupId]; !ok {
+	if metaGroup, ok = namespace.MetaPartitions[partitionID]; !ok {
 		err = MetaGroupNotFound
 		goto errDeal
 	}

@@ -14,17 +14,17 @@ type Peer struct {
 	Addr string
 }
 type CreateMetaPartitionRequest struct {
-	MetaId  string
-	NsName  string
-	Start   uint64
-	End     uint64
-	GroupId uint64
-	Members []Peer
+	MetaId      string
+	NsName      string
+	Start       uint64
+	End         uint64
+	PartitionID uint64
+	Members     []Peer
 }
 
 type CreateMetaPartitionResponse struct {
-	NsName  string
-	GroupId uint64
-	Status  uint8
-	Result  string
+	NsName      string
+	PartitionID uint64
+	Status      uint8
+	Result      string
 }
