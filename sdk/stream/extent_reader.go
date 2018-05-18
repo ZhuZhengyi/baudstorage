@@ -56,7 +56,7 @@ func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
 	//	reader.cache.copyData(data, offset, size)
 	//	return
 	//}
-	//reader.Lock()
+	reader.Lock()
 	p := NewReadPacket(reader.key, offset, size)
 	reader.Unlock()
 	err = reader.readDataFromVol(p, data)
