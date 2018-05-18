@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
 	"github.com/tiglabs/baudstorage/util"
@@ -16,8 +17,8 @@ const (
 	ActionGetConnect       = "ActionGetConnect"
 	ActionStreamWriteWrite = "ActionStreamWriteWrite"
 	ActionRecoverExtent    = "ActionRecoverExtent"
-	IsFlushIng = 1
-	NoFlushIng=-1
+	IsFlushIng             = 1
+	NoFlushIng             = -1
 )
 
 type StreamWriter struct {
@@ -40,7 +41,7 @@ func NewStreamWriter(wrapper *sdk.VolGroupWrapper, inode uint64, appendExtentKey
 	stream.wrapper = wrapper
 	stream.appendExtentKey = appendExtentKey
 	stream.currentInode = inode
-	stream.isFlushIng=NoFlushIng
+	stream.isFlushIng = NoFlushIng
 	go stream.autoFlushThread()
 
 	return
@@ -83,14 +84,14 @@ func (stream *StreamWriter) init() (err error) {
 		err = stream.flushCurrExtentWriter()
 	}
 	if err != nil {
-		return
+		return errors.Annotatef(err, "StreamInfo[%v] WriteInit", stream.toString())
 	}
 	if stream.getWriter() != nil {
 		return
 	}
 	err = stream.allocateNewExtentWriter()
 	if err != nil {
-		log.LogError(fmt.Sprintf(util.GetFuncTrace()+" AllocNewExtentFailed err[%v]", err.Error()))
+		errors.Annotatef(err, "StreamInfo[%v] WriteInit AllocNewExtentFailed", stream.toString())
 		return
 	}
 
@@ -103,7 +104,8 @@ func (stream *StreamWriter) write(data []byte, size int) (total int, err error) 
 		if err == nil {
 			return
 		}
-		log.LogError(fmt.Sprintf(util.GetFuncTrace()+ActionStreamWriteWrite+" failed err[%v]", err.Error()))
+		err = errors.Annotatef(err, "Stream[%v] Write", stream.toString())
+		log.LogError(errors.ErrorStack(err))
 	}()
 	for total < size {
 		if err = stream.init(); err != nil {
@@ -124,7 +126,7 @@ func (stream *StreamWriter) write(data []byte, size int) (total int, err error) 
 
 func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 	defer func() {
-		stream.isFlushIng=NoFlushIng
+		stream.isFlushIng = NoFlushIng
 		stream.flushLock.Unlock()
 		if err == nil {
 			stream.errCount = 0
@@ -138,7 +140,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 			}
 		}
 	}()
-	stream.isFlushIng=IsFlushIng
+	stream.isFlushIng = IsFlushIng
 	stream.flushLock.Lock()
 	writer := stream.getWriter()
 	if writer == nil {
@@ -146,6 +148,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 		return nil
 	}
 	if err = writer.flush(); err != nil {
+		err = errors.Annotatef(err, "writer[%v] Flush Failed", writer.toString())
 		return err
 	}
 	ek := writer.toKey()
@@ -153,6 +156,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 		err = stream.appendExtentKey(stream.currentInode, ek)
 	}
 	if err != nil {
+		err = errors.Annotatef(err, "update to MetaNode fileSize[%v] Failed", ek.Size)
 		return err
 	}
 	if writer.isFullExtent() {
@@ -164,29 +168,29 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 
 func (stream *StreamWriter) recoverExtent() (err error) {
 	defer func() {
-		if err == nil {
-			log.LogInfo(ActionRecoverExtent + stream.currentWriter.toString() + " success")
-		} else {
-			log.LogError(fmt.Sprintf(ActionRecoverExtent+stream.currentWriter.toString()+" failed[%v]", err))
+		if err != nil {
+			log.LogError(fmt.Sprintf(ActionRecoverExtent+stream.currentWriter.toString()+" failed[%v]", errors.ErrorStack(err)))
 		}
 	}()
 
 	sendList := stream.getWriter().getNeedRetrySendPackets()
 	if err = stream.allocateNewExtentWriter(); err != nil {
+		err = errors.Annotatef(err, "RecoverExtent Failed")
 		return
 	}
 	ek := stream.getWriter().toKey()
 	if ek.Size != 0 {
 		err = stream.appendExtentKey(stream.currentInode, ek)
-		fmt.Printf("update2 to %v\n", ek.Size)
 	}
 	if err != nil {
+		err = errors.Annotatef(err, "update filesize[%v] to metanode Failed", ek.Size)
 		return
 	}
 	for e := sendList.Front(); e != nil; e = e.Next() {
 		p := e.Value.(*Packet)
 		_, err = stream.getWriter().write(p.Data, int(p.Size))
 		if err != nil {
+			err = errors.Annotatef(err, "RecoverExtent write failed")
 			return
 		}
 	}
@@ -229,7 +233,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 func (stream *StreamWriter) createExtent(vol *sdk.VolGroup) (extentId uint64, err error) {
 	connect, err := stream.wrapper.GetConnect(vol.Hosts[0])
 	if err != nil {
-		log.LogError(fmt.Sprintf(util.GetFuncTrace()+" streamWriter[%v] volhosts[%v]", stream.toString(), vol.Hosts))
+		err = errors.Annotatef(err, " streamWriter[%v] get connect from volhosts[%v]", stream.toString(), vol.Hosts[0])
 		return
 	}
 	defer func() {
@@ -241,9 +245,11 @@ func (stream *StreamWriter) createExtent(vol *sdk.VolGroup) (extentId uint64, er
 	}()
 	p := NewCreateExtentPacket(vol)
 	if err = p.WriteToConn(connect); err != nil {
+		err = errors.Annotatef(err, "send CreateExtent[%v] to volhosts[%v]", p.GetUniqLogId(), vol.Hosts[0])
 		return
 	}
 	if err = p.ReadFromConn(connect, proto.ReadDeadlineTime); err != nil {
+		err = errors.Annotatef(err, "recive CreateExtent[%v] failed", p.GetUniqLogId(), vol.Hosts[0])
 		return
 	}
 	extentId = p.FileID
@@ -259,7 +265,7 @@ func (stream *StreamWriter) autoFlushThread() {
 			if stream.getWriter() == nil {
 				continue
 			}
-			if stream.isFlushIng==IsFlushIng{
+			if stream.isFlushIng == IsFlushIng {
 				continue
 			}
 			stream.flushCurrExtentWriter()

@@ -240,7 +240,7 @@ func (s *DataNode) PostToMaster(data []byte, url string) (msg []byte, err error)
 				index = 0
 			}
 			masterAddr = s.masterAddrs[index]
-			err = errors.Annotatef(err, ActionPostToMaster+" url[%v] index[%v]", url, i)
+			err = errors.Annotatef(err, ActionPostToMaster+" url[%v] Index[%v]", url, i)
 			continue
 		}
 		scode := resp.StatusCode
