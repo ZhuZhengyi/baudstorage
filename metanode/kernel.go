@@ -13,9 +13,9 @@ import (
 // Dentry wraps necessary properties of `dentry` information in file system.
 //
 type Dentry struct {
-	ParentId uint64 // Id value of parent inode.
+	ParentId uint64 // FileIdId value of parent inode.
 	Name     string // Name of current dentry.
-	Inode    uint64 // Id value of current inode.
+	Inode    uint64 // FileIdId value of current inode.
 	Type     uint32 // Dentry type.
 }
 
