@@ -1,18 +1,20 @@
 package raftstore
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
-	"sync/atomic"
 	"testing"
+	"time"
+	"path"
+	"sync/atomic"
+	"encoding/json"
 
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
 )
 
 type raftAddr struct {
-	ip        string
+	ip string
 }
 
 type testKV struct {
@@ -69,7 +71,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 	for nid := 1; nid <= 3; nid++ {
 		TestAddresses[uint64(nid)] = &raftAddr{
-			ip:        fmt.Sprintf("172.0.0.%d", nid),
+			ip: fmt.Sprintf("127.0.0.%d", nid),
 		}
 
 		fmt.Println(TestAddresses[uint64(nid)])
@@ -80,7 +82,8 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 	for n := 1; n <= 3; n++ {
 		cfg.NodeID = uint64(n)
-		cfg.WalPath = fmt.Sprintf("wal%d", n)
+		cfg.WalPath = path.Join("wal", strconv.FormatUint(cfg.NodeID, 10))
+		cfg.IpAddr = TestAddresses[uint64(n)].ip
 
 		raftServer, err := NewRaftStore(&cfg)
 		if err != nil {
@@ -91,7 +94,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 		peers = append(peers, proto.Peer{ID: uint64(n)})
 
-		for k, v := range TestAddresses{
+		for k, v := range TestAddresses {
 			raftServer.AddNode(uint64(k), v.ip)
 		}
 
@@ -151,6 +154,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 					t.Fatal(err)
 				}
 
+				time.Sleep(5 * time.Second)
 				t.SkipNow()
 			}
 		}
