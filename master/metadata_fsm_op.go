@@ -42,7 +42,7 @@ type MetaPartitionValue struct {
 func newMetaPartitionValue(mp *MetaPartition) (mpv *MetaPartitionValue) {
 	mpv = &MetaPartitionValue{
 		PartitionID: mp.PartitionID,
-		ReplicaNum:  mp.replicaNum,
+		ReplicaNum:  mp.CurReplicaNum,
 		Start:       mp.Start,
 		End:         mp.End,
 		Hosts:       mp.hostsToString(),
@@ -208,7 +208,6 @@ func (c *Cluster) applyAddMetaPartition(cmd *Metadata) {
 	if keys[1] == MetaPartitionAcronym {
 		mpv := &MetaPartitionValue{}
 		json.Unmarshal(cmd.V, mpv)
-		//todo add replicaNum
 		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End)
 		ns, _ := c.getNamespace(keys[2])
 		ns.MetaPartitions[mp.PartitionID] = mp

@@ -44,13 +44,8 @@ const (
 	DefaultMetaPartitionMemSize          = 16 * util.GB
 )
 
-//Address ...
-type Address struct {
-	HttpAddr string
-}
-
 //AddrDatabase ...
-var AddrDatabase = make(map[uint64]*Address)
+var AddrDatabase = make(map[uint64]string)
 
 type ClusterConfig struct {
 	FileDelayCheckCrcSec          int64
@@ -121,11 +116,12 @@ func (cfg *ClusterConfig) parsePeers(peerStr string) error {
 	peerArr := strings.Split(peerStr, CommaSplit)
 	cfg.peerAddrs = peerArr
 	for _, peerAddr := range peerArr {
-		id, _, _, err := parsePeerAddr(peerAddr)
+		id, ip, port, err := parsePeerAddr(peerAddr)
 		if err != nil {
 			return err
 		}
 		cfg.peers = append(cfg.peers, proto.Peer{ID: id})
+		AddrDatabase[id] = fmt.Sprintf("%v:%v", ip, port)
 	}
 	return nil
 }

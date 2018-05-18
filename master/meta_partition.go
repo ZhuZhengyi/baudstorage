@@ -28,7 +28,7 @@ type MetaPartition struct {
 	Start            uint64
 	End              uint64
 	Replicas         []*MetaReplica
-	replicaNum       uint8
+	CurReplicaNum    uint8
 	status           uint8
 	PersistenceHosts []string
 	peers            []proto.Peer
@@ -151,7 +151,7 @@ func (mp *MetaPartition) checkStatus(writeLog bool, replicaNum int) {
 
 	if writeLog {
 		log.LogInfo(fmt.Sprintf("action[checkStatus],id:%v,status:%v,replicaNum:%v",
-			mp.PartitionID, mp.status, mp.replicaNum))
+			mp.PartitionID, mp.status, mp.CurReplicaNum))
 	}
 }
 
@@ -184,9 +184,9 @@ func (mp *MetaPartition) addMissNode(addr string, lastReportTime int64) {
 }
 
 func (mp *MetaPartition) checkReplicas(c *Cluster, nsName string) {
-	if int(mp.replicaNum) != len(mp.PersistenceHosts) {
-		orgReplicaNum := mp.replicaNum
-		mp.replicaNum = (uint8)(len(mp.PersistenceHosts))
+	if int(mp.CurReplicaNum) != len(mp.PersistenceHosts) {
+		orgReplicaNum := mp.CurReplicaNum
+		mp.CurReplicaNum = (uint8)(len(mp.PersistenceHosts))
 		mp.updateHosts(c, nsName)
 		msg := fmt.Sprintf("meta PartitionID:%v orgReplicaNum:%v locations:%v",
 			mp.PartitionID, orgReplicaNum, mp.PersistenceHosts)
@@ -268,22 +268,22 @@ func (mp *MetaPartition) updateMetaPartition(mgr *proto.MetaPartitionReport, met
 	mp.Unlock()
 }
 
-func (mp *MetaPartition) canOffline(nodeAddr string) (err error) {
+func (mp *MetaPartition) canOffline(nodeAddr string, replicaNum int) (err error) {
 	liveReplicas := mp.getLiveReplica()
-	if !mp.hasMajorityReplicas(len(liveReplicas)) {
+	if !mp.hasMajorityReplicas(len(liveReplicas), replicaNum) {
 		err = NoHaveMajorityReplica
 		return
 	}
 	liveAddrs := mp.getLiveReplicasAddr(liveReplicas)
-	if int(mp.replicaNum) != len(liveReplicas) && contains(liveAddrs, nodeAddr) {
+	if int(mp.CurReplicaNum) != len(liveReplicas) && contains(liveAddrs, nodeAddr) {
 		err = fmt.Errorf("live replicas num will be less than majority after offline nodeAddr: %v", nodeAddr)
 		return
 	}
 	return
 }
 
-func (mp *MetaPartition) hasMajorityReplicas(liveReplicas int) bool {
-	return liveReplicas >= int(mp.replicaNum/2+1)
+func (mp *MetaPartition) hasMajorityReplicas(liveReplicas int, replicaNum int) bool {
+	return liveReplicas >= int(mp.CurReplicaNum/2+1)
 }
 
 func (mp *MetaPartition) getLiveReplicasAddr(liveReplicas []*MetaReplica) (addrs []string) {
@@ -346,10 +346,10 @@ func (mp *MetaPartition) addVolHosts(addAddr string, c *Cluster, nsName string) 
 		}
 	}
 	mp.PersistenceHosts = append(mp.PersistenceHosts, addAddr)
-	mp.replicaNum = uint8(len(mp.PersistenceHosts))
+	mp.CurReplicaNum = uint8(len(mp.PersistenceHosts))
 	if err = mp.updateHosts(c, nsName); err != nil {
 		mp.PersistenceHosts = orgVolHosts
-		mp.replicaNum = uint8(orgGoal)
+		mp.CurReplicaNum = uint8(orgGoal)
 		return
 	}
 	msg := fmt.Sprintf(" addVolHosts partitionID:%v  Add host:%v  PersistenceHosts:%v ",

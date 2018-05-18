@@ -137,7 +137,7 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 		return
 	}
 
-	if err = mp.canOffline(nodeAddr); err != nil {
+	if err = mp.canOffline(nodeAddr, int(ns.mpReplicaNum)); err != nil {
 		goto errDeal
 	}
 

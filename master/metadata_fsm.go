@@ -100,10 +100,12 @@ func (mf *MetadataFsm) ApplyMemberChange(confChange *proto.ConfChange, index uin
 }
 
 func (mf *MetadataFsm) Snapshot() (proto.Snapshot, error) {
+	//todo
 	panic("implement me")
 }
 
 func (mf *MetadataFsm) ApplySnapshot(peers []proto.Peer, iterator proto.SnapIterator) error {
+	//todo
 	panic("implement me")
 }
 

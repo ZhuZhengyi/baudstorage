@@ -7,8 +7,7 @@ type LeaderInfo struct {
 }
 
 func (m *Master) handleLeaderChange(leader uint64) {
-	//todo get master addr
-	//m.leaderInfo.addr =
+	m.leaderInfo.addr = AddrDatabase[leader]
 	m.cluster.checkDataNodeHeartbeat()
 	m.cluster.checkDataNodeHeartbeat()
 }
