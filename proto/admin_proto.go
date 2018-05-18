@@ -10,6 +10,10 @@ const (
 	CmdSuccess = 1
 )
 
+type RegisterMetaNodeResp struct {
+	ID uint64
+}
+
 type ClusterInfo struct {
 	Cluster string
 	Ip      string
