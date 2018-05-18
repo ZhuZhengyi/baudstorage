@@ -1,14 +1,53 @@
 package datanode
 
 import (
-	"encoding/json"
+	"encoding/binary"
 	"fmt"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util/log"
 	"hash/crc32"
 	"net"
 )
+
+func (v *Vol) tinyRepair() {
+	allMembers, err := v.getAllMemberFileMetas()
+	if err != nil {
+		log.LogError(errors.ErrorStack(err))
+		return
+	}
+	v.generatorTinyRepairTasks(allMembers)
+	err = v.NotifyRepair(allMembers)
+	if err != nil {
+		log.LogError(errors.ErrorStack(err))
+	}
+	for _, fixExtentFile := range allMembers[0].NeedFixFileSizeTasks {
+		v.server.streamRepairObjects(fixExtentFile, v)
+	}
+}
+
+func (v *Vol) generatorTinyRepairTasks(allMembers []*MembersFileMetas) {
+	v.generatorFixFileSizeTasks(allMembers)
+	v.generatorTinyDeleteTasks(allMembers)
+
+}
+
+func (v *Vol) generatorTinyDeleteTasks(allMembers []*MembersFileMetas) {
+	store := v.store.(*storage.TinyStore)
+	for _, chunkInfo := range allMembers[0].objects {
+		deletes := store.GetDelObjects(uint32(chunkInfo.FileIdId))
+		deleteBuf := make([]byte, len(deletes)*ObjectIDSize)
+		for index, deleteObject := range deletes {
+			binary.BigEndian.PutUint64(deleteBuf[index*ObjectIDSize:(index+1)*ObjectIDSize], deleteObject)
+		}
+		for index := 0; index < len(allMembers); index++ {
+			allMembers[index].NeedDeleteObjectsTasks[chunkInfo.FileIdId] = make([]byte, len(deleteBuf))
+			copy(allMembers[index].NeedDeleteObjectsTasks[chunkInfo.FileIdId], deleteBuf)
+		}
+	}
+
+}
 
 func (s *DataNode) repairObjectRead(pkg *Packet, conn *net.TCPConn) {
 	var (
@@ -100,6 +139,14 @@ func syncData(chunkID uint32, startOid, endOid uint64, pkg *Packet, conn *net.TC
 		pos += int(realSize)
 	}
 	return postRepairData(pkg, objects[len(objects)-1].Oid, databuf, pos, conn)
+}
+
+func (s *DataNode) repairTiny(pkg *Packet) {
+
+}
+
+func (s *DataNode) streamRepairObjects(remoteExtentInfo *storage.FileInfo, v *Vol) (err error) {
+	return
 }
 
 //

@@ -328,7 +328,7 @@ func (s *ExtentStore) GetBlockCrcBuffer(extentId uint64, headerBuff []byte) (err
 	return
 }
 
-func (s *ExtentStore) GetWatermark(extentId uint64) (extentInfo *ExtentInfo, err error) {
+func (s *ExtentStore) GetWatermark(extentId uint64) (extentInfo *FileInfo, err error) {
 	var (
 		e     *Extent
 		finfo os.FileInfo
@@ -344,13 +344,13 @@ func (s *ExtentStore) GetWatermark(extentId uint64) (extentInfo *ExtentInfo, err
 		return
 	}
 	size := finfo.Size() - BlockCrcHeaderSize
-	extentInfo = &ExtentInfo{ExtentId: int(extentId), Size: uint64(size)}
+	extentInfo = &FileInfo{FileIdId: int(extentId), Size: uint64(size)}
 
 	return
 }
 
-func (s *ExtentStore) GetAllWatermark() (extents []*ExtentInfo, err error) {
-	extents = make([]*ExtentInfo, 0)
+func (s *ExtentStore) GetAllWatermark() (extents []*FileInfo, err error) {
+	extents = make([]*FileInfo, 0)
 	var (
 		finfos   []os.FileInfo
 		extentId uint64
@@ -367,7 +367,7 @@ func (s *ExtentStore) GetAllWatermark() (extents []*ExtentInfo, err error) {
 		if err != nil {
 			continue
 		}
-		var einfo *ExtentInfo
+		var einfo *FileInfo
 		einfo, err = s.GetWatermark(extentId)
 		if err != nil {
 			continue

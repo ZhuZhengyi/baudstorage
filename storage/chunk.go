@@ -25,14 +25,14 @@ type Chunk struct {
 	compactLock util.TryMutex
 }
 
-type ExtentInfo struct {
+type FileInfo struct {
 	Source   string
-	ExtentId int
+	FileIdId int
 	Size     uint64
 }
 
-func (ei *ExtentInfo)ToString()(m string){
-	return fmt.Sprintf("extent[%v] size[%v] source[%v]",ei.ExtentId,ei.Size,ei.Source)
+func (ei *FileInfo)ToString()(m string){
+	return fmt.Sprintf("extent[%v] size[%v] source[%v]",ei.FileIdId,ei.Size,ei.Source)
 }
 
 func NewChunk(dataDir string, chunkId int) (c *Chunk, err error) {

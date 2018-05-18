@@ -206,7 +206,7 @@ func (s *DataNode) streamRead(pkg *Packet, c net.Conn) {
 func (s *DataNode) getWatermark(pkg *Packet) {
 	var buf []byte
 	var (
-		finfo *storage.ExtentInfo
+		finfo *storage.FileInfo
 		err   error
 	)
 	switch pkg.StoreMode {
@@ -228,7 +228,7 @@ func (s *DataNode) getWatermark(pkg *Packet) {
 func (s *DataNode) getAllWatermark(pkg *Packet) {
 	var buf []byte
 	var (
-		finfos []*storage.ExtentInfo
+		finfos []*storage.FileInfo
 		err    error
 	)
 	switch pkg.StoreMode {

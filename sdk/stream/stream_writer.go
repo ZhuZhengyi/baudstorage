@@ -27,7 +27,7 @@ type StreamWriter struct {
 	errCount        int           //error count
 	excludeVols     []uint32      //exclude Vols
 	currentVolId    uint32        //current VolId
-	currentExtentId uint64        //current ExtentId
+	currentExtentId uint64        //current FileIdId
 	currentInode    uint64        //inode
 	flushLock       sync.Mutex
 	appendExtentKey AppendExtentKeyFunc

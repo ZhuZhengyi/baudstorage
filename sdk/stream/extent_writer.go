@@ -37,7 +37,7 @@ type ExtentWriter struct {
 	requestQueueLock sync.Mutex
 	volGroup         *sdk.VolGroup
 	wrapper          *sdk.VolGroupWrapper
-	extentId         uint64 //current ExtentId
+	extentId         uint64 //current FileIdId
 	currentPacket    *Packet
 	seqNo            uint64 //Current Send Packet Seq
 	byteAck          uint64 //DataNode Has Ack Bytes

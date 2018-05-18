@@ -160,7 +160,7 @@ func (s *TinyStore) Write(fileId uint32, offset, size int64, data []byte, crc ui
 	defer c.compactLock.Unlock()
 
 	if objectId < c.loadLastOid() {
-		msg := fmt.Sprintf("Object id smaller than last oid. DataDir[%v] ExtentId[%v]"+
+		msg := fmt.Sprintf("Object id smaller than last oid. DataDir[%v] FileIdId[%v]"+
 			" ObjectId[%v] Size[%v]", s.dataDir, chunkId, objectId, c.loadLastOid())
 		err = errors.New(msg)
 		return ErrObjectSmaller
@@ -236,23 +236,23 @@ func (s *TinyStore) Sync(fileId uint32) (err error) {
 	return c.file.Sync()
 }
 
-func (s *TinyStore) GetAllWatermark() (chunks []*ExtentInfo, err error) {
-	chunks = make([]*ExtentInfo, 0)
+func (s *TinyStore) GetAllWatermark() (chunks []*FileInfo, err error) {
+	chunks = make([]*FileInfo, 0)
 	for chunkId, c := range s.chunks {
-		ci := &ExtentInfo{ExtentId: chunkId, Size: c.loadLastOid()}
+		ci := &FileInfo{FileIdId: chunkId, Size: c.loadLastOid()}
 		chunks = append(chunks, ci)
 	}
 
 	return
 }
 
-func (s *TinyStore) GetWatermark(fileId uint64) (chunkInfo *ExtentInfo, err error) {
+func (s *TinyStore) GetWatermark(fileId uint64) (chunkInfo *FileInfo, err error) {
 	chunkId := (int)(fileId)
 	c, ok := s.chunks[chunkId]
 	if !ok {
 		return nil, ErrorChunkNotFound
 	}
-	chunkInfo = &ExtentInfo{ExtentId: chunkId, Size: c.loadLastOid()}
+	chunkInfo = &FileInfo{FileIdId: chunkId, Size: c.loadLastOid()}
 
 	return
 }
