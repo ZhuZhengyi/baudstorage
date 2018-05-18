@@ -238,12 +238,12 @@ func (m *MetaNode) ProxyServe(conn net.Conn, mp *MetaPartition,
 		goto errEnd
 	}
 	// Get Master Conn
-	mConn, err = m.proxyPool.Get(leaderAddr)
+	mConn, err = m.pool.Get(leaderAddr)
 	if err != nil {
 		goto errEnd
 	}
 	defer func() {
-		m.proxyPool.Put(mConn)
+		m.pool.Put(mConn)
 	}()
 	// Send Master Conn
 	if err = p.WriteToConn(mConn); err != nil {

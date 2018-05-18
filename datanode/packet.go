@@ -82,7 +82,21 @@ func NewGetAllWaterMarker(volId uint32, storeMode uint8) (p *Packet) {
 	return
 }
 
-func NewNotifyRepair(volId uint32,storeMode uint8) (p *Packet){
+func NewReadPacket(volId uint32, extentId, offset, size int) (p *Packet) {
+	p = new(Packet)
+	p.FileID = uint64(extentId)
+	p.VolID = volId
+	p.Magic = proto.ProtoMagic
+	p.Offset = int64(offset)
+	p.Size = uint32(size)
+	p.Opcode = proto.OpStreamRead
+	p.StoreMode = proto.ExtentStoreMode
+	p.ReqID = proto.GetReqID()
+
+	return
+}
+
+func NewNotifyRepair(volId uint32, storeMode uint8) (p *Packet) {
 	p = new(Packet)
 	p.Opcode = proto.OpNotifyRepair
 	p.VolID = volId

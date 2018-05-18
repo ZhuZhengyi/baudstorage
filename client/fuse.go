@@ -1,5 +1,12 @@
 package main
 
+//
+// Usage: ./client -c fuse.json &
+//
+// Default mountpoint is specified in fuse.json, which is "/mnt".
+// Therefore operations to "/mnt" are routed to the baudstorage.
+//
+
 import (
 	"flag"
 	"fmt"
