@@ -61,7 +61,7 @@ func (*testSM) HandleFatalEvent(err *raft.FatalError) {
 }
 
 func (*testSM) HandleLeaderChange(leader uint64) {
-	fmt.Printf("===test raft leader change===\n")
+	fmt.Printf("===test raft leader change to %d===\n", leader)
 	return
 }
 
