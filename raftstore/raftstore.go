@@ -3,7 +3,6 @@ package raftstore
 import (
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/storage/wal"
-	"os"
 	"path"
 	"strconv"
 	"fmt"
@@ -38,9 +37,9 @@ func (s *raftStore) Stop() {
 }
 
 func NewRaftStore(cfg *Config) (mr RaftStore, err error) {
-	if err = os.MkdirAll(cfg.WalPath, os.ModeDir); err != nil {
-		return
-	}
+//	if err = os.MkdirAll(cfg.WalPath, os.ModeDir); err != nil {
+//		return
+//	}
 	resolver := NewNodeResolver()
 	rc := raft.DefaultConfig()
 	rc.NodeID = cfg.NodeID
