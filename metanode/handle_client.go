@@ -2,9 +2,11 @@ package metanode
 
 import (
 	"encoding/json"
+	"net"
+	"strconv"
+
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/raft/util/log"
-	"net"
 )
 
 // Handle OpCreate Inode
@@ -28,7 +30,7 @@ func (m *MetaNode) opCreateInode(conn net.Conn, p *Packet) (err error) {
 	return
 }
 
-// Handle OpCreate
+// Handle OpCreateDentry
 func (m *MetaNode) opCreateDentry(conn net.Conn, p *Packet) (err error) {
 	req := &CreateDentryReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
@@ -85,10 +87,7 @@ func (m *MetaNode) opDeleteInode(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	err = mp.DeleteInode(req, p)
-	if err != nil {
-		return
-	}
-	err = m.replyClient(conn, p)
+	m.replyClient(conn, p)
 	return
 }
 
@@ -133,6 +132,93 @@ func (m *MetaNode) opOpen(conn net.Conn, p *Packet) (err error) {
 	}
 	// Reply operation result to client though TCP connection.
 	err = m.replyClient(conn, p)
+	return
+}
+
+func (m *MetaNode) opMetaInodeGet(conn net.Conn, p *Packet) (err error) {
+	req := &proto.InodeGetRequest{}
+	if err = json.Unmarshal(p.Data, req); err != nil {
+		return
+	}
+	mp, err := m.metaManager.LoadMetaPartition(req.PartitionID)
+	if err != nil {
+		return
+	}
+	if m.ProxyServe(conn, mp, p) {
+		return
+	}
+	err = mp.InodeGet(req, p)
+	if err != nil {
+		return
+	}
+	m.replyClient(conn, p)
+	return
+}
+
+func (m *MetaNode) opMetaLookup(conn net.Conn, p *Packet) (err error) {
+	req := &proto.LookupRequest{}
+	if err = json.Unmarshal(p.Data, req); err != nil {
+		return
+	}
+	mp, err := m.metaManager.LoadMetaPartition(req.PartitionID)
+	if err != nil {
+		return
+	}
+	if m.ProxyServe(conn, mp, p) {
+		return
+	}
+	parentID, err := strconv.ParseUint(req.PartitionID, 10, 64)
+	if err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		return
+	}
+	dentry := &Dentry{
+		ParentId: parentID,
+		Name:     req.Name,
+	}
+	status := mp.getDentry(dentry)
+	p.PackErrorWithBody(status, nil)
+	return
+}
+
+func (m *MetaNode) opMetaExtentsAdd(conn net.Conn, p *Packet) (err error) {
+	req := &proto.AppendExtentKeyRequest{}
+	if err = json.Unmarshal(p.Data, req); err != nil {
+		return
+	}
+	mp, err := m.metaManager.LoadMetaPartition(req.PartitionID)
+	if err != nil {
+		return
+	}
+	if m.ProxyServe(conn, mp, p) {
+		return
+	}
+	err = mp.ExtentAppend(req, p)
+	m.replyClient(conn, p)
+	return
+}
+
+func (m *MetaNode) opMetaExtentsList(conn net.Conn, p *Packet) (err error) {
+	req := &proto.GetExtentsRequest{}
+	if err = json.Unmarshal(p.Data, req); err != nil {
+		return
+	}
+	mp, err := m.metaManager.LoadMetaPartition(req.PartitionID)
+	if err != nil {
+		return
+	}
+	if m.ProxyServe(conn, mp, p) {
+		return
+	}
+
+	if err = mp.ExtentsList(req, p); err != nil {
+		//TODO: log
+	}
+	m.replyClient(conn, p)
+	return
+}
+
+func (m *MetaNode) opMetaExtentsDel(conn net.Conn, p *Packet) (err error) {
 	return
 }
 
