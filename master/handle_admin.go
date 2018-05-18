@@ -13,8 +13,18 @@ import (
 	"strings"
 )
 
-func (m *Master) getIp(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(strings.Split(r.RemoteAddr, ":")[0]))
+func (m *Master) getIpAndClusterName(w http.ResponseWriter, r *http.Request) {
+	cInfo := &proto.ClusterInfo{Cluster: m.cluster.Name, Ip: strings.Split(r.RemoteAddr, ":")[0]}
+	bytes, err := json.Marshal(cInfo)
+	if err != nil {
+		goto errDeal
+	}
+	w.Write(bytes)
+	return
+errDeal:
+	rstMsg := getReturnMessage("getIpAndClusterName", r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	HandleError(rstMsg, http.StatusBadRequest, w)
+	return
 }
 
 func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {

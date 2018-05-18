@@ -71,9 +71,10 @@ func (metaNode *MetaNode) setNodeAlive() {
 	metaNode.isActive = true
 }
 
-func (metaNode *MetaNode) generateHeartbeatTask() (task *proto.AdminTask) {
+func (metaNode *MetaNode) generateHeartbeatTask(masterAddr string) (task *proto.AdminTask) {
 	request := &proto.HeartBeatRequest{
-		CurrTime: time.Now().Unix(),
+		CurrTime:   time.Now().Unix(),
+		MasterAddr: masterAddr,
 	}
 	task = proto.NewAdminTask(OpMetaNodeHeartbeat, metaNode.Addr, request)
 	return

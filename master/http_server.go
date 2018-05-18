@@ -45,16 +45,37 @@ func (m *Master) startHttpService() (err error) {
 }
 
 func (m *Master) handleFunctions() (err error) {
-	http.HandleFunc(AdminGetIp, m.getIp)
-	http.Handle(RootUrlPath, m.handlerWithInterceptor())
+	http.HandleFunc(AdminGetIp, m.getIpAndClusterName)
+	http.Handle(AdminGetVol, m.handlerWithInterceptor())
+	http.Handle(AdminCreateVol, m.handlerWithInterceptor())
+	http.Handle(AdminLoadVol, m.handlerWithInterceptor())
+	http.Handle(AdminVolOffline, m.handlerWithInterceptor())
+	http.Handle(AdminCreateNamespace, m.handlerWithInterceptor())
+	http.Handle(AddDataNode, m.handlerWithInterceptor())
+	http.Handle(AddMetaNode, m.handlerWithInterceptor())
+	http.Handle(DataNodeOffline, m.handlerWithInterceptor())
+	http.Handle(MetaNodeOffline, m.handlerWithInterceptor())
+	http.Handle(GetDataNode, m.handlerWithInterceptor())
+	http.Handle(GetMetaNode, m.handlerWithInterceptor())
+	http.Handle(GetMetaNode, m.handlerWithInterceptor())
+	//http.Handle(AdminLoadMetaPartition, m.handlerWithInterceptor())
+	http.Handle(AdminMetaPartitionOffline, m.handlerWithInterceptor())
+	http.Handle(ClientVols, m.handlerWithInterceptor())
+	http.Handle(ClientNamespace, m.handlerWithInterceptor())
+	http.Handle(ClientMetaGroup, m.handlerWithInterceptor())
+	http.Handle(DataNodeResponse, m.handlerWithInterceptor())
+	http.Handle(MetaNodeResponse, m.handlerWithInterceptor())
 	return
 }
 
 func (m *Master) handlerWithInterceptor() http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			//todo preInterceptor
-			m.ServeHTTP(w, r)
+			if m.partition.IsLeader() {
+				m.ServeHTTP(w, r)
+			} else {
+				w.Write([]byte(m.leaderInfo.addr))
+			}
 		})
 }
 

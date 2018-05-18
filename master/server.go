@@ -12,6 +12,7 @@ import (
 
 //config keys
 const (
+	ClusterName = "clusterName"
 	ID          = "id"
 	IP          = "ip"
 	Port        = "port"
@@ -25,19 +26,21 @@ const (
 )
 
 type Master struct {
-	id        uint64
-	ip        string
-	port      string
-	logDir    string
-	logLevel  int
-	walDir    string
-	storeDir  string
-	config    *ClusterConfig
-	cluster   *Cluster
-	raftStore raftstore.RaftStore
-	fsm       *MetadataFsm
-	partition raftstore.Partition
-	wg        sync.WaitGroup
+	id          uint64
+	clusterName string
+	ip          string
+	port        string
+	logDir      string
+	logLevel    int
+	walDir      string
+	storeDir    string
+	leaderInfo  *LeaderInfo
+	config      *ClusterConfig
+	cluster     *Cluster
+	raftStore   raftstore.RaftStore
+	fsm         *MetadataFsm
+	partition   raftstore.Partition
+	wg          sync.WaitGroup
 }
 
 func NewServer() *Master {
@@ -46,12 +49,14 @@ func NewServer() *Master {
 
 func (m *Master) Start(cfg *config.Config) (err error) {
 	m.config = NewClusterConfig()
+	m.leaderInfo = &LeaderInfo{}
 	if err = m.checkConfig(cfg); err != nil {
 		return
 	}
 	if _, err = log.NewLog(m.logDir, LogModule, m.logLevel); err != nil {
 		return
 	}
+	m.cluster = newCluster(m.clusterName, m.leaderInfo)
 	m.loadMetadata()
 	if err = m.createRaftServer(); err != nil {
 		return
@@ -70,6 +75,7 @@ func (m *Master) Sync() {
 }
 
 func (m *Master) checkConfig(cfg *config.Config) (err error) {
+	m.clusterName = cfg.GetString(ClusterName)
 	m.ip = cfg.GetString(IP)
 	m.port = cfg.GetString(Port)
 	m.logDir = cfg.GetString(LogDir)
@@ -90,8 +96,8 @@ func (m *Master) checkConfig(cfg *config.Config) (err error) {
 		return fmt.Errorf("%v,err:%v", ErrBadConfFile, err.Error())
 	}
 
-	if m.ip == "" || m.port == "" || m.logDir == "" || m.walDir == "" || m.storeDir == "" {
-		return fmt.Errorf("%v,err:%v", ErrBadConfFile, "one of (ip,port,logDir,walDir,storeDir) is null")
+	if m.ip == "" || m.port == "" || m.logDir == "" || m.walDir == "" || m.storeDir == "" || m.clusterName == "" {
+		return fmt.Errorf("%v,err:%v", ErrBadConfFile, "one of (ip,port,logDir,walDir,storeDir,clusterName) is null")
 	}
 
 	if replicaNum != "" {
@@ -149,6 +155,8 @@ func (m *Master) createRaftServer() (err error) {
 	fsm := newMetadataFsm(m.storeDir)
 	fsm.RegisterLeaderChangeHandler(m.handleLeaderChange)
 	fsm.RegisterPeerChangeHandler(m.handlePeerChange)
+	fsm.RegisterApplyHandler(m.handleApply)
+	fsm.RegisterRestoreHandler(m.handleRestore)
 	fsm.restore()
 	m.fsm = fsm
 	partitionCfg := &raftstore.PartitionConfig{

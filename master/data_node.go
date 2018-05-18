@@ -116,9 +116,10 @@ func (dataNode *DataNode) clean() {
 	dataNode.sender.exitCh <- struct{}{}
 }
 
-func (dataNode *DataNode) generateHeartbeatTask() (task *proto.AdminTask) {
+func (dataNode *DataNode) generateHeartbeatTask(masterAddr string) (task *proto.AdminTask) {
 	request := &proto.HeartBeatRequest{
-		CurrTime: time.Now().Unix(),
+		CurrTime:   time.Now().Unix(),
+		MasterAddr: masterAddr,
 	}
 	task = proto.NewAdminTask(OpDataNodeHeartbeat, dataNode.HttpAddr, request)
 	return

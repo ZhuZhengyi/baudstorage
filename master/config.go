@@ -27,30 +27,25 @@ const (
 	DefaultEveryReleaseVolCount          = 10
 	DefaultReleaseVolAfterLoadVolSeconds = 5 * 60
 	DefaultReleaseVolInternalSeconds     = 10
-	DefaultCheckHeartBeatIntervalSeconds = 60
-	DefaultFileDelayCheckLackSec         = 5 * DefaultCheckHeartBeatIntervalSeconds
-	DefaultFileDelayCheckCrcSec          = 20 * DefaultCheckHeartBeatIntervalSeconds
+	DefaultCheckHeartbeatIntervalSeconds = 60
+	DefaultFileDelayCheckLackSec         = 5 * DefaultCheckHeartbeatIntervalSeconds
+	DefaultFileDelayCheckCrcSec          = 20 * DefaultCheckHeartbeatIntervalSeconds
 	NoHeartBeatTimes                     = 3
-	DefaultNodeTimeOutSec                = NoHeartBeatTimes * DefaultCheckHeartBeatIntervalSeconds
-	DefaultVolTimeOutSec                 = 5 * DefaultCheckHeartBeatIntervalSeconds
+	DefaultNodeTimeOutSec                = NoHeartBeatTimes * DefaultCheckHeartbeatIntervalSeconds
+	DefaultVolTimeOutSec                 = 5 * DefaultCheckHeartbeatIntervalSeconds
 	DefaultVolMissSec                    = 24 * 3600
 	DefaultCheckVolIntervalSeconds       = 60
 	DefaultVolWarnInterval               = 60 * 60
 	LoadVolWaitTime                      = 100
 	DefaultLoadVolFrequencyTime          = 60 * 60
 	DefaultEveryLoadVolCount             = 10
-	DefaultMetaPartitionTimeOutSec       = 5 * DefaultCheckHeartBeatIntervalSeconds
+	DefaultMetaPartitionTimeOutSec       = 5 * DefaultCheckHeartbeatIntervalSeconds
 	DefaultMetaPartitionThreshold        = 0.75
 	DefaultMetaPartitionMemSize          = 16 * util.GB
 )
 
-//Address ...
-type Address struct {
-	HttpAddr string
-}
-
 //AddrDatabase ...
-var AddrDatabase = make(map[uint64]*Address)
+var AddrDatabase = make(map[uint64]string)
 
 type ClusterConfig struct {
 	FileDelayCheckCrcSec          int64
@@ -95,9 +90,7 @@ func AddrInit(peerAddrs []string) (err error) {
 		if err != nil {
 			return err
 		}
-		AddrDatabase[id] = &Address{
-			HttpAddr: fmt.Sprintf("%s:%d", ip, port),
-		}
+		AddrDatabase[id] = fmt.Sprintf("%s:%d", ip, port)
 		fmt.Println(AddrDatabase[id])
 	}
 	return nil
@@ -121,11 +114,12 @@ func (cfg *ClusterConfig) parsePeers(peerStr string) error {
 	peerArr := strings.Split(peerStr, CommaSplit)
 	cfg.peerAddrs = peerArr
 	for _, peerAddr := range peerArr {
-		id, _, _, err := parsePeerAddr(peerAddr)
+		id, ip, port, err := parsePeerAddr(peerAddr)
 		if err != nil {
 			return err
 		}
 		cfg.peers = append(cfg.peers, proto.Peer{ID: id})
+		AddrDatabase[id] = fmt.Sprintf("%v:%v", ip, port)
 	}
 	return nil
 }
