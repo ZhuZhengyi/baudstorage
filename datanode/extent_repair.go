@@ -204,6 +204,7 @@ func (v *Vol) generatorDeleteExtentsTasks(allMembers []*MembersFileMetas) {
 	}
 }
 
+/*notify follower to repair vol store*/
 func (v *Vol) NotifyRepair(members []*MembersFileMetas) (err error) {
 	storeMode := proto.ExtentStoreMode
 	if v.volMode == TinyVol {
@@ -230,6 +231,7 @@ func (v *Vol) NotifyRepair(members []*MembersFileMetas) (err error) {
 	return
 }
 
+/*if follower recive OpNotifyRepair,then do it*/
 func (s *DataNode) repairExtents(pkg *Packet) {
 	mf := NewMembersFiles()
 	json.Unmarshal(pkg.Data, mf)
