@@ -57,6 +57,7 @@ func NewRaftStore(cfg *Config) (mr RaftStore, err error) {
 		resolver:   resolver,
 		raftConfig: rc,
 		raftServer: rs,
+		walPath:    cfg.WalPath,
 	}
 	return
 }
