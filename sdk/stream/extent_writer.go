@@ -23,7 +23,7 @@ const (
 	NotRecive              = false
 	ExtentWriterRecoverCnt = 1
 
-	DefaultWriteBufferSize = 1280 * util.KB
+	DefaultWriteBufferSize = 2 * util.MB
 )
 
 var (
