@@ -123,6 +123,14 @@ func (s *ExtentStore) getExtent(extentId uint64) (e *Extent, err error) {
 	return e, err
 }
 
+func (s *ExtentStore)IsExsitExtent(extentId uint64)(bool) {
+	_,err:=s.getExtent(extentId)
+	if err!=nil {
+		return false
+	}
+	return true
+}
+
 func (s *ExtentStore) loadExtentFromDisk(extentId uint64) (e *Extent, err error) {
 	name := s.dataDir + "/" + strconv.Itoa((int)(extentId))
 	e = NewExtentInCore(name, extentId)
