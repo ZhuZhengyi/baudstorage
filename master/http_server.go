@@ -45,7 +45,7 @@ func (m *Master) startHttpService() (err error) {
 }
 
 func (m *Master) handleFunctions() (err error) {
-	http.HandleFunc(AdminGetIp, m.getIp)
+	http.HandleFunc(AdminGetIp, m.getIpAndClusterName)
 	http.Handle(RootUrlPath, m.handlerWithInterceptor())
 	return
 }
