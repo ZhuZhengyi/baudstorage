@@ -2,15 +2,10 @@ package datanode
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/juju/errors"
-	"github.com/laohanlinux/riot/store"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk/stream"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util/log"
-	"go/token"
-	"golang.org/x/text/cmd/gotext/examples/extract_http/pkg"
 	"net"
 	"time"
 )
