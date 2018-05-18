@@ -158,15 +158,18 @@ func (mw *MetaWrapper) Rename_ll(srcParentID uint64, srcName string, dstParentID
 	return nil
 }
 
-func (mw *MetaWrapper) ReadDir_ll(parentID uint64) (children []proto.Dentry, err error) {
+func (mw *MetaWrapper) ReadDir_ll(parentID uint64) ([]proto.Dentry, error) {
 	mc, err := mw.connect(parentID)
 	if err != nil {
-		return
+		return nil, syscall.AGAIN
 	}
 	defer mw.putConn(mc, err)
 
-	children, err = mw.readdir(mc, parentID)
-	return
+	children, err := mw.readdir(mc, parentID)
+	if err != nil {
+		return nil, syscall.PERM
+	}
+	return children, nil
 }
 
 // Used as a callback by stream sdk
