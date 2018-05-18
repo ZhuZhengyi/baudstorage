@@ -90,9 +90,7 @@ func AddrInit(peerAddrs []string) (err error) {
 		if err != nil {
 			return err
 		}
-		AddrDatabase[id] = &Address{
-			HttpAddr: fmt.Sprintf("%s:%d", ip, port),
-		}
+		AddrDatabase[id] = fmt.Sprintf("%s:%d", ip, port)
 		fmt.Println(AddrDatabase[id])
 	}
 	return nil
