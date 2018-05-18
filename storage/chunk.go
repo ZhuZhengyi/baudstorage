@@ -24,10 +24,10 @@ type Chunk struct {
 	compactLock util.TryMutex
 }
 
-type FileInfo struct {
-	Source  string
-	FileId int
-	Size   uint64
+type ExtentInfo struct {
+	Source   string
+	ExtentId int
+	Size     uint64
 }
 
 func NewChunk(dataDir string, chunkId int) (c *Chunk, err error) {

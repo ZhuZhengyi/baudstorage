@@ -11,11 +11,11 @@ import (
 )
 
 func (v *Vol) check() {
-	ticker := time.Tick(time.Second * 10)
+	ticker := time.Tick(time.Second * 100)
 	for {
 		select {
 		case <-ticker:
-
+			v.extentRepair()
 		}
 	}
 }
