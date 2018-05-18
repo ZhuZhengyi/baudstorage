@@ -41,7 +41,7 @@ func (*testSM) Apply(command []byte, index uint64) (interface{}, error) {
 }
 
 func (*testSM) ApplyMemberChange(confChange *proto.ConfChange, index uint64) (interface{}, error) {
-	fmt.Printf("===tet raft member change index %d===\n", index)
+	fmt.Printf("===test raft member change index %d===\n", index)
 	return nil, nil
 }
 
@@ -51,17 +51,17 @@ func (*testSM) Snapshot() (proto.Snapshot, error) {
 }
 
 func (*testSM) ApplySnapshot(peers []proto.Peer, iter proto.SnapIterator) error {
-	fmt.Printf("===tet raft apply snapshot===\n")
+	fmt.Printf("===test raft apply snapshot===\n")
 	return nil
 }
 
 func (*testSM) HandleFatalEvent(err *raft.FatalError) {
-	fmt.Printf("===tet raft fatal event===\n")
+	fmt.Printf("===test raft fatal event===\n")
 	return
 }
 
 func (*testSM) HandleLeaderChange(leader uint64) {
-	fmt.Printf("===tet raft leader change===\n")
+	fmt.Printf("===test raft leader change===\n")
 	return
 }
 
