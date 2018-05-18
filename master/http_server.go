@@ -74,7 +74,7 @@ func (m *Master) handlerWithInterceptor() http.Handler {
 			if m.partition.IsLeader() {
 				m.ServeHTTP(w, r)
 			} else {
-				w.Write([]byte(m.leaderInfo.addr))
+				http.Error(w, m.leaderInfo.addr, http.StatusForbidden)
 			}
 		})
 }
