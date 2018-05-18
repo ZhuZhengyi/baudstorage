@@ -44,8 +44,6 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 		s.read(pkg)
 	case proto.OpCRepairRead:
 		s.repairObjectRead(pkg, c)
-	case proto.OpERepairRead:
-		s.repairExtentRead(pkg)
 	case proto.OpSyncDelNeedle:
 		s.applyDelObjects(pkg)
 	case proto.OpStreamRead:
@@ -60,8 +58,6 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 		s.getWatermark(pkg)
 	case proto.OpGetAllWatermark:
 		s.getAllWatermark(pkg)
-	case proto.OpFlowInfo:
-		s.GetFlowInfo(pkg)
 	case proto.OpCreateVol:
 		s.createVol(pkg)
 	case proto.OpLoadVol:
@@ -90,6 +86,18 @@ func (s *DataNode) createFile(pkg *Packet) {
 	}
 
 	return
+}
+
+func (s *DataNode) createVol(pkg *Packet) {
+	task := &proto.AdminTask{}
+	json.Unmarshal(pkg.Data, task)
+	if task.OpCode == proto.OpCreateVol {
+		request := task.Request.(*proto.CreateVolRequest)
+		s.space.chooseDiskAndCreateVol(request.VolId, request.VolType, request.VolSize)
+	} else {
+		data, _ := json.Marshal(task)
+		s.PostToMaster(data, "/node/report")
+	}
 }
 
 func (s *DataNode) markDel(pkg *Packet) {
@@ -158,17 +166,6 @@ func (s *DataNode) applyDelObjects(pkg *Packet) {
 		return
 	}
 	pkg.PackOkReply()
-	return
-}
-
-func (s *DataNode) repairExtentRead(pkg *Packet) {
-	if err := s.rd(pkg, LogRepairRead, LogRepairRead); err == nil {
-		pkg.Crc = crc32.ChecksumIEEE(pkg.Data[:pkg.Size])
-		pkg.PackErrorBody(LogRepairRead, err.Error())
-		return
-	}
-	pkg.PackOkReadReply()
-
 	return
 }
 
