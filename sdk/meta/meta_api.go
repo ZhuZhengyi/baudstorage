@@ -1,7 +1,6 @@
 package meta
 
 import (
-	"errors"
 	"syscall"
 
 	"github.com/tiglabs/baudstorage/proto"
@@ -161,22 +160,44 @@ func (mw *MetaWrapper) Rename_ll(srcParentID uint64, srcName string, dstParentID
 func (mw *MetaWrapper) ReadDir_ll(parentID uint64) ([]proto.Dentry, error) {
 	mc, err := mw.connect(parentID)
 	if err != nil {
-		return nil, syscall.AGAIN
+		return nil, syscall.EAGAIN
 	}
 	defer mw.putConn(mc, err)
 
 	children, err := mw.readdir(mc, parentID)
 	if err != nil {
-		return nil, syscall.PERM
+		return nil, syscall.EPERM
 	}
 	return children, nil
 }
 
 // Used as a callback by stream sdk
 func (mw *MetaWrapper) AppendExtentKey(inode uint64, ek proto.ExtentKey) error {
-	return errors.New("Not implemented yet")
+	mc, err := mw.connect(inode)
+	if err != nil {
+		return syscall.EAGAIN
+	}
+	defer mw.putConn(mc, err)
+
+	extents := []proto.ExtentKey{ek}
+
+	status, err := mw.appendextents(mc, inode, extents)
+	if err != nil || status != statusOK {
+		return syscall.EPERM
+	}
+	return nil
 }
 
 func (mw *MetaWrapper) GetExtents(inode uint64) ([]proto.ExtentKey, error) {
-	return nil, errors.New("Not implemented yet")
+	mc, err := mw.connect(inode)
+	if err != nil {
+		return nil, syscall.EAGAIN
+	}
+	defer mw.putConn(mc, err)
+
+	status, extents, err := mw.getextents(mc, inode)
+	if err != nil || status != statusOK {
+		return nil, syscall.EPERM
+	}
+	return extents, nil
 }

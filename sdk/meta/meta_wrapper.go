@@ -476,6 +476,7 @@ func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (children []proto.
 		Namespace: mw.namespace,
 		ParentID:  parentID,
 	}
+
 	packet := proto.NewPacket()
 	packet.Opcode = proto.OpMetaReadDir
 	packet.Data, err = json.Marshal(req)
@@ -491,6 +492,7 @@ func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (children []proto.
 
 	status := parseStatus(packet.ResultCode)
 	if status != statusOK {
+		children = make([]proto.Dentry, 0)
 		return
 	}
 
@@ -500,4 +502,12 @@ func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (children []proto.
 		return
 	}
 	return resp.Children, nil
+}
+
+func (mw *MetaWrapper) appendextents(mc *MetaConn, inode uint64, extents []proto.ExtentKey) (status int, err error) {
+	return
+}
+
+func (mw *MetaWrapper) getextents(mc *MetaConn, inode uint64) (status int, extents []proto.ExtentKey, err error) {
+	return
 }
