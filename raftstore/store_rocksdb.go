@@ -71,6 +71,19 @@ func (rs *RocksDBStore) Get(key interface{}) (result interface{}, err error) {
 	return rs.db.GetBytes(ro, key.([]byte))
 }
 
+func (rs *RocksDBStore) BatchPut(cmdMap map[string][]byte) (error) {
+	wo := gorocksdb.NewDefaultWriteOptions()
+	wb := gorocksdb.NewWriteBatch()
+	for key, value := range cmdMap {
+		wb.Put([]byte(key), value)
+	}
+	if err := rs.db.Write(wo, wb); err != nil {
+		err = fmt.Errorf("action[batchPutToRocksDB],err:%v", err)
+		return  err
+	}
+	return nil
+}
+
 func (rs *RocksDBStore) RocksDBSnapshot() *gorocksdb.Snapshot {
 	return rs.db.NewSnapshot()
 }

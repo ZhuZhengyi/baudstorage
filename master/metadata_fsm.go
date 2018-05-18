@@ -6,6 +6,8 @@ import (
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
 	"strconv"
+	"github.com/tiglabs/baudstorage/util/log"
+	"encoding/json"
 )
 
 const (
@@ -78,10 +80,10 @@ func (mf *MetadataFsm) Apply(command []byte, index uint64) (resp interface{}, er
 	if err = cmd.Unmarshal(command); err != nil {
 		return nil, fmt.Errorf("action[fsmApply],unmarshal data:%v, err:%v", command, err.Error())
 	}
-	if _, err = mf.Put(cmd.K, cmd.V); err != nil {
-		return
-	}
-	if _, err = mf.Put(Applied, index); err != nil {
+	cmdMap := make(map[string][]byte)
+	cmdMap[cmd.K] = cmd.V
+	cmdMap[Applied] = []byte(strconv.FormatUint(uint64(index), 10))
+	if err = mf.BatchPut(cmdMap); err != nil {
 		return
 	}
 	if err = mf.applyHandler(cmd); err != nil {
@@ -100,13 +102,38 @@ func (mf *MetadataFsm) ApplyMemberChange(confChange *proto.ConfChange, index uin
 }
 
 func (mf *MetadataFsm) Snapshot() (proto.Snapshot, error) {
-	//todo
-	panic("implement me")
+	snapshot := mf.store.RocksDBSnapshot()
+
+	iterator := mf.store.Iterator(snapshot)
+	iterator.SeekToFirst()
+	return &MetadataSnapshot{
+		applied:  mf.applied,
+		snapshot: snapshot,
+		fsm:      mf,
+		iterator: iterator,
+	}, nil
 }
 
-func (mf *MetadataFsm) ApplySnapshot(peers []proto.Peer, iterator proto.SnapIterator) error {
-	//todo
-	panic("implement me")
+func (mf *MetadataFsm) ApplySnapshot(peers []proto.Peer, iterator proto.SnapIterator) (err error) {
+	var data []byte
+	for err == nil {
+		if data, err = iterator.Next(); err != nil {
+			goto errDeal
+		}
+		cmd := &Metadata{}
+		if err = json.Unmarshal(data, cmd); err != nil {
+			goto errDeal
+		}
+
+		switch cmd.Op {
+
+		}
+	}
+	return
+
+errDeal:
+	log.LogError(fmt.Sprintf("action[ApplySnapshot] failed,err:%v", err.Error()))
+	return err
 }
 
 func (mf *MetadataFsm) HandleFatalEvent(err *raft.FatalError) {
@@ -121,6 +148,10 @@ func (mf *MetadataFsm) HandleLeaderChange(leader uint64) {
 
 func (mf *MetadataFsm) Put(key, val interface{}) (interface{}, error) {
 	return mf.store.Put(key, val)
+}
+
+func (mf *MetadataFsm) BatchPut(cmdMap map[string][]byte) (err error) {
+	return mf.store.BatchPut(cmdMap)
 }
 
 func (mf *MetadataFsm) Get(key interface{}) (interface{}, error) {

@@ -102,34 +102,6 @@ func syncData(chunkID uint32, startOid, endOid uint64, pkg *Packet, conn *net.TC
 	return postRepairData(pkg, objects[len(objects)-1].Oid, databuf, pos, conn)
 }
 
-type RepairTask struct {
-	RemoteAddr     string
-	RemoteFileId   uint64
-	RemoteOffset   uint64
-	RemoteFileSize uint64
-	VolId          uint32
-}
-
-func (rt *RepairTask) toString() (m string) {
-	return fmt.Sprintf("RepairTask vol[%v] remote[%v] file[%v] offset[%v] size[%v]",
-		rt.VolId, rt.RemoteAddr, rt.RemoteFileId, rt.RemoteOffset, rt.RemoteFileSize)
-}
-
-func (s *DataNode) repairChunk(pkg *Packet) {
-	task := new(RepairTask)
-	err := json.Unmarshal(pkg.Data[:pkg.Size], task)
-	if err != nil {
-		pkg.PackErrorBody(LogRepair, err.Error())
-		return
-	}
-	log.LogWrite(pkg.actionMesg(ActionFollowerToLeaderOpCRepairReadSendRequest, task.RemoteAddr, pkg.StartT, err))
-
-	//doRepairChunk(task, pkg.ReqID)
-	pkg.PackOkReply()
-
-	return
-}
-
 //
 //func doRepairChunk(task *RepairTask, notifyReqId int64) error {
 //	start := time.Now().UnixNano()

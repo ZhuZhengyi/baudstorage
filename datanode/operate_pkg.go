@@ -55,7 +55,7 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 	case proto.OpNotifyCompact:
 		s.compactChunk(pkg)
 	case proto.OpNotifyRepair:
-		s.repairChunk(pkg)
+		s.repair(pkg)
 	case proto.OpGetWatermark:
 		s.getWatermark(pkg)
 	case proto.OpGetAllWatermark:
@@ -264,9 +264,17 @@ func (s *DataNode) compactChunk(pkg *Packet) {
 	return
 }
 
-func (s *DataNode) GetFlowInfo(pkg *Packet) {
-	in, out := s.stats.GetFlow()
-	flow := strconv.Itoa(int(in/MB)) + InOutFlowSplit + strconv.Itoa(int(out/MB))
-	pkg.PackOkGetInfoReply([]byte(flow))
+func (s *DataNode) repair(pkg *Packet) {
+	v := s.space.getVol(pkg.VolID)
+	if v == nil {
+		pkg.PackErrorBody(LogRepair, fmt.Sprintf("vol[%v] not exsits", pkg.VolID))
+	}
+	switch pkg.StoreMode {
+	case proto.ExtentStoreMode:
+		s.repairExtents(pkg)
+	case proto.TinyStoreMode:
+		s.repairTiny(pkg)
+	}
+
 	return
 }

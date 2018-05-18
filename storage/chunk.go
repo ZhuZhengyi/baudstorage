@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 
 	"github.com/tiglabs/baudstorage/util"
+	"fmt"
 )
 
 var (
@@ -28,6 +29,10 @@ type ExtentInfo struct {
 	Source   string
 	ExtentId int
 	Size     uint64
+}
+
+func (ei *ExtentInfo)ToString()(m string){
+	return fmt.Sprintf("extent[%v] size[%v] source[%v]",ei.ExtentId,ei.Size,ei.Source)
 }
 
 func NewChunk(dataDir string, chunkId int) (c *Chunk, err error) {
