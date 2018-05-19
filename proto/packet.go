@@ -124,7 +124,7 @@ func NewPacket() *Packet {
 	return p
 }
 
-func GetOpMesg(opcode uint8) (m string) {
+func (p *Packet)GetOpMesg(opcode uint8) (m string) {
 	switch opcode {
 	case OpCreateFile:
 		m = "CreateFile"
@@ -345,7 +345,7 @@ func (p *Packet) PackErrorWithBody(errCode uint8, reply []byte) {
 
 func (p *Packet) GetUniqLogId() (m string) {
 	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v_%v", p.ReqID, p.VolID, p.FileID,
-		p.Offset, p.Size, GetOpMesg(p.Opcode), GetOpMesg(p.ResultCode))
+		p.Offset, p.Size, p.GetOpMesg(p.Opcode), p.GetOpMesg(p.ResultCode))
 
 	return
 }
@@ -356,15 +356,15 @@ func (p *Packet) IsTransitPkg() bool {
 
 func (p *Packet) ActionMesg(action, remote string, start int64, err error) (m string) {
 	if err == nil {
-		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[%v] size[%v] "+
+		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[success] size[%v] "+
 			" cost[%v] isTransite[%v] ",
-			p.GetUniqLogId(), action, remote, GetOpMesg(p.ResultCode), GetOpMesg(p.Opcode), p.Size,
+			p.GetUniqLogId(), action, remote, p.GetOpMesg(p.ResultCode), p.GetOpMesg(p.Opcode), p.Size,
 			(time.Now().UnixNano()-start)/1e6, p.IsTransitPkg())
 
 	} else {
 		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[%v] size[%v] "+
 			", err[%v] isTransite[%v]", p.GetUniqLogId(), action,
-			remote, GetOpMesg(p.ResultCode), GetOpMesg(p.Opcode), p.Size, err.Error(),
+			remote, p.GetOpMesg(p.ResultCode), p.GetOpMesg(p.Opcode), p.Size, err.Error(),
 			p.IsTransitPkg())
 	}
 

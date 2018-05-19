@@ -16,6 +16,7 @@ import (
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 	"hash/crc32"
+	"golang.org/x/text/cmd/gotext/examples/extract_http/pkg"
 )
 
 const (
@@ -61,7 +62,7 @@ func (m *MockServer) volGroupView() (views []*sdk.VolGroup) {
 
 func (m *MockServer) packErrorBody(request *proto.Packet, err error) {
 	log.LogError(fmt.Sprintf("request [%v]Action[%v] error[%v]", request.GetUniqLogId(),
-		proto.GetOpMesg(request.Opcode), err.Error()))
+		request.GetOpMesg(request.Opcode), err.Error()))
 	data := make([]byte, len(err.Error()))
 	copy(data, ([]byte)(err.Error()))
 	request.PackErrorWithBody(proto.OpIntraGroupNetErr, data)

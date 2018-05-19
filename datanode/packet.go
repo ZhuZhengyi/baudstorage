@@ -6,6 +6,7 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util/ump"
+	"golang.org/x/text/cmd/gotext/examples/extract_http/pkg"
 	"net"
 	"strings"
 	"time"
@@ -31,7 +32,7 @@ type Packet struct {
 func (p *Packet) afterTp() (ok bool) {
 	var err error
 	if p.IsErrPack() {
-		err = fmt.Errorf(proto.GetOpMesg(p.Opcode)+" failed because[%v]", string(p.Data[:p.Size]))
+		err = fmt.Errorf(pkg.GetOpMesg(p.Opcode)+" failed because[%v]", string(p.Data[:p.Size]))
 	}
 	ump.AfterTP(p.tpObject, err)
 
@@ -39,7 +40,7 @@ func (p *Packet) afterTp() (ok bool) {
 }
 
 func (p *Packet) beforeTp(clusterId string) (ok bool) {
-	umpKey := fmt.Sprintf("%s_datanode_%v", clusterId, proto.GetOpMesg(p.Opcode))
+	umpKey := fmt.Sprintf("%s_datanode_%v", clusterId, pkg.GetOpMesg(p.Opcode))
 	p.tpObject = ump.BeforeTP(umpKey)
 	return
 }
@@ -175,17 +176,17 @@ func (p *Packet) getErr() (m string) {
 	return fmt.Sprintf("req[%v] err[%v]", p.GetUniqLogId(), string(p.Data[:p.Size]))
 }
 
-func (p *Packet) actionMesg(action, remote string, start int64, err error) (m string) {
+func (p *Packet) ActionMesg(action, remote string, start int64, err error) (m string) {
 	if err == nil {
-		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[%v] size[%v] "+
+		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[success] size[%v] "+
 			" cost[%v] isTransite[%v] ",
-			p.GetUniqLogId(), action, remote, proto.GetOpMesg(p.Opcode), proto.GetOpMesg(p.ResultCode), p.Size,
+			p.GetUniqLogId(), action, remote, p.GetOpMesg(p.Opcode), p.Size,
 			(time.Now().UnixNano()-start)/1e6, p.IsTransitPkg())
 
 	} else {
 		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[%v] size[%v] "+
 			", err[%v] isTransite[%v]", p.GetUniqLogId(), action,
-			remote, proto.GetOpMesg(p.Opcode), proto.GetOpMesg(p.ResultCode), p.Size, err.Error(),
+			remote, p.GetOpMesg(p.Opcode), p.GetOpMesg(p.ResultCode), p.Size, err.Error(),
 			p.IsTransitPkg())
 	}
 

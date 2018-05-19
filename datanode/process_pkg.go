@@ -87,7 +87,7 @@ func (s *DataNode) doRequestCh(req *Packet, msgH *MessageHandler) {
 	if err = s.sendToNext(req, msgH); err == nil {
 		s.operatePacket(req, msgH.inConn)
 	} else {
-		log.LogError(req.actionMesg(ActionSendToNext, req.nextAddr,
+		log.LogError(req.ActionMesg(ActionSendToNext, req.nextAddr,
 			req.StartT, fmt.Errorf("failed to send to : %v", req.nextAddr)))
 		if req.IsMarkDeleteReq() {
 			s.operatePacket(req, msgH.inConn)
@@ -101,18 +101,18 @@ func (s *DataNode) doRequestCh(req *Packet, msgH *MessageHandler) {
 func (s *DataNode) doReplyCh(reply *Packet, msgH *MessageHandler) {
 	var err error
 	if reply.IsErrPack() {
-		err = fmt.Errorf(reply.actionMesg(ActionWriteToCli, msgH.inConn.RemoteAddr().String(),
+		err = fmt.Errorf(reply.ActionMesg(ActionWriteToCli, msgH.inConn.RemoteAddr().String(),
 			reply.StartT, fmt.Errorf(string(reply.Data[:reply.Size]))))
 		log.LogError(err)
 	}
 
 	if err = reply.WriteToConn(msgH.inConn); err != nil {
-		err = fmt.Errorf(reply.actionMesg(ActionWriteToCli, msgH.inConn.RemoteAddr().String(),
+		err = fmt.Errorf(reply.ActionMesg(ActionWriteToCli, msgH.inConn.RemoteAddr().String(),
 			reply.StartT, err))
 		log.LogError(err)
 		msgH.ExitSign()
 	}
-	log.LogDebug(reply.actionMesg(ActionWriteToCli,
+	log.LogDebug(reply.ActionMesg(ActionWriteToCli,
 		msgH.inConn.RemoteAddr().String(), reply.StartT, err))
 	s.statsFlow(reply, OutFlow)
 }
@@ -155,7 +155,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 	//if local excute failed,then
 	if request.IsErrPack() {
 		request.PackErrorBody(ActionReciveFromNext, request.getErr())
-		log.LogError(request.actionMesg(ActionReciveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
+		log.LogError(request.ActionMesg(ActionReciveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
 		return
 	}
 
@@ -169,7 +169,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 			return request, true
 		}
 	} else {
-		log.LogError(request.actionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
+		log.LogError(request.ActionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 		return
 	}
@@ -184,7 +184,7 @@ sucess:
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 		log.LogError(err.Error())
 	}
-	log.LogDebug(reply.actionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
+	log.LogDebug(reply.ActionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 
 	return
 }

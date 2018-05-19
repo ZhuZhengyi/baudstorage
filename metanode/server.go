@@ -125,7 +125,7 @@ func (m *MetaNode) handlePacket(conn net.Conn, p *Packet) (err error) {
 		err = m.opOfflineMetaPartition(conn, p)
 	default:
 		// Unknown operation
-		err = errors.New("unknown Opcode: " + proto.GetOpMesg(p.Opcode))
+		err = errors.New("unknown Opcode: " + pkg.GetOpMesg(p.Opcode))
 	}
 	return
 }
