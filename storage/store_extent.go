@@ -15,9 +15,10 @@ import (
 	"syscall"
 
 	"github.com/juju/errors"
-	"time"
-	"path"
+	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"
+	"path"
+	"time"
 )
 
 var (
@@ -25,14 +26,14 @@ var (
 )
 
 const (
-	BlockCrcHeaderSize = 4097
-	BlockCount         = 1024
-	MarkDelete         = 'D'
-	UnMarkDelete       = 'U'
-	MarkDeleteIndex    = 4096
-	BlockSize          = 65536
-	PerBlockCrcSize    = 4
-	DeleteIndexFileName="delete.index"
+	BlockCrcHeaderSize  = 4097
+	BlockCount          = 1024
+	MarkDelete          = 'D'
+	UnMarkDelete        = 'U'
+	MarkDeleteIndex     = 4096
+	BlockSize           = 65536
+	PerBlockCrcSize     = 4
+	DeleteIndexFileName = "delete.index"
 )
 
 type ExtentStore struct {
@@ -42,18 +43,18 @@ type ExtentStore struct {
 	fdlist       *list.List
 	baseExtentId uint64
 	storeSize    int
-	deleteFp    *FileSimulator
+	deleteFp     *FileSimulator
 }
 
 func NewExtentStore(dataDir string, storeSize int, newMode bool) (s *ExtentStore, err error) {
 	s = new(ExtentStore)
 	s.dataDir = dataDir
-	s.deleteFp=&FileSimulator{}
+	s.deleteFp = &FileSimulator{}
 	if err = CheckAndCreateSubdir(dataDir, newMode); err != nil {
 		return nil, fmt.Errorf("NewExtentStore [%v] err[%v]", dataDir, err)
 	}
 
-	if err=s.deleteFp.OpenFile(path.Join(dataDir,DeleteIndexFileName),ChunkOpenOpt,0666);err!=nil {
+	if err = s.deleteFp.OpenFile(path.Join(dataDir, DeleteIndexFileName), ChunkOpenOpt, 0666); err != nil {
 		return nil, fmt.Errorf("NewExtentStore [%v] create deleteIndex err[%v]", dataDir, err)
 	}
 
@@ -70,6 +71,39 @@ func NewExtentStore(dataDir string, storeSize int, newMode bool) (s *ExtentStore
 func (s *ExtentStore) DeleteStore() {
 	s.ClearAllCache()
 	os.RemoveAll(s.dataDir)
+
+	return
+}
+
+func (s *ExtentStore) SnapShot() (files []*proto.File, err error) {
+	var (
+		finfos   []os.FileInfo
+		extentId uint64
+	)
+	finfos, err = ioutil.ReadDir(s.dataDir)
+	if err != nil {
+		return
+	}
+	for _, finfo := range finfos {
+		if time.Now().Unix()-finfo.ModTime().Unix() < 60*5 {
+			continue
+		}
+		if finfo.Name() == DeleteIndexFileName {
+			continue
+		}
+		extentId, err = strconv.ParseUint(finfo.Name(), 10, 2)
+		if err != nil {
+			continue
+		}
+		var einfo *FileInfo
+		einfo, err = s.GetWatermark(extentId)
+		if err != nil {
+			continue
+		}
+		file := &proto.File{Name: finfo.Name(), Size: uint32(einfo.Size), MarkDel: false, NeedleCnt: 1}
+		files = append(files, file)
+	}
+	err = nil
 
 	return
 }
@@ -123,9 +157,9 @@ func (s *ExtentStore) getExtent(extentId uint64) (e *Extent, err error) {
 	return e, err
 }
 
-func (s *ExtentStore)IsExsitExtent(extentId uint64)(bool) {
-	_,err:=s.getExtent(extentId)
-	if err!=nil {
+func (s *ExtentStore) IsExsitExtent(extentId uint64) bool {
+	_, err := s.getExtent(extentId)
+	if err != nil {
 		return false
 	}
 	return true
@@ -279,16 +313,13 @@ func (s *ExtentStore) MarkDelete(extentId uint64, offset, size int64) (err error
 	if err = e.deleteExtent(); err != nil {
 		return nil
 	}
-	buf:=make([]byte,8)
-	binary.BigEndian.PutUint64(buf,extentId)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, extentId)
 	s.deleteFp.Write(buf)
 	s.deleteFp.Sync()
 
 	return
 }
-
-
-
 
 func (s *ExtentStore) Sync(extentId uint64) (err error) {
 	var e *Extent
@@ -373,6 +404,9 @@ func (s *ExtentStore) GetAllWatermark() (extents []*FileInfo, err error) {
 		if time.Now().Unix()-finfo.ModTime().Unix() < 60*5 {
 			continue
 		}
+		if finfo.Name() == DeleteIndexFileName {
+			continue
+		}
 		extentId, err = strconv.ParseUint(finfo.Name(), 10, 2)
 		if err != nil {
 			continue
@@ -419,7 +453,7 @@ func (s *ExtentStore) GetStoreFileCount() (files int, err error) {
 	var finfos []os.FileInfo
 
 	if finfos, err = ioutil.ReadDir(s.dataDir); err == nil {
-		files = len(finfos)
+		files = len(finfos) - 1
 	}
 
 	return
@@ -431,7 +465,7 @@ func (s *ExtentStore) GetStoreUsedSize() (size int64) {
 			if finfo.IsDir() {
 				continue
 			}
-			if finfo.Name()==DeleteIndexFileName {
+			if finfo.Name() == DeleteIndexFileName {
 				continue
 			}
 			size += finfo.Size()
@@ -449,18 +483,18 @@ func (s *ExtentStore) GetStoreStatus() int {
 }
 
 func (s *ExtentStore) GetDelObjects() (extents []uint64) {
-	extents=make([]uint64,0)
-	s.deleteFp.Seek(0,os.SEEK_SET)
+	extents = make([]uint64, 0)
+	s.deleteFp.Seek(0, os.SEEK_SET)
 	var offset int64
 	for {
-		buf:=make([]byte,util.MB*10)
-		read,err:=s.deleteFp.ReadAt(buf,offset)
-		offset+=int64(read)
-		for i:=0;i<len(buf);i+=ObjectIdLen{
-			extentId:=binary.BigEndian.Uint64(buf[i*ObjectIdLen:(i+1)*ObjectIdLen])
-			extents=append(extents,extentId)
+		buf := make([]byte, util.MB*10)
+		read, err := s.deleteFp.ReadAt(buf, offset)
+		offset += int64(read)
+		for i := 0; i < len(buf); i += ObjectIdLen {
+			extentId := binary.BigEndian.Uint64(buf[i*ObjectIdLen : (i+1)*ObjectIdLen])
+			extents = append(extents, extentId)
 		}
-		if err!=nil {
+		if err != nil {
 			break
 		}
 	}

@@ -9,11 +9,8 @@ import (
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
-	"hash/crc32"
-	"io"
 	"net"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -94,7 +91,6 @@ func (s *DataNode) createVol(pkg *Packet) {
 	pkg.PackOkReply()
 	response := &proto.CreateVolResponse{}
 	request := task.Request.(*proto.CreateVolRequest)
-	response.VolId = uint64(request.VolId)
 	if task.OpCode == proto.OpCreateVol {
 		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
 		if err != nil {
@@ -103,6 +99,7 @@ func (s *DataNode) createVol(pkg *Packet) {
 		}
 		response.Status = proto.OpOk
 	} else {
+		response.VolId = uint64(request.VolId)
 		response.Status = proto.OpErr
 		response.Result = "unavali opcode "
 	}
@@ -121,7 +118,6 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	pkg.PackOkReply()
 	request := &proto.DeleteVolRequest{}
 	response := &proto.DeleteVolResponse{}
-	response.VolId = uint64(request.VolId)
 	if task.OpCode == proto.OpCreateVol {
 		request = task.Request.(*proto.DeleteVolRequest)
 		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
@@ -129,6 +125,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 			response.Status = proto.OpErr
 			response.Result = err.Error()
 		}
+		response.VolId = uint64(request.VolId)
 		response.Status = proto.OpOk
 	} else {
 		response.Status = proto.OpErr
@@ -139,6 +136,33 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	_, err := s.PostToMaster(data, "/node/Repost")
 	if err != nil {
 		err = errors.Annotatef(err, "create vol failed,volId[%v]", request.VolId)
+		log.LogError(errors.ErrorStack(err))
+	}
+}
+
+func (s *DataNode) loadVol(pkg *Packet) {
+	task := &proto.AdminTask{}
+	json.Unmarshal(pkg.Data, task)
+	pkg.PackOkReply()
+	request := &proto.LoadVolRequest{}
+	response := &proto.LoadVolResponse{}
+	if task.OpCode == proto.OpCreateVol {
+		request = task.Request.(*proto.LoadVolRequest)
+		v := s.space.getVol(uint32(request.VolId))
+		if v == nil {
+			response.Status = proto.OpErr
+			response.Result = fmt.Sprintf("vol[%v] not found", request.VolId)
+		}
+		response = v.LoadVol()
+	} else {
+		response.Status = proto.OpErr
+		response.Result = "unavali opcode "
+	}
+	task.Response = response
+	data, _ := json.Marshal(task)
+	_, err := s.PostToMaster(data, "/node/Repost")
+	if err != nil {
+		err = errors.Annotatef(err, "load vol failed,volId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))
 	}
 }

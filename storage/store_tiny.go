@@ -118,7 +118,7 @@ func (s *TinyStore) chunkExist(chunkId uint32) (exist bool) {
 	return
 }
 
-func (s *TinyStore) WriteDeleteDentry(objectId uint64, chunkId int,crc uint32) (err error) {
+func (s *TinyStore) WriteDeleteDentry(objectId uint64, chunkId int, crc uint32) (err error) {
 	var (
 		fi os.FileInfo
 	)
@@ -133,7 +133,7 @@ func (s *TinyStore) WriteDeleteDentry(objectId uint64, chunkId int,crc uint32) (
 	if fi, err = c.file.Stat(); err != nil {
 		return
 	}
-	o := &Object{Oid: objectId, Size: TombstoneFileSize, Offset: uint32(fi.Size()),Crc:crc}
+	o := &Object{Oid: objectId, Size: TombstoneFileSize, Offset: uint32(fi.Size()), Crc: crc}
 	if err = c.tree.appendToIdxFile(o); err == nil {
 		if c.loadLastOid() < objectId {
 			c.storeLastOid(objectId)

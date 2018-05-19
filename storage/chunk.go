@@ -8,8 +8,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/tiglabs/baudstorage/util"
 	"fmt"
+	"github.com/tiglabs/baudstorage/util"
 )
 
 var (
@@ -31,8 +31,8 @@ type FileInfo struct {
 	Size     uint64
 }
 
-func (ei *FileInfo)ToString()(m string){
-	return fmt.Sprintf("extent[%v] size[%v] source[%v]",ei.FileIdId,ei.Size,ei.Source)
+func (ei *FileInfo) ToString() (m string) {
+	return fmt.Sprintf("extent[%v] size[%v] source[%v]", ei.FileIdId, ei.Size, ei.Source)
 }
 
 func NewChunk(dataDir string, chunkId int) (c *Chunk, err error) {

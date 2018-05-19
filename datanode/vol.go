@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util/log"
 	"os"
@@ -119,4 +120,29 @@ func (v *Vol) getMembers() (bool, *VolMembers, error) {
 	}
 
 	return true, members, nil
+}
+
+func (v *Vol) LoadVol() (response *proto.LoadVolResponse) {
+	response = new(proto.LoadVolResponse)
+	response.VolId = uint64(v.volId)
+	response.Status = uint8(v.status)
+	response.VolType = v.volMode
+	response.VolSnapshot = make([]*proto.File, 0)
+	switch v.volMode {
+	case ExtentVol:
+		var err error
+		store := v.store.(*storage.ExtentStore)
+		response.VolSnapshot, err = store.SnapShot()
+		response.Used = uint64(store.GetStoreUsedSize())
+		if err != nil {
+			response.Status = proto.OpErr
+			response.Result = err.Error()
+		} else {
+			response.Status = proto.OpOk
+		}
+	case TinyVol:
+
+	}
+	return
+
 }
