@@ -28,7 +28,7 @@ const (
 
 var (
 	FlushErr      = errors.New(" backEndlush error")
-	FullExtentErr = errors.New("full Extent")
+	FullExtentErr = errors.New("full extent")
 )
 
 type ExtentWriter struct {
@@ -206,7 +206,7 @@ func (writer *ExtentWriter) cleanHandleCh() {
 	}
 }
 
-//every Extent is FULL,must is 64MB
+//every extent is FULL,must is 64MB
 func (writer *ExtentWriter) isFullExtent() bool {
 	return writer.offset+CFSBLOCKSIZE >= CFSEXTENTSIZE
 }
@@ -223,7 +223,7 @@ func (writer *ExtentWriter) toString() string {
 	if writer.getPacket() != nil {
 		currPkgMesg = writer.currentPacket.GetUniqLogId()
 	}
-	return fmt.Sprintf("Extent{inode=%v volGroup=%v extentId=%v retryCnt=%v handleCh[%v] requestQueueLen[%v] currentPkg=%v}",
+	return fmt.Sprintf("extent{inode=%v volGroup=%v extentId=%v retryCnt=%v handleCh[%v] requestQueueLen[%v] currentPkg=%v}",
 		writer.inode, writer.volGroup.VolId, writer.extentId, writer.recoverCnt,
 		len(writer.handleCh), writer.getQueueListLen(), currPkgMesg)
 }
