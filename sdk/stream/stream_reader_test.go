@@ -102,7 +102,7 @@ func TestStreamReader_GetReader(t *testing.T) {
 		}
 		addSize+=currReadSize
 		if addSize>util.TB{
-			fmt.Printf("filesize[%v] haveReadOffset[%v]",sk.Size(),haveReadSize)
+			fmt.Printf("filesize[%v] haveReadOffset[%v]\n",sk.Size(),haveReadSize)
 			addSize=0
 		}
 		haveReadSize += currReadSize
