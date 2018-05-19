@@ -105,10 +105,10 @@ type DataNodeHeartBeatResponse struct {
 }
 
 type MetaPartitionReport struct {
-	GroupId  uint64
-	Status   int
-	MaxInodeID uint64
-	IsLeader bool
+	PartitionID uint64
+	Status      int
+	MaxInodeID  uint64
+	IsLeader    bool
 }
 
 type MetaNodeHeartbeatResponse struct {
@@ -132,28 +132,28 @@ type DeleteFileResponse struct {
 }
 
 type DeleteMetaPartitionRequest struct {
-	GroupId uint64
+	PartitionID uint64
 }
 
 type DeleteMetaPartitionResponse struct {
-	GroupId uint64
-	Status  uint8
-	Result  string
+	PartitionID uint64
+	Status      uint8
+	Result      string
 }
 
 type UpdateMetaPartitionRequest struct {
-	GroupId uint64
-	NsName  string
-	Start   uint64
-	End     uint64
+	PartitionID uint64
+	NsName      string
+	Start       uint64
+	End         uint64
 }
 
 type UpdateMetaPartitionResponse struct {
-	GroupId uint64
-	NsName  string
-	End     uint64
-	Status  uint8
-	Result  string
+	PartitionID uint64
+	NsName      string
+	End         uint64
+	Status      uint8
+	Result      string
 }
 
 type MetaPartitionOfflineRequest struct {

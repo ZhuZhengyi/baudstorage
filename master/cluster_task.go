@@ -295,7 +295,7 @@ func (c *Cluster) dealUpdateMetaPartition(nodeAddr string, resp *proto.UpdateMet
 		log.LogError(fmt.Sprintf("action[dealUpdateMetaPartition],nodeAddr %v update meta range failed,err %v", nodeAddr, resp.Result))
 		return
 	}
-	mp, err := c.getMetaPartitionByID(resp.GroupId)
+	mp, err := c.getMetaPartitionByID(resp.PartitionID)
 	mp.End = resp.End
 	mp.updateEnd()
 	if err != nil {
@@ -316,7 +316,7 @@ func (c *Cluster) dealDeleteMetaPartition(nodeAddr string, resp *proto.DeleteMet
 		return
 	}
 	var mr *MetaReplica
-	mp, err := c.getMetaPartitionByID(resp.GroupId)
+	mp, err := c.getMetaPartitionByID(resp.PartitionID)
 	if err != nil {
 		goto errDeal
 	}
@@ -351,7 +351,7 @@ func (c *Cluster) dealCreateMetaPartition(nodeAddr string, resp *proto.CreateMet
 		goto errDeal
 	}
 
-	if mp, err = ns.getMetaPartitionById(resp.GroupId); err != nil {
+	if mp, err = ns.getMetaPartitionById(resp.PartitionID); err != nil {
 		goto errDeal
 	}
 
@@ -572,7 +572,7 @@ func (c *Cluster) UpdateMetaNode(metaNode *MetaNode, threshold bool) {
 			continue
 		}
 
-		if mp, err := c.getMetaPartitionByID(mr.GroupId); err == nil {
+		if mp, err := c.getMetaPartitionByID(mr.PartitionID); err == nil {
 			mp.updateMetaPartition(mr, metaNode)
 			if threshold {
 				end := mr.MaxInodeID + DefaultMinMetaPartitionRange

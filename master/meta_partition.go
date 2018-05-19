@@ -371,10 +371,10 @@ func (mp *MetaPartition) generateCreateMetaPartitionTasks(specifyAddrs []string)
 	tasks = make([]*proto.AdminTask, 0)
 	hosts := make([]string, 0)
 	req := &proto.CreateMetaPartitionRequest{
-		Start:   mp.Start,
-		End:     mp.End,
-		GroupId: mp.PartitionID,
-		Members: mp.peers,
+		Start:       mp.Start,
+		End:         mp.End,
+		PartitionID: mp.PartitionID,
+		Members:     mp.peers,
 	}
 	if specifyAddrs == nil {
 		hosts = mp.PersistenceHosts
@@ -413,19 +413,19 @@ func (mp *MetaPartition) generateLoadMetaPartitionTasks() (tasks []*proto.AdminT
 	return
 }
 
-func (mp *MetaPartition) generateUpdateMetaReplicaTask(groupId uint64, end uint64) (t *proto.AdminTask) {
+func (mp *MetaPartition) generateUpdateMetaReplicaTask(partitionID uint64, end uint64) (t *proto.AdminTask) {
 	mr, err := mp.getLeaderMetaReplica()
 	if err != nil {
 		log.LogError(fmt.Sprintf("meta group %v no leader", mp.PartitionID))
 		return
 	}
-	req := &proto.UpdateMetaPartitionRequest{GroupId: groupId, End: end, NsName: mp.nsName}
+	req := &proto.UpdateMetaPartitionRequest{PartitionID: partitionID, End: end, NsName: mp.nsName}
 	t = proto.NewAdminTask(OpUpdateMetaPartition, mr.Addr, req)
 	return
 }
 
-func (mr *MetaReplica) generateDeleteReplicaTask(groupId uint64) (t *proto.AdminTask) {
-	req := &proto.DeleteMetaPartitionRequest{GroupId: groupId}
+func (mr *MetaReplica) generateDeleteReplicaTask(partitionID uint64) (t *proto.AdminTask) {
+	req := &proto.DeleteMetaPartitionRequest{PartitionID: partitionID}
 	t = proto.NewAdminTask(OpDeleteMetaPartition, mr.Addr, req)
 	return
 }
