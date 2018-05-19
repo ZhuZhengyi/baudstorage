@@ -20,6 +20,7 @@ func (s *DataNode) readFromCliAndDeal(msgH *MessageHandler) (err error) {
 	if err = pkg.ReadFromConn(msgH.inConn, proto.NoReadDeadlineTime); err != nil {
 		goto errDeal
 	}
+	pkg.beforeTp(s.clusterId)
 
 	if err = s.CheckPacket(pkg); err != nil {
 		goto errDeal
@@ -112,6 +113,7 @@ func (s *DataNode) doReplyCh(reply *Packet, msgH *MessageHandler) {
 		log.LogError(err)
 		msgH.ExitSign()
 	}
+	reply.afterTp()
 	log.LogDebug(reply.ActionMesg(ActionWriteToCli,
 		msgH.inConn.RemoteAddr().String(), reply.StartT, err))
 	s.statsFlow(reply, OutFlow)

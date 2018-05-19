@@ -281,7 +281,6 @@ func (p *Packet) ReadFromConn(c net.Conn, deadlineTime time.Duration) (err error
 		c.SetReadDeadline(time.Now().Add(deadlineTime * time.Second))
 	}
 	header := make([]byte, HeaderSize)
-
 	if _, err = io.ReadFull(c, header); err != nil {
 		return
 	}

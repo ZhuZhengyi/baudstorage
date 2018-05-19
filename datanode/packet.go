@@ -32,7 +32,7 @@ type Packet struct {
 func (p *Packet) afterTp() (ok bool) {
 	var err error
 	if p.IsErrPack() {
-		err = fmt.Errorf(pkg.GetOpMesg(p.Opcode)+" failed because[%v]", string(p.Data[:p.Size]))
+		err = fmt.Errorf(p.GetOpMesg(p.Opcode)+" failed because[%v]", string(p.Data[:p.Size]))
 	}
 	ump.AfterTP(p.tpObject, err)
 
@@ -40,7 +40,7 @@ func (p *Packet) afterTp() (ok bool) {
 }
 
 func (p *Packet) beforeTp(clusterId string) (ok bool) {
-	umpKey := fmt.Sprintf("%s_datanode_%v", clusterId, pkg.GetOpMesg(p.Opcode))
+	umpKey := fmt.Sprintf("%s_datanode_stream%v", clusterId, p.GetOpMesg(p.Opcode))
 	p.tpObject = ump.BeforeTP(umpKey)
 	return
 }
