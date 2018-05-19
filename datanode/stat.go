@@ -48,6 +48,12 @@ type Stats struct {
 	sync.Mutex
 }
 
+func NewStats(zone string) (s *Stats) {
+	s = new(Stats)
+	s.Zone = zone
+	return s
+}
+
 func (s *Stats) AddConnection() {
 	atomic.AddInt64(&s.CurrentConns, 1)
 }
@@ -83,6 +89,7 @@ func (s *Stats) updateMetrics(total, used, free, createdVolWeights, remainWeight
 func post(data []byte, url string) (*http.Response, error) {
 	client := &http.Client{}
 	buff := bytes.NewBuffer(data)
+	client.Timeout = time.Second
 	req, err := http.NewRequest("POST", url, buff)
 	if err != nil {
 		return nil, err

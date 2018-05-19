@@ -61,7 +61,7 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 		s.loadVol(pkg)
 	case proto.OpDeleteVol:
 		s.deleteVol(pkg)
-	case proto.OpMetaNodeHeartbeat:
+	case proto.OpDataNodeHeartbeat:
 		s.heartBeats(pkg)
 	default:
 		pkg.PackErrorBody(ErrorUnknowOp.Error(), ErrorUnknowOp.Error()+strconv.Itoa(int(pkg.Opcode)))
@@ -122,8 +122,8 @@ func (s *DataNode) heartBeats(pkg *Packet) {
 	request := &proto.HeartBeatRequest{}
 	response := &proto.DataNodeHeartBeatResponse{}
 	if task.OpCode == proto.OpDataNodeHeartbeat {
-
 		response.Status = proto.OpOk
+		masterAddr = request.MasterAddr
 	} else {
 		response.Status = proto.OpErr
 		response.Result = "unavali opcode "

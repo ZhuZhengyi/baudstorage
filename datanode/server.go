@@ -106,11 +106,11 @@ func (s *DataNode) getIpFromMaster() error {
 }
 
 func (s *DataNode) Start(cfg *config.Config) error {
-	s.space = NewSpaceManager()
 	err := s.checkConfigAndLoadVol(cfg)
 	if err != nil {
 
 	}
+	s.space = NewSpaceManager(s.zone)
 
 	panic("implement me")
 }

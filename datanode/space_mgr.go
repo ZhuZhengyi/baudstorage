@@ -18,10 +18,11 @@ type SpaceManager struct {
 	stats    *Stats
 }
 
-func NewSpaceManager() (space *SpaceManager) {
+func NewSpaceManager(rack string) (space *SpaceManager) {
 	space = new(SpaceManager)
 	space.disks = make(map[string]*Disk)
 	space.vols = make(map[uint32]*Vol)
+	space.stats = NewStats(rack)
 	go func() {
 		ticker := time.Tick(time.Second * 10)
 		for {
@@ -66,11 +67,11 @@ func (space *SpaceManager) updateMetrics() {
 		total += d.All
 		used += d.Used
 		free += d.Free
-		createdVolWeights += d.UsedVols
-		remainWeightsForCreateVol += d.remainWeightsForCreateVol
+		createdVolWeights += d.CreatedVolWeights
+		remainWeightsForCreateVol += d.RemainWeightsForCreateVol
 		volcnt += d.VolCnt
-		if maxWeightsForCreateVol > d.remainWeightsForCreateVol {
-			maxWeightsForCreateVol = d.remainWeightsForCreateVol
+		if maxWeightsForCreateVol > d.RemainWeightsForCreateVol {
+			maxWeightsForCreateVol = d.RemainWeightsForCreateVol
 		}
 	}
 	space.diskLock.RUnlock()
