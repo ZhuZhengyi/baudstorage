@@ -1,15 +1,11 @@
 package metanode
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
 	"io"
 	"net"
 	"strconv"
 
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
@@ -81,102 +77,13 @@ func (m *MetaNode) servConn(conn net.Conn, stopC chan uint8) {
 
 // RoutePacket check the OpCode in specified packet and route it to handler.
 func (m *MetaNode) handlePacket(conn net.Conn, p *Packet) (err error) {
-	switch p.Opcode {
-	case proto.OpMetaCreateInode:
-		// Client → MetaNode
-		err = m.opCreateInode(conn, p)
-	case proto.OpMetaCreateDentry:
-		// Client → MetaNode
-		err = m.opCreateDentry(conn, p)
-	case proto.OpMetaDeleteInode:
-		// Client → MetaNode
-		err = m.opDeleteInode(conn, p)
-	case proto.OpMetaDeleteDentry:
-		// Client → MetaNode
-		err = m.opDeleteDentry(conn, p)
-	case proto.OpMetaReadDir:
-		// Client → MetaNode
-		err = m.opReadDir(conn, p)
-	case proto.OpMetaOpen:
-		// Client → MetaNode
-		err = m.opOpen(conn, p)
-	case proto.OpMetaInodeGet:
-		err = m.opMetaInodeGet(conn, p)
-	case proto.OpMetaExtentsAdd:
-		err = m.opMetaExtentsAdd(conn, p)
-	case proto.OpMetaExtentsList:
-		err = m.opMetaExtentsList(conn, p)
-	case proto.OpMetaExtentsDel:
-		err = m.opMetaExtentsDel(conn, p)
-	case proto.OpMetaLookup:
-		err = m.opMetaLookup(conn, p)
-	case proto.OpCreateMetaPartition:
-		// Mater → MetaNode
-		err = m.opCreateMetaPartition(conn, p)
-	case proto.OpMetaNodeHeartbeat:
-		err = m.opMetaNodeHeartbeat(conn, p)
-	case proto.OpDeleteMetaPartition:
-		err = m.opDeleteMetaPartition(conn, p)
-	case proto.OpUpdateMetaPartition:
-		err = m.opUpdateMetaPartition(conn, p)
-	case proto.OpLoadMetaPartition:
-		err = m.opLoadMetaPartition(conn, p)
-	case proto.OpOfflineMetaPartition:
-		err = m.opOfflineMetaPartition(conn, p)
-	default:
-		// Unknown operation
-		err = errors.New("unknown Opcode: " + pkg.GetOpMesg(p.Opcode))
-	}
+	// Handle request
+	err = m.metaManager.HandleMetaOperation(conn, p)
 	return
 }
 
-// ReplyToClient send reply data though tcp connection to client.
-func (m *MetaNode) replyClient(conn net.Conn, p *Packet) (err error) {
-	// Handle panic
-	defer func() {
-		if r := recover(); r != nil {
-			switch data := r.(type) {
-			case error:
-				err = data
-			default:
-				err = errors.New(data.(string))
-			}
-		}
-	}()
-	// Process data and send reply though specified tcp connection.
-	if err = p.WriteToConn(conn); err != nil {
-		log.LogError(err.Error())
-	}
-	return
-}
-
-// ReplyToMaster reply operation result to master by sending http request.
-func (m *MetaNode) replyToMaster(ip string, data interface{}) (err error) {
-	// Handle panic
-	defer func() {
-		if r := recover(); r != nil {
-			switch data := r.(type) {
-			case error:
-				err = data
-			default:
-				err = errors.New(data.(string))
-			}
-		}
-	}()
-	if ip == "" {
-		err = ErrNotLeader
-		return
-	}
-	// Process data and send reply though http specified remote address.
-	jsonBytes, err := json.Marshal(data)
-	if err != nil {
-		return
-	}
-	url := fmt.Sprintf("http://%s/%s", ip, metaNodeResponse)
-	resp, err := util.PostToNode(jsonBytes, url)
-	if err != nil {
-		log.LogError(err.Error())
-	}
-	log.Debug(string(resp))
+func (m *MetaNode) sendAcknowledge(conn net.Conn, p *Packet) (err error) {
+	p.PackOkReply()
+	err = p.WriteToConn(conn)
 	return
 }

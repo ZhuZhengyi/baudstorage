@@ -10,8 +10,8 @@ type CreateNameSpaceResponse struct {
 }
 
 type Peer struct {
-	ID   uint64
-	Addr string
+	ID   uint64 `json:"id"`
+	Addr string `json:"addr"`
 }
 type CreateMetaPartitionRequest struct {
 	MetaId      string
