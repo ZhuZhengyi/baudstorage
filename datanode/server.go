@@ -35,7 +35,6 @@ type DataNode struct {
 	space           *SpaceManager
 	masterAddrs     []string
 	masterAddrIndex uint32
-	stats           *Stats
 	port            string
 	logdir          string
 	zone            string

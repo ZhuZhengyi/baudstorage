@@ -2,6 +2,7 @@ package datanode
 
 import (
 	"fmt"
+	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
 	"math"
 	"sync"
@@ -26,6 +27,7 @@ func NewSpaceManager() (space *SpaceManager) {
 		for {
 			select {
 			case <-ticker:
+				space.modifyVolsStatus()
 				space.updateMetrics()
 			}
 		}
@@ -144,5 +146,64 @@ func (space *SpaceManager) deleteVol(vodId uint32) {
 	case TinyVol:
 		store := v.store.(*storage.TinyStore)
 		store.CloseAll()
+	}
+}
+
+func (s *DataNode) fillHeartBeatResponse(response *proto.DataNodeHeartBeatResponse) {
+	response.Status = proto.OpOk
+	stat := s.space.stats
+	stat.Lock()
+	response.Used = stat.Used
+	response.Total = stat.Total
+	response.Free = stat.Free
+	response.CreatedVolCnt = stat.CreatedVolCnt
+	response.CreatedVolWeights = stat.CreatedVolWeights
+	response.MaxWeightsForCreateVol = stat.MaxWeightsForCreateVol
+	response.RemainWeightsForCreateVol = stat.RemainWeightsForCreateVol
+	stat.Unlock()
+
+	response.RackName = s.zone
+	response.VolInfo = make([]*proto.VolReport, 0)
+	space := s.space
+	space.volLock.RLock()
+	for _, v := range space.vols {
+		vr := &proto.VolReport{VolID: uint64(v.volId), VolStatus: v.status, Total: uint64(v.volSize), Used: uint64(v.used)}
+		response.VolInfo = append(response.VolInfo, vr)
+	}
+	space.volLock.RUnlock()
+}
+
+func (space *SpaceManager) modifyVolsStatus() {
+	for _, d := range space.disks {
+		volsID := d.getVols()
+		diskStatus := d.Status
+
+		for _, vID := range volsID {
+			v := space.getVol(vID)
+			if v == nil {
+				continue
+			}
+
+			switch v.volMode {
+			case ExtentVol:
+				store := v.store.(*storage.ExtentStore)
+				v.status = store.GetStoreStatus()
+				v.used = int(store.GetStoreUsedSize())
+			case TinyVol:
+				store := v.store.(*storage.TinyStore)
+				v.status = store.GetStoreStatus()
+				if v.isLeader {
+					store.MoveChunkToUnavailChan()
+				}
+				v.used = int(store.GetStoreUsedSize())
+			}
+			if v.isLeader && v.status == storage.ReadOnlyStore {
+				v.status = storage.ReadOnlyStore
+			}
+
+			if diskStatus == storage.DiskErrStore {
+				v.status = storage.DiskErrStore
+			}
+		}
 	}
 }

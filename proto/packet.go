@@ -70,6 +70,8 @@ const (
 	OpCreateVol uint8 = 0x26
 	OpDeleteVol uint8 = 0x27
 	OpLoadVol   uint8 = 0x28
+	OpDataNodeHeartbeat    uint8 = 0x29
+
 
 	// Commons
 	OpIntraGroupNetErr uint8 = 0xF3

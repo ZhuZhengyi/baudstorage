@@ -61,6 +61,8 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 		s.loadVol(pkg)
 	case proto.OpDeleteVol:
 		s.deleteVol(pkg)
+	case proto.OpMetaNodeHeartbeat:
+		s.heartBeats(pkg)
 	default:
 		pkg.PackErrorBody(ErrorUnknowOp.Error(), ErrorUnknowOp.Error()+strconv.Itoa(int(pkg.Opcode)))
 	}
@@ -90,8 +92,9 @@ func (s *DataNode) createVol(pkg *Packet) {
 	json.Unmarshal(pkg.Data, task)
 	pkg.PackOkReply()
 	response := &proto.CreateVolResponse{}
-	request := task.Request.(*proto.CreateVolRequest)
+	request := &proto.CreateVolRequest{}
 	if task.OpCode == proto.OpCreateVol {
+		request = task.Request.(*proto.CreateVolRequest)
 		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
 		if err != nil {
 			response.Status = proto.OpErr
@@ -100,6 +103,28 @@ func (s *DataNode) createVol(pkg *Packet) {
 		response.Status = proto.OpOk
 	} else {
 		response.VolId = uint64(request.VolId)
+		response.Status = proto.OpErr
+		response.Result = "unavali opcode "
+	}
+	task.Response = response
+	data, _ := json.Marshal(task)
+	_, err := s.PostToMaster(data, "/node/Repost")
+	if err != nil {
+		err = errors.Annotatef(err, "create vol failed,volId[%v]", request.VolId)
+		log.LogError(errors.ErrorStack(err))
+	}
+}
+
+func (s *DataNode) heartBeats(pkg *Packet) {
+	task := &proto.AdminTask{}
+	json.Unmarshal(pkg.Data, task)
+	pkg.PackOkReply()
+	request := &proto.HeartBeatRequest{}
+	response := &proto.DataNodeHeartBeatResponse{}
+	if task.OpCode == proto.OpDataNodeHeartbeat {
+
+		response.Status = proto.OpOk
+	} else {
 		response.Status = proto.OpErr
 		response.Result = "unavali opcode "
 	}

@@ -32,6 +32,7 @@ type Vol struct {
 	path     string
 	diskPath string
 	volSize  int
+	used     int
 	store    interface{}
 	status   int
 	isLeader bool
