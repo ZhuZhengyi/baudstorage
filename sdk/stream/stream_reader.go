@@ -149,7 +149,7 @@ func (stream *StreamReader) GetReader(offset, size int) (readers []*ExtentReader
 		var (
 			currReaderSize   int
 			currReaderOffset int
-			isPutReader      bool
+			exsit      bool
 		)
 		if size <= 0 {
 			break
@@ -162,20 +162,22 @@ func (stream *StreamReader) GetReader(offset, size int) (readers []*ExtentReader
 		if r.endInodeOffset >= offset+size {
 			currReaderOffset = offset - r.startInodeOffset
 			currReaderSize = size
-			isPutReader = true
+			offset += currReaderSize
+			size -= currReaderSize
+			exsit=true
 		} else {
 			currReaderOffset = offset - r.startInodeOffset
 			currReaderSize = (int(r.key.Size) - currReaderOffset)
-			isPutReader = true
-		}
-		if isPutReader {
-			offset += currReaderSize
+			offset = r.endInodeOffset
 			size -= currReaderSize
-			readersSize = append(readersSize, currReaderSize)
-			readersOffsets = append(readersOffsets, currReaderOffset)
-			readers = append(readers, r)
 		}
+		readersSize = append(readersSize, currReaderSize)
+		readersOffsets = append(readersOffsets, currReaderOffset)
+		readers = append(readers, r)
 		r.Unlock()
+		if exsit{
+			break
+		}
 	}
 
 	return
