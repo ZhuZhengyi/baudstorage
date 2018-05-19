@@ -244,6 +244,8 @@ func (s *DataNode) repairExtents(pkg *Packet) {
 		if err != nil {
 			continue
 		}
+		fixFileSizeTask := &storage.FileInfo{Source: addExtent.Source, FileIdId: addExtent.FileIdId, Size: addExtent.Size}
+		mf.NeedFixFileSizeTasks = append(mf.NeedFixFileSizeTasks, fixFileSizeTask)
 	}
 
 	for _, fixExtent := range mf.NeedFixFileSizeTasks {
