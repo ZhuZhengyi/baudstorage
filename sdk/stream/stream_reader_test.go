@@ -79,7 +79,8 @@ func TestStreamReader_GetReader(t *testing.T) {
 				t.Logf("cond1 failed,readerInfos[%v],offset[%v] size[%v]",string(body),haveReadSize,currReadSize)
 				t.FailNow()
 			}
-		}else if len(extents)==2{
+		}
+		if len(extents)==2{
 			cond2:=extents[0].startInodeOffset+extentsOffset[0]+extentsSizes[0]==extents[1].startInodeOffset
 			if !cond2{
 				t.Logf("cond2 failed,readerInfos[%v],offset[%v] size[%v]",string(body),haveReadSize,currReadSize)
