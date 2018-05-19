@@ -126,11 +126,6 @@ func GetVolReport(d *Disk, space *SpaceManager, flag uint8) []*VolStat {
 
 		vr.ID = uint32(vID)
 		vr.Status = int32(v.status)
-		if flag == ReportToMonitorRole {
-			vr.Files, _ = v.Store.GetStoreFileCount()
-			vr.ReadLatency, vr.ReadBytes = v.GetReadRecord()
-			vr.WriteLatency, vr.WriteBytes = v.GetWriteRecord()
-		}
 		switch v.volMode {
 		case TinyVol:
 			store := v.store.(*storage.TinyStore)
