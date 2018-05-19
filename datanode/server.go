@@ -12,6 +12,7 @@ import (
 	"github.com/tiglabs/baudstorage/util/pool"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"strconv"
 	"strings"
 )
@@ -28,6 +29,7 @@ var (
 
 const (
 	GetIpFromMaster = "/getip"
+	DefaultRackName = "huitian_rack1"
 )
 
 type DataNode struct {
@@ -37,9 +39,8 @@ type DataNode struct {
 	masterAddrIndex uint32
 	port            string
 	logdir          string
-	zone            string
-	restport        string
-	profport        string
+	rackName        string
+	profPort        string
 	clusterId       string
 	localIp         string
 	localServAddr   string
@@ -52,18 +53,20 @@ func (s *DataNode) checkConfigAndLoadVol(cfg *config.Config) (err error) {
 	for _, ip := range cfg.GetArray("MasterAddr") {
 		s.masterAddrs = append(s.masterAddrs, ip.(string))
 	}
-	s.zone = cfg.GetString("Zone")
+
+	s.rackName = cfg.GetString("Rack")
 	_, err = log.NewLog(s.logdir, "datanode", log.DebugLevel)
 	if err = s.getIpFromMaster(); err != nil {
 		return
 	}
+	s.profPort = cfg.GetString("Profport")
 
-	s.restport = cfg.GetString("restport")
-	s.profport = cfg.GetString("porfport")
-
-	if err != nil || s.port == "" || s.clusterId == "" || s.logdir == "" ||
-		masterAddr == "" || s.zone == "" {
+	if err != nil || s.port == "" || s.logdir == "" ||
+		masterAddr == "" {
 		return ErrBadConfFile
+	}
+	if s.rackName == "" {
+		s.rackName = DefaultRackName
 	}
 
 	for _, d := range cfg.GetArray("Disks") {
@@ -110,21 +113,17 @@ func (s *DataNode) Start(cfg *config.Config) error {
 	if err != nil {
 
 	}
-	s.space = NewSpaceManager(s.zone)
+	s.space = NewSpaceManager(s.rackName)
 
 	panic("implement me")
 }
 
 func (s *DataNode) StartRestService() {
-	http.HandleFunc("/disks", QueryDisks)
-	http.HandleFunc("/vols", QueryVols)
-	http.HandleFunc("/stats", QueryStats)
-	http.HandleFunc("/task", HandleTasks)
-	http.HandleFunc("/op", HandleOps)
-	go s.handleCmds()
-	go s.handleCmdResps()
+	http.HandleFunc("/disks", s.HandleGetDisk)
+	http.HandleFunc("/vols", s.HandleVol)
+	http.HandleFunc("/stats", s.HandleStat)
 	go func() {
-		err := http.ListenAndServe(s.localIp+":"+s.restport, nil)
+		err := http.ListenAndServe(s.localIp+":"+s.profPort, nil)
 		if err != nil {
 			println("Failed to start rest service")
 			s.Shutdown()
@@ -154,7 +153,8 @@ func (s *DataNode) listenAndServe() (err error) {
 }
 
 func (s *DataNode) serveConn(conn net.Conn) {
-	s.stats.AddConnection()
+	space := s.space
+	space.stats.AddConnection()
 	c, _ := conn.(*net.TCPConn)
 	c.SetKeepAlive(true)
 	c.SetNoDelay(true)
@@ -175,7 +175,7 @@ func (s *DataNode) serveConn(conn net.Conn) {
 	}
 
 exitDeal:
-	s.stats.RemoveConnection()
+	space.stats.RemoveConnection()
 	c.Close()
 
 	return

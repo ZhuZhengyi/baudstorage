@@ -15,22 +15,21 @@ func (s *DataNode) HandleGetDisk(w http.ResponseWriter, r *http.Request) {
 	}
 	space.diskLock.RUnlock()
 
-	volInfos := make([]*proto.VolReport, 0)
+	volInfos := make([]*proto.LoadVolResponse, 0)
 	space.volLock.RLock()
 	for _, v := range space.vols {
-		vr := &proto.VolReport{VolID: uint64(v.volId), VolStatus: v.status, Total: uint64(v.volSize), Used: uint64(v.used)}
-		volInfos = append(volInfos, vr)
+		volInfos = append(volInfos, v.LoadVol())
 	}
 	space.volLock.RUnlock()
 	type DisksInfo struct {
-		VolInfo []*proto.VolReport
+		VolInfo []*proto.LoadVolResponse
 		Disks   []*Disk
 		Rack    string
 	}
 	diskReport := &DisksInfo{
 		VolInfo: volInfos,
 		Disks:   disks,
-		Rack:    s.zone,
+		Rack:    s.rackName,
 	}
 	body, _ := json.Marshal(diskReport)
 	w.Write(body)
@@ -40,5 +39,17 @@ func (s *DataNode) HandleStat(w http.ResponseWriter, r *http.Request) {
 	response := &proto.DataNodeHeartBeatResponse{}
 	s.fillHeartBeatResponse(response)
 	body, _ := json.Marshal(response)
+	w.Write(body)
+}
+
+func (s *DataNode) HandleVol(w http.ResponseWriter, r *http.Request) {
+	space := s.space
+	space.volLock.RLock()
+	volInfos := make([]*proto.LoadVolResponse, 0)
+	for _, v := range space.vols {
+		volInfos = append(volInfos, v.LoadVol())
+	}
+	space.volLock.RUnlock()
+	body, _ := json.Marshal(volInfos)
 	w.Write(body)
 }

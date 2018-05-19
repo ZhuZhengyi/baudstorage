@@ -163,7 +163,7 @@ func (s *DataNode) fillHeartBeatResponse(response *proto.DataNodeHeartBeatRespon
 	response.RemainWeightsForCreateVol = stat.RemainWeightsForCreateVol
 	stat.Unlock()
 
-	response.RackName = s.zone
+	response.RackName = s.rackName
 	response.VolInfo = make([]*proto.VolReport, 0)
 	space := s.space
 	space.volLock.RLock()
