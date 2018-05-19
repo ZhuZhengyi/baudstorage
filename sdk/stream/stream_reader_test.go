@@ -11,10 +11,12 @@ import (
 	_ "net/http/pprof"
 	"github.com/tiglabs/baudstorage/util"
 	"encoding/json"
+	"sync/atomic"
 )
 
 var (
 	sk *StreamKey
+	extentId uint64
 )
 
 func updateKey123(inode uint64) (extents []proto.ExtentKey, err error) {
@@ -29,6 +31,7 @@ type ReaderInfo struct {
 }
 
 
+
 func TestStreamReader_GetReader(t *testing.T) {
 	go func() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
@@ -37,7 +40,7 @@ func TestStreamReader_GetReader(t *testing.T) {
 	sk = NewStreamKey(2)
 	for i := 0; i < 10000; i++ {
 		rand.Seed(time.Now().UnixNano())
-		ek := proto.ExtentKey{VolId: uint32(rand.Intn(1000)), ExtentId: rand.Uint64() % CFSEXTENTSIZE,
+		ek := proto.ExtentKey{VolId:uint32(i), ExtentId: atomic.AddUint64(&extentId,1),
 		Size: uint32(rand.Intn(CFSEXTENTSIZE))}
 		sk.Put(ek)
 
@@ -92,13 +95,13 @@ func TestStreamReader_GetReader(t *testing.T) {
 				t.FailNow()
 			}
 		}
-		if haveReadSize>util.GB*1024*5{
+		if haveReadSize>util.PB{
 			fmt.Printf("filesize[%v] haveReadOffset[%v]",sk.Size(),haveReadSize)
 			break
 		}
 		haveReadSize += currReadSize
 		rand.Seed(time.Now().UnixNano())
-		ek := proto.ExtentKey{VolId: uint32(rand.Intn(1000)), ExtentId: rand.Uint64() % CFSEXTENTSIZE,
+		ek := proto.ExtentKey{VolId: uint32(rand.Intn(1000)), ExtentId: atomic.AddUint64(&extentId,1),
 			Size: uint32(rand.Intn(CFSEXTENTSIZE) + currReadSize)}
 		sk.Put(ek)
 	}

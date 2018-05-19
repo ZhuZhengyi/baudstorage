@@ -7,6 +7,8 @@ const (
 	KB = 1 << (10 * iota)
 	MB
 	GB
+	TB
+	PB
 	DefaultVolSize     = 120 * GB
 	TaskWorkerInterval = 1
 )
