@@ -139,10 +139,11 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 	return canRead, nil
 }
 
-func (stream *StreamReader) GetReader(offset, size int) (readers []*ExtentReader, readersOffsets []int, readersSize []int) {
+func (stream *StreamReader) GetReader(startReadOffset, size int) (readers []*ExtentReader, readersOffsets []int, readersSize []int) {
 	readers = make([]*ExtentReader, 0)
 	readersOffsets = make([]int, 0)
 	readersSize = make([]int, 0)
+	endOffset:= startReadOffset +size
 	stream.Lock()
 	defer stream.Unlock()
 	for _, r := range stream.readers {
@@ -151,25 +152,23 @@ func (stream *StreamReader) GetReader(offset, size int) (readers []*ExtentReader
 			currReaderOffset int
 			exsit      bool
 		)
-		if size <= 0 {
+		if startReadOffset >=endOffset {
 			break
 		}
 		r.Lock()
-		if r.startInodeOffset > offset || r.endInodeOffset < offset {
+		if r.startInodeOffset > startReadOffset || r.endInodeOffset < startReadOffset {
 			r.Unlock()
 			continue
 		}
-		if r.endInodeOffset >= offset+size {
-			currReaderOffset = offset - r.startInodeOffset
+		if r.endInodeOffset >= startReadOffset+size {
+			currReaderOffset = startReadOffset - r.startInodeOffset
 			currReaderSize = size
-			offset += currReaderSize
-			size -= currReaderSize
+			startReadOffset += currReaderSize
 			exsit=true
 		} else {
-			currReaderOffset = offset - r.startInodeOffset
+			currReaderOffset = startReadOffset - r.startInodeOffset
 			currReaderSize = (int(r.key.Size) - currReaderOffset)
-			offset = r.endInodeOffset
-			size -= currReaderSize
+			startReadOffset = r.endInodeOffset
 		}
 		readersSize = append(readersSize, currReaderSize)
 		readersOffsets = append(readersOffsets, currReaderOffset)
