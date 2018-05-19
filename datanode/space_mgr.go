@@ -175,6 +175,8 @@ func (s *DataNode) fillHeartBeatResponse(response *proto.DataNodeHeartBeatRespon
 }
 
 func (space *SpaceManager) modifyVolsStatus() {
+	space.diskLock.RLock()
+	defer space.diskLock.RUnlock()
 	for _, d := range space.disks {
 		volsID := d.getVols()
 		diskStatus := d.Status
