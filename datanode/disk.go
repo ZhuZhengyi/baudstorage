@@ -35,19 +35,19 @@ var (
 )
 
 type Disk struct {
-	Path      string
-	ReadErrs  uint64
-	WriteErrs uint64
-	All       uint64
-	Used      uint64
-	Free      uint64
-	VolCnt    uint64
-	FreeVols  uint64
-	UsedVols  uint64
-	MaxErrs   int
-	Status    int
-	VolsName  []string
-	RestSize  uint64
+	Path                      string
+	ReadErrs                  uint64
+	WriteErrs                 uint64
+	All                       uint64
+	Used                      uint64
+	Free                      uint64
+	VolCnt                    uint64
+	remainWeightsForCreateVol uint64
+	UsedVols                  uint64
+	MaxErrs                   int
+	Status                    int
+	VolsName                  []string
+	RestSize                  uint64
 	sync.Mutex
 	compactCh chan *CompactTask
 	space     *SpaceManager
@@ -144,7 +144,7 @@ func (d *Disk) recomputeVolCnt() {
 	d.Lock()
 	atomic.StoreUint64(&d.VolCnt, count)
 	d.VolsName = volnames
-	d.FreeVols = (d.All - d.RestSize - uint64(len(d.VolsName)*volSize))
+	d.remainWeightsForCreateVol = (d.All - d.RestSize - uint64(len(d.VolsName)*volSize))
 	d.UsedVols = uint64(len(d.VolsName) * volSize)
 	d.Unlock()
 }
@@ -165,7 +165,7 @@ func (d *Disk) UpdateSpaceInfo(localIp string) (err error) {
 	}
 	mesg := fmt.Sprintf("node[%v] Path[%v] total[%v] realAvail[%v] volsAvail[%v]"+
 		"MinRestSize[%v] maxErrs[%v] ReadErrs[%v] WriteErrs[%v] status[%v]", localIp, d.Path,
-		d.All, d.Free, d.FreeVols, d.RestSize, d.MaxErrs, d.ReadErrs, d.WriteErrs, d.Status)
+		d.All, d.Free, d.remainWeightsForCreateVol, d.RestSize, d.MaxErrs, d.ReadErrs, d.WriteErrs, d.Status)
 	log.LogInfo(mesg)
 
 	return
@@ -177,7 +177,7 @@ func (d *Disk) addVol(v *Vol) {
 	defer d.Unlock()
 	d.VolsName = append(d.VolsName, name)
 	atomic.AddUint64(&d.VolCnt, 1)
-	d.FreeVols = (d.All - d.RestSize - uint64(len(d.VolsName)*v.volSize))
+	d.remainWeightsForCreateVol = (d.All - d.RestSize - uint64(len(d.VolsName)*v.volSize))
 	d.UsedVols += uint64(v.volSize)
 }
 

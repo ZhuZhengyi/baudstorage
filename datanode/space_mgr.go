@@ -54,25 +54,26 @@ func (space *SpaceManager) putDisk(d *Disk) {
 func (space *SpaceManager) updateMetrics() {
 	space.diskLock.RLocker()
 	var (
-		total, used, free   uint64
-		usedVols, freeVols  uint64
-		maxFreeVols, volcnt uint64
+		total, used, free                            uint64
+		createdVolWeights, remainWeightsForCreateVol uint64
+		maxWeightsForCreateVol, volcnt               uint64
 	)
-	maxFreeVols = 0
+	maxWeightsForCreateVol = 0
 	for _, d := range space.disks {
 		d.recomputeVolCnt()
 		total += d.All
 		used += d.Used
 		free += d.Free
-		usedVols += d.UsedVols
-		freeVols += d.FreeVols
+		createdVolWeights += d.UsedVols
+		remainWeightsForCreateVol += d.remainWeightsForCreateVol
 		volcnt += d.VolCnt
-		if maxFreeVols > d.FreeVols {
-			maxFreeVols = d.FreeVols
+		if maxWeightsForCreateVol > d.remainWeightsForCreateVol {
+			maxWeightsForCreateVol = d.remainWeightsForCreateVol
 		}
 	}
 	space.diskLock.RUnlock()
-	space.stats.updateMetrics(total, used, free, usedVols, freeVols, maxFreeVols, volcnt)
+	space.stats.updateMetrics(total, used, free, createdVolWeights,
+		remainWeightsForCreateVol, maxWeightsForCreateVol, volcnt)
 }
 
 func (space *SpaceManager) getMinVolCntDisk() (d *Disk) {
