@@ -33,20 +33,19 @@ const (
 )
 
 type DataNode struct {
-	ConnPool        *pool.ConnPool
-	space           *SpaceManager
-	masterAddrs     []string
-	masterAddrIndex uint32
-	port            string
-	logdir          string
-	rackName        string
-	profPort        string
-	clusterId       string
-	localIp         string
-	localServAddr   string
+	ConnPool      *pool.ConnPool
+	space         *SpaceManager
+	masterAddrs   []string
+	port          string
+	logdir        string
+	rackName      string
+	profPort      string
+	clusterId     string
+	localIp       string
+	localServAddr string
 }
 
-func (s *DataNode) checkConfigAndLoadVol(cfg *config.Config) (err error) {
+func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	s.port = cfg.GetString("Port")
 	s.clusterId = cfg.GetString("ClusterID")
 	s.logdir = cfg.GetString("LogDir")
@@ -60,6 +59,7 @@ func (s *DataNode) checkConfigAndLoadVol(cfg *config.Config) (err error) {
 		return
 	}
 	s.profPort = cfg.GetString("Profport")
+	s.space = NewSpaceManager(s.rackName)
 
 	if err != nil || s.port == "" || s.logdir == "" ||
 		masterAddr == "" {
@@ -75,7 +75,7 @@ func (s *DataNode) checkConfigAndLoadVol(cfg *config.Config) (err error) {
 			return ErrBadConfFile
 		}
 		path := arr[0]
-		restSize, err := strconv.ParseUint(arr[1], 10, 2)
+		restSize, err := strconv.ParseUint(arr[1], 10, 64)
 		if err != nil {
 			return ErrBadConfFile
 		}
@@ -109,11 +109,10 @@ func (s *DataNode) getIpFromMaster() error {
 }
 
 func (s *DataNode) Start(cfg *config.Config) error {
-	err := s.checkConfigAndLoadVol(cfg)
+	err := s.LoadVol(cfg)
 	if err != nil {
 
 	}
-	s.space = NewSpaceManager(s.rackName)
 
 	panic("implement me")
 }

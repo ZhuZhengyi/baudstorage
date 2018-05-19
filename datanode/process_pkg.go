@@ -254,7 +254,7 @@ func CheckCrc(p *Packet) (err error) {
 }
 
 func (s *DataNode) statsFlow(pkg *Packet, flag bool) {
-	stat:=s.space.stats
+	stat := s.space.stats
 	if pkg == nil {
 		return
 	}
