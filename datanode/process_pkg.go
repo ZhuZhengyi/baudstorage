@@ -254,18 +254,19 @@ func CheckCrc(p *Packet) (err error) {
 }
 
 func (s *DataNode) statsFlow(pkg *Packet, flag bool) {
+	stat:=s.space.stats
 	if pkg == nil {
 		return
 	}
 	if flag == OutFlow {
-		s.stats.AddInDataSize(uint64(pkg.Size + pkg.Arglen))
+		stat.AddInDataSize(uint64(pkg.Size + pkg.Arglen))
 		return
 	}
 
 	if pkg.IsReadReq() {
-		s.stats.AddInDataSize(uint64(pkg.Arglen))
+		stat.AddInDataSize(uint64(pkg.Arglen))
 	} else {
-		s.stats.AddInDataSize(uint64(pkg.Size + pkg.Arglen))
+		stat.AddInDataSize(uint64(pkg.Size + pkg.Arglen))
 	}
 
 }
