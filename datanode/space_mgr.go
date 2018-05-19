@@ -14,6 +14,7 @@ type SpaceManager struct {
 	vols     map[uint32]*Vol
 	diskLock sync.RWMutex
 	volLock  sync.RWMutex
+	stats    *Stats
 }
 
 func NewSpaceManager() (space *SpaceManager) {
@@ -25,13 +26,8 @@ func NewSpaceManager() (space *SpaceManager) {
 		for {
 			select {
 			case <-ticker:
-				space.diskLock.RLocker()
-				for _, d := range space.disks {
-					d.recomputeVolCnt()
-				}
-				space.diskLock.RUnlock()
+				space.updateMetrics()
 			}
-
 		}
 	}()
 
@@ -53,6 +49,30 @@ func (space *SpaceManager) putDisk(d *Disk) {
 	space.disks[d.Path] = d
 	space.diskLock.Unlock()
 
+}
+
+func (space *SpaceManager) updateMetrics() {
+	space.diskLock.RLocker()
+	var (
+		total, used, free   uint64
+		usedVols, freeVols  uint64
+		maxFreeVols, volcnt uint64
+	)
+	maxFreeVols = 0
+	for _, d := range space.disks {
+		d.recomputeVolCnt()
+		total += d.All
+		used += d.Used
+		free += d.Free
+		usedVols += d.UsedVols
+		freeVols += d.FreeVols
+		volcnt += d.VolCnt
+		if maxFreeVols > d.FreeVols {
+			maxFreeVols = d.FreeVols
+		}
+	}
+	space.diskLock.RUnlock()
+	space.stats.updateMetrics(total, used, free, usedVols, freeVols, maxFreeVols, volcnt)
 }
 
 func (space *SpaceManager) getMinVolCntDisk() (d *Disk) {

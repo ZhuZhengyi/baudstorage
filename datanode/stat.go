@@ -2,31 +2,16 @@ package datanode
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/juju/errors"
-	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util/log"
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
-
-type VolStat struct {
-	ID     uint32 `json:"VolId"`
-	Status int32  `json:"VolStat"`
-
-	//report to monitor
-	ReadLatency  int32 `json:"ReadDelay"`
-	WriteLatency int32 `json:"WriteDelay"`
-	ReadBytes    int64
-	WriteBytes   int64
-	Files        int
-	Total        int
-	Used         int64
-}
 
 type DiskMetrics struct {
 	Status          int32
@@ -38,41 +23,29 @@ type DiskMetrics struct {
 	RealAvailWeight int64
 	VolAvailWeight  int64
 	Path            string
-	VolInfo         []*VolStat
 }
 
 //various metrics such free and total storage space, traffic, etc
 type Stats struct {
-	role        uint8
 	inDataSize  uint64
 	outDataSize uint64
 	inFlow      uint64
 	outFlow     uint64
 
-	Zone               string
-	CurrentConns       int64
-	MaxDiskAvailWeight int64
-	TotalWeight        uint64
-	UsedWeight         uint64
-	Ver                string
-	ClusterID          string
-	TcpAddr            string
-	Start              time.Time
+	Zone         string
+	CurrentConns int64
+	ClusterID    string
+	TcpAddr      string
+	Start        time.Time
+	Total        uint64
+	Used         uint64
+	Free         uint64
+	UsedVols     uint64
+	FreeVols     uint64
+	VolCnt       uint64
+	MaxFreeVols  uint64
 
-	VolsInfo []*VolStat `json:"VolInfo"`
-	DiskInfo []*DiskMetrics
-}
-
-func NewStats(role uint8, ver, cltaddr string, zone string, total uint64) *Stats {
-	s := new(Stats)
-	s.role = role
-	s.Start = time.Now()
-	s.Ver = ver
-	s.Zone = zone
-	s.TcpAddr = cltaddr
-	s.TotalWeight = total
-
-	return s
+	sync.Mutex
 }
 
 func (s *Stats) AddConnection() {
@@ -95,111 +68,16 @@ func (s *Stats) AddOutDataSize(size uint64) {
 	atomic.AddUint64(&s.outDataSize, size)
 }
 
-func (s *Stats) UpdateDataSize(takeTime uint64) {
-	inData := atomic.LoadUint64(&s.inDataSize)
-	outData := atomic.LoadUint64(&s.outDataSize)
-	atomic.StoreUint64(&s.inFlow, inData/takeTime)
-	atomic.StoreUint64(&s.outFlow, outData/takeTime)
-
-	atomic.StoreUint64(&s.inDataSize, 0)
-	atomic.StoreUint64(&s.outDataSize, 0)
-}
-
-func (s *Stats) GetFlow() (uint64, uint64) {
-	return atomic.LoadUint64(&s.inFlow), atomic.LoadUint64(&s.outFlow)
-}
-
-func (s *Stats) ToJSON() ([]byte, error) {
-	return json.Marshal(s)
-}
-
-func GetVolReport(d *Disk, space *SpaceManager, flag uint8) []*VolStat {
-	volIDs := d.getVols()
-	volReport := make([]*VolStat, len(volIDs))
-
-	for i, vID := range volIDs {
-		vr := new(VolStat)
-		v := space.getVol(vID)
-		if v == nil {
-			continue
-		}
-
-		vr.ID = uint32(vID)
-		vr.Status = int32(v.status)
-		switch v.volMode {
-		case TinyVol:
-			store := v.store.(*storage.TinyStore)
-			vr.Total = v.volSize
-			vr.Used = store.GetStoreUsedSize()
-		case ExtentVol:
-			store := v.store.(*storage.ExtentStore)
-			vr.Total = v.volSize
-			vr.Used = store.GetStoreUsedSize()
-		}
-		volReport[i] = vr
-	}
-
-	return volReport
-}
-
-func GetDiskReport(d *Disk, space *SpaceManager, flag uint8) (metrics *DiskMetrics) {
-	metrics = new(DiskMetrics)
-	metrics.Status = int32(d.Status)
-	metrics.ReadErrs = int32(d.ReadErrs)
-	metrics.WriteErrs = int32(d.WriteErrs)
-	metrics.MaxDiskErrs = int32(d.MaxErrs)
-	metrics.MinRestWeight = int64(d.RestSize)
-	metrics.TotalWeight = int64(d.All)
-	metrics.RealAvailWeight = int64(d.Free)
-	metrics.VolAvailWeight = int64(d.VolFree)
-	metrics.VolInfo = GetVolReport(d, space, flag)
-
-	return
-}
-
-func (s *Stats) GetStat(space *SpaceManager) ([]byte, error) {
-	if s.role == ReportToSelfRole {
-		return json.MarshalIndent(*s, "", "\t")
-	}
-
-	i, avaliVolWeight := 0, uint64(0)
-	s.MaxDiskAvailWeight = 0
-	if s.role == ReportToMonitorRole {
-		s.DiskInfo = make([]*DiskMetrics, len(space.disks))
-		s.VolsInfo = nil
-	} else {
-		s.VolsInfo = make([]*VolStat, 0)
-		s.DiskInfo = nil
-	}
-
-	for path, d := range space.disks {
-		d.UpdateSpaceInfo(s.TcpAddr)
-		if s.role == ReportToMonitorRole {
-			s.DiskInfo[i] = GetDiskReport(d, space, s.role)
-			s.DiskInfo[i].Path = path
-			i++
-		} else {
-			volReports := GetVolReport(d, space, s.role)
-			for _, volrpt := range volReports {
-				if volrpt == nil {
-					continue
-				}
-				s.VolsInfo = append(s.VolsInfo, volrpt)
-			}
-		}
-		s.TotalWeight += d.All
-		avaliVolWeight += uint64(d.VolFree)
-		if s.MaxDiskAvailWeight < int64(d.VolFree) && d.Status == storage.ReadWriteStore {
-			s.MaxDiskAvailWeight = int64(d.VolFree)
-		}
-	}
-	if s.TotalWeight < avaliVolWeight {
-		s.UsedWeight = 0
-	} else {
-		s.UsedWeight = s.TotalWeight - avaliVolWeight
-	}
-
-	return s.ToJSON()
+func (s *Stats) updateMetrics(total, used, free, usedVols, FreeVols, maxFreeVols, volcnt uint64) {
+	s.Lock()
+	defer s.Unlock()
+	s.Total = total
+	s.Used = used
+	s.Free = free
+	s.UsedVols = usedVols
+	s.FreeVols = FreeVols
+	s.MaxFreeVols = maxFreeVols
+	s.VolCnt = volcnt
 }
 
 func post(data []byte, url string) (*http.Response, error) {
