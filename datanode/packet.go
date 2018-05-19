@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
+	"github.com/tiglabs/baudstorage/util/ump"
 	"net"
 	"strings"
 	"time"
@@ -24,6 +25,23 @@ type Packet struct {
 	addrs    []string
 	isReturn bool
 	vol      *Vol
+	tpObject *ump.TpObject
+}
+
+func (p *Packet) afterTp() (ok bool) {
+	var err error
+	if p.IsErrPack() {
+		err = fmt.Errorf(proto.GetOpMesg(p.Opcode)+" failed because[%v]", string(p.Data[:p.Size]))
+	}
+	ump.AfterTP(p.tpObject, err)
+
+	return
+}
+
+func (p *Packet) beforeTp(clusterId string) (ok bool) {
+	umpKey := fmt.Sprintf("%s_datanode_%v", clusterId, proto.GetOpMesg(p.Opcode))
+	p.tpObject = ump.BeforeTP(umpKey)
+	return
 }
 
 func (p *Packet) UnmarshalAddrs() (addrs []string, err error) {

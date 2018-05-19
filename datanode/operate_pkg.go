@@ -9,13 +9,20 @@ import (
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/baudstorage/util/ump"
 	"net"
 	"strconv"
 	"time"
 )
 
+var (
+	ErrorUnknowOp = errors.New("unknow opcode")
+)
+
 func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 	orgSize := pkg.Size
+	umpKey := fmt.Sprintf("%s_datanode_%s", s.clusterId, proto.GetOpMesg(pkg.Opcode))
+	tpObject := ump.BeforeTP(umpKey)
 	start := time.Now().UnixNano()
 	var err error
 	defer func() {
@@ -31,6 +38,7 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 			}
 		}
 		pkg.Size = resultSize
+		ump.AfterTP(tpObject, err)
 	}()
 	switch pkg.Opcode {
 	case proto.OpCreateFile:
