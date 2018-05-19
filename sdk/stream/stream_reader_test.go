@@ -48,6 +48,7 @@ func TestStreamReader_GetReader(t *testing.T) {
 	reader, _ := NewStreamReader(2, nil, updateKey123)
 	sumSize := sk.Size()
 	haveReadSize := 0
+	addSize:=0
 	for {
 		if sumSize <= 0 {
 			break
@@ -98,6 +99,11 @@ func TestStreamReader_GetReader(t *testing.T) {
 		if haveReadSize>util.PB{
 			fmt.Printf("filesize[%v] haveReadOffset[%v]",sk.Size(),haveReadSize)
 			break
+		}
+		addSize+=currReadSize
+		if addSize>util.TB{
+			fmt.Printf("filesize[%v] haveReadOffset[%v]",sk.Size(),haveReadSize)
+			addSize=0
 		}
 		haveReadSize += currReadSize
 		rand.Seed(time.Now().UnixNano())
