@@ -2,11 +2,8 @@ package ump
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"strings"
 	"net"
 )
 
