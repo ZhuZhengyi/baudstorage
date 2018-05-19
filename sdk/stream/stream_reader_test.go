@@ -12,6 +12,7 @@ import (
 	"github.com/tiglabs/baudstorage/util"
 	"encoding/json"
 	"sync/atomic"
+	"runtime"
 )
 
 var (
@@ -33,6 +34,7 @@ type ReaderInfo struct {
 
 
 func TestStreamReader_GetReader(t *testing.T) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	go func() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
