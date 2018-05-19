@@ -17,7 +17,7 @@ func (s *DataNode) readFromCliAndDeal(msgH *MessageHandler) (err error) {
 	pkg := NewPacket()
 	s.statsFlow(pkg, InFlow)
 	remote := msgH.inConn.RemoteAddr().String()
-	if err = pkg.ReadFromConn(msgH.inConn, NoReadDeadlineTime); err != nil {
+	if err = pkg.ReadFromConn(msgH.inConn, proto.NoReadDeadlineTime); err != nil {
 		goto errDeal
 	}
 
@@ -160,7 +160,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 	}
 
 	reply = NewPacket()
-	if err = reply.ReadFromConn(request.nextConn, ReadDeadlineTime); err == nil {
+	if err = reply.ReadFromConn(request.nextConn, proto.ReadDeadlineTime); err == nil {
 		if reply.ReqID == request.ReqID && reply.VolID == request.VolID {
 			goto sucess
 		}
