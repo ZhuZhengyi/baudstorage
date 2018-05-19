@@ -46,14 +46,14 @@ func NewStreamWriter(wrapper *sdk.VolGroupWrapper, inode uint64, appendExtentKey
 	return
 }
 
-//get current extent writer
+//get current Extent writer
 func (stream *StreamWriter) getWriter() (writer *ExtentWriter) {
 	stream.Lock()
 	defer stream.Unlock()
 	return stream.currentWriter
 }
 
-//set current extent Writer to null
+//set current Extent Writer to null
 func (stream *StreamWriter) setWriterToNull() {
 	stream.Lock()
 	defer stream.Unlock()
@@ -77,7 +77,7 @@ func (stream *StreamWriter) toString() (m string) {
 		stream.errCount)
 }
 
-//stream init,alloc a extent ,select vol and extent
+//stream init,alloc a Extent ,select vol and Extent
 func (stream *StreamWriter) init() (err error) {
 	if stream.getWriter() != nil && stream.getWriter().isFullExtent() {
 		err = stream.flushCurrExtentWriter()
@@ -198,7 +198,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 		extentId uint64
 		writer   *ExtentWriter
 	)
-	err = fmt.Errorf("cannot alloct new extent after maxrery")
+	err = fmt.Errorf("cannot alloct new Extent after maxrery")
 	for i := 0; i < MaxSelectVolForWrite; i++ {
 		if vol, err = stream.wrapper.GetWriteVol(stream.excludeVols); err != nil {
 			continue

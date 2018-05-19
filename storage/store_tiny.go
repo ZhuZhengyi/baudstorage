@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"syscall"
 	"time"
 
 	"github.com/juju/errors"
@@ -511,7 +510,6 @@ func (s *TinyStore) doCompactAndCommit(chunkID int) (err error, released uint64)
 }
 
 func CheckAndCreateSubdir(name string, newMode bool) (err error) {
-	var fd int
 	if newMode == ReBootStoreMode {
 		err = os.MkdirAll(name, 0755)
 	} else if newMode == NewStoreMode {
@@ -523,14 +521,14 @@ func CheckAndCreateSubdir(name string, newMode bool) (err error) {
 		return
 	}
 
-	if fd, err = syscall.Open(name, os.O_RDONLY, 0666); err != nil {
-		return
-	}
-
-	if err = syscall.Fsync(fd); err != nil {
-		return
-	}
-	syscall.Close(fd)
+	//if fd, err = syscall.Open(name, os.O_RDONLY, 0666); err != nil {
+	//	return
+	//}
+	//
+	//if err = syscall.Fsync(fd); err != nil {
+	//	return
+	//}
+	//syscall.Close(fd)
 
 	return
 }

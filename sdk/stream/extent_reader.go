@@ -5,8 +5,8 @@ import (
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
+	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
-	"github.com/tiglabs/raft/util"
 	"math/rand"
 	"sync"
 	"time"
@@ -33,7 +33,7 @@ const (
 func NewExtentReader(inode uint64, inInodeOffset int, key proto.ExtentKey,
 	wrapper *sdk.VolGroupWrapper) (reader *ExtentReader, err error) {
 	reader = new(ExtentReader)
-	reader.vol, err = wrapper.GetVol(key.VolId)
+	//reader.vol, err = wrapper.GetVol(key.VolId)
 	if err != nil {
 		return
 	}
@@ -52,8 +52,8 @@ func NewExtentReader(inode uint64, inInodeOffset int, key proto.ExtentKey,
 }
 
 func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
-	//if reader.getCacheStatus() == AvaliBuffer && offset+size <= reader.cache.getBufferEndOffset() {
-	//	reader.cache.copyData(data, offset, size)
+	//if reader.getCacheStatus() == AvaliBuffer && Offset+Size <= reader.cache.getBufferEndOffset() {
+	//	reader.cache.copyData(data, Offset, Size)
 	//	return
 	//}
 	reader.Lock()
@@ -64,7 +64,7 @@ func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
 	//if err == nil {
 	//	select {
 	//	case reader.cacheReferCh <- true:
-	//		reader.lastReadOffset = offset
+	//		reader.lastReadOffset = Offset
 	//	default:
 	//		return
 	//	}
@@ -159,8 +159,8 @@ func (reader *ExtentReader) updateKey(key proto.ExtentKey) (update bool) {
 }
 
 func (reader *ExtentReader) toString() (m string) {
-	return fmt.Sprintf("inode[%v] extentKey[%v] ", reader.inode,
-		reader.key.Marshal())
+	return fmt.Sprintf("inode[%v] extentKey[%v] start[%v] end[%v]", reader.inode,
+		reader.key.Marshal(), reader.startInodeOffset, reader.endInodeOffset)
 }
 
 func (reader *ExtentReader) fillCache() error {
@@ -170,8 +170,8 @@ func (reader *ExtentReader) fillCache() error {
 		return nil
 	}
 	reader.setCacheToUnavali()
-	bufferSize := int(util.Min(uint64(int(reader.key.Size)-reader.lastReadOffset),
-		uint64(DefaultReadBufferSize)))
+	bufferSize := int(util.Min((int(reader.key.Size) - reader.lastReadOffset),
+		DefaultReadBufferSize))
 	bufferOffset := reader.lastReadOffset
 	p := NewReadPacket(reader.key, bufferOffset, bufferSize)
 	reader.Unlock()

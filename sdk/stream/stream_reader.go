@@ -93,8 +93,8 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err erro
 		} else if index == oldReaderCnt-1 {
 			stream.readers[index].updateKey(key)
 			newOffSet += int(key.Size)
-			fmt.Printf("inode[%v] update from Metanode TO FILESIZE[%v]\n",
-				stream.inode, newOffSet)
+			//fmt.Printf("inode[%v] update from Metanode TO FILESIZE[%v]\n",
+			//	stream.inode, newOffSet)
 			continue
 		} else if index > oldReaderCnt-1 {
 			if r, err = NewExtentReader(stream.inode, newOffSet, key, stream.wrapper); err != nil {
@@ -103,7 +103,7 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err erro
 			}
 			readers = append(readers, r)
 			newOffSet += int(key.Size)
-			fmt.Printf("inode[%v] update from Metanode TO FILESIZE[%v]\n", stream.inode, newOffSet)
+			//fmt.Printf("inode[%v] update from Metanode TO FILESIZE[%v]\n", stream.inode, newOffSet)
 			continue
 		}
 	}
@@ -122,13 +122,13 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 	if keyCanRead <= 0 || err != nil {
 		return
 	}
-	readers, readerOffset, readerSize := stream.getReader(offset, size)
+	readers, readerOffset, readerSize := stream.GetReader(offset, size)
 	for index := 0; index < len(readers); index++ {
 		r := readers[index]
 		err = r.read(data[canRead:canRead+readerSize[index]], readerOffset[index], readerSize[index])
 		if err != nil {
 			err = errors.Annotatef(err, "UserRequest{inode[%v] FileSize[%v] "+
-				"offset[%v] size[%v]} readers{ [%v] offset[%v] size[%v] occous error}",
+				"Offset[%v] Size[%v]} readers{ [%v] Offset[%v] Size[%v] occous error}",
 				stream.inode, stream.fileSize, offset, size, r.toString(), readerOffset[index],
 				readerSize[index])
 			return canRead, err
@@ -139,7 +139,7 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 	return canRead, nil
 }
 
-func (stream *StreamReader) getReader(offset, size int) (readers []*ExtentReader, readersOffsets []int, readersSize []int) {
+func (stream *StreamReader) GetReader(offset, size int) (readers []*ExtentReader, readersOffsets []int, readersSize []int) {
 	readers = make([]*ExtentReader, 0)
 	readersOffsets = make([]int, 0)
 	readersSize = make([]int, 0)

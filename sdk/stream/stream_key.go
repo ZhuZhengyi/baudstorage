@@ -60,7 +60,7 @@ func (sk *StreamKey) GetExtentLen() int {
 	return len(sk.Extents)
 }
 
-// Range calls f sequentially for each key and value present in the extent key collection.
+// Range calls f sequentially for each key and value present in the Extent key collection.
 // If f returns false, range stops the iteration.
 func (sk *StreamKey) Range(f func(i int, v proto.ExtentKey) bool) {
 	sk.Lock()
