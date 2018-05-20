@@ -33,7 +33,7 @@ const (
 func NewExtentReader(inode uint64, inInodeOffset int, key proto.ExtentKey,
 	wrapper *sdk.VolGroupWrapper) (reader *ExtentReader, err error) {
 	reader = new(ExtentReader)
-	//reader.vol, err = wrapper.GetVol(key.VolId)
+	reader.vol, err = wrapper.GetVol(key.VolId)
 	if err != nil {
 		return
 	}

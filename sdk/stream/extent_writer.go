@@ -272,13 +272,16 @@ func (writer *ExtentWriter) flush() (err error) {
 	return nil
 }
 
-func (writer *ExtentWriter) close() {
+func (writer *ExtentWriter) close() (err error) {
 	if writer.isAllFlushed() {
 		writer.handleCh <- NotRecive
 	} else {
-		writer.flush()
+		err = writer.flush()
+		if err == nil && writer.isAllFlushed() {
+			writer.handleCh <- NotRecive
+		}
 	}
-
+	return
 }
 
 func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet) (err error) {

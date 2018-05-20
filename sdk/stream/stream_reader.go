@@ -9,6 +9,14 @@ import (
 	"sync"
 )
 
+type ReadRequest struct {
+	data    []byte
+	offset  int
+	size    int
+	canRead int
+	err     error
+}
+
 type StreamReader struct {
 	inode      uint64
 	wrapper    *sdk.VolGroupWrapper
@@ -16,6 +24,9 @@ type StreamReader struct {
 	getExtents GetExtentsFunc
 	extents    *StreamKey
 	fileSize   uint64
+	requestCh  chan *ReadRequest
+	replyCh    chan *ReadRequest
+	exitCh     chan bool
 	sync.Mutex
 }
 
@@ -24,6 +35,9 @@ func NewStreamReader(inode uint64, wrapper *sdk.VolGroupWrapper, getExtents GetE
 	stream.inode = inode
 	stream.wrapper = wrapper
 	stream.getExtents = getExtents
+	stream.requestCh = make(chan *ReadRequest, 1000)
+	stream.replyCh = make(chan *ReadRequest, 1000)
+	stream.exitCh = make(chan bool, 1)
 	stream.extents = NewStreamKey(inode)
 	stream.extents.Extents, err = stream.getExtents(inode)
 	if err != nil {
@@ -40,7 +54,20 @@ func NewStreamReader(inode uint64, wrapper *sdk.VolGroupWrapper, getExtents GetE
 		offset += int(key.Size)
 	}
 	stream.fileSize = stream.extents.Size()
+	go stream.server()
 	return
+}
+
+func (stream *StreamReader) server() {
+	for {
+		select {
+		case request := <-stream.requestCh:
+			request.canRead, request.err = stream.read(request.data, request.offset, request.size)
+			stream.replyCh <- request
+		case <-stream.exitCh:
+			return
+		}
+	}
 }
 
 func (stream *StreamReader) toString() (m string) {
@@ -77,6 +104,12 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	}
 
 	return size, nil
+}
+
+func (stream *StreamReader) close() {
+	stream.exitCh <- true
+	stream.exitCh <- true
+
 }
 
 func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err error) {
@@ -150,7 +183,7 @@ func (stream *StreamReader) GetReader(offset, size int) (readers []*ExtentReader
 			currReaderSize   int
 			currReaderOffset int
 		)
-		if size <=0 {
+		if size <= 0 {
 			break
 		}
 		r.Lock()
@@ -162,18 +195,18 @@ func (stream *StreamReader) GetReader(offset, size int) (readers []*ExtentReader
 			currReaderOffset = offset - r.startInodeOffset
 			currReaderSize = size
 			offset += currReaderSize
-			size-=currReaderSize
+			size -= currReaderSize
 		} else {
 			currReaderOffset = offset - r.startInodeOffset
 			currReaderSize = (int(r.key.Size) - currReaderOffset)
 			offset = r.endInodeOffset
-			size=size-currReaderSize
+			size = size - currReaderSize
 		}
 		readersSize = append(readersSize, currReaderSize)
 		readersOffsets = append(readersOffsets, currReaderOffset)
 		readers = append(readers, r)
 		r.Unlock()
-		if size<=0{
+		if size <= 0 {
 			break
 		}
 	}

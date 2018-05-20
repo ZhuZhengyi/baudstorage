@@ -110,7 +110,11 @@ func (client *ExtentClient) Write(inode uint64, data []byte) (write int, err err
 	if stream == nil {
 		return 0, fmt.Errorf("cannot init write stream")
 	}
-	write, err = stream.write(data, len(data))
+	request := &WriteRequest{data: data, size: len(data)}
+	stream.requestCh <- request
+	request = <-stream.replyCh
+	err = request.err
+	write = request.canWrite
 	if err != nil {
 		log.LogError(errors.ErrorStack(err))
 	}
@@ -153,10 +157,11 @@ func (client *ExtentClient) Close(inode uint64) (err error) {
 	if inodeReferCnt != 0 {
 		return
 	}
-
+	err = streamWriter.close()
 	client.writerLock.Lock()
 	delete(client.writers, inode)
 	client.writerLock.Unlock()
+
 	client.readerLock.RLock()
 	streamReader := client.readers[inode]
 	client.readerLock.RUnlock()
@@ -167,6 +172,7 @@ func (client *ExtentClient) Close(inode uint64) (err error) {
 		client.readerLock.Lock()
 		delete(client.readers, inode)
 		client.readerLock.Unlock()
+		streamReader.close()
 	}
 
 	return
@@ -177,8 +183,13 @@ func (client *ExtentClient) Read(inode uint64, data []byte, offset int, size int
 	if stream, err = client.getStreamReader(inode); err != nil {
 		return
 	}
+	request := &ReadRequest{data: data, size: size, offset: offset}
+	stream.requestCh <- request
+	request = <-stream.replyCh
+	err = request.err
+	read = request.canRead
 
-	return stream.read(data, offset, size)
+	return
 }
 
 func (client *ExtentClient) Delete(keys []proto.ExtentKey) (err error) {

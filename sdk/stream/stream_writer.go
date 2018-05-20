@@ -20,6 +20,13 @@ const (
 	NoFlushIng             = -1
 )
 
+type WriteRequest struct {
+	data     []byte
+	size     int
+	canWrite int
+	err      error
+}
+
 type StreamWriter struct {
 	sync.Mutex
 	wrapper         *sdk.VolGroupWrapper
@@ -32,6 +39,9 @@ type StreamWriter struct {
 	flushLock       sync.Mutex
 	appendExtentKey AppendExtentKeyFunc
 	isFlushIng      int32
+	requestCh       chan *WriteRequest
+	replyCh         chan *WriteRequest
+	exitCh          chan bool
 }
 
 func NewStreamWriter(wrapper *sdk.VolGroupWrapper, inode uint64, appendExtentKey AppendExtentKeyFunc) (stream *StreamWriter) {
@@ -41,6 +51,10 @@ func NewStreamWriter(wrapper *sdk.VolGroupWrapper, inode uint64, appendExtentKey
 	stream.appendExtentKey = appendExtentKey
 	stream.currentInode = inode
 	stream.isFlushIng = NoFlushIng
+	stream.requestCh = make(chan *WriteRequest, 1000)
+	stream.replyCh = make(chan *WriteRequest, 1000)
+	stream.exitCh = make(chan bool, 2)
+	go stream.server()
 	go stream.autoFlushThread()
 
 	return
@@ -97,6 +111,18 @@ func (stream *StreamWriter) init() (err error) {
 	return
 }
 
+func (stream *StreamWriter) server() {
+	for {
+		select {
+		case request := <-stream.requestCh:
+			request.canWrite, request.err = stream.write(request.data, request.size)
+			stream.replyCh <- request
+		case <-stream.exitCh:
+			return
+		}
+	}
+}
+
 func (stream *StreamWriter) write(data []byte, size int) (total int, err error) {
 	var write int
 	defer func() {
@@ -118,6 +144,26 @@ func (stream *StreamWriter) write(data []byte, size int) (total int, err error) 
 			return
 		}
 		total += write
+	}
+
+	return
+}
+
+func (stream *StreamWriter) close() (err error) {
+	for i := 0; i < 3; i++ {
+		err = stream.flushCurrExtentWriter()
+		if err == nil {
+			break
+		}
+	}
+	if stream.getWriter() != nil {
+		stream.Lock()
+		err = stream.currentWriter.close()
+		stream.Unlock()
+	}
+	if err == nil {
+		stream.exitCh <- true
+		stream.exitCh <- true
 	}
 
 	return
@@ -262,6 +308,8 @@ func (stream *StreamWriter) autoFlushThread() {
 				continue
 			}
 			stream.flushCurrExtentWriter()
+		case <-stream.exitCh:
+			return
 		}
 	}
 
