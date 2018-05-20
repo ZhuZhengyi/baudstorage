@@ -8,6 +8,7 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
 	"github.com/tiglabs/baudstorage/util/log"
+	"runtime"
 )
 
 type AppendExtentKeyFunc func(inode uint64, key proto.ExtentKey) error
@@ -26,6 +27,7 @@ type ExtentClient struct {
 }
 
 func NewExtentClient(logdir string, master string, appendExtentKey AppendExtentKeyFunc, getExtents GetExtentsFunc) (client *ExtentClient, err error) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	client = new(ExtentClient)
 	_, err = log.NewLog(logdir, "extentclient", log.DebugLevel)
 	if err != nil {
