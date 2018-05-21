@@ -258,7 +258,9 @@ func (s *DataNode) read(pkg *Packet) {
 
 func (s *DataNode) applyDelObjects(pkg *Packet) {
 	if pkg.Size%storage.ObjectIdLen != 0 {
-		pkg.PackErrorBody(LogRepairNeedles, "Invalid args for OpSyncNeedle")
+		err := errors.Annotatef(fmt.Errorf("unvalid objectLen for opsync delete object"),
+			"Request[%v] ApplyDelObjects Error", pkg.GetUniqLogId())
+		pkg.PackErrorBody(LogRepairNeedles, err)
 		return
 	}
 	needles := make([]uint64, 0)
@@ -314,11 +316,12 @@ func (s *DataNode) getWatermark(pkg *Packet) {
 	)
 	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
-		finfo, err = pkg.vol.store.(*storage.TinyStore).GetWatermark(uint32(pkg.FileID))
+		finfo, err = pkg.vol.store.(*storage.TinyStore).GetWatermark(pkg.FileID)
 	case proto.ExtentStoreMode:
 		finfo, err = pkg.vol.store.(*storage.ExtentStore).GetWatermark(pkg.FileID)
 	}
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] getWatermark Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogGetWm, err.Error())
 	} else {
 		buf, err = json.Marshal(finfo)
@@ -341,6 +344,7 @@ func (s *DataNode) getAllWatermark(pkg *Packet) {
 		finfos, err = pkg.vol.store.(*storage.ExtentStore).GetAllWatermark()
 	}
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] getAllWatermark Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogGetAllWm, err.Error())
 	} else {
 		buf, err = json.Marshal(finfos)
@@ -359,6 +363,7 @@ func (s *DataNode) compactChunk(pkg *Packet) {
 	}
 	err := s.AddCompactTask(task)
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] compactChunk Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogCompactChunk, err.Error())
 		return
 	}
@@ -370,7 +375,8 @@ func (s *DataNode) compactChunk(pkg *Packet) {
 func (s *DataNode) repair(pkg *Packet) {
 	v := s.space.getVol(pkg.VolID)
 	if v == nil {
-		pkg.PackErrorBody(LogRepair, fmt.Sprintf("vol[%v] not exsits", pkg.VolID))
+		err := errors.Annotatef(fmt.Errorf("vol not exsit"), "Request[%v] compactChunk Error", pkg.GetUniqLogId())
+		pkg.PackErrorBody(LogRepair, err.Error())
 	}
 	switch pkg.StoreMode {
 	case proto.ExtentStoreMode:

@@ -61,11 +61,13 @@ func (s *DataNode) repairObjectRead(pkg *Packet, conn *net.TCPConn) {
 		fmt.Sprintf("follower require Oid[%v] localOid[%v]", requireOid, localOid), pkg.StartT, err))
 	if localOid < requireOid {
 		err = fmt.Errorf(" requireOid[%v] but localOid[%v]", requireOid, localOid)
+		err = errors.Annotatef(err, "Request[%v] repairObjectRead Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(ActionLeaderToFollowerOpCRepairReadPackResponse, err.Error())
 		return
 	}
 	err = syncData(chunkID, requireOid, localOid, pkg, conn)
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] SYNCDATA Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(ActionLeaderToFollowerOpCRepairReadPackResponse, err.Error())
 	}
 

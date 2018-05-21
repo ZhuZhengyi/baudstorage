@@ -233,6 +233,7 @@ func (s *DataNode) handleChunkInfo(pkg *Packet) (err error) {
 		err = s.headNodeSetChunkInfo(pkg)
 	}
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] handleChunkInfo Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(ActionCheckChunkInfo, err.Error())
 	}
 

@@ -3,6 +3,7 @@ package datanode
 import (
 	"container/list"
 	"fmt"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util/log"
@@ -153,13 +154,15 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 		s.statsFlow(reply, InFlow)
 	}()
 	if request.nextConn == nil {
-		request.PackErrorBody(ActionReciveFromNext, ConnIsNullErr)
+		err = errors.Annotatef(fmt.Errorf(ConnIsNullErr), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
+		request.PackErrorBody(ActionReciveFromNext, err.Error())
 		return
 	}
 
 	//if local excute failed,then
 	if request.IsErrPack() {
-		request.PackErrorBody(ActionReciveFromNext, request.getErr())
+		err = errors.Annotatef(fmt.Errorf(request.getErr()), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
+		request.PackErrorBody(ActionReciveFromNext, err.Error())
 		log.LogError(request.ActionMesg(ActionReciveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
 		return
 	}
@@ -175,6 +178,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 		}
 	} else {
 		log.LogError(request.ActionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
+		err = errors.Annotatef(err, "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 		return
 	}
@@ -183,11 +187,11 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 
 sucess:
 	if reply.IsErrPack() {
-		err = fmt.Errorf(ActionReciveFromNext+"[%v] remote [%v] do failed[%v]", request.GetUniqLogId(),
+		err = fmt.Errorf(ActionReciveFromNext+"remote [%v] do failed[%v]",
 			request.nextAddr, string(reply.Data[:reply.Size]))
+		err = errors.Annotatef(err, "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.CopyFrom(reply)
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
-		log.LogError(err.Error())
 	}
 	log.LogDebug(reply.ActionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 
@@ -205,7 +209,8 @@ func (s *DataNode) sendToNext(pkg *Packet, msgH *MessageHandler) error {
 	pkg.Nodes++
 	if err != nil {
 		msg := fmt.Sprintf("pkg inconnect[%v] to[%v] err[%v]", msgH.inConn.RemoteAddr().String(), pkg.nextAddr, err.Error())
-		pkg.PackErrorBody(ActionSendToNext, msg)
+		err = errors.Annotatef(fmt.Errorf(msg), "Request[%v] sendToNext Error", pkg.GetUniqLogId())
+		pkg.PackErrorBody(ActionSendToNext, err.Error())
 	}
 
 	return err
