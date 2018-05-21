@@ -239,7 +239,7 @@ func (m *MetaServer) handlePacket(conn net.Conn, p *proto.Packet) (err error) {
 	case proto.OpMetaInodeGet:
 		err = m.handleInodeGet(conn, p)
 	case proto.OpMetaExtentsAdd:
-		err = m.handleAppendExtents(conn, p)
+		err = m.handleAppendExtentKey(conn, p)
 	case proto.OpMetaExtentsList:
 		err = m.handleGetExtents(conn, p)
 	default:
@@ -471,7 +471,7 @@ out:
 	return err
 }
 
-func (m *MetaServer) handleAppendExtents(conn net.Conn, p *proto.Packet) error {
+func (m *MetaServer) handleAppendExtentKey(conn net.Conn, p *proto.Packet) error {
 	var data []byte
 
 	req := &proto.AppendExtentKeyRequest{}
@@ -488,8 +488,9 @@ func (m *MetaServer) handleAppendExtents(conn net.Conn, p *proto.Packet) error {
 	}
 
 	inode.Lock()
-	inode.extents = append(inode.extents, req.Extents...)
+	inode.extents = append(inode.extents, req.Extent)
 	inode.Unlock()
+	p.ResultCode = proto.OpOk
 
 out:
 	p.Data = data

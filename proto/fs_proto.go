@@ -110,7 +110,7 @@ type AppendExtentKeyRequest struct {
 	Namespace   string `json:"namespace"`
 	PartitionID string `json:"partitionID"`
 	Inode       uint64 `json:"inode"`
-	Extents     []ExtentKey
+	Extent      ExtentKey
 }
 
 type GetExtentsRequest struct {
