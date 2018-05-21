@@ -30,17 +30,12 @@ func (sk *StreamKey) UnMarshal(data []byte) {
 func (sk *StreamKey) Put(k proto.ExtentKey) {
 	sk.Lock()
 	defer sk.Unlock()
-	isFound := false
-	for index := 0; index < len(sk.Extents); index++ {
-		if sk.Extents[index].VolId == k.VolId && sk.Extents[index].ExtentId == k.ExtentId {
-			sk.Extents[index].Size = k.Size
-			isFound = true
-			return
-		}
+	lastKey:=sk.Extents[len(sk.Extents)-1]
+	if lastKey.VolId==k.VolId&& lastKey.ExtentId==k.ExtentId && k.Size>lastKey.Size{
+		sk.Extents[len(sk.Extents)-1].Size = k.Size
+		return
 	}
-	if !isFound {
-		sk.Extents = append(sk.Extents, k)
-	}
+	sk.Extents = append(sk.Extents, k)
 
 	return
 }
