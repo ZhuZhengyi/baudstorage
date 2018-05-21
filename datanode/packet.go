@@ -183,23 +183,6 @@ func (p *Packet) getErr() (m string) {
 	return fmt.Sprintf("req[%v] err[%v]", p.GetUniqLogId(), string(p.Data[:p.Size]))
 }
 
-func (p *Packet) ActionMesg(action, remote string, start int64, err error) (m string) {
-	if err == nil {
-		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[success] size[%v] "+
-			" cost[%v] isTransite[%v] ",
-			p.GetUniqLogId(), action, remote, p.GetOpMesg(p.Opcode), p.Size,
-			(time.Now().UnixNano()-start)/1e6, p.IsTransitPkg())
-
-	} else {
-		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[%v] size[%v] "+
-			", err[%v] isTransite[%v]", p.GetUniqLogId(), action,
-			remote, p.GetOpMesg(p.Opcode), p.GetOpMesg(p.ResultCode), p.Size, err.Error(),
-			p.IsTransitPkg())
-	}
-
-	return
-}
-
 func (p *Packet) ClassifyErrorOp(errLog string, errMsg string) {
 	if strings.Contains(errLog, ActionReciveFromNext) || strings.Contains(errLog, ActionSendToNext) ||
 		strings.Contains(errLog, ConnIsNullErr) || strings.Contains(errLog, ActioncheckAndAddInfos) {

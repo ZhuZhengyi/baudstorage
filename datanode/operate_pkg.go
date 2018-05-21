@@ -224,10 +224,11 @@ func (s *DataNode) append(pkg *Packet) {
 		err = pkg.vol.store.(*storage.TinyStore).Write(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
 		s.AddDiskErrs(pkg.VolID, err, WriteFlag)
 	case proto.ExtentStoreMode:
-		err = errors.Annotatef(ErrStoreTypeUnmatch, " Append only support TinyVol")
+		err = pkg.vol.store.(*storage.TinyStore).Write(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
+		s.AddDiskErrs(pkg.VolID, err, WriteFlag)
 	}
 	if err != nil {
-		pkg.PackErrorBody(LogMarkDel, err.Error())
+		pkg.PackErrorBody(LogWrite, err.Error())
 	} else {
 		pkg.PackOkReply()
 	}
@@ -241,6 +242,7 @@ func (s *DataNode) read(pkg *Packet) {
 	pkg.Crc, err = pkg.vol.store.(*storage.TinyStore).Read(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data)
 	if err != nil {
 		err = errors.Annotatef(err, "Request[%v] Read Error", pkg.GetUniqLogId())
+		s.AddDiskErrs(pkg.VolID, err, ReadFlag)
 	}
 	if err == nil {
 		pkg.PackOkReadReply()
