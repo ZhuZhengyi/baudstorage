@@ -10,6 +10,7 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 	"hash/crc32"
 	"net"
+	"github.com/tiglabs/baudstorage/util"
 )
 
 func (v *Vol) tinyRepair() {
@@ -108,6 +109,11 @@ func packObjectToBuf(databuf []byte, o *storage.Object, chunkID uint32, v *Vol) 
 	_, err = v.store.(*storage.TinyStore).Read(chunkID, int64(o.Oid), int64(o.Size), databuf[storage.ObjectHeaderSize:])
 	return
 }
+
+const (
+	PkgRepairCReadRespMaxSize=10*util.MB
+	PkgRepairCReadRespLimitSize=15*util.MB
+)
 
 func syncData(chunkID uint32, startOid, endOid uint64, pkg *Packet, conn *net.TCPConn) error {
 	var (
