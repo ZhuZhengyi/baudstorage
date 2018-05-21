@@ -24,31 +24,6 @@ and do nothing..then the metaNode or  dataNode send a new http request to reply 
 to master
 
 */
-type CommandRequest struct {
-	head []byte
-	body []byte
-}
-
-func NewCommandRequest() (req *CommandRequest) {
-	req = &CommandRequest{
-		head: make([]byte, proto.HeaderSize),
-		body: make([]byte, 0),
-	}
-	return
-}
-
-func (cr *CommandRequest) setHeadAndBody(task *proto.AdminTask) (err error) {
-	packet := proto.NewPacket()
-	packet.Opcode = task.OpCode
-	body, err := json.Marshal(task)
-	if err != nil {
-		return
-	}
-	packet.Size = uint32(len(body))
-	packet.MarshalHeader(cr.head)
-	cr.body = body
-	return
-}
 
 type AdminTaskSender struct {
 	targetAddr string
@@ -108,16 +83,21 @@ func (sender *AdminTaskSender) sendTasks(tasks []*proto.AdminTask) {
 
 }
 
-func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) (err error) {
-	cr := NewCommandRequest()
-	if err = cr.setHeadAndBody(task); err != nil {
+func (sender *AdminTaskSender) buildPacket(task *proto.AdminTask) (packet *proto.Packet) {
+	packet = proto.NewPacket()
+	packet.Opcode = task.OpCode
+	body, err := json.Marshal(task)
+	if err != nil {
 		return
 	}
-	if _, err = conn.Write(cr.head); err != nil {
-		return
-	}
+	packet.Size = uint32(len(body))
+	packet.Data = body
+	return
+}
 
-	if _, err = conn.Write(cr.body); err != nil {
+func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) (err error) {
+	packet := sender.buildPacket(task)
+	if err = packet.WriteToConn(conn); err != nil {
 		return
 	}
 	response := proto.NewPacket()
