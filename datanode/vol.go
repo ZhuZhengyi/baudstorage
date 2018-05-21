@@ -80,6 +80,7 @@ func (v *Vol) parseVolMember() (err error) {
 	v.isLeader = false
 	isLeader, members, err := v.getMembers()
 	if !isLeader {
+		err = ErrNotLeader
 		return
 	}
 	v.isLeader = isLeader
@@ -104,8 +105,8 @@ func (v *Vol) getMembers() (bool, *VolMembers, error) {
 		return false, nil, err
 	}
 
-	if len(members.VolHosts) >= 1 && members.VolHosts[0] != v.server.localServAddr {
-		err = errors.Annotatef(ErrNotLeader, "vol[%v] current LocalIP[%v]", v.volId, v.server.localServAddr)
+	if len(members.VolHosts) >= 1 && members.VolHosts[0] != v.server.localServeAddr {
+		err = errors.Annotatef(ErrNotLeader, "vol[%v] current LocalIP[%v]", v.volId, v.server.localServeAddr)
 		return false, nil, err
 	}
 

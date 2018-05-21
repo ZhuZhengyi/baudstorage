@@ -6,20 +6,17 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/pool"
+	"github.com/tiglabs/raft/util/log"
 	"io/ioutil"
 	"net"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 )
 
-const metaPartitionPrefix = "partition_"
-
-type MetaManagerConfig struct {
-	DataPath string
-	Raft     raftstore.RaftStore
-}
+const partitionPrefix = "partition_"
 
 // MetaManager manage all metaPartition and make mapping between namespace and metaPartition.
 type MetaManager interface {
@@ -29,14 +26,21 @@ type MetaManager interface {
 	HandleMetaOperation(conn net.Conn, p *Packet) error
 }
 
+type MetaManagerConfig struct {
+	NodeID  uint64
+	RootDir string
+	Raft    raftstore.RaftStore
+}
+
 type metaManager struct {
-	dataPath   string
-	raft       raftstore.RaftStore
-	partitions map[string]MetaPartition // Key: metaRangeId, Val: metaPartition
+	nodeId     uint64
+	rootDir    string
 	masterAddr string
+	raft       raftstore.RaftStore
 	connPool   *pool.ConnPool
-	mu         sync.RWMutex
 	state      ServiceState
+	mu         sync.RWMutex
+	partitions map[uint64]MetaPartition // Key: metaRangeId, Val: metaPartition
 }
 
 func (m *metaManager) HandleMetaOperation(conn net.Conn, p *Packet) (err error) {
@@ -100,14 +104,14 @@ func (m *metaManager) onStop() {
 }
 
 // LoadMetaPartition returns metaPartition with specified namespace if the mapping exist or report an error.
-func (m *metaManager) getPartition(id string) (mp MetaPartition, err error) {
+func (m *metaManager) getPartition(id uint64) (mp MetaPartition, err error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	mp, ok := m.partitions[id]
 	if ok {
 		return
 	}
-	err = errors.New("unknown meta partition: " + id)
+	err = errors.New(fmt.Sprintf("unknown meta partition: %d", id))
 	return
 }
 
@@ -115,9 +119,9 @@ func (m *metaManager) getPartition(id string) (mp MetaPartition, err error) {
 // into this meta range manager.
 func (m *metaManager) loadPartitions() (err error) {
 	// Check metaDir directory
-	fileInfo, err := os.Stat(m.dataPath)
+	fileInfo, err := os.Stat(m.rootDir)
 	if err != nil {
-		os.MkdirAll(m.dataPath, 0655)
+		os.MkdirAll(m.rootDir, 0655)
 		err = nil
 		return
 	}
@@ -126,26 +130,43 @@ func (m *metaManager) loadPartitions() (err error) {
 		return
 	}
 	// Scan data directory.
-	fileInfoList, err := ioutil.ReadDir(m.dataPath)
+	fileInfoList, err := ioutil.ReadDir(m.rootDir)
 	if err != nil {
 		return
 	}
+	var wg sync.WaitGroup
 	for _, fileInfo := range fileInfoList {
-		if fileInfo.IsDir() && strings.HasPrefix(fileInfo.Name(), metaPartitionPrefix) {
+		if fileInfo.IsDir() && strings.HasPrefix(fileInfo.Name(), partitionPrefix) {
+			wg.Add(1)
 			go func() {
+				var id uint64
 				partitionId := fileInfo.Name()[12:]
-				partitionConfig := &MetaPartitionConfig{}
-				partitionConfig.ID = partitionId
-				partitionConfig.DataPath = path.Join(m.dataPath, fileInfo.Name())
-				partition := NewMetaPartition(partitionConfig, m.raft)
-				m.attachPartition(partitionId, partition)
+				id, err = strconv.ParseUint(partitionId, 10, 64)
+				if err != nil {
+					wg.Done()
+					return
+				}
+				partitionConfig := &MetaPartitionConfig{
+					PartitionId: id,
+					NodeId:      m.nodeId,
+					RootDir:     path.Join(m.rootDir, fileInfo.Name()),
+				}
+				partitionConfig.AfterStop = func() {
+					m.detachPartition(id)
+				}
+				partition := NewMetaPartition(partitionConfig)
+				if err = m.attachPartition(id, partition); err != nil {
+					log.Error(fmt.Sprintf("start partition %d: %s", id, err.Error()))
+				}
+				wg.Done()
 			}()
 		}
 	}
+	wg.Wait()
 	return
 }
 
-func (m *metaManager) attachPartition(id string, partition MetaPartition) (err error) {
+func (m *metaManager) attachPartition(id uint64, partition MetaPartition) (err error) {
 	if err = partition.Start(); err != nil {
 		return
 	}
@@ -155,42 +176,47 @@ func (m *metaManager) attachPartition(id string, partition MetaPartition) (err e
 	return
 }
 
-func (m *metaManager) detachPartition(id string) (err error) {
+func (m *metaManager) detachPartition(id uint64) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if partition, has := m.partitions[id]; has {
+	if _, has := m.partitions[id]; has {
 		delete(m.partitions, id)
-		partition.Stop()
 	} else {
 		err = fmt.Errorf("unknown partition: %d", id)
 	}
 	return
 }
 
-func (m *metaManager) createPartition(id string, start, end uint64, peers []proto.Peer) (err error) {
+func (m *metaManager) createPartition(id uint64, start, end uint64,
+	peers []proto.Peer) (err error) {
 	/* Create metaPartition and add metaManager */
+	partId := fmt.Sprintf("%d", id)
 	mpc := &MetaPartitionConfig{
-		ID:       id,
-		Start:    start,
-		End:      end,
-		Cursor:   start,
-		Peers:    peers,
-		DataPath: path.Join(m.dataPath, metaPartitionPrefix+id),
+		PartitionId: id,
+		Start:       start,
+		End:         end,
+		Cursor:      start,
+		Peers:       peers,
+		RootDir:     path.Join(m.rootDir, partitionPrefix+partId),
 	}
-	partition := NewMetaPartition(mpc, m.raft)
+	mpc.AfterStop = func() {
+		m.detachPartition(id)
+	}
+	partition := NewMetaPartition(mpc)
 	err = m.attachPartition(id, partition)
 	return
 }
 
-func (m *metaManager) deletePartition(id string) (err error) {
+func (m *metaManager) deletePartition(id uint64) (err error) {
 	m.detachPartition(id)
 	return
 }
 
-func NewMetaManager(config *MetaManagerConfig) MetaManager {
+func NewMetaManager(conf MetaManagerConfig) MetaManager {
 	return &metaManager{
-		dataPath:   config.DataPath,
-		raft:       config.Raft,
-		partitions: make(map[string]MetaPartition),
+		nodeId:     conf.NodeID,
+		rootDir:    conf.RootDir,
+		raft:       conf.Raft,
+		partitions: make(map[uint64]MetaPartition),
 	}
 }

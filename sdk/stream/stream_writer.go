@@ -32,11 +32,11 @@ type StreamWriter struct {
 	wrapper         *sdk.VolGroupWrapper
 	currentWriter   *ExtentWriter //current ExtentWriter
 	errCount        int           //error count
-	excludeVols     []uint32      //exclude Vols
 	currentVolId    uint32        //current VolId
 	currentExtentId uint64        //current FileIdId
 	currentInode    uint64        //inode
 	flushLock       sync.Mutex
+	execludeVols    []uint32
 	appendExtentKey AppendExtentKeyFunc
 	isFlushIng      int32
 	requestCh       chan *WriteRequest
@@ -46,7 +46,6 @@ type StreamWriter struct {
 
 func NewStreamWriter(wrapper *sdk.VolGroupWrapper, inode uint64, appendExtentKey AppendExtentKeyFunc) (stream *StreamWriter) {
 	stream = new(StreamWriter)
-	stream.excludeVols = make([]uint32, 0)
 	stream.wrapper = wrapper
 	stream.appendExtentKey = appendExtentKey
 	stream.currentInode = inode
@@ -54,6 +53,7 @@ func NewStreamWriter(wrapper *sdk.VolGroupWrapper, inode uint64, appendExtentKey
 	stream.requestCh = make(chan *WriteRequest, 1000)
 	stream.replyCh = make(chan *WriteRequest, 1000)
 	stream.exitCh = make(chan bool, 2)
+	stream.execludeVols = make([]uint32, 0)
 	go stream.server()
 	go stream.autoFlushThread()
 
@@ -212,25 +212,31 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 }
 
 func (stream *StreamWriter) recoverExtent() (err error) {
-	sendList := stream.getWriter().getNeedRetrySendPackets()
-	if err = stream.allocateNewExtentWriter(); err != nil {
-		err = errors.Annotatef(err, "RecoverExtent Failed")
-		return
-	}
-	ek := stream.getWriter().toKey()
-	if ek.Size != 0 {
-		err = stream.appendExtentKey(stream.currentInode, ek)
-	}
-	if err != nil {
-		err = errors.Annotatef(err, "update filesize[%v] to metanode Failed", ek.Size)
-		return
-	}
-	for e := sendList.Front(); e != nil; e = e.Next() {
-		p := e.Value.(*Packet)
-		_, err = stream.getWriter().write(p.Data, int(p.Size))
+	for i := 0; i < MaxSelectVolForWrite; i++ {
+		sendList := stream.getWriter().getNeedRetrySendPackets()
+		stream.execludeVols = append(stream.execludeVols, stream.getWriter().volId)
+		if err = stream.allocateNewExtentWriter(); err != nil {
+			err = errors.Annotatef(err, "RecoverExtent Failed")
+			continue
+		}
+		ek := stream.getWriter().toKey()
+		if ek.Size != 0 {
+			err = stream.appendExtentKey(stream.currentInode, ek)
+		}
 		if err != nil {
-			err = errors.Annotatef(err, "RecoverExtent write failed")
-			return
+			err = errors.Annotatef(err, "update filesize[%v] to metanode Failed", ek.Size)
+			continue
+		}
+		for e := sendList.Front(); e != nil; e = e.Next() {
+			p := e.Value.(*Packet)
+			_, err = stream.getWriter().write(p.Data, int(p.Size))
+			if err != nil {
+				err = errors.Annotatef(err, "RecoverExtent write failed")
+				continue
+			}
+		}
+		if err == nil {
+			break
 		}
 	}
 
@@ -246,7 +252,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	)
 	err = fmt.Errorf("cannot alloct new extent after maxrery")
 	for i := 0; i < MaxSelectVolForWrite; i++ {
-		if vol, err = stream.wrapper.GetWriteVol(stream.excludeVols); err != nil {
+		if vol, err = stream.wrapper.GetWriteVol(&stream.execludeVols); err != nil {
 			continue
 		}
 		if extentId, err = stream.createExtent(vol); err != nil {

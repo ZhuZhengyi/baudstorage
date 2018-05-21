@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
+	"github.com/tiglabs/baudstorage/util/log"
 	raftproto "github.com/tiglabs/raft/proto"
 )
 
@@ -28,15 +28,25 @@ var (
 	ErrInodeOutOfRange = errors.New("inode ID out of range")
 )
 
-// MetRangeConfig used by create metaPartition and serialize
+/* MetRangeConfig used by create metaPartition and serialize
+PartitionId: Identity for raft group,Raft nodes in same raft group must have same groupID.
+Start: Minimal Inode ID of this range. (Required when initialize)
+End: Maximal Inode ID of this range. (Required when initialize)
+Cursor: Cursor ID value of Inode what have been already assigned.
+Peers: Peers information for raft.
+*/
 type MetaPartitionConfig struct {
-	ID          string       `json:"id"`            // Consist with. (Required when initialize)
-	Start       uint64       `json:"start"`         // Minimal Inode ID of this range. (Required when initialize)
-	End         uint64       `json:"end"`           // Maximal Inode ID of this range. (Required when initialize)
-	Cursor      uint64       `json:"cursor"`        // Cursor ID value of Inode what have been already assigned.
-	Peers       []proto.Peer `json:"peers"`         // Peers information for raft.
-	RaftGroupId uint64       `json:"raft_group_id"` // Identity for raft group.Raft nodes in same raft group must have same groupID.
-	DataPath    string       `json:"_"`
+	PartitionId uint64       `json:"partition_id"`
+	Start       uint64       `json:"start"`
+	End         uint64       `json:"end"`
+	Cursor      uint64       `json:"cursor"`
+	Peers       []proto.Peer `json:"peers"`
+	NodeId      uint64       `json:"-"`
+	RootDir     string       `json:"-"`
+	BeforeStart func()       `json:"-"`
+	AfterStart  func()       `json:"-"`
+	BeforeStop  func()       `json:"-"`
+	AfterStop   func()       `json:"-"`
 }
 
 func (c *MetaPartitionConfig) Dump() ([]byte, error) {
@@ -94,10 +104,9 @@ type metaPartition struct {
 	inodeMu       sync.RWMutex // Mutex for Inode operation.
 	inodeTree     *btree.BTree // B-Tree for Inode.
 	opCounter     uint64       // Counter for meta operation, this index will be reset after data dumped into storage.
-	raftGroupId   uint64
 	raftStore     raftstore.RaftStore
 	raftPartition raftstore.Partition // Raft partition instance of this meta partition.
-	scheduleStopC chan bool
+	stopC         chan bool
 	state         ServiceState
 }
 
@@ -108,14 +117,26 @@ func (mp *metaPartition) Start() (err error) {
 				SetState(&mp.state, stateReady)
 			}
 		}()
+		if mp.config.BeforeStart != nil {
+			mp.config.BeforeStart()
+		}
 		err = mp.onStart()
+		if mp.config.AfterStart != nil {
+			mp.config.AfterStart()
+		}
 	}
 	return
 }
 
 func (mp *metaPartition) Stop() {
 	if TrySwitchState(&mp.state, stateRunning, stateReady) {
+		if mp.config.BeforeStop != nil {
+			mp.config.BeforeStop()
+		}
 		mp.onStop()
+		if mp.config.AfterStop != nil {
+			mp.config.AfterStop()
+		}
 	}
 }
 
@@ -123,10 +144,10 @@ func (mp *metaPartition) onStart() (err error) {
 	if err = mp.load(); err != nil {
 		return
 	}
-	mp.startSchedule()
 	if err = mp.startRaft(); err != nil {
 		return
 	}
+	mp.startSchedule()
 	return
 }
 
@@ -137,7 +158,7 @@ func (mp *metaPartition) onStop() {
 }
 
 func (mp *metaPartition) startSchedule() {
-	mp.scheduleStopC = make(chan bool)
+	mp.stopC = make(chan bool)
 	go func(stopC chan bool) {
 		timer := time.NewTicker(defaultDumpRate)
 		for {
@@ -147,20 +168,23 @@ func (mp *metaPartition) startSchedule() {
 				return
 			case <-timer.C:
 				if err := mp.store(); err != nil {
-					log.LogError(fmt.Sprintf("dump meta partition %s fail cause %s", mp.config.ID, err))
+					log.LogError(fmt.Sprintf(
+						"dump meta partition %d fail cause %s", mp.config.PartitionId,
+						err))
 				}
 			}
 		}
-	}(mp.scheduleStopC)
+	}(mp.stopC)
 }
 
 func (mp *metaPartition) stopSchedule() {
-	if mp.scheduleStopC != nil {
-		close(mp.scheduleStopC)
+	if mp.stopC != nil {
+		close(mp.stopC)
 	}
 }
 
-func (mp *metaPartition) startRaft() (err error) {
+func (mp *metaPartition) startRaft() (
+	err error) {
 	peers := make([]raftproto.Peer, len(mp.config.Peers))
 	for _, peer := range mp.config.Peers {
 		raftPeer := raftproto.Peer{
@@ -170,7 +194,7 @@ func (mp *metaPartition) startRaft() (err error) {
 		mp.raftPartition.AddNode(peer.ID, peer.Addr)
 	}
 	pc := &raftstore.PartitionConfig{
-		ID:      mp.raftGroupId,
+		ID:      mp.config.PartitionId,
 		Applied: mp.applyID,
 		Peers:   peers,
 		SM:      mp,
@@ -185,12 +209,11 @@ func (mp *metaPartition) stopRaft() {
 }
 
 // NewMetaPartition create and init a new meta partition with specified configuration.
-func NewMetaPartition(conf *MetaPartitionConfig, raft raftstore.RaftStore) MetaPartition {
+func NewMetaPartition(conf *MetaPartitionConfig) MetaPartition {
 	mp := &metaPartition{
 		config:     conf,
 		dentryTree: btree.New(defaultBTreeDegree),
 		inodeTree:  btree.New(defaultBTreeDegree),
-		raftStore:  raft,
 	}
 	return mp
 }

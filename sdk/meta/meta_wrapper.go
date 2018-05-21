@@ -37,15 +37,16 @@ const (
 )
 
 type MetaPartition struct {
-	PartitionID string
+	PartitionID uint64
 	Start       uint64
 	End         uint64
 	Members     []string
+	LeaderAddr  string
 }
 
 type MetaConn struct {
 	conn net.Conn
-	id   string
+	id   uint64 //PartitionID
 }
 
 type NamespaceView struct {
@@ -61,7 +62,7 @@ type MetaWrapper struct {
 
 	// partitions and ranges should be modified together.
 	// do not use partitions and ranges directly, use the helper functions instead.
-	partitions map[string]*MetaPartition
+	partitions map[uint64]*MetaPartition
 	ranges     *btree.BTree // *MetaPartition tree indexed by Start
 
 	currStart uint64
@@ -81,7 +82,7 @@ func NewMetaWrapper(namespace, masterHosts string) (*MetaWrapper, error) {
 	mw.namespace = namespace
 	mw.master = strings.Split(masterHosts, HostsSeparator)
 	mw.conns = pool.NewConnPool()
-	mw.partitions = make(map[string]*MetaPartition)
+	mw.partitions = make(map[uint64]*MetaPartition)
 	mw.ranges = btree.New(32)
 	if err := mw.Update(); err != nil {
 		return nil, err
@@ -175,7 +176,7 @@ func (mw *MetaWrapper) replaceOrInsertPartition(mp *MetaPartition) {
 	return
 }
 
-func (mw *MetaWrapper) getPartitionByID(id string) *MetaPartition {
+func (mw *MetaWrapper) getPartitionByID(id uint64) *MetaPartition {
 	mw.RLock()
 	defer mw.RUnlock()
 	mp, ok := mw.partitions[id]
@@ -223,7 +224,7 @@ func (mw *MetaWrapper) getNextPartition(ino uint64) *MetaPartition {
 //
 
 func (mw *MetaWrapper) getConn(mp *MetaPartition) (*MetaConn, error) {
-	addr := mp.Members[0]
+	addr := mp.LeaderAddr
 	//TODO: deal with member 0 is not leader
 	conn, err := mw.conns.Get(addr)
 	if err != nil {

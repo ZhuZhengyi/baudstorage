@@ -2,7 +2,6 @@ package meta
 
 import (
 	"fmt"
-	"math/rand"
 	"syscall"
 	"testing"
 
@@ -70,12 +69,19 @@ func doInodeGet(t *testing.T, ino uint64) {
 }
 
 func TestLookup(t *testing.T) {
-	name := fmt.Sprintf("abc%v", rand.Intn(TestFileCount))
-	ino, mode, err := gMetaWrapper.Lookup_ll(2, name)
+	id := uuid.New()
+	filename := id.String()
+	file, err := gMetaWrapper.Create_ll(proto.ROOT_INO, filename, proto.ModeRegular)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Lookup name(%v) : ino(%v) mode(%v)", name, ino, mode)
+	t.Logf("Generate file: parent(%v) name(%v) ino(%v)", proto.ROOT_INO, filename, file.Inode)
+
+	ino, mode, err := gMetaWrapper.Lookup_ll(proto.ROOT_INO, filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Lookup name(%v) : ino(%v) mode(%v)", filename, ino, mode)
 
 	info, err := gMetaWrapper.InodeGet_ll(ino)
 	if err != nil {
@@ -88,33 +94,49 @@ func TestLookup(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	name := fmt.Sprintf("abc%v", rand.Intn(TestFileCount))
-	err := gMetaWrapper.Delete_ll(2, name)
+	id := uuid.New()
+	filename := id.String()
+	file, err := gMetaWrapper.Create_ll(proto.ROOT_INO, filename, proto.ModeRegular)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Delete name(%v)", name)
+	t.Logf("Generate file: parent(%v) name(%v) ino(%v)", proto.ROOT_INO, filename, file.Inode)
 
-	_, _, err = gMetaWrapper.Lookup_ll(2, name)
+	err = gMetaWrapper.Delete_ll(proto.ROOT_INO, filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Delete name(%v)", filename)
+
+	_, _, err = gMetaWrapper.Lookup_ll(proto.ROOT_INO, filename)
 	if err != syscall.ENOENT {
 		t.Fatal(err)
 	}
 }
 
 func TestRename(t *testing.T) {
-	uuid := uuid.New()
-	parent, err := gMetaWrapper.Create_ll(proto.ROOT_INO, uuid.String(), proto.ModeDir)
+	id := uuid.New()
+	filename := id.String()
+	file, err := gMetaWrapper.Create_ll(proto.ROOT_INO, filename, proto.ModeRegular)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Generate file: parent(%v) name(%v) ino(%v)", proto.ROOT_INO, filename, file.Inode)
+
+	id = uuid.New()
+	parent, err := gMetaWrapper.Create_ll(proto.ROOT_INO, id.String(), proto.ModeDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Generate dir: parent(%v) name(%v) ino(%v)", proto.ROOT_INO, id.String(), parent.Inode)
+
+	t.Logf("Rename [%v %v] --> [%v %v]", proto.ROOT_INO, filename, parent.Inode, "abc10")
+	err = gMetaWrapper.Rename_ll(proto.ROOT_INO, filename, parent.Inode, "abc10")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = gMetaWrapper.Rename_ll(2, "abc50", parent.Inode, "abc10")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("Rename [%v %v] --> [%v %v]", 2, "abc50", parent.Inode, "abc10")
-
-	_, _, err = gMetaWrapper.Lookup_ll(2, "abc50")
+	_, _, err = gMetaWrapper.Lookup_ll(proto.ROOT_INO, filename)
 	if err != syscall.ENOENT {
 		t.Fatal(err)
 	}

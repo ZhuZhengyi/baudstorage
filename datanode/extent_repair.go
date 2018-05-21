@@ -15,6 +15,9 @@ func (v *Vol) checkExtent() {
 	for {
 		select {
 		case <-ticker:
+			if err := v.parseVolMember(); err != nil {
+				continue
+			}
 			v.extentsRepair()
 		case <-v.exitCh:
 			return
@@ -149,7 +152,7 @@ func (v *Vol) mapMaxSizeExtentToIndex(allMembers []*MembersFileMetas) (maxSizeEx
 /*generator add extent if follower not have this extent*/
 func (v *Vol) generatorAddExtentsTasks(allMembers []*MembersFileMetas) {
 	leader := allMembers[0]
-	leaderAddr := v.server.localServAddr
+	leaderAddr := v.server.localServeAddr
 	for fileId, leaderFile := range leader.extents {
 		for index := 1; index < len(allMembers); index++ {
 			follower := allMembers[index]
@@ -189,7 +192,7 @@ func (v *Vol) generatorFixFileSizeTasks(allMembers []*MembersFileMetas) {
 func (v *Vol) generatorDeleteExtentsTasks(allMembers []*MembersFileMetas) {
 	store := v.store.(*storage.ExtentStore)
 	deletes := store.GetDelObjects()
-	leaderAddr := v.server.localServAddr
+	leaderAddr := v.server.localServeAddr
 	for _, deleteFileId := range deletes {
 		for index := 1; index < len(allMembers); index++ {
 			follower := allMembers[index]
