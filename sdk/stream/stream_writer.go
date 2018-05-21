@@ -32,7 +32,6 @@ type StreamWriter struct {
 	wrapper         *sdk.VolGroupWrapper
 	currentWriter   *ExtentWriter //current ExtentWriter
 	errCount        int           //error count
-	excludeVols     []uint32      //exclude Vols
 	currentVolId    uint32        //current VolId
 	currentExtentId uint64        //current FileIdId
 	currentInode    uint64        //inode
@@ -46,7 +45,6 @@ type StreamWriter struct {
 
 func NewStreamWriter(wrapper *sdk.VolGroupWrapper, inode uint64, appendExtentKey AppendExtentKeyFunc) (stream *StreamWriter) {
 	stream = new(StreamWriter)
-	stream.excludeVols = make([]uint32, 0)
 	stream.wrapper = wrapper
 	stream.appendExtentKey = appendExtentKey
 	stream.currentInode = inode
@@ -214,7 +212,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 func (stream *StreamWriter) recoverExtent() (err error) {
 	for i := 0; i < MaxSelectVolForWrite; i++ {
 		sendList := stream.getWriter().getNeedRetrySendPackets()
-		stream.excludeVols = append(stream.excludeVols, stream.getWriter().volId)
+		stream.wrapper.PutExcludeVol(stream.getWriter().volId)
 		if err = stream.allocateNewExtentWriter(); err != nil {
 			err = errors.Annotatef(err, "RecoverExtent Failed")
 			continue
@@ -286,7 +284,6 @@ func (stream *StreamWriter) createExtent(vol *sdk.VolGroup) (extentId uint64, er
 			stream.wrapper.PutConnect(connect)
 		} else {
 			connect.Close()
-			stream.excludeVols = append(stream.excludeVols, vol.VolId)
 		}
 	}()
 	p := NewCreateExtentPacket(vol)
