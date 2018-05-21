@@ -36,6 +36,7 @@ type StreamWriter struct {
 	currentExtentId uint64        //current FileIdId
 	currentInode    uint64        //inode
 	flushLock       sync.Mutex
+	execludeVols    []uint32
 	appendExtentKey AppendExtentKeyFunc
 	isFlushIng      int32
 	requestCh       chan *WriteRequest
@@ -52,6 +53,7 @@ func NewStreamWriter(wrapper *sdk.VolGroupWrapper, inode uint64, appendExtentKey
 	stream.requestCh = make(chan *WriteRequest, 1000)
 	stream.replyCh = make(chan *WriteRequest, 1000)
 	stream.exitCh = make(chan bool, 2)
+	stream.execludeVols = make([]uint32, 0)
 	go stream.server()
 	go stream.autoFlushThread()
 
@@ -212,7 +214,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 func (stream *StreamWriter) recoverExtent() (err error) {
 	for i := 0; i < MaxSelectVolForWrite; i++ {
 		sendList := stream.getWriter().getNeedRetrySendPackets()
-		stream.wrapper.PutExcludeVol(stream.getWriter().volId)
+		stream.execludeVols = append(stream.execludeVols, stream.getWriter().volId)
 		if err = stream.allocateNewExtentWriter(); err != nil {
 			err = errors.Annotatef(err, "RecoverExtent Failed")
 			continue
@@ -250,7 +252,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	)
 	err = fmt.Errorf("cannot alloct new extent after maxrery")
 	for i := 0; i < MaxSelectVolForWrite; i++ {
-		if vol, err = stream.wrapper.GetWriteVol(stream.excludeVols); err != nil {
+		if vol, err = stream.wrapper.GetWriteVol(&stream.execludeVols); err != nil {
 			continue
 		}
 		if extentId, err = stream.createExtent(vol); err != nil {

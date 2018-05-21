@@ -45,7 +45,6 @@ type VolGroupWrapper struct {
 	volGroups     map[uint32]*VolGroup
 	readWriteVols []*VolGroup
 	ConnPool      *pool.ConnPool
-	execludeVol   []uint32
 	execludeVolCh chan uint32
 	sync.RWMutex
 }
@@ -57,7 +56,6 @@ func NewVolGroupWraper(masterHosts string) (wrapper *VolGroupWrapper, err error)
 	wrapper.ConnPool = pool.NewConnPool()
 	wrapper.readWriteVols = make([]*VolGroup, 0)
 	wrapper.volGroups = make(map[uint32]*VolGroup)
-	wrapper.execludeVol = make([]uint32, 0)
 	wrapper.execludeVolCh = make(chan uint32, 10000)
 	if err = wrapper.getVolsFromMaster(); err != nil {
 		return
@@ -72,10 +70,7 @@ func (wrapper *VolGroupWrapper) update() {
 	for {
 		select {
 		case <-ticker.C:
-			wrapper.execludeVol = make([]uint32, 0)
 			wrapper.getVolsFromMaster()
-		case volId := <-wrapper.execludeVolCh:
-			wrapper.execludeVol = append(wrapper.execludeVol, volId)
 		}
 	}
 }
@@ -167,19 +162,19 @@ func isExcluse(volId uint32, excludes *[]uint32) (exclude bool) {
 	return
 }
 
-func (wrapper *VolGroupWrapper) GetWriteVol() (v *VolGroup, err error) {
+func (wrapper *VolGroupWrapper) GetWriteVol(exclude *[]uint32) (v *VolGroup, err error) {
 	wrapper.RLock()
 	rand.Seed(time.Now().UnixNano())
 	randomIndex := rand.Intn(len(wrapper.readWriteVols))
 	v = wrapper.readWriteVols[randomIndex]
 	wrapper.RUnlock()
-	if !isExcluse(v.VolId, &wrapper.execludeVol) {
+	if !isExcluse(v.VolId, exclude) {
 		return
 	}
 	wrapper.RLock()
 	defer wrapper.RUnlock()
 	for _, v = range wrapper.readWriteVols {
-		if !isExcluse(v.VolId, &wrapper.execludeVol) {
+		if !isExcluse(v.VolId, exclude) {
 			return
 		}
 	}
