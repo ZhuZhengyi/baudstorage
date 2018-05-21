@@ -168,6 +168,14 @@ func (p *Packet) isHeadNode() (ok bool) {
 	return
 }
 
+func (p *Packet) CopyFrom(src *Packet) {
+	p.ResultCode = src.ResultCode
+	p.Opcode=src.Opcode
+	p.Size = src.Size
+	p.Data = src.Data
+}
+
+
 func (p *Packet) IsErrPack() bool {
 	return p.ResultCode == proto.OpOk
 }
