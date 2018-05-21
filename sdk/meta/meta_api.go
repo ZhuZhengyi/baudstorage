@@ -1,6 +1,7 @@
 package meta
 
 import (
+	"log"
 	"syscall"
 
 	"github.com/tiglabs/baudstorage/proto"
@@ -179,10 +180,9 @@ func (mw *MetaWrapper) AppendExtentKey(inode uint64, ek proto.ExtentKey) error {
 	}
 	defer mw.putConn(mc, err)
 
-	extents := []proto.ExtentKey{ek}
-
-	status, err := mw.appendextents(mc, inode, extents)
+	status, err := mw.appendExtentKey(mc, inode, ek)
 	if err != nil || status != statusOK {
+		log.Printf("err(%v) status(%v)", err, status)
 		return syscall.EPERM
 	}
 	return nil
@@ -195,7 +195,7 @@ func (mw *MetaWrapper) GetExtents(inode uint64) ([]proto.ExtentKey, error) {
 	}
 	defer mw.putConn(mc, err)
 
-	status, extents, err := mw.getextents(mc, inode)
+	status, extents, err := mw.getExtents(mc, inode)
 	if err != nil || status != statusOK {
 		return nil, syscall.EPERM
 	}

@@ -1,6 +1,7 @@
 package metanode
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -10,7 +11,7 @@ import (
 	"strings"
 )
 
-// Dentry wraps necessary properties of `dentry` information in file system.
+// Dentry wraps necessary properties of `Dentry` information in file system.
 //
 type Dentry struct {
 	ParentId uint64 // FileIdId value of parent inode.
@@ -19,7 +20,17 @@ type Dentry struct {
 	Type     uint32 // Dentry type.
 }
 
-// Less tests whether the current dentry item is less than the given one.
+// Dump Dentry item to bytes.
+func (d *Dentry) Dump() (result []byte, err error) {
+	return json.Marshal(d)
+}
+
+// Load Dentry item from bytes.
+func (d *Dentry) Load(raw []byte) (err error) {
+	return json.Unmarshal(raw, d)
+}
+
+// Less tests whether the current Dentry item is less than the given one.
 // This method is necessary fot B-Tree item implementation.
 func (d *Dentry) Less(than btree.Item) (less bool) {
 	dentry, ok := than.(*Dentry)
@@ -33,7 +44,7 @@ func (d *Dentry) Less(than btree.Item) (less bool) {
 // so the `ParentId` in key uses 20-bit character alignment to support fuzzy retrieval.
 // Example:
 //  +----------------------------------------------------+
-//  | ParentId    | Name  | ExtentKey                    |
+//  | ParentId    | Name  | Key                          |
 //  +----------------------------------------------------+
 //  |           1 | demo1 | "                   1*demo1" |
 //  | 84467440737 | demo2 | "         84467440737*demo2" |
@@ -53,7 +64,7 @@ func (d *Dentry) ParseKeyBytes(k []byte) (err error) {
 	return
 }
 
-// GetValueString returns string value of this dentry which consists of Inode and Type properties.
+// GetValueString returns string value of this Dentry which consists of Inode and Type properties.
 func (d *Dentry) GetValue() (m string) {
 	return fmt.Sprintf("%d*%d", d.Inode, d.Type)
 }
@@ -69,7 +80,7 @@ func (d *Dentry) ParseValueBytes(val []byte) (err error) {
 	return
 }
 
-// Inode wraps necessary properties of `inode` information in file system.
+// Inode wraps necessary properties of `Inode` information in file system.
 type Inode struct {
 	Inode      uint64 // Inode ID
 	Type       uint32
@@ -80,7 +91,17 @@ type Inode struct {
 	Extents    []proto.ExtentKey
 }
 
-// NewInode returns a new inode instance pointer with specified inode ID, name and inode type code.
+// Dump Inode item to bytes.
+func (i *Inode) Dump() ([]byte, error) {
+	return json.Marshal(i)
+}
+
+// Load Inode item from bytes.
+func (i *Inode) Load(raw []byte) error {
+	return json.Unmarshal(raw, i)
+}
+
+// NewInode returns a new Inode instance pointer with specified Inode ID, name and Inode type code.
 // The AccessTime and ModifyTime of new instance will be set to current time.
 func NewInode(ino uint64, t uint32) *Inode {
 	ts := time.Now().Unix()
@@ -93,7 +114,7 @@ func NewInode(ino uint64, t uint32) *Inode {
 	}
 }
 
-// Less tests whether the current inode item is less than the given one.
+// Less tests whether the current Inode item is less than the given one.
 // This method is necessary fot B-Tree item implementation.
 func (i *Inode) Less(than btree.Item) bool {
 	ino, ok := than.(*Inode)

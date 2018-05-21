@@ -501,12 +501,12 @@ func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (status int, child
 	return statusOK, resp.Children, nil
 }
 
-func (mw *MetaWrapper) appendextents(mc *MetaConn, inode uint64, extents []proto.ExtentKey) (status int, err error) {
+func (mw *MetaWrapper) appendExtentKey(mc *MetaConn, inode uint64, extent proto.ExtentKey) (status int, err error) {
 	req := &proto.AppendExtentKeyRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
 		Inode:       inode,
-		Extents:     extents,
+		Extent:      extent,
 	}
 
 	packet := proto.NewPacket()
@@ -522,10 +522,13 @@ func (mw *MetaWrapper) appendextents(mc *MetaConn, inode uint64, extents []proto
 		log.Println(err)
 		return
 	}
+	if packet.ResultCode != proto.OpOk {
+		log.Printf("ResultCode(%v)\n", packet.ResultCode)
+	}
 	return parseStatus(packet.ResultCode), nil
 }
 
-func (mw *MetaWrapper) getextents(mc *MetaConn, inode uint64) (status int, extents []proto.ExtentKey, err error) {
+func (mw *MetaWrapper) getExtents(mc *MetaConn, inode uint64) (status int, extents []proto.ExtentKey, err error) {
 	req := &proto.GetExtentsRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,

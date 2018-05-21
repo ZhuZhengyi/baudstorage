@@ -65,7 +65,7 @@ func (si *SnapshotIterator) Next() (data []byte, err error) {
 		err = io.EOF
 		return
 	}
-	// ascend inode tree
+	// ascend Inode tree
 	if si.cur <= si.inoLen {
 		si.inodeTree.AscendGreaterOrEqual(si.curItem, func(i btree.Item) bool {
 			ino := i.(*Inode)
@@ -82,7 +82,7 @@ func (si *SnapshotIterator) Next() (data []byte, err error) {
 		return
 	}
 
-	//ascend dentry tree
+	//ascend Dentry tree
 	if si.cur == (si.inoLen + 1) {
 		si.curItem = nil
 	}

@@ -4,18 +4,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
-	"net"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/baudstorage/util/pool"
+	"math/rand"
+	"net"
+	"strings"
+	"sync"
+	"time"
 )
 
 // Configuration keys
@@ -31,16 +30,7 @@ const (
 	metaNodeURL = "metaNode/add"
 )
 
-// State type definition
-type nodeState uint8
-
-// State constants
-const (
-	sReady nodeState = iota
-	sRunning
-)
-
-// The MetaNode manage Dentry and Inode information in multiple MetaPartition, and
+// The MetaNode manage Dentry and Inode information in multiple metaPartition, and
 // through the Raft algorithm and other MetaNodes in the RageGroup for reliable
 // data synchronization to maintain data consistency within the MetaGroup.
 type MetaNode struct {
@@ -50,13 +40,12 @@ type MetaNode struct {
 	logDir      string
 	raftDir     string //raft log store base dir
 	masterAddr  string
-	masterAddrs string
-	pool        *pool.ConnPool
-	metaManager *MetaManager
+	proxyPool   *pool.ConnPool
+	metaManager MetaManager
 	raftStore   raftstore.RaftStore
 	httpStopC   chan uint8
-	state       nodeState
-	stateMutex  sync.RWMutex
+	log         *log.Log
+	state       ServiceState
 	wg          sync.WaitGroup
 }
 
@@ -66,56 +55,55 @@ type MetaNode struct {
 //  3. Start tcp server and accept connection from master and clients.
 func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	// Parallel safe.
-	m.stateMutex.Lock()
-	defer m.stateMutex.Unlock()
-	if m.state != sReady {
-		// Only work if this MetaNode current is not running.
-		return
+	if TrySwitchState(&m.state, stateReady, stateRunning) {
+		defer func() {
+			if err != nil {
+				SetState(&m.state, stateReady)
+			}
+		}()
+		if err = m.onStart(cfg); err != nil {
+			return
+		}
+		m.wg.Add(1)
 	}
-	// Prepare configuration
-	if err = m.prepareConfig(cfg); err != nil {
-		return
-	}
-	// Init logging
-	if _, err = log.NewLog(m.logDir, "MetaNode", log.DebugLevel); err != nil {
-		return
-	}
-	// Check and Valid NodeID
-	if err = m.ValidNodeID(); err != nil {
-		return
-	}
-	// Start raft server
-	if err = m.startRaftServer(); err != nil {
-		return
-	}
-	// Load and start metaManager relation from file and start raft
-	if err = m.startMetaManager(); err != nil {
-		return
-	}
-
-	// Start and listen server
-	if err = m.startServer(); err != nil {
-		return
-	}
-	// Start reply
-	m.state = sRunning
-	m.wg.Add(1)
 	return
 }
 
 // Shutdown stop this MetaNode.
 func (m *MetaNode) Shutdown() {
-	// Parallel safe.
-	m.stateMutex.Lock()
-	defer m.stateMutex.Unlock()
-	if m.state != sRunning {
-		// Only work if this MetaNode current is running.
+	if TrySwitchState(&m.state, stateRunning, stateReady) {
+		m.onShutdown()
+		m.wg.Done()
+	}
+}
+
+func (m *MetaNode) onStart(cfg *config.Config) (err error) {
+	if err = m.parseConfig(cfg); err != nil {
 		return
 	}
+	if m.log, err = log.NewLog(m.logDir, "MetaNode", log.DebugLevel); err != nil {
+		return
+	}
+	if err = m.validNodeID(); err != nil {
+		return
+	}
+	if err = m.startRaftServer(); err != nil {
+		return
+	}
+	if err = m.startMetaManager(); err != nil {
+		return
+	}
+	if err = m.startServer(); err != nil {
+		return
+	}
+	return
+}
+
+func (m *MetaNode) onShutdown() {
 	// Shutdown node and release resource.
 	m.stopServer()
-	m.state = sReady
-	m.wg.Done()
+	m.stopMetaManager()
+	m.stopRaftServer()
 }
 
 // Sync will block invoker goroutine until this MetaNode shutdown.
@@ -123,7 +111,7 @@ func (m *MetaNode) Sync() {
 	m.wg.Wait()
 }
 
-func (m *MetaNode) prepareConfig(cfg *config.Config) (err error) {
+func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 	if cfg == nil {
 		err = errors.New("invalid configuration")
 		return
@@ -132,30 +120,34 @@ func (m *MetaNode) prepareConfig(cfg *config.Config) (err error) {
 	m.logDir = cfg.GetString(cfgLogDir)
 	m.metaDir = cfg.GetString(cfgMetaDir)
 	m.raftDir = cfg.GetString(cfgRaftDir)
-	m.masterAddrs = cfg.GetString(cfgMasterAddr)
+	m.masterAddr = cfg.GetString(cfgMasterAddr)
 	return
 }
 
 func (m *MetaNode) startMetaManager() (err error) {
 	// Load metaManager
-	err = m.metaManager.LoadMetaManagers(m.metaDir)
-	// Start Raft
-	m.metaManager.Range(func(id string, mp *MetaPartition) bool {
-		if err = m.createPartition(mp); err != nil {
-			return false
-		}
-		return true
-	})
+	mmc := &MetaManagerConfig{
+		DataPath: m.metaDir,
+		Raft:     m.raftStore,
+	}
+	m.metaManager = NewMetaManager(mmc)
+	err = m.metaManager.Start()
 	return
 }
 
-func (m *MetaNode) ValidNodeID() (err error) {
+func (m *MetaNode) stopMetaManager() {
+	if m.metaManager != nil {
+		m.metaManager.Stop()
+	}
+}
+
+func (m *MetaNode) validNodeID() (err error) {
 	// Register and Get NodeID
-	if m.masterAddrs == "" {
+	if m.masterAddr == "" {
 		err = errors.New("masterAddrs is empty")
 		return
 	}
-	mAddrSlice := strings.Split(m.masterAddrs, ";")
+	mAddrSlice := strings.Split(m.masterAddr, ";")
 	rand.Seed(time.Now().Unix())
 	i := rand.Intn(len(mAddrSlice))
 	var localAddr string
@@ -182,8 +174,5 @@ func (m *MetaNode) ValidNodeID() (err error) {
 
 // NewServer create an new MetaNode instance.
 func NewServer() *MetaNode {
-	return &MetaNode{
-		metaManager: NewMetaRangeManager(),
-		pool:        pool.NewConnPool(),
-	}
+	return &MetaNode{}
 }

@@ -87,6 +87,7 @@ func (s *DataNode) createFile(pkg *Packet) {
 		err = pkg.vol.store.(*storage.ExtentStore).MarkDelete(pkg.FileID, pkg.Offset, int64(pkg.Size))
 	}
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] CreateFile Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogCreateFile, err.Error())
 	} else {
 		pkg.PackOkReply()
@@ -140,7 +141,7 @@ func (s *DataNode) heartBeats(pkg *Packet) {
 	data, _ := json.Marshal(task)
 	_, err := s.PostToMaster(data, "/node/Repost")
 	if err != nil {
-		err = errors.Annotatef(err, "create vol failed,volId[%v]", request.VolId)
+		err = errors.Annotatef(err, "heaerbeat to master[%v] failed", request.MasterAddr)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
@@ -168,7 +169,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	data, _ := json.Marshal(task)
 	_, err := s.PostToMaster(data, "/node/Repost")
 	if err != nil {
-		err = errors.Annotatef(err, "create vol failed,volId[%v]", request.VolId)
+		err = errors.Annotatef(err, "delete vol failed,volId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
@@ -209,6 +210,7 @@ func (s *DataNode) markDel(pkg *Packet) {
 		err = pkg.vol.store.(*storage.ExtentStore).MarkDelete(pkg.FileID, pkg.Offset, int64(pkg.Size))
 	}
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] MarkDelete Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogMarkDel, err.Error())
 	} else {
 		pkg.PackOkReply()
@@ -224,10 +226,12 @@ func (s *DataNode) append(pkg *Packet) {
 		err = pkg.vol.store.(*storage.TinyStore).Write(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
 		s.AddDiskErrs(pkg.VolID, err, WriteFlag)
 	case proto.ExtentStoreMode:
-		err = errors.Annotatef(ErrStoreTypeUnmatch, " Append only support TinyVol")
+		err = pkg.vol.store.(*storage.TinyStore).Write(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
+		s.AddDiskErrs(pkg.VolID, err, WriteFlag)
 	}
 	if err != nil {
-		pkg.PackErrorBody(LogMarkDel, err.Error())
+		err = errors.Annotatef(err, "Request[%v] Write Error", pkg.GetUniqLogId())
+		pkg.PackErrorBody(LogWrite, err.Error())
 	} else {
 		pkg.PackOkReply()
 	}
@@ -241,6 +245,7 @@ func (s *DataNode) read(pkg *Packet) {
 	pkg.Crc, err = pkg.vol.store.(*storage.TinyStore).Read(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data)
 	if err != nil {
 		err = errors.Annotatef(err, "Request[%v] Read Error", pkg.GetUniqLogId())
+		s.AddDiskErrs(pkg.VolID, err, ReadFlag)
 	}
 	if err == nil {
 		pkg.PackOkReadReply()
@@ -253,7 +258,9 @@ func (s *DataNode) read(pkg *Packet) {
 
 func (s *DataNode) applyDelObjects(pkg *Packet) {
 	if pkg.Size%storage.ObjectIdLen != 0 {
-		pkg.PackErrorBody(LogRepairNeedles, "Invalid args for OpSyncNeedle")
+		err := errors.Annotatef(fmt.Errorf("unvalid objectLen for opsync delete object"),
+			"Request[%v] ApplyDelObjects Error", pkg.GetUniqLogId())
+		pkg.PackErrorBody(LogRepairNeedles, err.Error())
 		return
 	}
 	needles := make([]uint64, 0)
@@ -262,7 +269,8 @@ func (s *DataNode) applyDelObjects(pkg *Packet) {
 		needles = append(needles, needle)
 	}
 	if err := pkg.vol.store.(*storage.TinyStore).ApplyDelObjects(uint32(pkg.FileID), needles); err != nil {
-		pkg.PackErrorBody(LogRepair, "err OpSyncNeedle: "+err.Error())
+		err = errors.Annotatef(err, "Request[%v] ApplyDelObjects Error", pkg.GetUniqLogId())
+		pkg.PackErrorBody(LogRepair, err.Error())
 		return
 	}
 	pkg.PackOkReply()
@@ -284,13 +292,13 @@ func (s *DataNode) streamRead(pkg *Packet, c net.Conn) {
 		pkg.Data = make([]byte, currReadSize)
 		pkg.Crc, err = pkg.vol.store.(*storage.ExtentStore).Read(pkg.FileID, offset, int64(currReadSize), pkg.Data)
 		if err != nil {
+			err = errors.Annotatef(err, "Request[%v] streamRead Error", pkg.GetUniqLogId())
 			pkg.PackErrorBody(ActionStreamRead, err.Error())
 			s.AddDiskErrs(pkg.VolID, err, ReadFlag)
-			pkg.WriteToConn(c)
 			return
 		}
 		pkg.Size = currReadSize
-		pkg.Opcode = proto.OpOk
+		pkg.ResultCode = proto.OpOk
 		if err = pkg.WriteToConn(c); err != nil {
 			return
 		}
@@ -308,11 +316,12 @@ func (s *DataNode) getWatermark(pkg *Packet) {
 	)
 	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
-		finfo, err = pkg.vol.store.(*storage.TinyStore).GetWatermark(uint32(pkg.FileID))
+		finfo, err = pkg.vol.store.(*storage.TinyStore).GetWatermark(pkg.FileID)
 	case proto.ExtentStoreMode:
 		finfo, err = pkg.vol.store.(*storage.ExtentStore).GetWatermark(pkg.FileID)
 	}
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] getWatermark Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogGetWm, err.Error())
 	} else {
 		buf, err = json.Marshal(finfo)
@@ -335,6 +344,7 @@ func (s *DataNode) getAllWatermark(pkg *Packet) {
 		finfos, err = pkg.vol.store.(*storage.ExtentStore).GetAllWatermark()
 	}
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] getAllWatermark Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogGetAllWm, err.Error())
 	} else {
 		buf, err = json.Marshal(finfos)
@@ -353,6 +363,7 @@ func (s *DataNode) compactChunk(pkg *Packet) {
 	}
 	err := s.AddCompactTask(task)
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] compactChunk Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogCompactChunk, err.Error())
 		return
 	}
@@ -364,7 +375,8 @@ func (s *DataNode) compactChunk(pkg *Packet) {
 func (s *DataNode) repair(pkg *Packet) {
 	v := s.space.getVol(pkg.VolID)
 	if v == nil {
-		pkg.PackErrorBody(LogRepair, fmt.Sprintf("vol[%v] not exsits", pkg.VolID))
+		err := errors.Annotatef(fmt.Errorf("vol not exsit"), "Request[%v] compactChunk Error", pkg.GetUniqLogId())
+		pkg.PackErrorBody(LogRepair, err.Error())
 	}
 	switch pkg.StoreMode {
 	case proto.ExtentStoreMode:

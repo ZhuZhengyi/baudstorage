@@ -3,6 +3,7 @@ package stream
 import (
 	"fmt"
 	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk"
 	"github.com/tiglabs/baudstorage/util/log"
 	"io"
@@ -22,7 +23,7 @@ type StreamReader struct {
 	wrapper    *sdk.VolGroupWrapper
 	readers    []*ExtentReader
 	getExtents GetExtentsFunc
-	extents    *StreamKey
+	extents    *proto.StreamKey
 	fileSize   uint64
 	requestCh  chan *ReadRequest
 	replyCh    chan *ReadRequest
@@ -38,7 +39,7 @@ func NewStreamReader(inode uint64, wrapper *sdk.VolGroupWrapper, getExtents GetE
 	stream.requestCh = make(chan *ReadRequest, 1000)
 	stream.replyCh = make(chan *ReadRequest, 1000)
 	stream.exitCh = make(chan bool, 1)
-	stream.extents = NewStreamKey(inode)
+	stream.extents = proto.NewStreamKey(inode)
 	stream.extents.Extents, err = stream.getExtents(inode)
 	if err != nil {
 		return
@@ -86,7 +87,7 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 	if offset+size < int(stream.fileSize) {
 		return size, nil
 	}
-	newStreamKey := NewStreamKey(stream.inode)
+	newStreamKey := proto.NewStreamKey(stream.inode)
 	newStreamKey.Extents, err = stream.getExtents(stream.inode)
 
 	if err == nil {
@@ -112,7 +113,7 @@ func (stream *StreamReader) close() {
 
 }
 
-func (stream *StreamReader) updateLocalReader(newStreamKey *StreamKey) (err error) {
+func (stream *StreamReader) updateLocalReader(newStreamKey *proto.StreamKey) (err error) {
 	var (
 		newOffSet int
 		r         *ExtentReader
@@ -198,7 +199,7 @@ func (stream *StreamReader) GetReader(offset, size int) (readers []*ExtentReader
 			size -= currReaderSize
 		} else {
 			currReaderOffset = offset - r.startInodeOffset
-			currReaderSize = (int(r.key.Size) - currReaderOffset)
+			currReaderSize = int(r.key.Size) - currReaderOffset
 			offset = r.endInodeOffset
 			size = size - currReaderSize
 		}
