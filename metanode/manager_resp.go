@@ -2,8 +2,8 @@ package metanode
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/util"
 	"net"
 )
