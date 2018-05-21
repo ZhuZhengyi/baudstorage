@@ -53,6 +53,7 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	for _, ip := range cfg.GetArray("MasterAddr") {
 		s.masterAddrs = append(s.masterAddrs, ip.(string))
 	}
+	s.ConnPool=pool.NewConnPool()
 
 	s.rackName = cfg.GetString("Rack")
 	_, err = log.NewLog(s.logdir, "datanode", log.DebugLevel)
