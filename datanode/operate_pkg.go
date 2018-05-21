@@ -87,6 +87,7 @@ func (s *DataNode) createFile(pkg *Packet) {
 		err = pkg.vol.store.(*storage.ExtentStore).MarkDelete(pkg.FileID, pkg.Offset, int64(pkg.Size))
 	}
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] CreateFile Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogCreateFile, err.Error())
 	} else {
 		pkg.PackOkReply()
@@ -209,6 +210,7 @@ func (s *DataNode) markDel(pkg *Packet) {
 		err = pkg.vol.store.(*storage.ExtentStore).MarkDelete(pkg.FileID, pkg.Offset, int64(pkg.Size))
 	}
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] MarkDelete Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogMarkDel, err.Error())
 	} else {
 		pkg.PackOkReply()
@@ -228,6 +230,7 @@ func (s *DataNode) append(pkg *Packet) {
 		s.AddDiskErrs(pkg.VolID, err, WriteFlag)
 	}
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] Write Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogWrite, err.Error())
 	} else {
 		pkg.PackOkReply()
@@ -264,7 +267,8 @@ func (s *DataNode) applyDelObjects(pkg *Packet) {
 		needles = append(needles, needle)
 	}
 	if err := pkg.vol.store.(*storage.TinyStore).ApplyDelObjects(uint32(pkg.FileID), needles); err != nil {
-		pkg.PackErrorBody(LogRepair, "err OpSyncNeedle: "+err.Error())
+		err = errors.Annotatef(err, "Request[%v] ApplyDelObjects Error", pkg.GetUniqLogId())
+		pkg.PackErrorBody(LogRepair, err.Error())
 		return
 	}
 	pkg.PackOkReply()
@@ -286,13 +290,13 @@ func (s *DataNode) streamRead(pkg *Packet, c net.Conn) {
 		pkg.Data = make([]byte, currReadSize)
 		pkg.Crc, err = pkg.vol.store.(*storage.ExtentStore).Read(pkg.FileID, offset, int64(currReadSize), pkg.Data)
 		if err != nil {
+			err = errors.Annotatef(err, "Request[%v] streamRead Error", pkg.GetUniqLogId())
 			pkg.PackErrorBody(ActionStreamRead, err.Error())
 			s.AddDiskErrs(pkg.VolID, err, ReadFlag)
-			pkg.WriteToConn(c)
 			return
 		}
 		pkg.Size = currReadSize
-		pkg.Opcode = proto.OpOk
+		pkg.ResultCode = proto.OpOk
 		if err = pkg.WriteToConn(c); err != nil {
 			return
 		}

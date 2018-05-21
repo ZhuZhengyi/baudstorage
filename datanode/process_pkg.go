@@ -107,12 +107,15 @@ func (s *DataNode) doReplyCh(reply *Packet, msgH *MessageHandler) {
 		log.LogError(err)
 	}
 
-	if err = reply.WriteToConn(msgH.inConn); err != nil {
-		err = fmt.Errorf(reply.ActionMesg(ActionWriteToCli, msgH.inConn.RemoteAddr().String(),
-			reply.StartT, err))
-		log.LogError(err)
-		msgH.ExitSign()
+	if reply.Opcode != proto.OpStreamRead {
+		if err = reply.WriteToConn(msgH.inConn); err != nil {
+			err = fmt.Errorf(reply.ActionMesg(ActionWriteToCli, msgH.inConn.RemoteAddr().String(),
+				reply.StartT, err))
+			log.LogError(err)
+			msgH.ExitSign()
+		}
 	}
+
 	reply.afterTp()
 	log.LogDebug(reply.ActionMesg(ActionWriteToCli,
 		msgH.inConn.RemoteAddr().String(), reply.StartT, err))
