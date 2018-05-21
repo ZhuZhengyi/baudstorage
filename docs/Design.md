@@ -131,4 +131,10 @@ optimization:
 Multiple reader clients need to read a file stream in real time. So they subscribe to the current extent and consume the newest changes without need to first read the inode. 
 
 
+## Cross Media
+
+A BaudStorage cluster or even a datanode is usually equipped with one or multiple types of storage media: HDD, SSD, and NVM. 
+
+When creating a filesystem volume on BaudStorage, the application can choose a media type. 
+
 
