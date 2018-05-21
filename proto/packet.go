@@ -84,7 +84,7 @@ const (
 	OpExistErr         uint8 = 0xFA
 	OpInodeFullErr     uint8 = 0xFB
 	OpArgUnmatchErr    uint8 = 0xFC
-	OpOk               uint8 = 0x00
+	OpOk               uint8 = 0xF0
 )
 
 const (
