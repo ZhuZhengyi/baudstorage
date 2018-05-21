@@ -36,6 +36,7 @@ type DataNode struct {
 	ConnPool      *pool.ConnPool
 	space         *SpaceManager
 	masterAddrs   []string
+	masterAddrIndex uint32
 	port          string
 	logdir        string
 	rackName      string

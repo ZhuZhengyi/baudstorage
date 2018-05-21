@@ -6,7 +6,6 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util/ump"
-	"golang.org/x/text/cmd/gotext/examples/extract_http/pkg"
 	"net"
 	"strings"
 	"time"

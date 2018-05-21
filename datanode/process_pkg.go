@@ -7,7 +7,6 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util/log"
-	"golang.org/x/text/cmd/gotext/examples/extract_http/pkg"
 	"hash/crc32"
 	"io"
 	"net"

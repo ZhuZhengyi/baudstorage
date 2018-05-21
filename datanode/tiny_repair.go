@@ -195,6 +195,7 @@ func (v *Vol) applyRepairObjects(chunkId int, data []byte, endObjectId uint64) (
 		}
 		applyObjectId = o.Oid
 	}
+	return nil
 }
 
 func (s *DataNode) streamRepairObjects(remoteFileInfo *storage.FileInfo, v *Vol) (err error) {
@@ -242,7 +243,7 @@ func (s *DataNode) streamRepairObjects(remoteFileInfo *storage.FileInfo, v *Vol)
 		if err != nil {
 			conn.Close()
 			err = errors.Annotatef(err, "streamRepairObjects apply data failed")
-			return
+			return err
 		}
 	}
 	return

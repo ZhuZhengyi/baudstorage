@@ -141,7 +141,7 @@ func (s *DataNode) heartBeats(pkg *Packet) {
 	data, _ := json.Marshal(task)
 	_, err := s.PostToMaster(data, "/node/Repost")
 	if err != nil {
-		err = errors.Annotatef(err, "create vol failed,volId[%v]", request.VolId)
+		err = errors.Annotatef(err, "heaerbeat to master[%v] failed", request.MasterAddr)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
@@ -169,7 +169,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	data, _ := json.Marshal(task)
 	_, err := s.PostToMaster(data, "/node/Repost")
 	if err != nil {
-		err = errors.Annotatef(err, "create vol failed,volId[%v]", request.VolId)
+		err = errors.Annotatef(err, "delete vol failed,volId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
@@ -260,7 +260,7 @@ func (s *DataNode) applyDelObjects(pkg *Packet) {
 	if pkg.Size%storage.ObjectIdLen != 0 {
 		err := errors.Annotatef(fmt.Errorf("unvalid objectLen for opsync delete object"),
 			"Request[%v] ApplyDelObjects Error", pkg.GetUniqLogId())
-		pkg.PackErrorBody(LogRepairNeedles, err)
+		pkg.PackErrorBody(LogRepairNeedles, err.Error())
 		return
 	}
 	needles := make([]uint64, 0)
