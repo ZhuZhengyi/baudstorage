@@ -3,61 +3,64 @@ package metanode
 import (
 	"encoding/json"
 	"fmt"
+	"net"
+	"strings"
+
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
-	"net"
-	"strconv"
-	"strings"
+	raftproto "github.com/tiglabs/raft/proto"
 )
 
 func (m *metaManager) opMasterHeartbeat(conn net.Conn, p *Packet) (err error) {
-	// Ack from Master Request
 	adminTask := &proto.AdminTask{}
 	if err = json.Unmarshal(p.Data, adminTask); err != nil {
-		// TODO: Log
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	var (
+		req     = &proto.HeartBeatRequest{}
+		reqData []byte
+	)
+	reqData, err = json.Marshal(adminTask.Request)
+	if err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	if err = json.Unmarshal(reqData, req); err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	// For ack to master
+	m.responseAckOKToMaster(conn, p)
+	m.masterAddr = req.MasterAddr
+	// collect used info
+	resp := &proto.MetaNodeHeartbeatResponse{}
+	// machine mem total and used
+	resp.Total, resp.Used, err = util.GetMemInfo()
+	if err != nil {
 		adminTask.Status = proto.TaskFail
 		goto end
 	}
-	// parse req
-	{
-		var (
-			req     = &proto.HeartBeatRequest{}
-			reqData []byte
-		)
-		reqData, err = json.Marshal(adminTask.Request)
-		if err != nil {
-			adminTask.Status = proto.TaskFail
-			goto end
+	// every partition used
+	for id, partition := range m.partitions {
+		mpr := &proto.MetaPartitionReport{}
+		mpr.PartitionID = id
+		addr, isLeader := partition.IsLeader()
+		if addr != "" {
+			mpr.Status = proto.CmdFailed
 		}
-		if err = json.Unmarshal(reqData, req); err != nil {
-			adminTask.Status = proto.TaskFail
-			goto end
-		}
-		m.masterAddr = req.MasterAddr
+		mpr.IsLeader = isLeader
+		mpr.MaxInodeID = partition.GetCursor()
+		resp.MetaPartitionInfo = append(resp.MetaPartitionInfo, mpr)
 	}
-	// collect used info
-	if true {
-		resp := &proto.MetaNodeHeartbeatResponse{}
-		// machine mem total and used
-		resp.Total, resp.Used, err = util.GetMemInfo()
-		if err != nil {
-			adminTask.Status = proto.TaskFail
-			goto end
-		}
-		// every partition used
-		for id, partition := range m.partitions {
-			mpr := &proto.MetaPartitionReport{}
-			mpr.PartitionID, _ = strconv.ParseUint(id, 10, 8)
-			_, mpr.IsLeader = partition.IsLeader()
-			mpr.Status = 1
-			resp.MetaPartitionInfo = append(resp.MetaPartitionInfo, mpr)
-		}
-		resp.Status = proto.OpOk
-	}
+	resp.Status = proto.TaskSuccess
 
 end:
-	err = m.respondToMaster(m.masterAddr, adminTask)
+	m.respondToMaster(m.masterAddr, adminTask)
 	return
 }
 
@@ -94,8 +97,7 @@ func (m *metaManager) opCreateMetaPartition(conn net.Conn, p *Packet) (err error
 		return
 	}
 	// Create new  metaPartition.
-	id := strconv.FormatUint(req.PartitionID, 10)
-	err = m.createPartition(id, req.Start, req.End, req.Members)
+	err = m.createPartition(req.PartitionID, req.Start, req.End, req.Members)
 	return
 }
 
@@ -303,6 +305,224 @@ func (m *metaManager) opMetaExtentsList(conn net.Conn, p *Packet) (err error) {
 	return
 }
 
-func (m *MetaNode) opMetaExtentsDel(conn net.Conn, p *Packet) (err error) {
+func (m *metaManager) opMetaExtentsDel(conn net.Conn, p *Packet) (err error) {
+	return
+}
+
+func (m *metaManager) opDeleteMetaPartition(conn net.Conn, p *Packet) (err error) {
+	adminTask := &proto.AdminTask{}
+	if err = json.Unmarshal(p.Data, adminTask); err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	var (
+		mp      MetaPartition
+		reqData []byte
+	)
+	req := &proto.DeleteMetaPartitionRequest{}
+	reqData, err = json.Marshal(adminTask.Request)
+	if err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	if err = json.Unmarshal(reqData, req); err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	resp := &proto.DeleteMetaPartitionResponse{
+		PartitionID: req.PartitionID,
+		Status:      proto.OpErr,
+	}
+	mp, err = m.getPartition(req.PartitionID)
+	if err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	if m.serveProxy(conn, mp, p) {
+		return
+	}
+	// Ack Master Request
+	m.responseAckOKToMaster(conn, p)
+	if err = mp.DeletePartition(); err != nil {
+		resp.Result = err.Error()
+		goto end
+	}
+	resp.Status = proto.OpOk
+end:
+	adminTask.Response = resp
+	adminTask.Request = nil
+	err = m.respondToMaster(m.masterAddr, adminTask)
+	return
+}
+
+func (m *metaManager) opUpdateMetaPartition(conn net.Conn, p *Packet) (err error) {
+	adminTask := &proto.AdminTask{}
+	if err = json.Unmarshal(p.Data, adminTask); err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	var (
+		reqData []byte
+		req     = &proto.UpdateMetaPartitionRequest{}
+	)
+	reqData, err = json.Marshal(adminTask.Request)
+	if err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	if err = json.Unmarshal(reqData, req); err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	mp, err := m.getPartition(req.PartitionID)
+	if err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	if m.serveProxy(conn, mp, p) {
+		return
+	}
+	go func() {
+		p.PackOkReply()
+		p.WriteToConn(conn)
+	}()
+	resp := &proto.UpdateMetaPartitionResponse{
+		NsName:      req.NsName,
+		PartitionID: req.PartitionID,
+		End:         req.End,
+		Status:      proto.OpOk,
+	}
+	if err = mp.UpdatePartition(req); err != nil {
+		resp.Status = proto.OpErr
+	}
+	adminTask.Response = resp
+	adminTask.Request = nil
+	err = m.respondToMaster(m.masterAddr, adminTask)
+	return
+}
+
+func (m *metaManager) opLoadMetaPartition(conn net.Conn, p *Packet) (err error) {
+	adminTask := &proto.AdminTask{}
+	if err = json.Unmarshal(p.Data, adminTask); err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		p.WriteToConn(conn)
+		return
+	}
+	var (
+		req     = &proto.LoadMetaPartitionMetricRequest{}
+		resp    = &proto.LoadMetaPartitionMetricResponse{}
+		reqData []byte
+	)
+	if reqData, err = json.Marshal(adminTask.Request); err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		p.WriteToConn(conn)
+		return
+	}
+	if err = json.Unmarshal(reqData, req); err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		p.WriteToConn(conn)
+		return
+	}
+	go func() {
+		p.PackOkReply()
+		p.WriteToConn(conn)
+	}()
+	mp, err := m.getPartition(req.PartitionID)
+	if err != nil {
+		resp.Status = proto.OpErr
+		resp.Result = err.Error()
+		adminTask.Response = resp
+		adminTask.Request = nil
+		m.respondToMaster(m.masterAddr, adminTask)
+		return
+	}
+	mConf := mp.GetBaseConfig()
+	resp.Start = mConf.Start
+	resp.End = mConf.End
+	resp.MaxInode = mConf.Cursor
+	resp.Status = proto.OpOk
+	adminTask.Response = resp
+	adminTask.Request = nil
+	m.respondToMaster(m.masterAddr, adminTask)
+	return
+}
+
+func (m *metaManager) opOfflineMetaPartition(conn net.Conn, p *Packet) (err error) {
+	var (
+		reqData []byte
+		req     = &proto.MetaPartitionOfflineRequest{}
+	)
+	adminTask := &proto.AdminTask{}
+	if err = json.Unmarshal(p.Data, adminTask); err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	reqData, err = json.Marshal(adminTask.Request)
+	if err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	if err = json.Unmarshal(reqData, req); err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	mp, err := m.getPartition(req.PartitionID)
+	if err != nil {
+		p.PackErrorWithBody(proto.OpErr, nil)
+		m.respondToClient(conn, p)
+		return
+	}
+	if m.serveProxy(conn, mp, p) {
+		return
+	}
+	defer func() {
+		p.PackOkReply()
+		m.respondToClient(conn, p)
+	}()
+	m.raftStore.AddNode(req.AddPeer.ID, req.AddPeer.Addr)
+	resp := proto.MetaPartitionOfflineResponse{
+		PartitionID: req.PartitionID,
+		Status:      proto.OpErr,
+	}
+	// add peer
+	reqData, err = json.Marshal(req.AddPeer)
+	if err != nil {
+		resp.Result = err.Error()
+		goto end
+	}
+	_, err = mp.ChangeMember(raftproto.ConfAddNode,
+		raftproto.Peer{ID: req.AddPeer.ID}, reqData)
+	if err != nil {
+		resp.Result = err.Error()
+		goto end
+	}
+	// delete peer
+	reqData, err = json.Marshal(req.RemovePeer)
+	if err != nil {
+		resp.Result = err.Error()
+		goto end
+	}
+	_, err = mp.ChangeMember(raftproto.ConfRemoveNode,
+		raftproto.Peer{ID: req.RemovePeer.ID}, reqData)
+	if err != nil {
+		resp.Result = err.Error()
+		goto end
+	}
+	resp.Status = proto.OpOk
+end:
+	adminTask.Request = nil
+	adminTask.Response = resp
+	m.respondToMaster(m.masterAddr, adminTask)
 	return
 }

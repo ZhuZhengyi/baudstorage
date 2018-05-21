@@ -2,8 +2,8 @@ package metanode
 
 import (
 	"encoding/json"
+
 	"github.com/tiglabs/baudstorage/proto"
-	"strconv"
 )
 
 func (mp *metaPartition) CreateDentry(req *CreateDentryReq, p *Packet) (err error) {
@@ -63,13 +63,12 @@ func (mp *metaPartition) ReadDir(req *ReadDirReq, p *Packet) (err error) {
 }
 
 func (mp *metaPartition) Lookup(req *LookupReq, p *Packet) (err error) {
-	parentID, err := strconv.ParseUint(req.PartitionID, 10, 64)
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
 	dentry := &Dentry{
-		ParentId: parentID,
+		ParentId: req.PartitionID,
 		Name:     req.Name,
 	}
 	status := mp.getDentry(dentry)

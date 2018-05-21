@@ -3,8 +3,9 @@ package metanode
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tiglabs/baudstorage/proto"
 	"sync/atomic"
+
+	"github.com/tiglabs/baudstorage/proto"
 
 	"github.com/tiglabs/raft"
 	raftproto "github.com/tiglabs/raft/proto"
@@ -66,19 +67,34 @@ end:
 }
 
 func (mp *metaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, index uint64) (interface{}, error) {
-	// Write Disk
-	// Rename
+	var err error
+	peer := &proto.Peer{}
+	if err = json.Unmarshal(confChange.Context, peer); err != nil {
+		return nil, err
+	}
+
 	// Change memory state
 	switch confChange.Type {
 	case raftproto.ConfAddNode:
-		//TODO
+		mp.config.Peers = append(mp.config.Peers, *peer)
 	case raftproto.ConfRemoveNode:
-		//TODO
+		for i, p := range mp.config.Peers {
+			if p.ID == peer.ID {
+				mp.config.Peers = append(mp.config.Peers[:i], mp.config.Peers[i+1:]...)
+			}
+		}
+		if mp.config.NodeId == peer.ID {
+			mp.Stop()
+		}
 	case raftproto.ConfUpdateNode:
 		//TODO
 	}
+	// Write Disk
+	if err = mp.storeMeta(); err != nil {
+		return nil, err
+	}
 	mp.applyID = index
-	return nil, nil
+	return nil, err
 }
 
 func (mp *metaPartition) Snapshot() (raftproto.Snapshot, error) {
@@ -137,7 +153,7 @@ func (mp *metaPartition) Put(key, val interface{}) (resp interface{}, err error)
 	if err != nil {
 		return
 	}
-	//submit raft
+	//submit raftStore
 	resp, err = mp.raftPartition.Submit(cmd)
 	if err != nil {
 		return

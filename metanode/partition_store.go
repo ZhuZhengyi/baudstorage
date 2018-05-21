@@ -5,12 +5,13 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"github.com/google/btree"
-	"github.com/tiglabs/baudstorage/proto"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
+
+	"github.com/google/btree"
+	"github.com/tiglabs/baudstorage/proto"
 )
 
 const (
@@ -24,10 +25,10 @@ const (
 	dumpFileApplyIdTmp = ".apply"
 )
 
+// Load struct from meta
 func (mp *metaPartition) loadMeta() (err error) {
-	// Load struct from meta
 	metaFile := path.Join(mp.config.RootDir, dumpFileMeta)
-	fp, err := os.OpenFile(metaFile, os.O_RDONLY, 0655)
+	fp, err := os.OpenFile(metaFile, os.O_RDONLY, 0644)
 	if err != nil {
 		return
 	}
@@ -40,13 +41,14 @@ func (mp *metaPartition) loadMeta() (err error) {
 	if err = json.Unmarshal(data, mConf); err != nil {
 		return
 	}
+	// TODO: Valid PartitionConfig
+
 	mp.config = mConf
 	return
 }
 
 // Load inode info from inode snapshot file
 func (mp *metaPartition) loadInode() (err error) {
-	// Restore btree from ino file
 	inoFile := path.Join(mp.config.RootDir, dumpFileInode)
 	fp, err := os.OpenFile(inoFile, os.O_RDONLY, 0644)
 	if err != nil {
@@ -87,7 +89,6 @@ func (mp *metaPartition) loadInode() (err error) {
 
 // Load dentry from dentry snapshot file
 func (mp *metaPartition) loadDentry() (err error) {
-	// Restore dentry from dentry file
 	dentryFile := path.Join(mp.config.RootDir, dumpFileDentry)
 	fp, err := os.OpenFile(dentryFile, os.O_RDONLY, 0644)
 	if err != nil {

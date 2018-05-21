@@ -2,6 +2,7 @@ package metanode
 
 import (
 	"errors"
+
 	"github.com/tiglabs/baudstorage/proto"
 )
 
@@ -35,9 +36,9 @@ type (
 	OpenReq = proto.OpenRequest
 )
 
-// For use when raft store and application apply
+// For use when raftStore store and application apply
 const (
-	opCreateInode      uint32 = iota
+	opCreateInode uint32 = iota
 	opDeleteInode
 	opCreateDentry
 	opDeleteDentry

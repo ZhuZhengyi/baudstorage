@@ -4,16 +4,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/raftstore"
-	"github.com/tiglabs/baudstorage/util"
-	"github.com/tiglabs/baudstorage/util/config"
-	"github.com/tiglabs/baudstorage/util/log"
 	"math/rand"
 	"net"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/raftstore"
+	"github.com/tiglabs/baudstorage/util"
+	"github.com/tiglabs/baudstorage/util/config"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 // Configuration keys
@@ -30,14 +31,14 @@ const (
 )
 
 // The MetaNode manage Dentry and Inode information in multiple metaPartition, and
-// through the Raft algorithm and other MetaNodes in the RageGroup for reliable
+// through the RaftStore algorithm and other MetaNodes in the RageGroup for reliable
 // data synchronization to maintain data consistency within the MetaGroup.
 type MetaNode struct {
 	nodeId      uint64
 	listen      int
 	metaDir     string //metaNode store root dir
 	logDir      string
-	raftDir     string //raft log store base dir
+	raftDir     string //raftStore log store base dir
 	masterAddrs string
 	metaManager MetaManager
 	raftStore   raftstore.RaftStore
@@ -48,7 +49,7 @@ type MetaNode struct {
 
 // Start this MeteNode with specified configuration.
 //  1. Start and load each meta range from snapshot.
-//  2. Restore raft fsm of each meta range.
+//  2. Restore raftStore fsm of each meta range.
 //  3. Start tcp server and accept connection from master and clients.
 func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	// Parallel safe.
@@ -124,9 +125,9 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 func (m *MetaNode) startMetaManager() (err error) {
 	// Load metaManager
 	conf := MetaManagerConfig{
-		NodeID:  m.nodeId,
-		RootDir: m.metaDir,
-		Raft:    m.raftStore,
+		NodeID:    m.nodeId,
+		RootDir:   m.metaDir,
+		RaftStore: m.raftStore,
 	}
 	m.metaManager = NewMetaManager(conf)
 	err = m.metaManager.Start()
