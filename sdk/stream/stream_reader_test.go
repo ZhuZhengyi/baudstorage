@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	sk       *StreamKey
+	sk       *proto.StreamKey
 	extentId uint64
 )
 
@@ -37,7 +37,7 @@ func TestStreamReader_GetReader(t *testing.T) {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 	log.NewLog("log", "test", log.DebugLevel)
-	sk = NewStreamKey(2)
+	sk = proto.NewStreamKey(2)
 	for i := 0; i < 10000; i++ {
 		rand.Seed(time.Now().UnixNano())
 		ek := proto.ExtentKey{VolId: uint32(i), ExtentId: atomic.AddUint64(&extentId, 1),

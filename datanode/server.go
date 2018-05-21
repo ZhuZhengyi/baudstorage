@@ -36,6 +36,7 @@ type DataNode struct {
 	ConnPool      *pool.ConnPool
 	space         *SpaceManager
 	masterAddrs   []string
+	masterAddrIndex uint32
 	port          string
 	logdir        string
 	rackName      string
@@ -233,6 +234,7 @@ func (s *DataNode) handleChunkInfo(pkg *Packet) (err error) {
 		err = s.headNodeSetChunkInfo(pkg)
 	}
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] handleChunkInfo Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(ActionCheckChunkInfo, err.Error())
 	}
 

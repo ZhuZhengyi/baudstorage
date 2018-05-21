@@ -3,6 +3,7 @@ package stream
 import (
 	"bytes"
 	"fmt"
+	"github.com/tiglabs/baudstorage/proto"
 	"log"
 	"math/rand"
 	"net/http"
@@ -12,12 +13,10 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/tiglabs/baudstorage/proto"
 )
 
 var aalock sync.Mutex
-var allKeys map[uint64]*StreamKey
+var allKeys map[uint64]*proto.StreamKey
 
 func saveExtentKey(inode uint64, k proto.ExtentKey) (err error) {
 	aalock.Lock()
@@ -64,8 +63,8 @@ func initClient(t *testing.T) (client *ExtentClient) {
 	return
 }
 
-func initInode(inode uint64) (sk *StreamKey) {
-	sk = new(StreamKey)
+func initInode(inode uint64) (sk *proto.StreamKey) {
+	sk = new(proto.StreamKey)
 	sk.Inode = inode
 	allKeys[inode] = sk
 	return
@@ -91,7 +90,7 @@ func OccoursErr(err error, t *testing.T) {
 
 func TestExtentClient_Write(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	allKeys = make(map[uint64]*StreamKey)
+	allKeys = make(map[uint64]*proto.StreamKey)
 	client := initClient(t)
 	var (
 		inode uint64

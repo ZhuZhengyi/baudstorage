@@ -84,7 +84,7 @@ const (
 	OpExistErr         uint8 = 0xFA
 	OpInodeFullErr     uint8 = 0xFB
 	OpArgUnmatchErr    uint8 = 0xFC
-	OpOk               uint8 = 0x00
+	OpOk               uint8 = 0xF0
 )
 
 const (
@@ -355,16 +355,15 @@ func (p *Packet) IsTransitPkg() bool {
 
 func (p *Packet) ActionMesg(action, remote string, start int64, err error) (m string) {
 	if err == nil {
-		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[success] size[%v] "+
+		m = fmt.Sprintf("id[%v] act[%v] remote[%v] "+
 			" cost[%v] isTransite[%v] ",
-			p.GetUniqLogId(), action, remote, p.GetOpMesg(p.ResultCode), p.GetOpMesg(p.Opcode), p.Size,
+			p.GetUniqLogId(), action, remote,
 			(time.Now().UnixNano()-start)/1e6, p.IsTransitPkg())
 
 	} else {
-		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[%v] size[%v] "+
+		m = fmt.Sprintf("id[%v] act[%v] remote[%v]" +
 			", err[%v] isTransite[%v]", p.GetUniqLogId(), action,
-			remote, p.GetOpMesg(p.ResultCode), p.GetOpMesg(p.Opcode), p.Size, err.Error(),
-			p.IsTransitPkg())
+			remote, err.Error(),p.IsTransitPkg())
 	}
 
 	return

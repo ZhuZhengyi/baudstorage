@@ -7,6 +7,7 @@ import (
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
+	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 	"hash/crc32"
 	"net"
@@ -61,11 +62,13 @@ func (s *DataNode) repairObjectRead(pkg *Packet, conn *net.TCPConn) {
 		fmt.Sprintf("follower require Oid[%v] localOid[%v]", requireOid, localOid), pkg.StartT, err))
 	if localOid < requireOid {
 		err = fmt.Errorf(" requireOid[%v] but localOid[%v]", requireOid, localOid)
+		err = errors.Annotatef(err, "Request[%v] repairObjectRead Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(ActionLeaderToFollowerOpCRepairReadPackResponse, err.Error())
 		return
 	}
 	err = syncData(chunkID, requireOid, localOid, pkg, conn)
 	if err != nil {
+		err = errors.Annotatef(err, "Request[%v] SYNCDATA Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(ActionLeaderToFollowerOpCRepairReadPackResponse, err.Error())
 	}
 
@@ -106,6 +109,11 @@ func packObjectToBuf(databuf []byte, o *storage.Object, chunkID uint32, v *Vol) 
 	_, err = v.store.(*storage.TinyStore).Read(chunkID, int64(o.Oid), int64(o.Size), databuf[storage.ObjectHeaderSize:])
 	return
 }
+
+const (
+	PkgRepairCReadRespMaxSize   = 10 * util.MB
+	PkgRepairCReadRespLimitSize = 15 * util.MB
+)
 
 func syncData(chunkID uint32, startOid, endOid uint64, pkg *Packet, conn *net.TCPConn) error {
 	var (
@@ -187,6 +195,7 @@ func (v *Vol) applyRepairObjects(chunkId int, data []byte, endObjectId uint64) (
 		}
 		applyObjectId = o.Oid
 	}
+	return nil
 }
 
 func (s *DataNode) streamRepairObjects(remoteFileInfo *storage.FileInfo, v *Vol) (err error) {
@@ -234,7 +243,7 @@ func (s *DataNode) streamRepairObjects(remoteFileInfo *storage.FileInfo, v *Vol)
 		if err != nil {
 			conn.Close()
 			err = errors.Annotatef(err, "streamRepairObjects apply data failed")
-			return
+			return err
 		}
 	}
 	return

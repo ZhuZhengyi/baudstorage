@@ -1,15 +1,13 @@
-package stream
+package proto
 
 import (
 	"encoding/json"
 	"sync"
-
-	"github.com/tiglabs/baudstorage/proto"
 )
 
 type StreamKey struct {
 	Inode   uint64
-	Extents []proto.ExtentKey
+	Extents []ExtentKey
 	sync.Mutex
 }
 
@@ -27,20 +25,26 @@ func (sk *StreamKey) UnMarshal(data []byte) {
 	json.Unmarshal(data, sk)
 }
 
-func (sk *StreamKey) Put(k proto.ExtentKey) {
+func (sk *StreamKey) Put(k ExtentKey) {
 	sk.Lock()
 	defer sk.Unlock()
-	isFound := false
-	for index := 0; index < len(sk.Extents); index++ {
-		if sk.Extents[index].VolId == k.VolId && sk.Extents[index].ExtentId == k.ExtentId {
-			sk.Extents[index].Size = k.Size
-			isFound = true
+	lastIndex:=len(sk.Extents)-1
+	lastKey := sk.Extents[lastIndex]
+	if lastKey.VolId == k.VolId && lastKey.ExtentId == k.ExtentId {
+		if k.Size > lastKey.Size {
+			sk.Extents[lastIndex].Size = k.Size
 			return
 		}
+		return
 	}
-	if !isFound {
-		sk.Extents = append(sk.Extents, k)
+	var haveFileSize uint32
+	for index,ek:=range sk.Extents{
+		if index!=lastIndex && ek.VolId == k.VolId && ek.ExtentId == k.ExtentId{
+			haveFileSize+=ek.Size
+		}
 	}
+	k.Size=k.Size-haveFileSize
+	sk.Extents=append(sk.Extents,k)
 
 	return
 }
@@ -62,7 +66,7 @@ func (sk *StreamKey) GetExtentLen() int {
 
 // Range calls f sequentially for each key and value present in the extent key collection.
 // If f returns false, range stops the iteration.
-func (sk *StreamKey) Range(f func(i int, v proto.ExtentKey) bool) {
+func (sk *StreamKey) Range(f func(i int, v ExtentKey) bool) {
 	sk.Lock()
 	defer sk.Unlock()
 	for i, v := range sk.Extents {

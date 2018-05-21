@@ -7,7 +7,6 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util/log"
-	"os"
 	"path"
 )
 

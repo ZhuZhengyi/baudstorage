@@ -6,7 +6,6 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util/ump"
-	"golang.org/x/text/cmd/gotext/examples/extract_http/pkg"
 	"net"
 	"strings"
 	"time"
@@ -168,29 +167,19 @@ func (p *Packet) isHeadNode() (ok bool) {
 	return
 }
 
+func (p *Packet) CopyFrom(src *Packet) {
+	p.ResultCode = src.ResultCode
+	p.Opcode = src.Opcode
+	p.Size = src.Size
+	p.Data = src.Data
+}
+
 func (p *Packet) IsErrPack() bool {
-	return p.ResultCode == proto.OpOk
+	return p.ResultCode != proto.OpOk
 }
 
 func (p *Packet) getErr() (m string) {
 	return fmt.Sprintf("req[%v] err[%v]", p.GetUniqLogId(), string(p.Data[:p.Size]))
-}
-
-func (p *Packet) ActionMesg(action, remote string, start int64, err error) (m string) {
-	if err == nil {
-		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[success] size[%v] "+
-			" cost[%v] isTransite[%v] ",
-			p.GetUniqLogId(), action, remote, p.GetOpMesg(p.Opcode), p.Size,
-			(time.Now().UnixNano()-start)/1e6, p.IsTransitPkg())
-
-	} else {
-		m = fmt.Sprintf("id[%v] act[%v] remote[%v] op[%v] local[%v] size[%v] "+
-			", err[%v] isTransite[%v]", p.GetUniqLogId(), action,
-			remote, p.GetOpMesg(p.Opcode), p.GetOpMesg(p.ResultCode), p.Size, err.Error(),
-			p.IsTransitPkg())
-	}
-
-	return
 }
 
 func (p *Packet) ClassifyErrorOp(errLog string, errMsg string) {
