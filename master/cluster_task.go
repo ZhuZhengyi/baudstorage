@@ -538,13 +538,12 @@ func (c *Cluster) dealDataNodeHeartbeat(nodeAddr string, resp *proto.DataNodeHea
 		goto errDeal
 	}
 
+	dataNode.UpdateNodeMetric(resp)
+	dataNode.setNodeAlive()
+	c.UpdateDataNode(dataNode)
+	dataNode.VolInfo = nil
 	logMsg = fmt.Sprintf("action[dealDataNodeHeartbeat],dataNode:%v ReportTime:%v  success", dataNode.HttpAddr, time.Now().Unix())
 	log.LogDebug(logMsg)
-	dataNode.setNodeAlive()
-	dataNode.VolInfo = resp.VolInfo
-	c.UpdateDataNode(dataNode)
-	dataNode.VolInfoCount = len(dataNode.VolInfo)
-	dataNode.VolInfo = nil
 
 	return
 errDeal:
