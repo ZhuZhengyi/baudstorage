@@ -95,13 +95,12 @@ type VolReport struct {
 }
 
 type DataNodeHeartBeatResponse struct {
-	MaxDiskAvailWeight int64
 	Total              uint64
 	Used               uint64
 	Free               uint64
 	CreatedVolWeights         uint64 //volCnt*volsize
 	RemainWeightsForCreateVol uint64 //all-usedvolsWieghts
-	CreatedVolCnt             uint64
+	CreatedVolCnt             uint32
 	MaxWeightsForCreateVol    uint64
 	RackName           string
 	VolInfo            []*VolReport

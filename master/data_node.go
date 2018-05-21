@@ -14,12 +14,15 @@ const (
 )
 
 type DataNode struct {
-	TcpAddr            string `json:"TcpAddr"`
-	MaxDiskAvailWeight uint64 `json:"MaxDiskAvailWeight"`
-	Total              uint64 `json:"TotalWeight"`
-	Used               uint64 `json:"UsedWeight"`
-	RackName           string `json:"Rack"`
-	HttpAddr           string
+	TcpAddr                   string `json:"TcpAddr"`
+	MaxDiskAvailWeight        uint64 `json:"MaxDiskAvailWeight"`
+	CreatedVolWeights         uint64
+	RemainWeightsForCreateVol uint64
+	Total                     uint64 `json:"TotalWeight"`
+	Used                      uint64 `json:"UsedWeight"`
+	Free                      uint64
+	RackName                  string `json:"Rack"`
+	HttpAddr                  string
 
 	reportTime time.Time
 	isActive   bool
@@ -29,7 +32,7 @@ type DataNode struct {
 	carry        float64
 	sender       *AdminTaskSender
 	VolInfo      []*proto.VolReport
-	VolInfoCount int
+	VolInfoCount uint32
 }
 
 func NewDataNode(addr string) (dataNode *DataNode) {
@@ -68,13 +71,18 @@ func (dataNode *DataNode) checkIsActive() bool {
 
 }
 
-func (dataNode *DataNode) UpdateNodeMetric(sourceNode *DataNode) {
+func (dataNode *DataNode) UpdateNodeMetric(resp *proto.DataNodeHeartBeatResponse) {
 	dataNode.Lock()
 	defer dataNode.Unlock()
-	dataNode.MaxDiskAvailWeight = sourceNode.MaxDiskAvailWeight
-	dataNode.Total = sourceNode.Total
-	dataNode.Used = sourceNode.Used
-	dataNode.RackName = sourceNode.RackName
+	dataNode.MaxDiskAvailWeight = resp.MaxWeightsForCreateVol
+	dataNode.CreatedVolWeights = resp.CreatedVolWeights
+	dataNode.RemainWeightsForCreateVol = resp.RemainWeightsForCreateVol
+	dataNode.Total = resp.Total
+	dataNode.Used = resp.Used
+	dataNode.Free = resp.Free
+	dataNode.RackName = resp.RackName
+	dataNode.VolInfoCount = resp.CreatedVolCnt
+	dataNode.VolInfo = resp.VolInfo
 	dataNode.ratio = (float64)(dataNode.Used) / (float64)(dataNode.Total)
 }
 

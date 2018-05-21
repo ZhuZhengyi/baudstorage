@@ -32,17 +32,17 @@ const (
 )
 
 type MetaNodeDesc struct {
-	id    string
+	id    uint64
 	start uint64
 	end   uint64
 	port  string
 }
 
 var globalMetaDesc = []MetaNodeDesc{
-	{"mp001", 1, 100, "8910"},
-	{"mp002", 101, 200, "8911"},
-	{"mp003", 210, 300, "8912"},
-	{"mp004", 301, 400, "8913"},
+	{1, 1, 100, "8910"},
+	{2, 101, 200, "8911"},
+	{3, 210, 300, "8912"},
+	{4, 301, 400, "8913"},
 }
 
 type MasterServer struct {
@@ -140,12 +140,13 @@ func (m *MasterServer) handleClientNS(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func NewMetaPartition(id string, start, end uint64, member string) *MetaPartition {
+func NewMetaPartition(id, start, end uint64, member string) *MetaPartition {
 	return &MetaPartition{
 		PartitionID: id,
 		Start:       start,
 		End:         end,
 		Members:     []string{member, member, member},
+		LeaderAddr:  member,
 	}
 }
 
@@ -365,6 +366,7 @@ func (m *MetaServer) handleDeleteDentry(conn net.Conn, p *proto.Packet) error {
 
 	resp.Inode = child.ino
 	data, err = json.Marshal(resp)
+	p.ResultCode = proto.OpOk
 
 out:
 	p.Data = data
