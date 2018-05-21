@@ -58,7 +58,7 @@ func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wrapper *sdk.VolGroupWrapp
 	writer.handleCh = make(chan bool, DefaultWriteBufferSize/(64*util.KB))
 	writer.extentId = extentId
 	writer.volGroup = vol
-	writer.volId=vol.VolId
+	writer.volId = vol.VolId
 	writer.inode = inode
 	writer.wrapper = wrapper
 	writer.connect, err = wrapper.GetConnect(vol.Hosts[0])
