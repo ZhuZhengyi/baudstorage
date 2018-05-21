@@ -176,7 +176,7 @@ func (p *Packet) CopyFrom(src *Packet) {
 }
 
 func (p *Packet) IsErrPack() bool {
-	return p.ResultCode == proto.OpOk
+	return p.ResultCode != proto.OpOk
 }
 
 func (p *Packet) getErr() (m string) {
