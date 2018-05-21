@@ -30,8 +30,11 @@ func (sk *StreamKey) Put(k ExtentKey) {
 	defer sk.Unlock()
 	lastIndex:=len(sk.Extents)-1
 	lastKey := sk.Extents[lastIndex]
-	if lastKey.VolId == k.VolId && lastKey.ExtentId == k.ExtentId && k.Size > lastKey.Size {
-		sk.Extents[lastIndex].Size = k.Size
+	if lastKey.VolId == k.VolId && lastKey.ExtentId == k.ExtentId {
+		if k.Size > lastKey.Size {
+			sk.Extents[lastIndex].Size = k.Size
+			return
+		}
 		return
 	}
 	var haveFileSize uint32
