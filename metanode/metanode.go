@@ -9,7 +9,6 @@ import (
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
-	"github.com/tiglabs/baudstorage/util/pool"
 	"math/rand"
 	"net"
 	"strings"
@@ -19,11 +18,11 @@ import (
 
 // Configuration keys
 const (
-	cfgListen     = "listen"
-	cfgLogDir     = "logDir"
-	cfgMetaDir    = "metaDir"
-	cfgRaftDir    = "raftDir"
-	cfgMasterAddr = "masterAddrs"
+	cfgListen      = "listen"
+	cfgLogDir      = "logDir"
+	cfgMetaDir     = "metaDir"
+	cfgRaftDir     = "raftDir"
+	cfgMasterAddrs = "masterAddrs"
 )
 
 const (
@@ -39,12 +38,10 @@ type MetaNode struct {
 	metaDir     string //metaNode store root dir
 	logDir      string
 	raftDir     string //raft log store base dir
-	masterAddr  string
-	proxyPool   *pool.ConnPool
+	masterAddrs string
 	metaManager MetaManager
 	raftStore   raftstore.RaftStore
 	httpStopC   chan uint8
-	log         *log.Log
 	state       ServiceState
 	wg          sync.WaitGroup
 }
@@ -81,7 +78,7 @@ func (m *MetaNode) onStart(cfg *config.Config) (err error) {
 	if err = m.parseConfig(cfg); err != nil {
 		return
 	}
-	if m.log, err = log.NewLog(m.logDir, "MetaNode", log.DebugLevel); err != nil {
+	if _, err = log.NewLog(m.logDir, "MetaNode", log.DebugLevel); err != nil {
 		return
 	}
 	if err = m.validNodeID(); err != nil {
@@ -120,17 +117,18 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 	m.logDir = cfg.GetString(cfgLogDir)
 	m.metaDir = cfg.GetString(cfgMetaDir)
 	m.raftDir = cfg.GetString(cfgRaftDir)
-	m.masterAddr = cfg.GetString(cfgMasterAddr)
+	m.masterAddrs = cfg.GetString(cfgMasterAddrs)
 	return
 }
 
 func (m *MetaNode) startMetaManager() (err error) {
 	// Load metaManager
-	mmc := &MetaManagerConfig{
-		DataPath: m.metaDir,
-		Raft:     m.raftStore,
+	conf := MetaManagerConfig{
+		NodeID:  m.nodeId,
+		RootDir: m.metaDir,
+		Raft:    m.raftStore,
 	}
-	m.metaManager = NewMetaManager(mmc)
+	m.metaManager = NewMetaManager(conf)
 	err = m.metaManager.Start()
 	return
 }
@@ -143,11 +141,11 @@ func (m *MetaNode) stopMetaManager() {
 
 func (m *MetaNode) validNodeID() (err error) {
 	// Register and Get NodeID
-	if m.masterAddr == "" {
+	if m.masterAddrs == "" {
 		err = errors.New("masterAddrs is empty")
 		return
 	}
-	mAddrSlice := strings.Split(m.masterAddr, ";")
+	mAddrSlice := strings.Split(m.masterAddrs, ";")
 	rand.Seed(time.Now().Unix())
 	i := rand.Intn(len(mAddrSlice))
 	var localAddr string

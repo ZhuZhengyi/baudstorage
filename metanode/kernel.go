@@ -88,7 +88,7 @@ type Inode struct {
 	CreateTime int64
 	AccessTime int64
 	ModifyTime int64
-	Extents    []proto.ExtentKey
+	Extents    *proto.StreamKey
 }
 
 // Dump Inode item to bytes.
@@ -111,6 +111,7 @@ func NewInode(ino uint64, t uint32) *Inode {
 		CreateTime: ts,
 		AccessTime: ts,
 		ModifyTime: ts,
+		Extents:    proto.NewStreamKey(ino),
 	}
 }
 
@@ -201,9 +202,6 @@ func (i *Inode) ParseValueBytes(val []byte) (err error) {
 	return
 }
 
-func (i *Inode) AppendExtents(exts []proto.ExtentKey) {
-	i.Extents = append(i.Extents, exts...)
-	for _, ext := range exts {
-		i.Size += uint64(ext.Size)
-	}
+func (i *Inode) AppendExtents(ext proto.ExtentKey) {
+	i.Extents.Put(ext)
 }
