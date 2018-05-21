@@ -1,7 +1,6 @@
 package metanode
 
 import (
-	"os"
 	"time"
 
 	"github.com/google/btree"
@@ -11,7 +10,7 @@ import (
 // GetDentry query dentry from DentryTree with specified dentry info;
 // if it exist, the required parameter is the dentry entity,
 // if not exist, not change
-func (mp *MetaPartition) getDentry(dentry *Dentry) (status uint8) {
+func (mp *metaPartition) getDentry(dentry *Dentry) (status uint8) {
 	status = proto.OpOk
 	item := mp.dentryTree.Get(dentry)
 	if item == nil {
@@ -25,7 +24,7 @@ func (mp *MetaPartition) getDentry(dentry *Dentry) (status uint8) {
 // GetInode query inode from InodeTree with specified inode info;
 // if it exist, the required parameter is the inode entity,
 // if not exist, not change
-func (mp *MetaPartition) getInode(ino *Inode) (status uint8) {
+func (mp *metaPartition) getInode(ino *Inode) (status uint8) {
 	status = proto.OpOk
 	item := mp.inodeTree.Get(ino)
 	if item == nil {
@@ -36,12 +35,12 @@ func (mp *MetaPartition) getInode(ino *Inode) (status uint8) {
 	return
 }
 
-func (mp *MetaPartition) getInodeTree() *btree.BTree {
+func (mp *metaPartition) getInodeTree() *btree.BTree {
 	return mp.inodeTree
 }
 
 // CreateDentry insert dentry into dentry tree.
-func (mp *MetaPartition) createDentry(dentry *Dentry) (status uint8) {
+func (mp *metaPartition) createDentry(dentry *Dentry) (status uint8) {
 	// TODO: Implement it.
 	status = proto.OpOk
 	mp.dentryMu.Lock()
@@ -56,7 +55,7 @@ func (mp *MetaPartition) createDentry(dentry *Dentry) (status uint8) {
 }
 
 // DeleteDentry delete dentry from dentry tree.
-func (mp *MetaPartition) deleteDentry(dentry *Dentry) (status uint8) {
+func (mp *metaPartition) deleteDentry(dentry *Dentry) (status uint8) {
 	// TODO: Implement it.
 	status = proto.OpOk
 	mp.dentryMu.Lock()
@@ -70,12 +69,8 @@ func (mp *MetaPartition) deleteDentry(dentry *Dentry) (status uint8) {
 	return
 }
 
-func (mp *MetaPartition) getDentryTree() *btree.BTree {
-	return mp.dentryTree
-}
-
 // CreateInode create inode to inode tree.
-func (mp *MetaPartition) createInode(ino *Inode) (status uint8) {
+func (mp *metaPartition) createInode(ino *Inode) (status uint8) {
 	// TODO: Implement it.
 	status = proto.OpOk
 	mp.inodeMu.Lock()
@@ -90,7 +85,7 @@ func (mp *MetaPartition) createInode(ino *Inode) (status uint8) {
 }
 
 // DeleteInode delete specified inode item from inode tree.
-func (mp *MetaPartition) deleteInode(ino *Inode) (status uint8) {
+func (mp *metaPartition) deleteInode(ino *Inode) (status uint8) {
 	// TODO: Implement it.
 	status = proto.OpOk
 	mp.inodeMu.Lock()
@@ -104,7 +99,7 @@ func (mp *MetaPartition) deleteInode(ino *Inode) (status uint8) {
 	return
 }
 
-func (mp *MetaPartition) openFile(ino *Inode) (status uint8) {
+func (mp *metaPartition) openFile(ino *Inode) (status uint8) {
 	item := mp.inodeTree.Get(ino)
 	if item == nil {
 		status = proto.OpNotExistErr
@@ -115,7 +110,7 @@ func (mp *MetaPartition) openFile(ino *Inode) (status uint8) {
 	return
 }
 
-func (mp *MetaPartition) readDir(req *ReadDirReq) (resp *ReadDirResp) {
+func (mp *metaPartition) readDir(req *ReadDirReq) (resp *ReadDirResp) {
 	begDentry := &Dentry{
 		ParentId: req.ParentID,
 	}
@@ -134,7 +129,7 @@ func (mp *MetaPartition) readDir(req *ReadDirReq) (resp *ReadDirResp) {
 	return
 }
 
-func (mp *MetaPartition) AppendExtents(ino *Inode) (status uint8) {
+func (mp *metaPartition) AppendExtents(ino *Inode) (status uint8) {
 	exts := ino.Extents
 	status = proto.OpOk
 	item := mp.inodeTree.Get(ino)
@@ -148,26 +143,29 @@ func (mp *MetaPartition) AppendExtents(ino *Inode) (status uint8) {
 	return
 }
 
-func (mp *MetaPartition) offlinePartition() (err error) {
-
+func (mp *metaPartition) offlinePartition() (err error) {
 	return
 }
 
-func (mp *MetaPartition) updatePartition(end uint64) (err error) {
-	oldEnd := mp.End
-	mp.End = end
+func (mp *metaPartition) updatePartition(end uint64) (err error) {
+	oldEnd := mp.config.End
+	mp.config.End = end
 	defer func() {
 		if err != nil {
-			mp.End = oldEnd
+			mp.config.End = oldEnd
 		}
 	}()
+	/*
 	err = mp.StoreMeta()
+	*/
 	return
 }
 
-func (mp *MetaPartition) deletePartition() (err error) {
+func (mp *metaPartition) deletePartition() (err error) {
 	mp.Stop()
-	mp.MetaManager.DeleteMetaPartition(mp.ID)
+	/*
+	mp.deletePartition(mp.ID)
 	err = os.RemoveAll(mp.RootDir)
+	*/
 	return
 }

@@ -199,7 +199,7 @@ func (stream *StreamReader) GetReader(offset, size int) (readers []*ExtentReader
 			size -= currReaderSize
 		} else {
 			currReaderOffset = offset - r.startInodeOffset
-			currReaderSize = (int(r.key.Size) - currReaderOffset)
+			currReaderSize = int(r.key.Size) - currReaderOffset
 			offset = r.endInodeOffset
 			size = size - currReaderSize
 		}

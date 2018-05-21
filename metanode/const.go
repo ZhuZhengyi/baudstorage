@@ -11,29 +11,33 @@ type (
 	CreateMetaRangeReq = proto.CreateMetaPartitionRequest
 	// MetaNode -> Master create metaPartition response struct
 	CreateMetaRangeResp = proto.CreateMetaPartitionResponse
-	// Client -> MetaNode create inode request struct
+	// Client -> MetaNode create Inode request struct
 	CreateInoReq = proto.CreateInodeRequest
-	// MetaNode -> Client create inode response struct
+	// MetaNode -> Client create Inode response struct
 	CreateInoResp = proto.CreateInodeResponse
-	// Client -> MetaNode delete inode request struct
+	// Client -> MetaNode delete Inode request struct
 	DeleteInoReq = proto.DeleteInodeRequest
-	// Client -> MetaNode create dentry request struct
+	// Client -> MetaNode create Dentry request struct
 	CreateDentryReq = proto.CreateDentryRequest
-	// Client -> MetaNode delete dentry request struct
+	// Client -> MetaNode delete Dentry request struct
 	DeleteDentryReq = proto.DeleteDentryRequest
-	// MetaNode -> Client delete dentry response struct
+	// MetaNode -> Client delete Dentry response struct
 	DeleteDentryResp = proto.DeleteDentryResponse
 	// Client -> MetaNode read dir request struct
 	ReadDirReq = proto.ReadDirRequest
 	// MetaNode -> Client read dir response struct
 	ReadDirResp = proto.ReadDirResponse
+	// MetaNode -> Client lookup
+	LookupReq = proto.LookupRequest
+	// Client -> MetaNode lookup
+	LookupResp = proto.LookupResponse
 	// Client -> MetaNode open file request struct
 	OpenReq = proto.OpenRequest
 )
 
 // For use when raft store and application apply
 const (
-	opCreateInode uint32 = iota
+	opCreateInode      uint32 = iota
 	opDeleteInode
 	opCreateDentry
 	opDeleteDentry
