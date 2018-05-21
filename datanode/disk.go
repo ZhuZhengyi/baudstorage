@@ -144,7 +144,7 @@ func (d *Disk) recomputeVolCnt() {
 	d.Lock()
 	atomic.StoreUint64(&d.VolCnt, count)
 	d.VolsName = volnames
-	d.RemainWeightsForCreateVol = (d.All - d.RestSize - uint64(len(d.VolsName)*volSize))
+	d.RemainWeightsForCreateVol = d.All - d.RestSize - uint64(len(d.VolsName)*volSize)
 	d.CreatedVolWeights = uint64(len(d.VolsName) * volSize)
 	d.Unlock()
 }
@@ -163,10 +163,10 @@ func (d *Disk) UpdateSpaceInfo(localIp string) (err error) {
 	} else {
 		d.Status = storage.ReadWriteStore
 	}
-	mesg := fmt.Sprintf("node[%v] Path[%v] total[%v] realAvail[%v] volsAvail[%v]"+
+	msg := fmt.Sprintf("node[%v] Path[%v] total[%v] realAvail[%v] volsAvail[%v]"+
 		"MinRestSize[%v] maxErrs[%v] ReadErrs[%v] WriteErrs[%v] status[%v]", localIp, d.Path,
 		d.All, d.Free, d.RemainWeightsForCreateVol, d.RestSize, d.MaxErrs, d.ReadErrs, d.WriteErrs, d.Status)
-	log.LogInfo(mesg)
+	log.LogInfo(msg)
 
 	return
 }
@@ -177,7 +177,7 @@ func (d *Disk) addVol(v *Vol) {
 	defer d.Unlock()
 	d.VolsName = append(d.VolsName, name)
 	atomic.AddUint64(&d.VolCnt, 1)
-	d.RemainWeightsForCreateVol = (d.All - d.RestSize - uint64(len(d.VolsName)*v.volSize))
+	d.RemainWeightsForCreateVol = d.All - d.RestSize - uint64(len(d.VolsName)*v.volSize)
 	d.CreatedVolWeights += uint64(v.volSize)
 }
 
@@ -262,10 +262,10 @@ func IsDiskErr(errMsg string) bool {
 		strings.Contains(errMsg, io.EOF.Error()) || strings.Contains(errMsg, storage.ErrSyscallNoSpace.Error()) ||
 		strings.Contains(errMsg, storage.ErrorHasDelete.Error()) || strings.Contains(errMsg, ErrVolNotExist.Error()) ||
 		strings.Contains(errMsg, storage.ErrObjectSmaller.Error()) ||
-		strings.Contains(errMsg, storage.ErrPkgCrcUnmatch.Error()) || strings.Contains(errMsg, ErrStoreTypeUnmatch.Error()) ||
+		strings.Contains(errMsg, storage.ErrPkgCrcUnmatch.Error()) || strings.Contains(errMsg, ErrStoreTypeMismatch.Error()) ||
 		strings.Contains(errMsg, storage.ErrorNoUnAvaliFile.Error()) ||
 		strings.Contains(errMsg, storage.ErrExtentNameFormat.Error()) || strings.Contains(errMsg, storage.ErrorAgain.Error()) ||
-		strings.Contains(errMsg, ErrChunkOffsetUnmatch.Error()) ||
+		strings.Contains(errMsg, ErrChunkOffsetMismatch.Error()) ||
 		strings.Contains(errMsg, storage.ErrorCompaction.Error()) || strings.Contains(errMsg, storage.ErrorVolReadOnly.Error()) {
 		return false
 	}

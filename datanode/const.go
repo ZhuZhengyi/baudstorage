@@ -1,6 +1,11 @@
 package datanode
 
 const (
+	StateReady uint32 = iota
+	StateRunning
+)
+
+const (
 	RequstChanSize = 10240
 )
 

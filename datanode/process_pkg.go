@@ -219,7 +219,7 @@ func (s *DataNode) CheckStoreMode(p *Packet) (err error) {
 	if p.StoreMode == proto.TinyStoreMode || p.StoreMode == proto.ExtentStoreMode {
 		return nil
 	}
-	return ErrStoreTypeUnmatch
+	return ErrStoreTypeMismatch
 }
 
 func (s *DataNode) CheckPacket(pkg *Packet) error {

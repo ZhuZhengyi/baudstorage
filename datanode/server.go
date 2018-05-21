@@ -15,14 +15,16 @@ import (
 	_ "net/http/pprof"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 )
 
 var (
-	ErrStoreTypeUnmatch   = errors.New("store type error")
-	ErrVolNotExist        = errors.New("vol not exsits")
-	ErrChunkOffsetUnmatch = errors.New("chunk offset not unmatch")
-	ErrNoDiskForCreateVol = errors.New("no disk for create vol")
-	ErrBadConfFile        = errors.New("bad config file")
+	ErrStoreTypeMismatch   = errors.New("store type error")
+	ErrVolNotExist         = errors.New("vol not exists")
+	ErrChunkOffsetMismatch = errors.New("chunk offset not mismatch")
+	ErrNoDiskForCreateVol  = errors.New("no disk for create vol")
+	ErrBadConfFile         = errors.New("bad config file")
 
 	masterAddr string
 )
@@ -33,36 +35,38 @@ const (
 )
 
 type DataNode struct {
-	ConnPool      *pool.ConnPool
-	space         *SpaceManager
-	masterAddrs   []string
+	ConnPool        *pool.ConnPool
+	space           *SpaceManager
+	masterAddrs     []string
 	masterAddrIndex uint32
-	port          string
-	logdir        string
-	rackName      string
-	profPort      string
-	clusterId     string
-	localIp       string
-	localServAddr string
+	port            string
+	logDir          string
+	rackName        string
+	profPort        string
+	clusterId       string
+	localIp         string
+	localServeAddr  string
+	state           uint32
+	wg              sync.WaitGroup
 }
 
 func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	s.port = cfg.GetString("Port")
 	s.clusterId = cfg.GetString("ClusterID")
-	s.logdir = cfg.GetString("LogDir")
+	s.logDir = cfg.GetString("LogDir")
 	for _, ip := range cfg.GetArray("MasterAddr") {
 		s.masterAddrs = append(s.masterAddrs, ip.(string))
 	}
 
 	s.rackName = cfg.GetString("Rack")
-	_, err = log.NewLog(s.logdir, "datanode", log.DebugLevel)
+	_, err = log.NewLog(s.logDir, "DataNode", log.DebugLevel)
 	if err = s.getIpFromMaster(); err != nil {
 		return
 	}
 	s.profPort = cfg.GetString("Profport")
 	s.space = NewSpaceManager(s.rackName)
 
-	if err != nil || s.port == "" || s.logdir == "" ||
+	if err != nil || s.port == "" || s.logDir == "" ||
 		masterAddr == "" {
 		return ErrBadConfFile
 	}
@@ -102,20 +106,23 @@ func (s *DataNode) getIpFromMaster() error {
 	json.Unmarshal(data, cInfo)
 	s.localIp = string(cInfo.Ip)
 	s.clusterId = cInfo.Cluster
-	s.localServAddr = fmt.Sprintf("%s:%v", s.localIp, s.port)
+	s.localServeAddr = fmt.Sprintf("%s:%v", s.localIp, s.port)
 	if !util.IP(s.localIp) {
 		panic(fmt.Sprintf("unavalid ip from master[%v] err[%v]", s.masterAddrs, s.localIp))
 	}
 	return nil
 }
 
-func (s *DataNode) Start(cfg *config.Config) error {
-	err := s.LoadVol(cfg)
-	if err != nil {
-
+func (s *DataNode) Start(cfg *config.Config) (err error) {
+	if atomic.CompareAndSwapUint32(&s.state, StateReady, StateRunning) {
+		defer func() {
+			if err != nil {
+				atomic.StoreUint32(&s.state, StateReady)
+			}
+		}()
+		err = s.LoadVol(cfg)
 	}
-
-	panic("implement me")
+	return
 }
 
 func (s *DataNode) StartRestService() {
@@ -215,7 +222,7 @@ func (s *DataNode) checkChunkInfo(pkg *Packet) (err error) {
 	leaderObjId := uint64(pkg.Offset)
 	localObjId := chunkInfo.Size
 	if (leaderObjId - 1) != chunkInfo.Size {
-		err = ErrChunkOffsetUnmatch
+		err = ErrChunkOffsetMismatch
 		mesg := fmt.Sprintf("Err[%v] leaderObjId[%v] localObjId[%v]", err, leaderObjId, localObjId)
 		log.LogWarn(pkg.ActionMesg(ActionCheckChunkInfo, LocalProcessAddr, pkg.StartT, fmt.Errorf(mesg)))
 	}
