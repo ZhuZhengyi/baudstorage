@@ -212,25 +212,31 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 }
 
 func (stream *StreamWriter) recoverExtent() (err error) {
-	sendList := stream.getWriter().getNeedRetrySendPackets()
-	if err = stream.allocateNewExtentWriter(); err != nil {
-		err = errors.Annotatef(err, "RecoverExtent Failed")
-		return
-	}
-	ek := stream.getWriter().toKey()
-	if ek.Size != 0 {
-		err = stream.appendExtentKey(stream.currentInode, ek)
-	}
-	if err != nil {
-		err = errors.Annotatef(err, "update filesize[%v] to metanode Failed", ek.Size)
-		return
-	}
-	for e := sendList.Front(); e != nil; e = e.Next() {
-		p := e.Value.(*Packet)
-		_, err = stream.getWriter().write(p.Data, int(p.Size))
+	for i := 0; i < MaxSelectVolForWrite; i++ {
+		sendList := stream.getWriter().getNeedRetrySendPackets()
+		stream.excludeVols = append(stream.excludeVols, stream.getWriter().volGroup.VolId)
+		if err = stream.allocateNewExtentWriter(); err != nil {
+			err = errors.Annotatef(err, "RecoverExtent Failed")
+			continue
+		}
+		ek := stream.getWriter().toKey()
+		if ek.Size != 0 {
+			err = stream.appendExtentKey(stream.currentInode, ek)
+		}
 		if err != nil {
-			err = errors.Annotatef(err, "RecoverExtent write failed")
-			return
+			err = errors.Annotatef(err, "update filesize[%v] to metanode Failed", ek.Size)
+			continue
+		}
+		for e := sendList.Front(); e != nil; e = e.Next() {
+			p := e.Value.(*Packet)
+			_, err = stream.getWriter().write(p.Data, int(p.Size))
+			if err != nil {
+				err = errors.Annotatef(err, "RecoverExtent write failed")
+				continue
+			}
+		}
+		if err == nil {
+			break
 		}
 	}
 
@@ -280,6 +286,7 @@ func (stream *StreamWriter) createExtent(vol *sdk.VolGroup) (extentId uint64, er
 			stream.wrapper.PutConnect(connect)
 		} else {
 			connect.Close()
+			stream.excludeVols = append(stream.excludeVols, vol.VolId)
 		}
 	}()
 	p := NewCreateExtentPacket(vol)
