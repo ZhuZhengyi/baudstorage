@@ -4,30 +4,30 @@ import (
 	"bufio"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
 
 	"github.com/google/btree"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 )
 
 const (
-	dumpFileInode      = "inode"
-	dumpFileInodeTmp   = ".inode"
-	dumpFileDentry     = "dentry"
-	dumpFileDentryTmp  = ".dentry"
-	dumpFileMeta       = "meta"
-	dumpFileMetaTmp    = ".meta"
-	dumpFileApplyId    = "apply"
-	dumpFileApplyIdTmp = ".apply"
+	inodeFile      = "inode"
+	inodeFileTmp   = ".inode"
+	dentryFile     = "dentry"
+	dentryFileTmp  = ".dentry"
+	metaFile       = "meta"
+	metaFileTmp    = ".meta"
+	applyIDFile    = "apply"
+	applyIDFileTmp = ".apply"
 )
 
 // Load struct from meta
 func (mp *metaPartition) loadMeta() (err error) {
-	metaFile := path.Join(mp.config.RootDir, dumpFileMeta)
+	metaFile := path.Join(mp.config.RootDir, metaFile)
 	fp, err := os.OpenFile(metaFile, os.O_RDONLY, 0644)
 	if err != nil {
 		return
@@ -43,14 +43,17 @@ func (mp *metaPartition) loadMeta() (err error) {
 	}
 	// TODO: Valid PartitionConfig
 
-	mp.config = mConf
+	mp.config.PartitionId = mConf.PartitionId
+	mp.config.Start = mConf.Start
+	mp.config.End = mConf.End
+	mp.config.Peers = mConf.Peers
 	return
 }
 
 // Load inode info from inode snapshot file
 func (mp *metaPartition) loadInode() (err error) {
-	inoFile := path.Join(mp.config.RootDir, dumpFileInode)
-	fp, err := os.OpenFile(inoFile, os.O_RDONLY, 0644)
+	filename := path.Join(mp.config.RootDir, inodeFile)
+	fp, err := os.OpenFile(filename, os.O_RDONLY, 0644)
 	if err != nil {
 		if err == os.ErrNotExist {
 			err = nil
@@ -62,7 +65,7 @@ func (mp *metaPartition) loadInode() (err error) {
 	for {
 		var (
 			line []byte
-			ino  = &Inode{}
+			ino  = NewInode(0, 0)
 		)
 		line, _, err = reader.ReadLine()
 		if err != nil {
@@ -89,8 +92,8 @@ func (mp *metaPartition) loadInode() (err error) {
 
 // Load dentry from dentry snapshot file
 func (mp *metaPartition) loadDentry() (err error) {
-	dentryFile := path.Join(mp.config.RootDir, dumpFileDentry)
-	fp, err := os.OpenFile(dentryFile, os.O_RDONLY, 0644)
+	filename := path.Join(mp.config.RootDir, dentryFile)
+	fp, err := os.OpenFile(filename, os.O_RDONLY, 0644)
 	if err != nil {
 		if err == os.ErrNotExist {
 			err = nil
@@ -124,8 +127,8 @@ func (mp *metaPartition) loadDentry() (err error) {
 }
 
 func (mp *metaPartition) loadApplyID() (err error) {
-	applyIDFile := path.Join(mp.config.RootDir, dumpFileInode)
-	data, err := ioutil.ReadFile(applyIDFile)
+	filename := path.Join(mp.config.RootDir, applyIDFile)
+	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		if err == os.ErrNotExist {
 			err = nil
@@ -140,33 +143,34 @@ func (mp *metaPartition) loadApplyID() (err error) {
 	return
 }
 
+// Store Meta to file
 func (mp *metaPartition) storeMeta() (err error) {
-	// Store Meta to file
-	metaFile := path.Join(mp.config.RootDir, dumpFileMetaTmp)
-	fp, err := os.OpenFile(metaFile, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE,
+	filename := path.Join(mp.config.RootDir, metaFileTmp)
+	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE,
 		0655)
 	if err != nil {
 		return
 	}
 	defer func() {
+		fp.Sync()
 		fp.Close()
 		if err != nil {
-			os.Remove(metaFile)
+			os.Remove(filename)
 		}
 	}()
-	data, err := json.Marshal(mp)
+	data, err := json.Marshal(mp.config)
 	if err != nil {
 		return
 	}
 	if _, err = fp.Write(data); err != nil {
 		return
 	}
-	err = os.Rename(metaFile, path.Join(mp.config.RootDir, dumpFileMeta))
+	err = os.Rename(filename, path.Join(mp.config.RootDir, metaFile))
 	return
 }
 
-func (mp *metaPartition) storeApplyID() (err error) {
-	filename := path.Join(mp.config.RootDir, dumpFileApplyIdTmp)
+func (mp *metaPartition) storeApplyID(appID uint64) (err error) {
+	filename := path.Join(mp.config.RootDir, applyIDFileTmp)
 	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_TRUNC, 0644)
 	if err != nil {
 		return
@@ -174,16 +178,19 @@ func (mp *metaPartition) storeApplyID() (err error) {
 	defer func() {
 		fp.Sync()
 		fp.Close()
+		if err != nil {
+			os.Remove(filename)
+		}
 	}()
-	if err = binary.Write(fp, binary.BigEndian, mp.applyID); err != nil {
+	if err = binary.Write(fp, binary.BigEndian, appID); err != nil {
 		return
 	}
-	err = os.Rename(filename, path.Join(mp.config.RootDir, dumpFileApplyId))
+	err = os.Rename(filename, path.Join(mp.config.RootDir, applyIDFile))
 	return
 }
 
 func (mp *metaPartition) storeInode() (err error) {
-	filename := path.Join(mp.config.RootDir, dumpFileInodeTmp)
+	filename := path.Join(mp.config.RootDir, inodeFileTmp)
 	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND, 0644)
 	if err != nil {
 		return
@@ -191,6 +198,9 @@ func (mp *metaPartition) storeInode() (err error) {
 	defer func() {
 		fp.Sync()
 		fp.Close()
+		if err != nil {
+			os.RemoveAll(filename)
+		}
 	}()
 	inoTree := mp.getInodeTree()
 	inoTree.Ascend(func(i btree.Item) bool {
@@ -207,12 +217,12 @@ func (mp *metaPartition) storeInode() (err error) {
 		}
 		return true
 	})
-	err = os.Rename(filename, path.Join(mp.config.RootDir, dumpFileInodeTmp))
+	err = os.Rename(filename, path.Join(mp.config.RootDir, inodeFile))
 	return
 }
 
 func (mp *metaPartition) storeDentry() (err error) {
-	filename := path.Join(mp.config.RootDir, dumpFileDentryTmp)
+	filename := path.Join(mp.config.RootDir, dentryFileTmp)
 	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND, 0644)
 	if err != nil {
 		return
@@ -220,6 +230,9 @@ func (mp *metaPartition) storeDentry() (err error) {
 	defer func() {
 		fp.Sync()
 		fp.Close()
+		if err != nil {
+			os.Remove(filename)
+		}
 	}()
 	denTree := mp.dentryTree
 	denTree.Ascend(func(i btree.Item) bool {
@@ -237,6 +250,6 @@ func (mp *metaPartition) storeDentry() (err error) {
 		}
 		return true
 	})
-	err = os.Rename(filename, path.Join(mp.config.RootDir, dumpFileDentry))
+	err = os.Rename(filename, path.Join(mp.config.RootDir, dentryFile))
 	return
 }

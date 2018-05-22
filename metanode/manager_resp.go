@@ -2,12 +2,12 @@ package metanode
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"net"
 
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/util"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 const (

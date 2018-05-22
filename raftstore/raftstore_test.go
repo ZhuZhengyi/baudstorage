@@ -1,13 +1,13 @@
 package raftstore
 
 import (
+	"encoding/json"
 	"fmt"
+	"path"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
-	"path"
-	"sync/atomic"
-	"encoding/json"
 
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"

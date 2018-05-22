@@ -3,8 +3,8 @@ package ump
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"net"
+	"os"
 )
 
 type FunctionTp struct {
@@ -138,7 +138,7 @@ func initLogName(module string) (err error) {
 		return
 	}
 
-	if HostName,err = GetLocalIpAddr(); err != nil {
+	if HostName, err = GetLocalIpAddr(); err != nil {
 		return
 	}
 
@@ -157,7 +157,7 @@ func initLogName(module string) (err error) {
 	return
 }
 
-func GetLocalIpAddr() (ipaddr string ,err error) {
+func GetLocalIpAddr() (ipaddr string, err error) {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		fmt.Println(err.Error())
@@ -166,11 +166,11 @@ func GetLocalIpAddr() (ipaddr string ,err error) {
 	for _, addr := range addrs {
 		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String(),nil
+				return ipnet.IP.String(), nil
 			}
 		}
 	}
-	return "",fmt.Errorf("cannot get local ip")
+	return "", fmt.Errorf("cannot get local ip")
 }
 
 func backGroudWrite() {

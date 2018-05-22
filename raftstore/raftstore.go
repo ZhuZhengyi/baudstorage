@@ -1,11 +1,11 @@
 package raftstore
 
 import (
+	"fmt"
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/storage/wal"
 	"path"
 	"strconv"
-	"fmt"
 )
 
 type RaftStore interface {

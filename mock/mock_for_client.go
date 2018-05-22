@@ -36,7 +36,7 @@ func NewMockServer(datadir string) (m *MockServer, err error) {
 
 	}
 	m.datadir = datadir
-	m.storage, err = storage.NewExtentStore(datadir,1024*1024*1024*1024, storage.ReBootStoreMode)
+	m.storage, err = storage.NewExtentStore(datadir, 1024*1024*1024*1024, storage.ReBootStoreMode)
 	if err != nil {
 		return nil, errors.Annotatef(err, "NewMock server error")
 	}
@@ -76,7 +76,7 @@ func (m *MockServer) operator(request *proto.Packet, connect net.Conn) (err erro
 	}()
 	switch request.Opcode {
 	case proto.OpCreateFile:
-		request.FileID=m.storage.GetExtentId()
+		request.FileID = m.storage.GetExtentId()
 		err = m.storage.Create(request.FileID)
 		if err != nil {
 			m.packErrorBody(request, err)
@@ -115,7 +115,7 @@ func (m *MockServer) operator(request *proto.Packet, connect net.Conn) (err erro
 				return
 			}
 			request.Size = currReadSize
-			request.Opcode = proto.OpOk
+			request.ResultCode = proto.OpOk
 			if err = request.WriteToConn(connect); err != nil {
 				return
 			}

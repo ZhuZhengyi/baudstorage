@@ -30,8 +30,8 @@ func TestConnPool(t *testing.T) {
 }
 
 type mockTcpServer struct {
-	state uint32
-	ln    net.Listener
+	state       uint32
+	ln          net.Listener
 	acceptCount uint64
 }
 
