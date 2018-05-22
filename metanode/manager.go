@@ -220,12 +220,17 @@ func (m *metaManager) createPartition(id uint64, start, end uint64,
 		End:         end,
 		Cursor:      start,
 		Peers:       peers,
+		RaftStore:   m.raftStore,
+		NodeId:      m.nodeId,
 		RootDir:     path.Join(m.rootDir, partitionPrefix+partId),
 	}
 	mpc.AfterStop = func() {
 		m.detachPartition(id)
 	}
 	partition := NewMetaPartition(mpc)
+	if err = partition.StoreMeta(); err != nil {
+		return
+	}
 	err = m.attachPartition(id, partition)
 	return
 }
@@ -233,6 +238,16 @@ func (m *metaManager) createPartition(id uint64, start, end uint64,
 func (m *metaManager) deletePartition(id uint64) (err error) {
 	m.detachPartition(id)
 	return
+}
+
+func (m *metaManager) Range(f func(i uint64, p MetaPartition) bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for k, v := range m.partitions {
+		if !f(k, v) {
+			return
+		}
+	}
 }
 
 func NewMetaManager(conf MetaManagerConfig) MetaManager {

@@ -20,7 +20,7 @@ const (
 )
 
 const (
-	storeTimeTicker = time.Minute * 3
+	storeTimeTicker = time.Hour * 1
 )
 
 // Errors
@@ -61,7 +61,7 @@ func (c *MetaPartitionConfig) Load(bytes []byte) error {
 type OpInode interface {
 	CreateInode(req *CreateInoReq, p *Packet) (err error)
 	DeleteInode(req *DeleteInoReq, p *Packet) (err error)
-	InodeGet(req *proto.InodeGetRequest, p *Packet) (err error)
+	InodeGet(req *InodeGetReq, p *Packet) (err error)
 	Open(req *OpenReq, p *Packet) (err error)
 }
 
@@ -88,9 +88,11 @@ type OpPartition interface {
 	IsLeader() (leaderAddr string, isLeader bool)
 	GetCursor() uint64
 	GetBaseConfig() *MetaPartitionConfig
+	StoreMeta() (err error)
 	ChangeMember(changeType raftproto.ConfChangeType, peer raftproto.Peer, context []byte) (resp interface{}, err error)
 	DeletePartition() (err error)
-	UpdatePartition(req *proto.UpdateMetaPartitionRequest) (err error)
+	UpdatePartition(req *proto.UpdateMetaPartitionRequest,
+		resp *proto.UpdateMetaPartitionResponse) (err error)
 }
 
 type MetaPartition interface {
@@ -246,6 +248,11 @@ func (mp *metaPartition) GetCursor() uint64 {
 	return mp.config.Cursor
 }
 
+func (mp *metaPartition) StoreMeta() (err error) {
+	err = mp.storeMeta()
+	return
+}
+
 // Load used when metaNode start and recover data from snapshot
 func (mp *metaPartition) load() (err error) {
 	if err = mp.loadMeta(); err != nil {
@@ -313,12 +320,20 @@ func (mp *metaPartition) DeletePartition() (err error) {
 	return
 }
 
-func (mp *metaPartition) UpdatePartition(req *proto.UpdateMetaPartitionRequest) (err error) {
+func (mp *metaPartition) UpdatePartition(req *proto.
+	UpdateMetaPartitionRequest, resp *proto.UpdateMetaPartitionResponse) (
+	err error) {
 	reqData, err := json.Marshal(req)
 	if err != nil {
+		resp.Status = proto.TaskFail
+		resp.Result = err.Error()
 		return
 	}
-	_, err = mp.Put(opUpdatePartition, reqData)
+	r, err := mp.Put(opUpdatePartition, reqData)
+	resp.Status = r.(uint8)
+	if err != nil {
+		resp.Result = err.Error()
+	}
 	return
 }
 

@@ -7,8 +7,10 @@ import (
 
 	"github.com/tiglabs/baudstorage/proto"
 
+	"github.com/henrylee2cn/goutil/errors"
 	"github.com/tiglabs/raft"
 	raftproto "github.com/tiglabs/raft/proto"
+	"os"
 )
 
 func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, err error) {
@@ -48,18 +50,20 @@ func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 			goto end
 		}
 		resp = mp.openFile(ino)
+	case opDeletePartition:
+		resp = mp.deletePartition()
 	case opUpdatePartition:
 		req := &proto.UpdateMetaPartitionRequest{}
 		if err = json.Unmarshal(msg.V, req); err != nil {
 			goto end
 		}
-		err = mp.updatePartition(req.End)
+		resp, err = mp.updatePartition(req.End)
 	case opExtentsAdd:
 		ino := NewInode(0, 0)
 		if err = json.Unmarshal(msg.V, ino); err != nil {
 			goto end
 		}
-		mp.appendExtents(ino)
+		resp = mp.appendExtents(ino)
 	}
 end:
 	mp.applyID = index
@@ -68,26 +72,51 @@ end:
 
 func (mp *metaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, index uint64) (interface{}, error) {
 	var err error
-	peer := &proto.Peer{}
-	if err = json.Unmarshal(confChange.Context, peer); err != nil {
+	req := &proto.MetaPartitionOfflineRequest{}
+	if err = json.Unmarshal(confChange.Context, req); err != nil {
 		return nil, err
 	}
 
 	// Change memory state
 	switch confChange.Type {
 	case raftproto.ConfAddNode:
-		mp.config.Peers = append(mp.config.Peers, *peer)
+		// TODO:
 	case raftproto.ConfRemoveNode:
-		for i, p := range mp.config.Peers {
-			if p.ID == peer.ID {
-				mp.config.Peers = append(mp.config.Peers[:i], mp.config.Peers[i+1:]...)
+		// TODO:
+	case raftproto.ConfUpdateNode:
+		var (
+			fondRemove, fondAdd = -1, -1
+			newPeer             []proto.Peer
+		)
+		for i, peer := range mp.config.Peers {
+			if peer.ID == req.RemovePeer.ID {
+				fondRemove = i
+				continue
+			}
+			newPeer = append(newPeer, peer)
+			if peer.ID == req.AddPeer.ID {
+				fondAdd = i
 			}
 		}
-		if mp.config.NodeId == peer.ID {
-			mp.Stop()
+		if fondAdd != -1 {
+			return nil, errors.New("repeat peer")
 		}
-	case raftproto.ConfUpdateNode:
-		//TODO
+		if fondRemove == -1 {
+			return nil, errors.New("remove peer not existed")
+		}
+		if mp.config.NodeId == req.RemovePeer.ID {
+			mp.Stop()
+			os.RemoveAll(mp.config.RootDir)
+			mp.applyID = index
+			return nil, nil
+		}
+		oldPeer := mp.config.Peers
+		mp.config.Peers = append(newPeer, req.AddPeer)
+		defer func() {
+			if err != nil {
+				mp.config.Peers = oldPeer
+			}
+		}()
 	}
 	// Write Disk
 	if err = mp.storeMeta(); err != nil {

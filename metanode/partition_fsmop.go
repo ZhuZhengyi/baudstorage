@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
+	"os"
 )
 
 // GetDentry query dentry from DentryTree with specified dentry info;
@@ -150,25 +151,23 @@ func (mp *metaPartition) offlinePartition() (err error) {
 	return
 }
 
-func (mp *metaPartition) updatePartition(end uint64) (err error) {
+func (mp *metaPartition) updatePartition(end uint64) (status uint8, err error) {
+	status = proto.OpOk
 	oldEnd := mp.config.End
 	mp.config.End = end
 	defer func() {
 		if err != nil {
 			mp.config.End = oldEnd
+			status = proto.OpDiskErr
 		}
 	}()
-	/*
-		err = mp.StoreMeta()
-	*/
+	err = mp.StoreMeta()
 	return
 }
 
-func (mp *metaPartition) deletePartition() (err error) {
+func (mp *metaPartition) deletePartition() (status uint8) {
 	mp.Stop()
-	/*
-		mp.deletePartition(mp.ID)
-		err = os.RemoveAll(mp.RootDir)
-	*/
+	os.RemoveAll(mp.config.RootDir)
+	status = proto.OpOk
 	return
 }

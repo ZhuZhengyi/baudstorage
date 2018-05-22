@@ -43,7 +43,10 @@ func (mp *metaPartition) loadMeta() (err error) {
 	}
 	// TODO: Valid PartitionConfig
 
-	mp.config = mConf
+	mp.config.PartitionId = mConf.PartitionId
+	mp.config.Start = mConf.Start
+	mp.config.End = mConf.End
+	mp.config.Peers = mConf.Peers
 	return
 }
 
@@ -195,6 +198,9 @@ func (mp *metaPartition) storeInode() (err error) {
 	defer func() {
 		fp.Sync()
 		fp.Close()
+		if err != nil {
+			os.RemoveAll(filename)
+		}
 	}()
 	inoTree := mp.getInodeTree()
 	inoTree.Ascend(func(i btree.Item) bool {

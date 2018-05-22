@@ -73,8 +73,7 @@ func (mp *metaPartition) Open(req *OpenReq, p *Packet) (err error) {
 	return
 }
 
-func (mp *metaPartition) InodeGet(req *proto.InodeGetRequest,
-	p *Packet) (err error) {
+func (mp *metaPartition) InodeGet(req *InodeGetReq, p *Packet) (err error) {
 	ino := NewInode(req.Inode, 0)
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
