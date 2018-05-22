@@ -1,8 +1,7 @@
 package metanode
 
 import (
-	"errors"
-
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 )
 

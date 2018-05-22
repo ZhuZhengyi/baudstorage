@@ -2,13 +2,12 @@ package metanode
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/google/btree"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/log"
@@ -178,9 +177,7 @@ func (mp *metaPartition) startSchedule() {
 				return
 			case <-timer.C:
 				if err := mp.store(); err != nil {
-					log.LogError(fmt.Sprintf(
-						"dump meta partition %d fail cause %s", mp.config.PartitionId,
-						err))
+					log.LogErrorf("dump meta partition %d fail cause %s", mp.config.PartitionId, err)
 				}
 			}
 		}

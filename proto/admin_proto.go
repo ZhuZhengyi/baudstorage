@@ -95,17 +95,17 @@ type VolReport struct {
 }
 
 type DataNodeHeartBeatResponse struct {
-	Total              uint64
-	Used               uint64
-	Free               uint64
+	Total                     uint64
+	Used                      uint64
+	Free                      uint64
 	CreatedVolWeights         uint64 //volCnt*volsize
 	RemainWeightsForCreateVol uint64 //all-usedvolsWieghts
 	CreatedVolCnt             uint32
 	MaxWeightsForCreateVol    uint64
-	RackName           string
-	VolInfo            []*VolReport
-	Status             uint8
-	Result             string
+	RackName                  string
+	VolInfo                   []*VolReport
+	Status                    uint8
+	Result                    string
 }
 
 type MetaPartitionReport struct {

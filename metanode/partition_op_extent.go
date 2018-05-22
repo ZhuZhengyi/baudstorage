@@ -2,6 +2,7 @@ package metanode
 
 import (
 	"encoding/json"
+
 	"github.com/tiglabs/baudstorage/proto"
 )
 

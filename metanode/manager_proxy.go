@@ -1,8 +1,9 @@
 package metanode
 
 import (
-	"github.com/tiglabs/baudstorage/proto"
 	"net"
+
+	"github.com/tiglabs/baudstorage/proto"
 )
 
 func (m *metaManager) serveProxy(conn net.Conn, mp MetaPartition,

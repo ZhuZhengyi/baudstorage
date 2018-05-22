@@ -1,7 +1,6 @@
 package metanode
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -11,10 +10,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
+	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/baudstorage/util/pool"
-	"github.com/tiglabs/raft/util/log"
 )
 
 const partitionPrefix = "partition_"
@@ -157,7 +157,7 @@ func (m *metaManager) loadPartitions() (err error) {
 			wg.Add(1)
 			go func() {
 				if len(fileInfo.Name()) < 10 {
-					log.Warn("ignore unknown partition dir: %s", fileInfo.Name())
+					log.LogWarnf("ignore unknown partition dir: %s", fileInfo.Name())
 					wg.Done()
 					return
 				}
@@ -165,7 +165,7 @@ func (m *metaManager) loadPartitions() (err error) {
 				partitionId := fileInfo.Name()[10:]
 				id, err = strconv.ParseUint(partitionId, 10, 64)
 				if err != nil {
-					log.Warn("ignore path: %s,not partition", partitionId)
+					log.LogWarnf("ignore path: %s,not partition", partitionId)
 					wg.Done()
 					return
 				}
@@ -179,7 +179,7 @@ func (m *metaManager) loadPartitions() (err error) {
 				}
 				partition := NewMetaPartition(partitionConfig)
 				if err = m.attachPartition(id, partition); err != nil {
-					log.Error(fmt.Sprintf("start partition %d: %s", id, err.Error()))
+					log.LogErrorf("start partition %d: %s", id, err.Error())
 				}
 				wg.Done()
 			}()

@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
-	"strings"
 )
 
 // Dentry wraps necessary properties of `Dentry` information in file system.

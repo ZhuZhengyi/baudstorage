@@ -3,14 +3,13 @@ package metanode
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"sync/atomic"
 
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
-
-	"github.com/henrylee2cn/goutil/errors"
 	"github.com/tiglabs/raft"
 	raftproto "github.com/tiglabs/raft/proto"
-	"os"
 )
 
 func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, err error) {

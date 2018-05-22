@@ -87,7 +87,7 @@ func (v *Vol) getAllMemberFileMetas() (allMembers []*MembersFileMetas, err error
 	for i := 1; i < len(v.members.VolHosts); i++ {
 		var conn net.Conn
 		target := v.members.VolHosts[i]
-		conn, err = v.server.ConnPool.Get(target)
+		conn, err = connPool.Get(target)
 		if err != nil {
 			err = errors.Annotatef(err, "getAllMemberFileMetas  vol[%v] get host[%v] connect", v.volId, target)
 			return
@@ -107,7 +107,7 @@ func (v *Vol) getAllMemberFileMetas() (allMembers []*MembersFileMetas, err error
 		mf := NewMembersFiles()
 		err = json.Unmarshal(p.Data[:p.Size], mf)
 		if err != nil {
-			v.server.ConnPool.Put(conn)
+			connPool.Put(conn)
 			err = errors.Annotatef(err, "getAllMemberFileMetas json unmarsh [%v]", v.volId, string(p.Data[:p.Size]))
 			return
 		}
@@ -214,7 +214,7 @@ func (v *Vol) NotifyRepair(members []*MembersFileMetas) (err error) {
 	for i := 1; i < len(members); i++ {
 		var conn net.Conn
 		target := v.members.VolHosts[i]
-		conn, err = v.server.ConnPool.Get(target)
+		conn, err = connPool.Get(target)
 		if err != nil {
 			continue
 		}
@@ -225,7 +225,7 @@ func (v *Vol) NotifyRepair(members []*MembersFileMetas) (err error) {
 			conn.Close()
 			continue
 		}
-		v.server.ConnPool.Put(conn)
+		connPool.Put(conn)
 	}
 
 	return
@@ -280,7 +280,7 @@ func (s *DataNode) streamRepairExtent(remoteExtentInfo *storage.FileInfo, v *Vol
 	needFixSize := remoteExtentInfo.Size - localExtentInfo.Size
 	request := NewStreamReadPacket(v.volId, remoteExtentInfo.FileIdId, int(localExtentInfo.Size), int(needFixSize))
 	var conn net.Conn
-	conn, err = s.ConnPool.Get(remoteExtentInfo.Source)
+	conn, err = connPool.Get(remoteExtentInfo.Source)
 	if err != nil {
 		return errors.Annotatef(err, "streamRepairExtent get conn from host[%v] error", remoteExtentInfo.Source)
 	}
@@ -296,7 +296,7 @@ func (s *DataNode) streamRepairExtent(remoteExtentInfo *storage.FileInfo, v *Vol
 			return errors.Annotatef(err, "streamRepairExtent GetWatermark error")
 		}
 		if localExtentInfo.Size >= remoteExtentInfo.Size {
-			s.ConnPool.Put(conn)
+			connPool.Put(conn)
 			break
 		}
 		err = request.ReadFromConn(conn, proto.ReadDeadlineTime)

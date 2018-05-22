@@ -95,7 +95,7 @@ func (v *Vol) getMembers() (bool, *VolMembers, error) {
 	)
 
 	url := fmt.Sprintf(GetVolMember+"?vol=%v", v.volId)
-	if volHostsBuf, err = v.server.PostToMaster(nil, url); err != nil {
+	if volHostsBuf, err = v.server.postToMaster(nil, url); err != nil {
 		return false, nil, err
 	}
 	members := new(VolMembers)

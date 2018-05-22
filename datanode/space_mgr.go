@@ -157,7 +157,7 @@ func (s *DataNode) fillHeartBeatResponse(response *proto.DataNodeHeartBeatRespon
 	response.Used = stat.Used
 	response.Total = stat.Total
 	response.Free = stat.Free
-	response.CreatedVolCnt = stat.CreatedVolCnt
+	response.CreatedVolCnt = uint32(stat.CreatedVolCnt)
 	response.CreatedVolWeights = stat.CreatedVolWeights
 	response.MaxWeightsForCreateVol = stat.MaxWeightsForCreateVol
 	response.RemainWeightsForCreateVol = stat.RemainWeightsForCreateVol

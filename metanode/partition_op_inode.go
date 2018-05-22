@@ -2,8 +2,9 @@ package metanode
 
 import (
 	"encoding/json"
-	"github.com/tiglabs/baudstorage/proto"
 	"time"
+
+	"github.com/tiglabs/baudstorage/proto"
 )
 
 func (mp *metaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {

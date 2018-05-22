@@ -1,11 +1,11 @@
 package metanode
 
 import (
+	"os"
 	"time"
 
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
-	"os"
 )
 
 // GetDentry query dentry from DentryTree with specified dentry info;
