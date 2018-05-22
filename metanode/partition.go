@@ -20,7 +20,7 @@ const (
 )
 
 const (
-	defaultDumpRate = time.Second * 30
+	storeTimeTicker = time.Minute * 3
 )
 
 // Errors
@@ -39,8 +39,8 @@ type MetaPartitionConfig struct {
 	PartitionId uint64              `json:"partition_id"`
 	Start       uint64              `json:"start"`
 	End         uint64              `json:"end"`
-	Cursor      uint64              `json:"-"`
 	Peers       []proto.Peer        `json:"peers"`
+	Cursor      uint64              `json:"-"`
 	NodeId      uint64              `json:"-"`
 	RootDir     string              `json:"-"`
 	BeforeStart func()              `json:"-"`
@@ -170,7 +170,7 @@ func (mp *metaPartition) onStop() {
 func (mp *metaPartition) startSchedule() {
 	mp.stopC = make(chan bool)
 	go func(stopC chan bool) {
-		timer := time.NewTicker(defaultDumpRate)
+		timer := time.NewTicker(storeTimeTicker)
 		for {
 			select {
 			case <-stopC:
@@ -264,16 +264,19 @@ func (mp *metaPartition) load() (err error) {
 }
 
 func (mp *metaPartition) store() (err error) {
-	if err = mp.storeApplyID(); err != nil {
-		return
-	}
+	appID := mp.applyID
 	if err = mp.storeInode(); err != nil {
 		return
 	}
 	if err = mp.storeDentry(); err != nil {
 		return
 	}
-	err = mp.storeMeta()
+	if err = mp.storeMeta(); err != nil {
+		return
+	}
+	if err = mp.storeApplyID(appID); err != nil {
+		return
+	}
 	return
 }
 

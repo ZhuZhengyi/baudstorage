@@ -41,6 +41,7 @@ type MetaNode struct {
 	raftDir     string //raftStore log store base dir
 	masterAddrs string
 	metaManager MetaManager
+	localAddr   string
 	raftStore   raftstore.RaftStore
 	httpStopC   chan uint8
 	state       ServiceState
@@ -149,16 +150,15 @@ func (m *MetaNode) validNodeID() (err error) {
 	mAddrSlice := strings.Split(m.masterAddrs, ";")
 	rand.Seed(time.Now().Unix())
 	i := rand.Intn(len(mAddrSlice))
-	var localAddr string
 	conn, _ := net.DialTimeout("tcp", mAddrSlice[i], time.Second)
 	defer func() {
 		if conn != nil {
 			conn.Close()
 		}
 	}()
-	localAddr = strings.Split(conn.LocalAddr().String(), ":")[0]
+	m.localAddr = strings.Split(conn.LocalAddr().String(), ":")[0]
 	masterURL := fmt.Sprintf("http://%s/%s?addr=%s", mAddrSlice[i],
-		metaNodeURL, fmt.Sprintf("%s:%d", localAddr, m.listen))
+		metaNodeURL, fmt.Sprintf("%s:%d", m.localAddr, m.listen))
 	data, err := util.PostToNode(nil, masterURL)
 	if err != nil {
 		return

@@ -61,7 +61,6 @@ func (m *metaManager) HandleMetaOperation(conn net.Conn, p *Packet) (err error) 
 	case proto.OpMetaOpen:
 		err = m.opOpen(conn, p)
 	case proto.OpCreateMetaPartition:
-		// Mater → MetaNode
 		err = m.opCreateMetaPartition(conn, p)
 	case proto.OpMetaNodeHeartbeat:
 		err = m.opMasterHeartbeat(conn, p)
@@ -157,12 +156,16 @@ func (m *metaManager) loadPartitions() (err error) {
 		if fileInfo.IsDir() && strings.HasPrefix(fileInfo.Name(), partitionPrefix) {
 			wg.Add(1)
 			go func() {
+				if len(fileInfo.Name()) < 10 {
+					log.Warn("ignore unknown partition dir: %s", fileInfo.Name())
+					wg.Done()
+					return
+				}
 				var id uint64
-				partitionId := fileInfo.Name()[12:]
+				partitionId := fileInfo.Name()[10:]
 				id, err = strconv.ParseUint(partitionId, 10, 64)
 				if err != nil {
-					log.Warn(fmt.Sprintf("ignore path: %s, "+
-						"not partition", partitionId))
+					log.Warn("ignore path: %s,not partition", partitionId)
 					wg.Done()
 					return
 				}
