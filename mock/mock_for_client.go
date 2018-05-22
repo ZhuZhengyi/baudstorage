@@ -16,7 +16,6 @@ import (
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 	"hash/crc32"
-	"golang.org/x/text/cmd/gotext/examples/extract_http/pkg"
 )
 
 const (
