@@ -15,7 +15,7 @@ type AppendExtentKeyFunc func(inode uint64, key proto.ExtentKey) error
 type GetExtentsFunc func(inode uint64) ([]proto.ExtentKey, error)
 
 type ExtentClient struct {
-	wrapper         *sdk.VolGroupWrapper
+	vols            *sdk.VolGroupWrapper
 	writers         map[uint64]*StreamWriter
 	writerLock      sync.RWMutex
 	readers         map[uint64]*StreamReader
@@ -33,7 +33,7 @@ func NewExtentClient(logdir string, master string, appendExtentKey AppendExtentK
 	if err != nil {
 		return nil, fmt.Errorf("init Log Failed[%v]", err.Error())
 	}
-	client.wrapper, err = sdk.NewVolGroupWraper(master)
+	client.vols, err = sdk.NewVolGroupWraper(master)
 	if err != nil {
 		return nil, fmt.Errorf("init volGroup Wrapper failed [%v]", err.Error())
 	}
@@ -46,7 +46,7 @@ func NewExtentClient(logdir string, master string, appendExtentKey AppendExtentK
 }
 
 func (client *ExtentClient) InitWriteStream(inode uint64) (stream *StreamWriter) {
-	stream = NewStreamWriter(client.wrapper, inode, client.appendExtentKey)
+	stream = NewStreamWriter(client.vols, inode, client.appendExtentKey)
 	client.writerLock.Lock()
 	client.writers[inode] = stream
 	client.writerLock.Unlock()
@@ -55,7 +55,7 @@ func (client *ExtentClient) InitWriteStream(inode uint64) (stream *StreamWriter)
 }
 
 func (client *ExtentClient) InitReadStream(inode uint64) (stream *StreamReader, err error) {
-	stream, err = NewStreamReader(inode, client.wrapper, client.getExtents)
+	stream, err = NewStreamReader(inode, client.vols, client.getExtents)
 	if err != nil {
 		return
 	}
@@ -196,7 +196,7 @@ func (client *ExtentClient) Read(inode uint64, data []byte, offset int, size int
 
 func (client *ExtentClient) Delete(keys []proto.ExtentKey) (err error) {
 	for _, k := range keys {
-		vol, err := client.wrapper.GetVol(k.VolId)
+		vol, err := client.vols.GetVol(k.VolId)
 		if err != nil {
 			continue
 		}
@@ -207,13 +207,13 @@ func (client *ExtentClient) Delete(keys []proto.ExtentKey) (err error) {
 }
 
 func (client *ExtentClient) delete(vol *sdk.VolGroup, extentId uint64) (err error) {
-	connect, err := client.wrapper.GetConnect(vol.Hosts[0])
+	connect, err := client.vols.GetConnect(vol.Hosts[0])
 	if err != nil {
 		return
 	}
 	defer func() {
 		if err == nil {
-			client.wrapper.PutConnect(connect)
+			client.vols.PutConnect(connect)
 		} else {
 			connect.Close()
 		}
