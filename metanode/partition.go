@@ -106,15 +106,13 @@ type MetaPartition interface {
 //  | New | → Restore → | Ready |
 //  +-----+             +-------+
 type metaPartition struct {
-	config     *MetaPartitionConfig
-	leaderID   uint64
-	applyID    uint64       // For store Inode/Dentry max applyID, this index will be update after restore from dump data.
-	dentryMu   sync.RWMutex // Mutex for Dentry operation.
-	dentryTree *btree.BTree // B-Tree for Dentry.
-	inodeMu    sync.RWMutex // Mutex for Inode operation.
-	inodeTree  *btree.BTree // B-Tree for Inode.
-	opCounter  uint64       // Counter for meta operation, this index will be reset after data dumped into storage.
-
+	config        *MetaPartitionConfig
+	leaderID      uint64
+	applyID       uint64              // For store Inode/Dentry max applyID, this index will be update after restore from dump data.
+	dentryMu      sync.RWMutex        // Mutex for Dentry operation.
+	dentryTree    *btree.BTree        // B-Tree for Dentry.
+	inodeMu       sync.RWMutex        // Mutex for Inode operation.
+	inodeTree     *btree.BTree        // B-Tree for Inode.
 	raftPartition raftstore.Partition // RaftStore partition instance of this meta partition.
 	stopC         chan bool
 	state         ServiceState

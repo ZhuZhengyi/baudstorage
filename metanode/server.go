@@ -81,9 +81,3 @@ func (m *MetaNode) handlePacket(conn net.Conn, p *Packet) (err error) {
 	err = m.metaManager.HandleMetaOperation(conn, p)
 	return
 }
-
-func (m *MetaNode) sendAcknowledge(conn net.Conn, p *Packet) (err error) {
-	p.PackOkReply()
-	err = p.WriteToConn(conn)
-	return
-}

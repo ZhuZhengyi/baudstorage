@@ -111,7 +111,7 @@ func (m *metaManager) opCreateInode(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		return
 	}
-	if ok := m.serveProxy(conn, mp, p); !ok {
+	if !m.serveProxy(conn, mp, p) {
 		return
 	}
 	if err = mp.CreateInode(req, p); err != nil {

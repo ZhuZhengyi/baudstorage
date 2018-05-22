@@ -19,13 +19,13 @@ func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 	}
 	switch msg.Op {
 	case opCreateInode:
-		ino := &Inode{}
+		ino := NewInode(0, 0)
 		if err = json.Unmarshal(msg.V, ino); err != nil {
 			goto end
 		}
 		resp = mp.createInode(ino)
 	case opDeleteInode:
-		ino := &Inode{}
+		ino := NewInode(0, 0)
 		if err = json.Unmarshal(msg.V, ino); err != nil {
 			goto end
 		}
@@ -43,7 +43,7 @@ func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 		}
 		resp = mp.deleteDentry(den)
 	case opOpen:
-		ino := &Inode{}
+		ino := NewInode(0, 0)
 		if err = json.Unmarshal(msg.V, ino); err != nil {
 			goto end
 		}
@@ -155,9 +155,6 @@ func (mp *metaPartition) Put(key, val interface{}) (resp interface{}, err error)
 	}
 	//submit raftStore
 	resp, err = mp.raftPartition.Submit(cmd)
-	if err != nil {
-		return
-	}
 	return
 }
 
