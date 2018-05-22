@@ -81,14 +81,16 @@ type OpMeta interface {
 	OpInode
 	OpDentry
 	OpExtent
-	OpConfig
+	OpPartition
 }
 
-type OpConfig interface {
+type OpPartition interface {
 	IsLeader() (leaderAddr string, isLeader bool)
 	GetCursor() uint64
 	GetBaseConfig() *MetaPartitionConfig
 	ChangeMember(changeType raftproto.ConfChangeType, peer raftproto.Peer, context []byte) (resp interface{}, err error)
+	DeletePartition() (err error)
+	UpdatePartition(req *proto.UpdateMetaPartitionRequest) (err error)
 }
 
 type MetaPartition interface {
@@ -303,4 +305,23 @@ func (mp *metaPartition) ChangeMember(changeType raftproto.ConfChangeType, peer 
 
 func (mp *metaPartition) GetBaseConfig() *MetaPartitionConfig {
 	return mp.config
+}
+
+func (mp *metaPartition) DeletePartition() (err error) {
+	_, err = mp.Put(opDeletePartition, nil)
+	return
+}
+
+func (mp *metaPartition) UpdatePartition(req *proto.UpdateMetaPartitionRequest) (err error) {
+	reqData, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
+	_, err = mp.Put(opUpdatePartition, reqData)
+	return
+}
+
+func (mp *metaPartition) OfflinePartition(req []byte) (err error) {
+	_, err = mp.Put(opOfflinePartition, req)
+	return
 }

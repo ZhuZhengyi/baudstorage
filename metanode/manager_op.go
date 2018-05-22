@@ -316,12 +316,8 @@ func (m *metaManager) opDeleteMetaPartition(conn net.Conn, p *Packet) (err error
 		m.respondToClient(conn, p)
 		return
 	}
-	var (
-		mp      MetaPartition
-		reqData []byte
-	)
 	req := &proto.DeleteMetaPartitionRequest{}
-	reqData, err = json.Marshal(adminTask.Request)
+	reqData, err := json.Marshal(adminTask.Request)
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		m.respondToClient(conn, p)
@@ -332,11 +328,7 @@ func (m *metaManager) opDeleteMetaPartition(conn net.Conn, p *Packet) (err error
 		m.respondToClient(conn, p)
 		return
 	}
-	resp := &proto.DeleteMetaPartitionResponse{
-		PartitionID: req.PartitionID,
-		Status:      proto.OpErr,
-	}
-	mp, err = m.getPartition(req.PartitionID)
+	mp, err := m.getPartition(req.PartitionID)
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		m.respondToClient(conn, p)
@@ -344,6 +336,10 @@ func (m *metaManager) opDeleteMetaPartition(conn net.Conn, p *Packet) (err error
 	}
 	if m.serveProxy(conn, mp, p) {
 		return
+	}
+	resp := &proto.DeleteMetaPartitionResponse{
+		PartitionID: req.PartitionID,
+		Status:      proto.OpErr,
 	}
 	// Ack Master Request
 	m.responseAckOKToMaster(conn, p)

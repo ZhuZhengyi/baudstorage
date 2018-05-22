@@ -48,18 +48,18 @@ func (m *metaManager) HandleMetaOperation(conn net.Conn, p *Packet) (err error) 
 	switch p.Opcode {
 	case proto.OpMetaCreateInode:
 		err = m.opCreateInode(conn, p)
-	case proto.OpMetaCreateDentry:
-		err = m.opCreateDentry(conn, p)
 	case proto.OpMetaDeleteInode:
 		err = m.opDeleteInode(conn, p)
+	case proto.OpMetaInodeGet:
+		err = m.opMetaInodeGet(conn, p)
+	case proto.OpMetaCreateDentry:
+		err = m.opCreateDentry(conn, p)
 	case proto.OpMetaDeleteDentry:
 		err = m.opDeleteDentry(conn, p)
 	case proto.OpMetaReadDir:
 		err = m.opReadDir(conn, p)
 	case proto.OpMetaOpen:
 		err = m.opOpen(conn, p)
-	case proto.OpMetaInodeGet:
-		err = m.opMetaInodeGet(conn, p)
 	case proto.OpCreateMetaPartition:
 		// Mater → MetaNode
 		err = m.opCreateMetaPartition(conn, p)

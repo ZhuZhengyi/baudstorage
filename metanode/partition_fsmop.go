@@ -129,7 +129,7 @@ func (mp *metaPartition) readDir(req *ReadDirReq) (resp *ReadDirResp) {
 	return
 }
 
-func (mp *metaPartition) AppendExtents(ino *Inode) (status uint8) {
+func (mp *metaPartition) appendExtents(ino *Inode) (status uint8) {
 	exts := ino.Extents
 	status = proto.OpOk
 	item := mp.inodeTree.Get(ino)
@@ -138,7 +138,10 @@ func (mp *metaPartition) AppendExtents(ino *Inode) (status uint8) {
 		return
 	}
 	ino = item.(*Inode)
-	ino.AppendExtents(exts)
+	exts.Range(func(i int, ext proto.ExtentKey) bool {
+		ino.AppendExtents(ext)
+		return true
+	})
 	ino.ModifyTime = time.Now().Unix()
 	return
 }
@@ -156,7 +159,7 @@ func (mp *metaPartition) updatePartition(end uint64) (err error) {
 		}
 	}()
 	/*
-	err = mp.StoreMeta()
+		err = mp.StoreMeta()
 	*/
 	return
 }
@@ -164,8 +167,8 @@ func (mp *metaPartition) updatePartition(end uint64) (err error) {
 func (mp *metaPartition) deletePartition() (err error) {
 	mp.Stop()
 	/*
-	mp.deletePartition(mp.ID)
-	err = os.RemoveAll(mp.RootDir)
+		mp.deletePartition(mp.ID)
+		err = os.RemoveAll(mp.RootDir)
 	*/
 	return
 }

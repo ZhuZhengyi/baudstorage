@@ -7,7 +7,7 @@ import (
 
 func (mp *metaPartition) ExtentAppend(req *proto.AppendExtentKeyRequest, p *Packet) (err error) {
 	ino := NewInode(req.Inode, 0)
-	ino.Extents = req.Extents
+	ino.Extents.Put(req.Extent)
 	val, err := json.Marshal(ino)
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -28,9 +28,11 @@ func (mp *metaPartition) ExtentsList(req *proto.GetExtentsRequest,
 	status := mp.getInode(ino)
 	var reply []byte
 	if status == proto.OpOk {
-		resp := &proto.GetExtentsResponse{
-			Extents: ino.Extents,
-		}
+		resp := &proto.GetExtentsResponse{}
+		ino.Extents.Range(func(i int, ext proto.ExtentKey) bool {
+			resp.Extents = append(resp.Extents, ext)
+			return true
+		})
 		reply, err = json.Marshal(resp)
 		if err != nil {
 			status = proto.OpErr

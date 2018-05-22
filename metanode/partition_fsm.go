@@ -55,11 +55,11 @@ func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 		}
 		err = mp.updatePartition(req.End)
 	case opExtentsAdd:
-		ino := &Inode{}
+		ino := NewInode(0, 0)
 		if err = json.Unmarshal(msg.V, ino); err != nil {
 			goto end
 		}
-		mp.AppendExtents(ino)
+		mp.appendExtents(ino)
 	}
 end:
 	mp.applyID = index
