@@ -27,15 +27,26 @@ var (
 	ErrBadConfFile         = errors.New("bad config file")
 
 	masterAddr string
+	connPool   *pool.ConnPool = pool.NewConnPool()
 )
 
 const (
+	ModuleName      = "DataNode"
 	GetIpFromMaster = "/getip"
 	DefaultRackName = "huitian_rack1"
 )
 
+const (
+	ConfigKeyPort       = "Port"       // string
+	ConfigKeyClusterID  = "ClusterID"  // string
+	ConfigKeyLogDir     = "LogDir"     // string
+	ConfigKeyMasterAddr = "MasterAddr" // array
+	ConfigKeyRack       = "Rack"       // string
+	ConfigKeyProfPort   = "ProfPort"   // string
+	ConfigKeyDisks      = "Disks"      // array
+)
+
 type DataNode struct {
-	ConnPool        *pool.ConnPool
 	space           *SpaceManager
 	masterAddrs     []string
 	masterAddrIndex uint32
@@ -51,31 +62,31 @@ type DataNode struct {
 }
 
 func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
-	s.port = cfg.GetString("Port")
-	s.clusterId = cfg.GetString("ClusterID")
-	s.logDir = cfg.GetString("LogDir")
-	for _, ip := range cfg.GetArray("MasterAddr") {
+	s.port = cfg.GetString(ConfigKeyPort)
+	s.clusterId = cfg.GetString(ConfigKeyClusterID)
+	s.logDir = cfg.GetString(ConfigKeyLogDir)
+	for _, ip := range cfg.GetArray(ConfigKeyMasterAddr) {
 		s.masterAddrs = append(s.masterAddrs, ip.(string))
 	}
-	s.ConnPool=pool.NewConnPool()
 
-	s.rackName = cfg.GetString("Rack")
-	_, err = log.NewLog(s.logDir, "DataNode", log.DebugLevel)
+	s.rackName = cfg.GetString(ConfigKeyRack)
+	_, err = log.NewLog(s.logDir, ModuleName, log.DebugLevel)
 	if err = s.getIpFromMaster(); err != nil {
 		return
 	}
-	s.profPort = cfg.GetString("Profport")
+	s.profPort = cfg.GetString(ConfigKeyProfPort)
 	s.space = NewSpaceManager(s.rackName)
 
 	if err != nil || s.port == "" || s.logDir == "" ||
 		masterAddr == "" {
-		return ErrBadConfFile
+		err = ErrBadConfFile
+		return
 	}
 	if s.rackName == "" {
 		s.rackName = DefaultRackName
 	}
 
-	for _, d := range cfg.GetArray("Disks") {
+	for _, d := range cfg.GetArray(ConfigKeyDisks) {
 		arr := strings.Split(d.(string), ":")
 		if len(arr) != 3 {
 			return ErrBadConfFile
@@ -95,11 +106,10 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 		}
 	}
 	return nil
-
 }
 
 func (s *DataNode) getIpFromMaster() error {
-	data, err := s.PostToMaster(nil, GetIpFromMaster)
+	data, err := s.postToMaster(nil, GetIpFromMaster)
 	if err != nil {
 		panic(fmt.Sprintf("cannot get ip from master[%v] err[%v]", s.masterAddrs, err))
 	}

@@ -467,10 +467,18 @@ func LogWarn(v ...interface{}) {
 	glog.warn.Print(s)
 }
 
+func LogWarnf(format string, v ...interface{})  {
+	LogWarn(fmt.Sprintf(format, v...))
+}
+
 func LogInfo(v ...interface{}) {
 	s := fmt.Sprintln(v...)
 	s = glog.SetPrefix(s, levels[1])
 	glog.info.Print(s)
+}
+
+func LogInfof(format string, v ...interface{})  {
+	LogInfo(fmt.Sprintf(format, v...))
 }
 
 func LogError(v ...interface{}) {
@@ -479,10 +487,18 @@ func LogError(v ...interface{}) {
 	glog.err.Print(s)
 }
 
+func LogErrorf(format string, v ...interface{})  {
+	LogError(fmt.Sprintf(format, v...))
+}
+
 func LogDebug(v ...interface{}) {
 	s := fmt.Sprintln(v...)
 	s = glog.SetPrefix(s, levels[0])
 	glog.debug.Print(s)
+}
+
+func LogDebugf(format string, v ...interface{})  {
+	LogDebug(fmt.Sprintf(format, v...))
 }
 
 func LogFatal(v ...interface{}) {
@@ -490,6 +506,10 @@ func LogFatal(v ...interface{}) {
 	s = glog.SetPrefix(s, levels[4])
 	glog.err.Output(2, s)
 	os.Exit(1)
+}
+
+func LogFatalf(format string, v ...interface{})  {
+	LogFatal(fmt.Sprintf(format, v...))
 }
 
 func LogRead(v ...interface{}) {

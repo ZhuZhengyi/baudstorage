@@ -3,7 +3,6 @@ package metanode
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -176,9 +175,7 @@ func (mp *metaPartition) startSchedule() {
 				return
 			case <-timer.C:
 				if err := mp.store(); err != nil {
-					log.LogError(fmt.Sprintf(
-						"dump meta partition %d fail cause %s", mp.config.PartitionId,
-						err))
+					log.LogErrorf("dump meta partition %d fail cause %s", mp.config.PartitionId, err)
 				}
 			}
 		}

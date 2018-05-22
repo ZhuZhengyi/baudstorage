@@ -2,7 +2,6 @@ package metanode
 
 import (
 	"encoding/json"
-	"fmt"
 	"net"
 	"strings"
 
@@ -115,7 +114,7 @@ func (m *metaManager) opCreateInode(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	if err = mp.CreateInode(req, p); err != nil {
-		log.LogError(fmt.Sprintf("Create Inode Request: %s", err.Error()))
+		log.LogErrorf("Create Inode Request: %s", err.Error())
 	}
 	// Reply operation result to client though TCP connection.
 	err = m.respondToClient(conn, p)
@@ -137,7 +136,7 @@ func (m *metaManager) opCreateDentry(conn net.Conn, p *Packet) (err error) {
 	}
 	err = mp.CreateDentry(req, p)
 	if err != nil {
-		log.LogError(fmt.Sprintf("Create Dentry: %s", err.Error()))
+		log.LogErrorf("Create Dentry: %s", err.Error())
 	}
 	// Reply operation result to client though TCP connection.
 	err = m.respondToClient(conn, p)

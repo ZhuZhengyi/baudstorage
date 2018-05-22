@@ -27,6 +27,7 @@ const (
 )
 
 const (
+	moduleName = "MetaNode"
 	metaNodeURL = "metaNode/add"
 )
 
@@ -79,7 +80,7 @@ func (m *MetaNode) onStart(cfg *config.Config) (err error) {
 	if err = m.parseConfig(cfg); err != nil {
 		return
 	}
-	if _, err = log.NewLog(m.logDir, "MetaNode", log.DebugLevel); err != nil {
+	if _, err = log.NewLog(m.logDir, moduleName, log.DebugLevel); err != nil {
 		return
 	}
 	if err = m.validNodeID(); err != nil {

@@ -41,7 +41,7 @@ func (m *MetaNode) stopServer() {
 	if m.httpStopC != nil {
 		defer func() {
 			if r := recover(); r != nil {
-				log.LogError("action[StopTcpServer],err:%v", r)
+				log.LogErrorf("action[StopTcpServer],err:%v", r)
 			}
 		}()
 		close(m.httpStopC)

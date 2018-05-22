@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/tiglabs/baudstorage/util/log"
 	"net"
 
-	"github.com/prometheus/common/log"
 	"github.com/tiglabs/baudstorage/util"
 )
 
@@ -35,7 +35,7 @@ func (m *metaManager) respondToMaster(ip string, data interface{}) (err error) {
 	url := fmt.Sprintf("http://%s%s", ip, masterResponsePath)
 	_, err = util.PostToNode(jsonBytes, url)
 	if err != nil {
-		log.Error("response to master: %s", err.Error())
+		log.LogErrorf("response to master: %s", err.Error())
 	}
 	return
 }
@@ -56,7 +56,7 @@ func (m *metaManager) respondToClient(conn net.Conn, p *Packet) (err error) {
 	// Process data and send reply though specified tcp connection.
 	err = p.WriteToConn(conn)
 	if err != nil {
-		log.Error("response to client: %s", err.Error())
+		log.LogErrorf("response to client: %s", err.Error())
 	}
 	return
 }
@@ -65,7 +65,7 @@ func (m *metaManager) responseAckOKToMaster(conn net.Conn, p *Packet) {
 	go func() {
 		p.PackOkReply()
 		if err := p.WriteToConn(conn); err != nil {
-			log.Error("ack master response: %s", err.Error())
+			log.LogErrorf("ack master response: %s", err.Error())
 		}
 	}()
 }

@@ -1,7 +1,6 @@
 package metanode
 
 import (
-	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 	"net"
@@ -48,7 +47,7 @@ end:
 	p.PackErrorWithBody(status, nil)
 	p.WriteToConn(conn)
 	if err != nil {
-		log.LogError(fmt.Sprintf("proxy to master: %s", err.Error()))
+		log.LogErrorf("proxy to master: %s", err.Error())
 	}
 	return
 }

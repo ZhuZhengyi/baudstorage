@@ -100,7 +100,7 @@ func post(data []byte, url string) (*http.Response, error) {
 	return client.Do(req)
 }
 
-func (s *DataNode) PostToMaster(data []byte, url string) (msg []byte, err error) {
+func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error) {
 	success := false
 	var err1 error
 	for i := 0; i < len(s.masterAddrs); i++ {
@@ -139,7 +139,7 @@ func (s *DataNode) PostToMaster(data []byte, url string) (msg []byte, err error)
 		break
 	}
 	if !success {
-		return nil, fmt.Errorf("PostToMaster err[%v]", err)
+		return nil, fmt.Errorf("postToMaster err[%v]", err)
 	}
 
 	return msg, err1
