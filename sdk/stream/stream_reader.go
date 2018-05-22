@@ -31,6 +31,7 @@ type StreamReader struct {
 	sync.Mutex
 }
 
+//FIXME: change arguments order to be consistent with NewStreamWriter
 func NewStreamReader(inode uint64, wrapper *sdk.VolGroupWrapper, getExtents GetExtentsFunc) (stream *StreamReader, err error) {
 	stream = new(StreamReader)
 	stream.inode = inode
