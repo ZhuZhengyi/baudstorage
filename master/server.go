@@ -58,7 +58,7 @@ func (m *Master) Start(cfg *config.Config) (err error) {
 	if err = m.createRaftServer(); err != nil {
 		return
 	}
-	m.cluster = newCluster(m.clusterName, m.leaderInfo)
+	m.cluster = newCluster(m.clusterName, m.leaderInfo,m.fsm,m.partition)
 	m.loadMetadata()
 	m.startHttpService()
 	m.wg.Add(1)

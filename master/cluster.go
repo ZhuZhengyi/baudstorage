@@ -23,7 +23,7 @@ type Cluster struct {
 	idAlloc       *IDAllocator
 }
 
-func newCluster(name string, leaderInfo *LeaderInfo,fsm *MetadataFsm,partition *raftstore.Partition) (c *Cluster) {
+func newCluster(name string, leaderInfo *LeaderInfo,fsm *MetadataFsm,partition raftstore.Partition) (c *Cluster) {
 	c = new(Cluster)
 	c.Name = name
 	c.leaderInfo = leaderInfo
