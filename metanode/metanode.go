@@ -116,7 +116,7 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 		err = errors.New("invalid configuration")
 		return
 	}
-	m.listen = int(cfg.GetInt(cfgListen))
+	m.listen = int(cfg.GetFloat(cfgListen))
 	m.logDir = cfg.GetString(cfgLogDir)
 	m.metaDir = cfg.GetString(cfgMetaDir)
 	m.raftDir = cfg.GetString(cfgRaftDir)
