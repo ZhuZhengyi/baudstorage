@@ -45,6 +45,7 @@ func Mount(cfg *config.Config) error {
 	mnt := cfg.GetString("Mountpoint")
 	namespace := cfg.GetString("Namespace")
 	master := cfg.GetString("Master")
+	logpath := cfg.GetString("Logpath")
 	c, err := fuse.Mount(
 		mnt,
 		fuse.AllowOther(),
@@ -59,7 +60,7 @@ func Mount(cfg *config.Config) error {
 	}
 	defer c.Close()
 
-	super, err := bdfs.NewSuper(namespace, master)
+	super, err := bdfs.NewSuper(namespace, master, logpath)
 	if err != nil {
 		return err
 	}
