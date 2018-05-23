@@ -36,9 +36,9 @@ const (
 )
 
 const (
-	VolUnavailable int = -1
-	VolReadOnly        = 1
-	VolReadWrite       = 2
+	VolUnavailable = 0
+	VolReadOnly    = 1
+	VolReadWrite   = 2
 )
 
 const (

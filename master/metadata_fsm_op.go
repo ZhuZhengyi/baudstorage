@@ -313,7 +313,7 @@ func (c *Cluster) loadMetaNodes() (err error) {
 		nodeID, addr, err := c.decodeMetaNodeKey(string(encodedKey.Data()))
 		if err != nil {
 			err = fmt.Errorf("action[loadMetaNodes] err:%v", err.Error())
-			return
+			return err
 		}
 		metaNode := NewMetaNode(addr)
 		metaNode.id = nodeID
@@ -337,7 +337,7 @@ func (c *Cluster) loadNamespaces() (err error) {
 		_, nsName, replicaNum, err := c.decodeNamespaceKey(string(encodedKey.Data()))
 		if err != nil {
 			err = fmt.Errorf("action[loadNamespaces] err:%v", err.Error())
-			return
+			return err
 		}
 		ns := NewNameSpace(nsName, replicaNum)
 		c.namespaces[nsName] = ns
@@ -362,12 +362,12 @@ func (c *Cluster) loadMetaPartitions() (err error) {
 		ns, err := c.getNamespace(nsName)
 		if err != nil {
 			err = fmt.Errorf("action[loadMetaPartitions] err:%v", err.Error())
-			return
+			return err
 		}
 		mpv := &MetaPartitionValue{}
 		if err = json.Unmarshal(encodedValue.Data(), mpv); err != nil {
 			err = fmt.Errorf("action[decodeMetaPartitionValue],value:%v,err:%v", encodedValue.Data(), err)
-			return
+			return err
 		}
 		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End, nsName)
 		mp.PersistenceHosts = strings.Split(mpv.Hosts, UnderlineSeparator)
@@ -394,12 +394,12 @@ func (c *Cluster) loadVolGroups() (err error) {
 		ns, err := c.getNamespace(nsName)
 		if err != nil {
 			err = fmt.Errorf("action[loadVolGroups] err:%v", err.Error())
-			return
+			return err
 		}
 		vgv := &VolGroupValue{}
 		if err = json.Unmarshal(encodedValue.Data(), vgv); err != nil {
 			err = fmt.Errorf("action[decodeVolValue],value:%v,err:%v", encodedValue.Data(), err)
-			return
+			return err
 		}
 		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum)
 		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
