@@ -138,7 +138,7 @@ func (m *metaManager) loadPartitions() (err error) {
 	// Check metaDir directory
 	fileInfo, err := os.Stat(m.rootDir)
 	if err != nil {
-		os.MkdirAll(m.rootDir, 0655)
+		os.MkdirAll(m.rootDir, 0755)
 		err = nil
 		return
 	}
