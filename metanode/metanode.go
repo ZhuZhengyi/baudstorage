@@ -142,6 +142,7 @@ func (m *MetaNode) stopMetaManager() {
 }
 
 func (m *MetaNode) validNodeID() (err error) {
+	var data []byte
 	for {
 		// Register and Get NodeID
 		if m.masterAddrs == "" {
@@ -157,7 +158,7 @@ func (m *MetaNode) validNodeID() (err error) {
 		}
 		masterURL := fmt.Sprintf("http://%s/%s?addr=%s", mAddrSlice[i],
 			metaNodeURL, fmt.Sprintf("%s:%d", m.localAddr, m.listen))
-		data, err := util.PostToNode(nil, masterURL)
+		data, err = util.PostToNode(nil, masterURL)
 		if err != nil {
 			log.LogErrorf("connect master: %s", err.Error())
 			time.Sleep(3 * time.Second)
