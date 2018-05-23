@@ -23,7 +23,8 @@ type testConfig struct {
 var TestAddresses = make(map[uint64]string)
 
 type testSM struct {
-	dir string
+	dir   string
+	stopc chan struct{}
 }
 
 type TestFsm struct {
@@ -96,6 +97,7 @@ func main() {
 		testCfg    testConfig
 		testFsm    TestFsm
 		raftCfg    Config
+		testParam  testSM
 	)
 
 	log.Println("Hello, Multi-raft")
@@ -137,11 +139,19 @@ func main() {
 
 		partitions[uint64(i)] = p
 
-		log.Println("==========new partition %d\n", i)
+		log.Println("==========new partition ", i)
 
 		if err != nil {
 			log.Fatal("create partition fail", err)
 			return
+		}
+	}
+
+	for {
+		select {
+		case <-testParam.stopc:
+			return
+		default:
 		}
 	}
 }
