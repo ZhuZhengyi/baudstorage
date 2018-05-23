@@ -142,30 +142,36 @@ func (m *MetaNode) stopMetaManager() {
 }
 
 func (m *MetaNode) validNodeID() (err error) {
-	// Register and Get NodeID
-	if m.masterAddrs == "" {
-		err = errors.New("masterAddrs is empty")
+	for {
+		// Register and Get NodeID
+		if m.masterAddrs == "" {
+			err = errors.New("masterAddrs is empty")
+			return
+		}
+		mAddrSlice := strings.Split(m.masterAddrs, ";")
+		rand.Seed(time.Now().Unix())
+		i := rand.Intn(len(mAddrSlice))
+		m.localAddr, err = util.GetLocalIP()
+		if err != nil {
+			return
+		}
+		masterURL := fmt.Sprintf("http://%s/%s?addr=%s", mAddrSlice[i],
+			metaNodeURL, fmt.Sprintf("%s:%d", m.localAddr, m.listen))
+		data, err := util.PostToNode(nil, masterURL)
+		if err != nil {
+			log.LogErrorf("connect master: %s", err.Error())
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		node := &proto.RegisterMetaNodeResp{}
+		if err = json.Unmarshal(data, node); err != nil {
+			log.LogErrorf("connect master: %s", err.Error())
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		m.nodeId = node.ID
 		return
 	}
-	mAddrSlice := strings.Split(m.masterAddrs, ";")
-	rand.Seed(time.Now().Unix())
-	i := rand.Intn(len(mAddrSlice))
-	m.localAddr, err = util.GetLocalIP()
-	if err != nil {
-		return
-	}
-	masterURL := fmt.Sprintf("http://%s/%s?addr=%s", mAddrSlice[i],
-		metaNodeURL, fmt.Sprintf("%s:%d", m.localAddr, m.listen))
-	data, err := util.PostToNode(nil, masterURL)
-	if err != nil {
-		return
-	}
-	node := &proto.RegisterMetaNodeResp{}
-	if err = json.Unmarshal(data, node); err != nil {
-		return
-	}
-	m.nodeId = node.ID
-	return
 }
 
 // NewServer create an new MetaNode instance.
