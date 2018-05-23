@@ -384,7 +384,7 @@ func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHea
 	log.LogDebug(logMsg)
 	metaNode.setNodeAlive()
 	metaNode.metaRangeInfos = resp.MetaPartitionInfo
-	threshold = metaNode.Used/metaNode.Total < DefaultMetaPartitionThreshold
+	threshold = float32(metaNode.Used/metaNode.Total) < DefaultMetaPartitionThreshold
 	c.UpdateMetaNode(metaNode, threshold)
 	metaNode.metaRangeCount = len(metaNode.metaRangeInfos)
 	metaNode.metaRangeInfos = nil

@@ -107,7 +107,8 @@ func (c *Cluster) submit(metadata *Metadata) (err error) {
 	if err != nil {
 		return
 	}
-	if _, err := c.partition.Submit(cmd); err != nil {
+	if _, err = c.partition.Submit(cmd); err != nil {
+		err = fmt.Errorf("action[metadata_submit] err:%v", err.Error())
 		return
 	}
 	return
@@ -311,6 +312,7 @@ func (c *Cluster) loadMetaNodes() (err error) {
 		encodedKey := it.Key()
 		nodeID, addr, err := c.decodeMetaNodeKey(string(encodedKey.Data()))
 		if err != nil {
+			err = fmt.Errorf("action[loadMetaNodes] err:%v", err.Error())
 			return
 		}
 		metaNode := NewMetaNode(addr)
@@ -334,6 +336,7 @@ func (c *Cluster) loadNamespaces() (err error) {
 		encodedKey := it.Key()
 		_, nsName, replicaNum, err := c.decodeNamespaceKey(string(encodedKey.Data()))
 		if err != nil {
+			err = fmt.Errorf("action[loadNamespaces] err:%v", err.Error())
 			return
 		}
 		ns := NewNameSpace(nsName, replicaNum)
@@ -358,6 +361,7 @@ func (c *Cluster) loadMetaPartitions() (err error) {
 		_, nsName := c.decodeMetaPartitionKey(string(encodedKey.Data()))
 		ns, err := c.getNamespace(nsName)
 		if err != nil {
+			err = fmt.Errorf("action[loadMetaPartitions] err:%v", err.Error())
 			return
 		}
 		mpv := &MetaPartitionValue{}
@@ -389,6 +393,7 @@ func (c *Cluster) loadVolGroups() (err error) {
 		_, nsName := c.decodeVolGroupKey(string(encodedKey.Data()))
 		ns, err := c.getNamespace(nsName)
 		if err != nil {
+			err = fmt.Errorf("action[loadVolGroups] err:%v", err.Error())
 			return
 		}
 		vgv := &VolGroupValue{}
