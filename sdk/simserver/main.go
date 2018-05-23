@@ -62,6 +62,7 @@ type Inode struct {
 	sync.RWMutex
 	ino     uint64
 	mode    uint32
+	size    uint32
 	extents []proto.ExtentKey
 	dents   map[string]*Dentry
 }
@@ -269,7 +270,7 @@ func (m *MetaServer) handleCreateInode(conn net.Conn, p *proto.Packet) error {
 	}
 
 	inode = NewInode(ino, req.Mode)
-	resp.Info = NewInodeInfo(ino, req.Mode)
+	resp.Info = NewInodeInfo(ino, req.Mode, 0)
 
 	data, err = json.Marshal(resp)
 	if err != nil {
@@ -458,7 +459,7 @@ func (m *MetaServer) handleInodeGet(conn net.Conn, p *proto.Packet) error {
 		goto out
 	}
 
-	resp.Info = NewInodeInfo(inode.ino, inode.mode)
+	resp.Info = NewInodeInfo(inode.ino, inode.mode, inode.size)
 	if data, err = json.Marshal(resp); err != nil {
 		log.Println(err)
 		p.ResultCode = proto.OpErr
@@ -475,6 +476,7 @@ out:
 
 func (m *MetaServer) handleAppendExtentKey(conn net.Conn, p *proto.Packet) error {
 	var data []byte
+	var cnt int
 
 	req := &proto.AppendExtentKeyRequest{}
 	err := json.Unmarshal(p.Data, req)
@@ -483,6 +485,7 @@ func (m *MetaServer) handleAppendExtentKey(conn net.Conn, p *proto.Packet) error
 		return err
 	}
 
+	log.Println("handleAppendExtentKey: ", *req)
 	inode := m.getInode(req.Inode)
 	if inode == nil {
 		p.ResultCode = proto.OpNotExistErr
@@ -490,7 +493,23 @@ func (m *MetaServer) handleAppendExtentKey(conn net.Conn, p *proto.Packet) error
 	}
 
 	inode.Lock()
-	inode.extents = append(inode.extents, req.Extent)
+	cnt = len(inode.extents)
+	if cnt <= 0 {
+		inode.extents = append(inode.extents, req.Extent)
+		inode.size = req.Extent.Size
+	} else {
+		ek := inode.extents[cnt-1]
+		if ek.VolId != req.Extent.VolId || ek.ExtentId != req.Extent.ExtentId {
+			inode.extents = append(inode.extents, req.Extent)
+			inode.size += req.Extent.Size
+		} else {
+			if req.Extent.Size > ek.Size {
+				inode.extents = append(inode.extents[:cnt-1], req.Extent)
+				inode.size += (req.Extent.Size - ek.Size)
+			}
+		}
+	}
+	log.Println("handleAppendExtentKey: size = ", inode.size)
 	inode.Unlock()
 	p.ResultCode = proto.OpOk
 
@@ -535,11 +554,11 @@ out:
 	return err
 }
 
-func NewInodeInfo(ino uint64, mode uint32) *proto.InodeInfo {
+func NewInodeInfo(ino uint64, mode, size uint32) *proto.InodeInfo {
 	return &proto.InodeInfo{
 		Inode:      ino,
 		Mode:       mode,
-		Size:       0,
+		Size:       uint64(size),
 		ModifyTime: time.Now(),
 		AccessTime: time.Now(),
 		CreateTime: time.Now(),

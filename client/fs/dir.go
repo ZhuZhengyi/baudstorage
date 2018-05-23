@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"log"
 	"syscall"
 
 	"bazil.org/fuse"
@@ -38,11 +39,17 @@ func NewDir(s *Super, p *Dir) *Dir {
 }
 
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
+	log.Printf("Dir Attr: ino(%v)", d.inode.ino)
+	err := d.super.InodeGet(d.inode.ino, &d.inode)
+	if err != nil {
+		return ParseError(err)
+	}
 	fillAttr(a, d)
 	return nil
 }
 
 func (d *Dir) Create(ctx context.Context, req *fuse.CreateRequest, resp *fuse.CreateResponse) (fs.Node, fs.Handle, error) {
+	log.Printf("Dir Create: ino(%v) name(%v)", d.inode.ino, req.Name)
 	info, err := d.super.mw.Create_ll(d.inode.ino, req.Name, ModeRegular)
 	if err != nil {
 		return nil, nil, ParseError(err)
@@ -52,6 +59,7 @@ func (d *Dir) Create(ctx context.Context, req *fuse.CreateRequest, resp *fuse.Cr
 	fillInode(&child.inode, info)
 	resp.Node = fuse.NodeID(child.inode.ino)
 	fillAttr(&resp.Attr, child)
+	d.super.ec.Open(child.inode.ino)
 	return child, child, nil
 }
 
@@ -59,6 +67,7 @@ func (d *Dir) Forget() {
 }
 
 func (d *Dir) Mkdir(ctx context.Context, req *fuse.MkdirRequest) (fs.Node, error) {
+	log.Printf("Dir Mkdir: ino(%v) name(%v)", d.inode.ino, req.Name)
 	info, err := d.super.mw.Create_ll(d.inode.ino, req.Name, ModeDir)
 	if err != nil {
 		return nil, ParseError(err)
@@ -70,6 +79,7 @@ func (d *Dir) Mkdir(ctx context.Context, req *fuse.MkdirRequest) (fs.Node, error
 }
 
 func (d *Dir) Remove(ctx context.Context, req *fuse.RemoveRequest) error {
+	log.Printf("Dir Remove: ino(%v) name(%v)", d.inode.ino, req.Name)
 	err := d.super.mw.Delete_ll(d.inode.ino, req.Name)
 	if err != nil {
 		return ParseError(err)
@@ -82,6 +92,7 @@ func (d *Dir) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
 }
 
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
+	log.Printf("Dir Lookup: ino(%v) name(%v)", d.inode.ino, req.Name)
 	ino, mode, err := d.super.mw.Lookup_ll(d.inode.ino, req.Name)
 	if err != nil {
 		return nil, ParseError(err)
@@ -105,10 +116,12 @@ func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	}
 	resp.Node = fuse.NodeID(ino)
 	fillAttr(&resp.Attr, child)
+	resp.EntryValid = LookupValidDuration
 	return child, nil
 }
 
 func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
+	log.Printf("Dir Readdir: ino(%v)\n", d.inode.ino)
 	dirents := make([]fuse.Dirent, 0)
 	children, err := d.super.mw.ReadDir_ll(d.inode.ino)
 	if err != nil {

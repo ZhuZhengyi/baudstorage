@@ -2,6 +2,7 @@ package fs
 
 import (
 	"syscall"
+	"time"
 
 	"bazil.org/fuse"
 
@@ -24,6 +25,11 @@ const (
 const (
 	ModeRegular = proto.ModeRegular
 	ModeDir     = proto.ModeDir
+)
+
+const (
+	LookupValidDuration = 0 * time.Second
+	AttrValidDuration   = 0 * time.Second
 )
 
 func ParseError(err error) fuse.Errno {

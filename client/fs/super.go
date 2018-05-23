@@ -2,6 +2,7 @@ package fs
 
 import (
 	"log"
+	"path"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
@@ -23,18 +24,20 @@ var (
 	_ fs.FSStatfser = (*Super)(nil)
 )
 
-func NewSuper(namespace, master string) (s *Super, err error) {
+func NewSuper(namespace, master, logpath string) (s *Super, err error) {
 	s = new(Super)
 	s.mw, err = meta.NewMetaWrapper(namespace, master)
 	if err != nil {
 		return nil, err
 	}
 	s.name = namespace
-	s.ec, err = stream.NewExtentClient("/tmp", master, s.mw.AppendExtentKey, s.mw.GetExtents)
+
+	//FIXME:
+	//s.ec, err = stream.NewExtentClient(path.Join(logpath, "extentclient"), master, s.mw.AppendExtentKey, s.mw.GetExtents)
+	s.ec, err = stream.NewExtentClient(path.Join(logpath, "extentclient"), "localhost:7778", s.mw.AppendExtentKey, s.mw.GetExtents)
 	if err != nil {
 		log.Printf("NewExtentClient failed! %v", err.Error())
-		//FIXME
-		//return nil, err
+		return nil, err
 	}
 	return s, nil
 }

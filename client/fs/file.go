@@ -1,6 +1,8 @@
 package fs
 
 import (
+	"log"
+
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"golang.org/x/net/context"
@@ -36,6 +38,11 @@ func NewFile(s *Super, p *Dir) *File {
 }
 
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
+	log.Printf("Attr: ino(%v)", f.inode.ino)
+	err := f.super.InodeGet(f.inode.ino, &f.inode)
+	if err != nil {
+		return ParseError(err)
+	}
 	fillAttr(a, f)
 	return nil
 }
@@ -44,28 +51,60 @@ func (f *File) Forget() {
 }
 
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
-	if req.Dir {
-		return nil, fuse.EPERM
-	}
+	log.Printf("Open: ino(%v)", f.inode.ino)
+	f.super.ec.Open(f.inode.ino)
 	return f, nil
 }
 
 func (f *File) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
+	log.Printf("Close: ino(%v)", f.inode.ino)
+	err := f.super.ec.Close(f.inode.ino)
+	if err != nil {
+		log.Printf("Close returns error (%v)", err.Error())
+		return fuse.EIO
+	}
 	return nil
 }
 
 func (f *File) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
+	log.Printf("Read: HandleID(%v) sizeof Data(%v) offset(%v) size(%v) \n", req.Handle, len(resp.Data), req.Offset, req.Size)
+
+	//	data := make([]byte, req.Size)
+	//	size, err := f.super.ec.Read(f.inode.ino, data, int(req.Offset), req.Size)
+	//	if err != nil {
+	//		log.Printf("Read error: (%v) size(%v) data(%v)", err.Error(), size, string(data))
+	//		return nil
+	//	}
 	return nil
 }
 
 func (f *File) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
+	log.Printf("Write: ino(%v) HandleID(%v) offset(%v) data(%v)\n", f.inode.ino, req.Handle, req.Offset, req.Data)
+	size, err := f.super.ec.Write(f.inode.ino, req.Data)
+	if err != nil {
+		log.Printf("Write returns error (%v)", err.Error())
+		return fuse.EIO
+	}
+	resp.Size = size
 	return nil
 }
 
 func (f *File) Flush(ctx context.Context, req *fuse.FlushRequest) error {
+	log.Printf("Flush: ino(%v) HandleID(%v)\n", f.inode.ino, req.Handle)
+	err := f.super.ec.Flush(f.inode.ino)
+	if err != nil {
+		log.Printf("Flush error (%v)", err.Error())
+		return fuse.EIO
+	}
 	return nil
 }
 
 func (f *File) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
+	log.Printf("Fsync: ino(%v) HandleID(%v)\n", f.inode.ino, req.Handle)
+	err := f.super.ec.Flush(f.inode.ino)
+	if err != nil {
+		log.Printf("Flush error (%v)", err.Error())
+		return fuse.EIO
+	}
 	return nil
 }

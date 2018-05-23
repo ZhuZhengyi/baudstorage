@@ -159,10 +159,13 @@ func (client *ExtentClient) Close(inode uint64) (err error) {
 	if inodeReferCnt != 0 {
 		return
 	}
-	err = streamWriter.close()
-	client.writerLock.Lock()
-	delete(client.writers, inode)
-	client.writerLock.Unlock()
+
+	if streamWriter != nil {
+		err = streamWriter.close()
+		client.writerLock.Lock()
+		delete(client.writers, inode)
+		client.writerLock.Unlock()
+	}
 
 	client.readerLock.RLock()
 	streamReader := client.readers[inode]
