@@ -386,6 +386,7 @@ func NewLog(dir, module string, level int) (*Log, error) {
 		if err != os.ErrNotExist {
 			return nil, err
 		}
+		err = nil
 		os.MkdirAll(dir, 0655)
 	}
 	if !fi.IsDir() {
