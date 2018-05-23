@@ -45,19 +45,19 @@ func (rs *RocksDBStore) Del(key interface{}) (result interface{}, err error) {
 	wo := gorocksdb.NewDefaultWriteOptions()
 	wb := gorocksdb.NewWriteBatch()
 	defer wb.Clear()
-	slice, err := rs.db.Get(ro, key.([]byte))
+	slice, err := rs.db.Get(ro, []byte(key.(string)))
 	if err != nil {
 		return
 	}
 	result = slice.Data()
-	err = rs.db.Delete(wo, key.([]byte))
+	err = rs.db.Delete(wo, []byte(key.(string)))
 	return
 }
 
 func (rs *RocksDBStore) Put(key, value interface{}) (result interface{}, err error) {
 	wo := gorocksdb.NewDefaultWriteOptions()
 	wb := gorocksdb.NewWriteBatch()
-	wb.Put(key.([]byte), value.([]byte))
+	wb.Put([]byte(key.(string)), value.([]byte))
 	if err := rs.db.Write(wo, wb); err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (rs *RocksDBStore) Put(key, value interface{}) (result interface{}, err err
 func (rs *RocksDBStore) Get(key interface{}) (result interface{}, err error) {
 	ro := gorocksdb.NewDefaultReadOptions()
 	ro.SetFillCache(false)
-	return rs.db.GetBytes(ro, key.([]byte))
+	return rs.db.GetBytes(ro, []byte(key.(string)))
 }
 
 func (rs *RocksDBStore) BatchPut(cmdMap map[string][]byte) error {
