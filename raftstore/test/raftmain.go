@@ -66,7 +66,7 @@ func (cfg *testConfig) parsePeers(peerStr string) error {
 	peerArr := strings.Split(peerStr, ",")
 	cfg.peerAddrs = peerArr
 	for _, peerAddr := range peerArr {
-		id, ip, _, err := parsePeerAddr(peerAddr)
+		id, ip, err := parsePeerAddr(peerAddr)
 		if err != nil {
 			return err
 		}
@@ -76,16 +76,13 @@ func (cfg *testConfig) parsePeers(peerStr string) error {
 	return nil
 }
 
-func parsePeerAddr(peerAddr string) (id uint64, ip string, port uint64, err error) {
+func parsePeerAddr(peerAddr string) (id uint64, ip string, err error) {
 	peerStr := strings.Split(peerAddr, ":")
 	id, err = strconv.ParseUint(peerStr[0], 10, 64)
 	if err != nil {
 		return
 	}
-	port, err = strconv.ParseUint(peerStr[2], 10, 64)
-	if err != nil {
-		return
-	}
+
 	ip = peerStr[1]
 	return
 }
