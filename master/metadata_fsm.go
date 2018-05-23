@@ -21,7 +21,6 @@ type RaftPeerChangeHandler func(confChange *proto.ConfChange) (err error)
 
 type RaftCmdApplyHandler func(cmd *Metadata) (err error)
 
-type RaftRestoreHandler func()
 
 type RaftApplySnapshotHandler func() (err error)
 
@@ -31,7 +30,6 @@ type MetadataFsm struct {
 	leaderChangeHandler  RaftLeaderChangeHandler
 	peerChangeHandler    RaftPeerChangeHandler
 	applyHandler         RaftCmdApplyHandler
-	restoreHandler       RaftRestoreHandler
 	applySnapshotHandler RaftApplySnapshotHandler
 }
 
@@ -52,9 +50,6 @@ func (mf *MetadataFsm) RegisterPeerChangeHandler(handler RaftPeerChangeHandler) 
 func (mf *MetadataFsm) RegisterApplyHandler(handler RaftCmdApplyHandler) {
 	mf.applyHandler = handler
 }
-func (mf *MetadataFsm) RegisterRestoreHandler(handler RaftRestoreHandler) {
-	mf.restoreHandler = handler
-}
 
 func (mf *MetadataFsm) RegisterApplySnapshotHandler(handler RaftApplySnapshotHandler) {
 	mf.applySnapshotHandler = handler
@@ -62,7 +57,6 @@ func (mf *MetadataFsm) RegisterApplySnapshotHandler(handler RaftApplySnapshotHan
 
 func (mf *MetadataFsm) restore() {
 	mf.restoreApplied()
-	mf.restoreHandler()
 }
 
 func (mf *MetadataFsm) restoreApplied() {

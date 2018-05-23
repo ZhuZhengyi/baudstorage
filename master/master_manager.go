@@ -36,10 +36,6 @@ func (m *Master) handleApply(cmd *Metadata) (err error) {
 	return m.cluster.handleApply(cmd)
 }
 
-func (m *Master) handleRestore() {
-	m.cluster.idAlloc.restore()
-}
-
 func (m *Master) handlerApplySnapshot() {
 	m.cluster.namespaces = make(map[string]*NameSpace)
 	m.fsm.restore()
@@ -47,7 +43,13 @@ func (m *Master) handlerApplySnapshot() {
 	return
 }
 
+func (m *Master) restoreIDAlloc() {
+	 m.cluster.idAlloc.restore()
+}
+
 func (m *Master) loadMetadata() {
+
+	m.restoreIDAlloc()
 	if err := m.cluster.loadDataNodes(); err != nil {
 		panic(err)
 	}
