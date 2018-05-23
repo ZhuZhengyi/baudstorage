@@ -1,12 +1,15 @@
 package datanode
 
 const (
-	StateReady uint32 = iota
-	StateRunning
+	Standby  uint32 = iota
+	Start
+	Running
+	Shutdown
+	Stopped
 )
 
 const (
-	RequstChanSize = 10240
+	RequestChanSize = 10240
 )
 
 const ChooseDiskTimes = 3

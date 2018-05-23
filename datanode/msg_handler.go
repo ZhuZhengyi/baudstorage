@@ -26,9 +26,9 @@ type MessageHandler struct {
 func NewMsgHandler(inConn *net.TCPConn) *MessageHandler {
 	m := new(MessageHandler)
 	m.sentList = list.New()
-	m.handleCh = make(chan struct{}, RequstChanSize)
-	m.requestCh = make(chan *Packet, RequstChanSize)
-	m.replyCh = make(chan *Packet, RequstChanSize)
+	m.handleCh = make(chan struct{}, RequestChanSize)
+	m.requestCh = make(chan *Packet, RequestChanSize)
+	m.replyCh = make(chan *Packet, RequestChanSize)
 	m.exitCh = make(chan bool, 100)
 	m.inConn = inConn
 

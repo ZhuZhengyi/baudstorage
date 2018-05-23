@@ -47,8 +47,8 @@ func main() {
 	log.Println("Hello, Containerfs")
 	flag.Parse()
 	cfg := config.LoadConfigFile(*configFile)
-	role := cfg.GetString("role")
-	profPort := cfg.GetString("prof")
+	role := cfg.GetString("Role")
+	profPort := cfg.GetString("Prof")
 
 	//for multi-cpu scheduling
 	runtime.GOMAXPROCS(runtime.NumCPU())
