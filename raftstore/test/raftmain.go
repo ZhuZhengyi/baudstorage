@@ -98,12 +98,13 @@ func main() {
 		raftCfg    Config
 	)
 
-	log.Println("Hello, Containerfs")
+	log.Println("Hello, Multi-raft")
 	flag.Parse()
 	cfg := config.LoadConfigFile(*configFile)
 
 	peerAddrs := cfg.GetString("peers")
 	if err = testCfg.parsePeers(peerAddrs); err != nil {
+		log.Fatal("parse peers fail", err)
 		return
 	}
 
@@ -113,6 +114,7 @@ func main() {
 	raftCfg.WalPath = path.Join("wal", strconv.FormatUint(raftCfg.NodeID, 10))
 	raftServer, err := NewRaftStore(&raftCfg)
 	if err != nil {
+		log.Fatal("new raft store fail", err)
 		return
 	}
 
@@ -120,7 +122,7 @@ func main() {
 		raftServer.AddNode(uint64(id), peer)
 	}
 
-	fmt.Printf("================new raft store \n")
+	log.Println("================new raft store")
 
 	for i := 1; i <= 5; i++ {
 		partitionCfg := &PartitionConfig{
@@ -134,9 +136,10 @@ func main() {
 
 		partitions[uint64(i)] = p
 
-		fmt.Printf("==========new partition %d\n", i)
+		log.Println("==========new partition %d\n", i)
 
 		if err != nil {
+			log.Fatal("create partition fail", err)
 			return
 		}
 	}
