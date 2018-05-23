@@ -28,11 +28,11 @@ func (sk *StreamKey) UnMarshal(data []byte) {
 func (sk *StreamKey) Put(k ExtentKey) {
 	sk.Lock()
 	defer sk.Unlock()
-	if len(sk.Extents)==0{
-		sk.Extents=append(sk.Extents,k)
+	if len(sk.Extents) == 0 {
+		sk.Extents = append(sk.Extents, k)
 		return
 	}
-	lastIndex:=len(sk.Extents)-1
+	lastIndex := len(sk.Extents) - 1
 	lastKey := sk.Extents[lastIndex]
 	if lastKey.VolId == k.VolId && lastKey.ExtentId == k.ExtentId {
 		if k.Size > lastKey.Size {
@@ -42,13 +42,13 @@ func (sk *StreamKey) Put(k ExtentKey) {
 		return
 	}
 	var haveFileSize uint32
-	for index,ek:=range sk.Extents{
-		if index!=lastIndex && ek.VolId == k.VolId && ek.ExtentId == k.ExtentId{
-			haveFileSize+=ek.Size
+	for index, ek := range sk.Extents {
+		if index != lastIndex && ek.VolId == k.VolId && ek.ExtentId == k.ExtentId {
+			haveFileSize += ek.Size
 		}
 	}
-	k.Size=k.Size-haveFileSize
-	sk.Extents=append(sk.Extents,k)
+	k.Size = k.Size - haveFileSize
+	sk.Extents = append(sk.Extents, k)
 
 	return
 }

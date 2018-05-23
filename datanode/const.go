@@ -1,7 +1,7 @@
 package datanode
 
 const (
-	Standby  uint32 = iota
+	Standby uint32 = iota
 	Start
 	Running
 	Shutdown

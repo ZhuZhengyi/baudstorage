@@ -1,13 +1,12 @@
-package cmd
+package main
 
 import (
-	datanode "github.com/tiglabs/baudstorage/datanode"
-	master "github.com/tiglabs/baudstorage/master"
-	metanode "github.com/tiglabs/baudstorage/metanode"
+	"github.com/tiglabs/baudstorage/datanode"
+	"github.com/tiglabs/baudstorage/master"
+	"github.com/tiglabs/baudstorage/metanode"
 
 	"flag"
 	"log"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -19,6 +18,16 @@ import (
 
 const (
 	Version = "0.1"
+)
+
+const (
+	ConfigKeyRole = "role"
+)
+
+const (
+	RoleMastrer = "master"
+	RoleMeta    = "metanode"
+	RoleData    = "datanode"
 )
 
 var (
@@ -47,25 +56,19 @@ func main() {
 	log.Println("Hello, Containerfs")
 	flag.Parse()
 	cfg := config.LoadConfigFile(*configFile)
-	role := cfg.GetString("Role")
-	profPort := cfg.GetString("Prof")
+	role := cfg.GetString(ConfigKeyRole)
 
 	//for multi-cpu scheduling
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	//init profile server
-	go func() {
-		log.Println(http.ListenAndServe(":"+profPort, nil))
-	}()
-
 	var server Server
 
 	switch role {
-	case "metanode":
+	case RoleMeta:
 		server = metanode.NewServer()
-	case "master":
+	case RoleMastrer:
 		server = master.NewServer()
-	case "datanode":
+	case RoleData:
 		server = datanode.NewServer()
 	default:
 		log.Println("Fatal: unmath role: ", role)

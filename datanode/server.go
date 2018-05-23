@@ -38,13 +38,13 @@ const (
 )
 
 const (
-	ConfigKeyPort       = "Port"       // int
-	ConfigKeyClusterID  = "ClusterID"  // string
-	ConfigKeyLogDir     = "LogDir"     // string
-	ConfigKeyMasterAddr = "MasterAddr" // array
-	ConfigKeyRack       = "Rack"       // string
-	ConfigKeyProfPort   = "ProfPort"   // int
-	ConfigKeyDisks      = "Disks"      // array
+	ConfigKeyPort       = "port"       // int
+	ConfigKeyClusterID  = "clusterID"  // string
+	ConfigKeyLogDir     = "logDir"     // string
+	ConfigKeyMasterAddr = "masterAddr" // array
+	ConfigKeyRack       = "rack"       // string
+	ConfigKeyProfPort   = "profPort"   // int
+	ConfigKeyDisks      = "disks"      // array
 )
 
 type DataNode struct {
@@ -113,7 +113,7 @@ func (s *DataNode) onShutdown() {
 }
 
 func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
-	s.port = int(cfg.GetInt(ConfigKeyPort))
+	s.port = int(cfg.GetFloat(ConfigKeyPort))
 	s.clusterId = cfg.GetString(ConfigKeyClusterID)
 	s.logDir = cfg.GetString(ConfigKeyLogDir)
 	for _, ip := range cfg.GetArray(ConfigKeyMasterAddr) {
@@ -125,7 +125,7 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	if err = s.getIpFromMaster(); err != nil {
 		return
 	}
-	s.profPort = int(cfg.GetInt(ConfigKeyProfPort))
+	s.profPort = int(cfg.GetFloat(ConfigKeyProfPort))
 	s.space = NewSpaceManager(s.rackName)
 
 	if err != nil || s.port == 0 || s.logDir == "" ||
