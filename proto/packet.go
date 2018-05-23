@@ -297,7 +297,7 @@ func (p *Packet) ReadFromConn(c net.Conn, deadlineTime time.Duration) (err error
 		return
 	}
 	size := p.Size
-	if (p.Opcode == OpRead || p.Opcode == OpStreamRead) && p.ResultCode!=OpOk {
+	if (p.Opcode == OpRead || p.Opcode == OpStreamRead) && p.ResultCode != OpOk {
 		size = 0
 	}
 	return ReadFull(c, &p.Data, int(size))

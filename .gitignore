@@ -15,6 +15,4 @@
 
 # Dependencies
 vendor/
-Gopkg.lock
-Gopkg.toml
 
