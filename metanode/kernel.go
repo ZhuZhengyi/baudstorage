@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
-	"strings"
 )
 
 // Dentry wraps necessary properties of `Dentry` information in file system.
@@ -88,7 +88,7 @@ type Inode struct {
 	CreateTime int64
 	AccessTime int64
 	ModifyTime int64
-	Extents    []proto.ExtentKey
+	Extents    *proto.StreamKey
 }
 
 // Dump Inode item to bytes.
@@ -111,6 +111,7 @@ func NewInode(ino uint64, t uint32) *Inode {
 		CreateTime: ts,
 		AccessTime: ts,
 		ModifyTime: ts,
+		Extents:    proto.NewStreamKey(ino),
 	}
 }
 
@@ -148,9 +149,10 @@ func (i *Inode) GetValue() (m string) {
 	s := fmt.Sprintf("%d*%d*%d*%d*%d", i.Type, i.Size, i.CreateTime, i.AccessTime, i.ModifyTime)
 	var exts []string
 	exts = append(exts, s)
-	for _, ext := range i.Extents {
-		exts = append(exts, ext.Marshal())
-	}
+	i.Extents.Range(func(i int, v proto.ExtentKey) bool {
+		exts = append(exts, v.Marshal())
+		return true
+	})
 	s = strings.Join(exts, "*")
 	return s
 }
@@ -196,14 +198,11 @@ func (i *Inode) ParseValueBytes(val []byte) (err error) {
 		if err = ext.UnMarshal(value); err != nil {
 			return
 		}
-		i.Extents = append(i.Extents, ext)
+		i.Extents.Put(ext)
 	}
 	return
 }
 
-func (i *Inode) AppendExtents(exts []proto.ExtentKey) {
-	i.Extents = append(i.Extents, exts...)
-	for _, ext := range exts {
-		i.Size += uint64(ext.Size)
-	}
+func (i *Inode) AppendExtents(ext proto.ExtentKey) {
+	i.Extents.Put(ext)
 }

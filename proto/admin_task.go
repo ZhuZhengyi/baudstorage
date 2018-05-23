@@ -31,7 +31,6 @@ type AdminTask struct {
 	Response     interface{}
 }
 
-
 func (t *AdminTask) ToString() (msg string) {
 	msg = fmt.Sprintf("FileIdId[%v] Status[%d] LastSendTime[%v]  SendCount[%v] ",
 		t.ID, t.Status, t.SendTime, t.SendCount)

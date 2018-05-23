@@ -2,56 +2,56 @@ package metanode
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/raftstore"
-	"github.com/tiglabs/baudstorage/util"
-	"github.com/tiglabs/baudstorage/util/config"
-	"github.com/tiglabs/baudstorage/util/log"
-	"github.com/tiglabs/baudstorage/util/pool"
 	"math/rand"
 	"net"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/raftstore"
+	"github.com/tiglabs/baudstorage/util"
+	"github.com/tiglabs/baudstorage/util/config"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 // Configuration keys
 const (
-	cfgListen     = "listen"
-	cfgLogDir     = "logDir"
-	cfgMetaDir    = "metaDir"
-	cfgRaftDir    = "raftDir"
-	cfgMasterAddr = "masterAddrs"
+	cfgListen      = "listen"
+	cfgLogDir      = "logDir"
+	cfgMetaDir     = "metaDir"
+	cfgRaftDir     = "raftDir"
+	cfgMasterAddrs = "masterAddrs"
 )
 
 const (
+	moduleName  = "MetaNode"
 	metaNodeURL = "metaNode/add"
 )
 
 // The MetaNode manage Dentry and Inode information in multiple metaPartition, and
-// through the Raft algorithm and other MetaNodes in the RageGroup for reliable
+// through the RaftStore algorithm and other MetaNodes in the RageGroup for reliable
 // data synchronization to maintain data consistency within the MetaGroup.
 type MetaNode struct {
 	nodeId      uint64
 	listen      int
 	metaDir     string //metaNode store root dir
 	logDir      string
-	raftDir     string //raft log store base dir
-	masterAddr  string
-	proxyPool   *pool.ConnPool
+	raftDir     string //raftStore log store base dir
+	masterAddrs string
 	metaManager MetaManager
+	localAddr   string
 	raftStore   raftstore.RaftStore
 	httpStopC   chan uint8
-	log         *log.Log
 	state       ServiceState
 	wg          sync.WaitGroup
 }
 
 // Start this MeteNode with specified configuration.
 //  1. Start and load each meta range from snapshot.
-//  2. Restore raft fsm of each meta range.
+//  2. Restore raftStore fsm of each meta range.
 //  3. Start tcp server and accept connection from master and clients.
 func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	// Parallel safe.
@@ -81,7 +81,7 @@ func (m *MetaNode) onStart(cfg *config.Config) (err error) {
 	if err = m.parseConfig(cfg); err != nil {
 		return
 	}
-	if m.log, err = log.NewLog(m.logDir, "MetaNode", log.DebugLevel); err != nil {
+	if _, err = log.NewLog(m.logDir, moduleName, log.DebugLevel); err != nil {
 		return
 	}
 	if err = m.validNodeID(); err != nil {
@@ -120,17 +120,18 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 	m.logDir = cfg.GetString(cfgLogDir)
 	m.metaDir = cfg.GetString(cfgMetaDir)
 	m.raftDir = cfg.GetString(cfgRaftDir)
-	m.masterAddr = cfg.GetString(cfgMasterAddr)
+	m.masterAddrs = cfg.GetString(cfgMasterAddrs)
 	return
 }
 
 func (m *MetaNode) startMetaManager() (err error) {
 	// Load metaManager
-	mmc := &MetaManagerConfig{
-		DataPath: m.metaDir,
-		Raft:     m.raftStore,
+	conf := MetaManagerConfig{
+		NodeID:    m.nodeId,
+		RootDir:   m.metaDir,
+		RaftStore: m.raftStore,
 	}
-	m.metaManager = NewMetaManager(mmc)
+	m.metaManager = NewMetaManager(conf)
 	err = m.metaManager.Start()
 	return
 }
@@ -143,23 +144,22 @@ func (m *MetaNode) stopMetaManager() {
 
 func (m *MetaNode) validNodeID() (err error) {
 	// Register and Get NodeID
-	if m.masterAddr == "" {
+	if m.masterAddrs == "" {
 		err = errors.New("masterAddrs is empty")
 		return
 	}
-	mAddrSlice := strings.Split(m.masterAddr, ";")
+	mAddrSlice := strings.Split(m.masterAddrs, ";")
 	rand.Seed(time.Now().Unix())
 	i := rand.Intn(len(mAddrSlice))
-	var localAddr string
 	conn, _ := net.DialTimeout("tcp", mAddrSlice[i], time.Second)
 	defer func() {
 		if conn != nil {
 			conn.Close()
 		}
 	}()
-	localAddr = strings.Split(conn.LocalAddr().String(), ":")[0]
+	m.localAddr = strings.Split(conn.LocalAddr().String(), ":")[0]
 	masterURL := fmt.Sprintf("http://%s/%s?addr=%s", mAddrSlice[i],
-		metaNodeURL, fmt.Sprintf("%s:%d", localAddr, m.listen))
+		metaNodeURL, fmt.Sprintf("%s:%d", m.localAddr, m.listen))
 	data, err := util.PostToNode(nil, masterURL)
 	if err != nil {
 		return

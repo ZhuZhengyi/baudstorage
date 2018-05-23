@@ -27,11 +27,9 @@ func Max(a, b int) int {
 	return b
 }
 
-
-
 func IP(val interface{}) bool {
 	ip4Pattern := `((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)`
-	ip4      := regexpCompile(ip4Pattern)
+	ip4 := regexpCompile(ip4Pattern)
 	return isMatch(ip4, val)
 }
 

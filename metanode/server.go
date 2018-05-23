@@ -41,7 +41,7 @@ func (m *MetaNode) stopServer() {
 	if m.httpStopC != nil {
 		defer func() {
 			if r := recover(); r != nil {
-				log.LogError("action[StopTcpServer],err:%v", r)
+				log.LogErrorf("action[StopTcpServer],err:%v", r)
 			}
 		}()
 		close(m.httpStopC)
@@ -79,11 +79,5 @@ func (m *MetaNode) servConn(conn net.Conn, stopC chan uint8) {
 func (m *MetaNode) handlePacket(conn net.Conn, p *Packet) (err error) {
 	// Handle request
 	err = m.metaManager.HandleMetaOperation(conn, p)
-	return
-}
-
-func (m *MetaNode) sendAcknowledge(conn net.Conn, p *Packet) (err error) {
-	p.PackOkReply()
-	err = p.WriteToConn(conn)
 	return
 }

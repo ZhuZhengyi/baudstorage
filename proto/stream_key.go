@@ -28,6 +28,10 @@ func (sk *StreamKey) UnMarshal(data []byte) {
 func (sk *StreamKey) Put(k ExtentKey) {
 	sk.Lock()
 	defer sk.Unlock()
+	if len(sk.Extents)==0{
+		sk.Extents=append(sk.Extents,k)
+		return
+	}
 	lastIndex:=len(sk.Extents)-1
 	lastKey := sk.Extents[lastIndex]
 	if lastKey.VolId == k.VolId && lastKey.ExtentId == k.ExtentId {

@@ -3,9 +3,11 @@ package metanode
 import (
 	"encoding/json"
 	"fmt"
+	"net"
+
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/util"
-	"net"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 const (
@@ -31,7 +33,10 @@ func (m *metaManager) respondToMaster(ip string, data interface{}) (err error) {
 		return
 	}
 	url := fmt.Sprintf("http://%s%s", ip, masterResponsePath)
-	util.PostToNode(jsonBytes, url)
+	_, err = util.PostToNode(jsonBytes, url)
+	if err != nil {
+		log.LogErrorf("response to master: %s", err.Error())
+	}
 	return
 }
 
@@ -50,5 +55,17 @@ func (m *metaManager) respondToClient(conn net.Conn, p *Packet) (err error) {
 	}()
 	// Process data and send reply though specified tcp connection.
 	err = p.WriteToConn(conn)
+	if err != nil {
+		log.LogErrorf("response to client: %s", err.Error())
+	}
 	return
+}
+
+func (m *metaManager) responseAckOKToMaster(conn net.Conn, p *Packet) {
+	go func() {
+		p.PackOkReply()
+		if err := p.WriteToConn(conn); err != nil {
+			log.LogErrorf("ack master response: %s", err.Error())
+		}
+	}()
 }

@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	ErrorUnknowOp = errors.New("unknow opcode")
+	ErrorUnknowOp = errors.New("unknown opcode")
 )
 
 func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
@@ -82,7 +82,7 @@ func (s *DataNode) createFile(pkg *Packet) {
 	var err error
 	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
-		err = errors.Annotatef(ErrStoreTypeUnmatch, " CreateFile only support ExtentMode Vol")
+		err = errors.Annotatef(ErrStoreTypeMismatch, " CreateFile only support ExtentMode Vol")
 	case proto.ExtentStoreMode:
 		err = pkg.vol.store.(*storage.ExtentStore).MarkDelete(pkg.FileID, pkg.Offset, int64(pkg.Size))
 	}
@@ -117,7 +117,7 @@ func (s *DataNode) createVol(pkg *Packet) {
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
-	_, err := s.PostToMaster(data, "/node/Repost")
+	_, err := s.postToMaster(data, "/node/Repost")
 	if err != nil {
 		err = errors.Annotatef(err, "create vol failed,volId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))
@@ -139,7 +139,7 @@ func (s *DataNode) heartBeats(pkg *Packet) {
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
-	_, err := s.PostToMaster(data, "/node/Repost")
+	_, err := s.postToMaster(data, "/node/Repost")
 	if err != nil {
 		err = errors.Annotatef(err, "heaerbeat to master[%v] failed", request.MasterAddr)
 		log.LogError(errors.ErrorStack(err))
@@ -167,7 +167,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
-	_, err := s.PostToMaster(data, "/node/Repost")
+	_, err := s.postToMaster(data, "/node/Repost")
 	if err != nil {
 		err = errors.Annotatef(err, "delete vol failed,volId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))
@@ -194,7 +194,7 @@ func (s *DataNode) loadVol(pkg *Packet) {
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
-	_, err := s.PostToMaster(data, "/node/Repost")
+	_, err := s.postToMaster(data, "/node/Repost")
 	if err != nil {
 		err = errors.Annotatef(err, "load vol failed,volId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))

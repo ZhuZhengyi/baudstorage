@@ -6,7 +6,7 @@ import "sync/atomic"
 type ServiceState = uint32
 
 const (
-	stateReady   ServiceState = iota
+	stateReady ServiceState = iota
 	stateRunning
 )
 

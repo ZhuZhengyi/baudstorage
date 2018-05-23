@@ -4,12 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"strings"
 	"testing"
-
-	"github.com/google/uuid"
 )
 
 const (
@@ -18,62 +15,66 @@ const (
 	TestHttpPort   = "9900"
 )
 
+const (
+	PartitionNotFound = 0
+)
+
 type testcase struct {
-	inode  uint64
-	result string
+	inode       uint64
+	partitionID uint64
 }
 
 var globalNV *NamespaceView
 
 var globalMP = []MetaPartition{
-	{"mp001", 1, 100, nil},
-	{"mp002", 101, 200, nil},
-	{"mp003", 210, 300, nil},
-	{"mp004", 301, 400, nil},
+	{1, 1, 100, nil, ""},
+	{2, 101, 200, nil, ""},
+	{3, 210, 300, nil, ""},
+	{4, 301, 400, nil, ""},
 }
 
 var globalTests = []testcase{
-	{1, "mp001"},
-	{100, "mp001"},
-	{101, "mp002"},
-	{200, "mp002"},
-	{201, ""},
-	{209, ""},
-	{210, "mp003"},
-	{220, "mp003"},
-	{300, "mp003"},
-	{301, "mp004"},
-	{400, "mp004"},
-	{401, ""},
-	{500, ""},
+	{1, 1},
+	{100, 1},
+	{101, 2},
+	{200, 2},
+	{201, PartitionNotFound},
+	{209, PartitionNotFound},
+	{210, 3},
+	{220, 3},
+	{300, 3},
+	{301, 4},
+	{400, 4},
+	{401, PartitionNotFound},
+	{500, PartitionNotFound},
 }
 
 var extraMP = []MetaPartition{
-	{"mp004", 320, 390, nil},
-	{"mp006", 600, 700, nil},
+	{4, 320, 390, nil, ""},
+	{6, 600, 700, nil, ""},
 }
 
 var extraTests = []testcase{
-	{301, ""},
-	{319, ""},
-	{320, "mp004"},
-	{390, "mp004"},
-	{391, ""},
-	{400, ""},
-	{599, ""},
-	{600, "mp006"},
-	{700, "mp006"},
-	{701, ""},
+	{301, PartitionNotFound},
+	{319, PartitionNotFound},
+	{320, 4},
+	{390, 4},
+	{391, PartitionNotFound},
+	{400, PartitionNotFound},
+	{599, PartitionNotFound},
+	{600, 6},
+	{700, 6},
+	{701, PartitionNotFound},
 }
 
 var getNextTests = []testcase{
-	{0, "mp001"},
-	{1, "mp002"},
-	{101, "mp003"},
-	{301, "mp004"},
-	{320, "mp006"},
-	{600, ""},
-	{700, ""},
+	{0, 1},
+	{1, 2},
+	{101, 3},
+	{301, 4},
+	{320, 6},
+	{600, PartitionNotFound},
+	{700, PartitionNotFound},
 }
 
 func init() {
@@ -102,21 +103,11 @@ func (nv *NamespaceView) update(partitions []MetaPartition) {
 	}
 }
 
-func newMetaPartition(id string, start, end uint64) *MetaPartition {
+func newMetaPartition(id, start, end uint64) *MetaPartition {
 	return &MetaPartition{
 		PartitionID: id,
 		Start:       start,
 		End:         end,
-	}
-}
-
-func (nv *NamespaceView) generateMetaPartitions(start, count int) {
-	for i := 0; i < count; i++ {
-		uuid := uuid.New()
-		end := start + rand.Intn(100) + 1
-		mp := newMetaPartition(uuid.String(), uint64(start), uint64(end))
-		nv.MetaPartitions = append(nv.MetaPartitions, mp)
-		start = end + rand.Intn(20) + 1
 	}
 }
 
@@ -219,19 +210,19 @@ func doTest(t *testing.T, mw *MetaWrapper, op int, tests []testcase) {
 		default:
 			mp = mw.getPartitionByInode(tc.inode)
 		}
-		if checkResult(mp, tc.result) != 0 {
+		if !checkResult(mp, tc.partitionID) {
 			t.Fatalf("inode = %v, %v", tc.inode, mp)
 		}
 		t.Logf("PASS: Finding inode = %v , %v", tc.inode, mp)
 	}
 }
 
-func checkResult(mp *MetaPartition, result string) int {
-	var toCompare string
+func checkResult(mp *MetaPartition, partitionID uint64) bool {
+	var toCompare uint64
 	if mp == nil {
-		toCompare = ""
+		toCompare = PartitionNotFound
 	} else {
 		toCompare = mp.PartitionID
 	}
-	return strings.Compare(toCompare, result)
+	return toCompare == partitionID
 }

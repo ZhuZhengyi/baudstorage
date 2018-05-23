@@ -6,8 +6,8 @@ import (
 
 // Constants for network port definition.
 const (
-	HeartbeatPort = 9901
-	ReplicatePort = 9902
+	HeartbeatPort = 5901
+	ReplicatePort = 5902
 )
 
 // Config defined necessary configuration properties for raft store.
