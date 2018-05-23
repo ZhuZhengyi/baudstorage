@@ -21,7 +21,6 @@ type RaftPeerChangeHandler func(confChange *proto.ConfChange) (err error)
 
 type RaftCmdApplyHandler func(cmd *Metadata) (err error)
 
-
 type RaftApplySnapshotHandler func() (err error)
 
 type MetadataFsm struct {

@@ -44,7 +44,7 @@ func (m *Master) handlerApplySnapshot() {
 }
 
 func (m *Master) restoreIDAlloc() {
-	 m.cluster.idAlloc.restore()
+	m.cluster.idAlloc.restore()
 }
 
 func (m *Master) loadMetadata() {
