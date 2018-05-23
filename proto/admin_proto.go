@@ -5,11 +5,6 @@ package proto
   or send command to datanode
 */
 
-const (
-	CmdFailed  = 0
-	CmdSuccess = 1
-)
-
 type RegisterMetaNodeResp struct {
 	ID uint64
 }

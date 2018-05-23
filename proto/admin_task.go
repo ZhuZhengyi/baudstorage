@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	TaskFail         = -1
+	TaskFail         = 2
 	TaskStart        = 0
 	TaskSuccess      = 1
 	ResponseInterval = 30
