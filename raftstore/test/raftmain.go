@@ -110,7 +110,8 @@ func main() {
 
 	partitions := make(map[uint64]Partition)
 
-	raftCfg.NodeID = uint64(cfg.GetInt("nodeid"))
+	nodeId := cfg.GetString("nodeid")
+	raftCfg.NodeID, _ = strconv.ParseUint(nodeId, 10, 10)
 	raftCfg.WalPath = path.Join("wal", strconv.FormatUint(raftCfg.NodeID, 10))
 	raftServer, err := NewRaftStore(&raftCfg)
 	if err != nil {
