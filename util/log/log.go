@@ -383,7 +383,10 @@ func NewLog(dir, module string, level int) (*Log, error) {
 	glog.module = module
 	fi, err := os.Stat(dir)
 	if err != nil {
-		return nil, err
+		if err != os.ErrNotExist {
+			return nil, err
+		}
+		os.MkdirAll(dir, 0655)
 	}
 	if !fi.IsDir() {
 		return nil, errors.New(dir + " is not a direnctoy")
