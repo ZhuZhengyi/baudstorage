@@ -155,7 +155,6 @@ func (m *Master) createRaftServer() (err error) {
 	fsm.RegisterLeaderChangeHandler(m.handleLeaderChange)
 	fsm.RegisterPeerChangeHandler(m.handlePeerChange)
 	fsm.RegisterApplyHandler(m.handleApply)
-	fsm.RegisterRestoreHandler(m.handleRestore)
 	fsm.restore()
 	m.fsm = fsm
 	partitionCfg := &raftstore.PartitionConfig{
