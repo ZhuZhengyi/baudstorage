@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	TaskFail         = -1
+	TaskFail         = 2
 	TaskStart        = 0
 	TaskSuccess      = 1
 	ResponseInterval = 30
@@ -30,7 +30,6 @@ type AdminTask struct {
 	Request      interface{}
 	Response     interface{}
 }
-
 
 func (t *AdminTask) ToString() (msg string) {
 	msg = fmt.Sprintf("FileIdId[%v] Status[%d] LastSendTime[%v]  SendCount[%v] ",

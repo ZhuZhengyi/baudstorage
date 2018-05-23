@@ -36,7 +36,7 @@ const (
 )
 
 const (
-	VolUnavailable = -1
+	VolUnavailable = 0
 	VolReadOnly    = 1
 	VolReadWrite   = 2
 )

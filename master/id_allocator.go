@@ -3,6 +3,7 @@ package master
 import (
 	"fmt"
 	"github.com/tiglabs/baudstorage/raftstore"
+	"github.com/tiglabs/baudstorage/util/log"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -108,7 +109,7 @@ func (alloc *IDAllocator) allocatorVolID() (volID uint64, err error) {
 	}
 	return
 errDeal:
-	atomic.AddUint64(&alloc.volID, -1)
+	log.LogError("action[allocatorVolID] err:%v", err.Error())
 	return
 }
 
@@ -126,7 +127,7 @@ func (alloc *IDAllocator) allocatorPartitionID() (partitionID uint64, err error)
 	}
 	return
 errDeal:
-	atomic.AddUint64(&alloc.partitionID, -1)
+	log.LogError("action[allocatorPartitionID] err:%v", err.Error())
 	return
 }
 
@@ -144,6 +145,6 @@ func (alloc *IDAllocator) allocatorMetaNodeID() (metaNodeID uint64, err error) {
 	}
 	return
 errDeal:
-	atomic.AddUint64(&alloc.metaNodeID, -1)
+	log.LogError("action[allocatorMetaNodeID] err:%v", err.Error())
 	return
 }

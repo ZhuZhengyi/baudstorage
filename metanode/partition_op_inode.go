@@ -2,8 +2,9 @@ package metanode
 
 import (
 	"encoding/json"
-	"github.com/tiglabs/baudstorage/proto"
 	"time"
+
+	"github.com/tiglabs/baudstorage/proto"
 )
 
 func (mp *metaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
@@ -73,8 +74,7 @@ func (mp *metaPartition) Open(req *OpenReq, p *Packet) (err error) {
 	return
 }
 
-func (mp *metaPartition) InodeGet(req *proto.InodeGetRequest,
-	p *Packet) (err error) {
+func (mp *metaPartition) InodeGet(req *InodeGetReq, p *Packet) (err error) {
 	ino := NewInode(req.Inode, 0)
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -98,24 +98,5 @@ func (mp *metaPartition) InodeGet(req *proto.InodeGetRequest,
 		}
 	}
 	p.PackErrorWithBody(status, reply)
-	return
-}
-
-func (mp *metaPartition) DeletePartition() (err error) {
-	_, err = mp.Put(opDeletePartition, nil)
-	return
-}
-
-func (mp *metaPartition) UpdatePartition(req *proto.UpdateMetaPartitionRequest) (err error) {
-	reqData, err := json.Marshal(req)
-	if err != nil {
-		return
-	}
-	_, err = mp.Put(opUpdatePartition, reqData)
-	return
-}
-
-func (mp *metaPartition) OfflinePartition(req []byte) (err error) {
-	_, err = mp.Put(opOfflinePartition, req)
 	return
 }

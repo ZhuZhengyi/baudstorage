@@ -1,8 +1,7 @@
 package metanode
 
 import (
-	"errors"
-
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 )
 
@@ -34,6 +33,8 @@ type (
 	LookupResp = proto.LookupResponse
 	// Client -> MetaNode open file request struct
 	OpenReq = proto.OpenRequest
+	// Client -> MetaNode
+	InodeGetReq = proto.InodeGetRequest
 )
 
 // For use when raftStore store and application apply

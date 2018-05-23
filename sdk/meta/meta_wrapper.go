@@ -2,6 +2,7 @@ package meta
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -36,6 +37,10 @@ const (
 	statusUnknownError
 )
 
+var (
+	NotLeader = errors.New("NotLeader")
+)
+
 type MetaPartition struct {
 	PartitionID uint64
 	Start       uint64
@@ -57,6 +62,7 @@ type NamespaceView struct {
 type MetaWrapper struct {
 	sync.RWMutex
 	namespace string
+	leader    string
 	master    []string
 	conns     *pool.ConnPool
 
@@ -81,6 +87,7 @@ func NewMetaWrapper(namespace, masterHosts string) (*MetaWrapper, error) {
 	mw := new(MetaWrapper)
 	mw.namespace = namespace
 	mw.master = strings.Split(masterHosts, HostsSeparator)
+	mw.leader = mw.master[0]
 	mw.conns = pool.NewConnPool()
 	mw.partitions = make(map[uint64]*MetaPartition)
 	mw.ranges = btree.New(32)
@@ -95,34 +102,57 @@ func NewMetaWrapper(namespace, masterHosts string) (*MetaWrapper, error) {
 // Namespace view managements
 //
 
-func (mw *MetaWrapper) PullNamespaceView() (*NamespaceView, error) {
-	addr := mw.master[0]
-	resp, err := http.Get("http://" + addr + MetaPartitionViewURL + mw.namespace)
+func (mw *MetaWrapper) PostGetRequest(addr string) ([]byte, error) {
+	resp, err := http.Get(addr)
 	if err != nil {
 		return nil, err
 	}
-
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		//TODO: master would return the leader addr if it is a follower
-		log.Printf("StatusCode(%v)", resp.StatusCode)
-		err = errors.New("Get namespace view failed!")
-		return nil, err
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusForbidden {
+		msg := fmt.Sprintf("Post to (%v) failed, StatusCode(%v)", addr, resp.StatusCode)
+		return nil, errors.New(msg)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		//TODO: log
+		msg := fmt.Sprintf("Post to (%v) read body failed, err(%v)", addr, err.Error())
+		return nil, errors.New(msg)
+	}
+
+	if resp.StatusCode == http.StatusForbidden {
+		// Update MetaWrapper's leader addr
+		mw.leader = strings.TrimSuffix(string(data), "\n")
+		return data, NotLeader
+	}
+	return data, nil
+}
+
+func (mw *MetaWrapper) PullNamespaceView() (*NamespaceView, error) {
+	body, err := mw.PostGetRequest("http://" + mw.leader + MetaPartitionViewURL + mw.namespace)
+	if err != nil {
+		if err == NotLeader {
+			// MetaWrapper's leader addr is already updated
+			body, err = mw.PostGetRequest("http://" + mw.leader + MetaPartitionViewURL + mw.namespace)
+		} else {
+			for _, addr := range mw.master {
+				body, err = mw.PostGetRequest("http://" + addr + MetaPartitionViewURL + mw.namespace)
+				if err == nil {
+					mw.leader = addr
+					break
+				}
+			}
+		}
+	}
+
+	if err != nil {
 		return nil, err
 	}
 
 	view := new(NamespaceView)
 	if err = json.Unmarshal(body, view); err != nil {
-		//TODO: log
 		return nil, err
 	}
-
 	return view, nil
 }
 

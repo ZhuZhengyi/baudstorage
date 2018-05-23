@@ -1,6 +1,7 @@
 package metanode
 
 import (
+	"os"
 	"time"
 
 	"github.com/google/btree"
@@ -129,7 +130,7 @@ func (mp *metaPartition) readDir(req *ReadDirReq) (resp *ReadDirResp) {
 	return
 }
 
-func (mp *metaPartition) AppendExtents(ino *Inode) (status uint8) {
+func (mp *metaPartition) appendExtents(ino *Inode) (status uint8) {
 	exts := ino.Extents
 	status = proto.OpOk
 	item := mp.inodeTree.Get(ino)
@@ -138,7 +139,10 @@ func (mp *metaPartition) AppendExtents(ino *Inode) (status uint8) {
 		return
 	}
 	ino = item.(*Inode)
-	ino.AppendExtents(exts)
+	exts.Range(func(i int, ext proto.ExtentKey) bool {
+		ino.AppendExtents(ext)
+		return true
+	})
 	ino.ModifyTime = time.Now().Unix()
 	return
 }
@@ -147,25 +151,23 @@ func (mp *metaPartition) offlinePartition() (err error) {
 	return
 }
 
-func (mp *metaPartition) updatePartition(end uint64) (err error) {
+func (mp *metaPartition) updatePartition(end uint64) (status uint8, err error) {
+	status = proto.OpOk
 	oldEnd := mp.config.End
 	mp.config.End = end
 	defer func() {
 		if err != nil {
 			mp.config.End = oldEnd
+			status = proto.OpDiskErr
 		}
 	}()
-	/*
 	err = mp.StoreMeta()
-	*/
 	return
 }
 
-func (mp *metaPartition) deletePartition() (err error) {
+func (mp *metaPartition) deletePartition() (status uint8) {
 	mp.Stop()
-	/*
-	mp.deletePartition(mp.ID)
-	err = os.RemoveAll(mp.RootDir)
-	*/
+	os.RemoveAll(mp.config.RootDir)
+	status = proto.OpOk
 	return
 }

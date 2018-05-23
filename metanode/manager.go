@@ -1,9 +1,7 @@
 package metanode
 
 import (
-	"errors"
 	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"io/ioutil"
 	"net"
 	"os"
@@ -12,8 +10,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
+	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/baudstorage/util/pool"
 )
 
@@ -48,20 +48,19 @@ func (m *metaManager) HandleMetaOperation(conn net.Conn, p *Packet) (err error) 
 	switch p.Opcode {
 	case proto.OpMetaCreateInode:
 		err = m.opCreateInode(conn, p)
-	case proto.OpMetaCreateDentry:
-		err = m.opCreateDentry(conn, p)
 	case proto.OpMetaDeleteInode:
 		err = m.opDeleteInode(conn, p)
+	case proto.OpMetaInodeGet:
+		err = m.opMetaInodeGet(conn, p)
+	case proto.OpMetaCreateDentry:
+		err = m.opCreateDentry(conn, p)
 	case proto.OpMetaDeleteDentry:
 		err = m.opDeleteDentry(conn, p)
 	case proto.OpMetaReadDir:
 		err = m.opReadDir(conn, p)
 	case proto.OpMetaOpen:
 		err = m.opOpen(conn, p)
-	case proto.OpMetaInodeGet:
-		err = m.opMetaInodeGet(conn, p)
 	case proto.OpCreateMetaPartition:
-		// Mater → MetaNode
 		err = m.opCreateMetaPartition(conn, p)
 	case proto.OpMetaNodeHeartbeat:
 		err = m.opMasterHeartbeat(conn, p)
@@ -157,12 +156,16 @@ func (m *metaManager) loadPartitions() (err error) {
 		if fileInfo.IsDir() && strings.HasPrefix(fileInfo.Name(), partitionPrefix) {
 			wg.Add(1)
 			go func() {
+				if len(fileInfo.Name()) < 10 {
+					log.LogWarnf("ignore unknown partition dir: %s", fileInfo.Name())
+					wg.Done()
+					return
+				}
 				var id uint64
-				partitionId := fileInfo.Name()[12:]
+				partitionId := fileInfo.Name()[10:]
 				id, err = strconv.ParseUint(partitionId, 10, 64)
 				if err != nil {
-					log.LogWarnf("ignore path: %s, "+
-						"not partition", partitionId)
+					log.LogWarnf("ignore path: %s,not partition", partitionId)
 					wg.Done()
 					return
 				}
@@ -217,12 +220,17 @@ func (m *metaManager) createPartition(id uint64, start, end uint64,
 		End:         end,
 		Cursor:      start,
 		Peers:       peers,
+		RaftStore:   m.raftStore,
+		NodeId:      m.nodeId,
 		RootDir:     path.Join(m.rootDir, partitionPrefix+partId),
 	}
 	mpc.AfterStop = func() {
 		m.detachPartition(id)
 	}
 	partition := NewMetaPartition(mpc)
+	if err = partition.StoreMeta(); err != nil {
+		return
+	}
 	err = m.attachPartition(id, partition)
 	return
 }
@@ -230,6 +238,16 @@ func (m *metaManager) createPartition(id uint64, start, end uint64,
 func (m *metaManager) deletePartition(id uint64) (err error) {
 	m.detachPartition(id)
 	return
+}
+
+func (m *metaManager) Range(f func(i uint64, p MetaPartition) bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for k, v := range m.partitions {
+		if !f(k, v) {
+			return
+		}
+	}
 }
 
 func NewMetaManager(conf MetaManagerConfig) MetaManager {

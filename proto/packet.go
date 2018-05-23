@@ -67,11 +67,10 @@ const (
 	OpLoadMetaPartition    uint8 = 0x24
 	OpOfflineMetaPartition uint8 = 0x25
 
-	OpCreateVol uint8 = 0x26
-	OpDeleteVol uint8 = 0x27
-	OpLoadVol   uint8 = 0x28
-	OpDataNodeHeartbeat    uint8 = 0x29
-
+	OpCreateVol         uint8 = 0x26
+	OpDeleteVol         uint8 = 0x27
+	OpLoadVol           uint8 = 0x28
+	OpDataNodeHeartbeat uint8 = 0x29
 
 	// Commons
 	OpIntraGroupNetErr uint8 = 0xF3
@@ -124,7 +123,7 @@ func NewPacket() *Packet {
 	return p
 }
 
-func (p *Packet)GetOpMesg(opcode uint8) (m string) {
+func (p *Packet) GetOpMesg(opcode uint8) (m string) {
 	switch opcode {
 	case OpCreateFile:
 		m = "CreateFile"
@@ -298,7 +297,7 @@ func (p *Packet) ReadFromConn(c net.Conn, deadlineTime time.Duration) (err error
 		return
 	}
 	size := p.Size
-	if p.Opcode == OpRead || p.Opcode == OpStreamRead {
+	if (p.Opcode == OpRead || p.Opcode == OpStreamRead) && p.ResultCode!=OpOk {
 		size = 0
 	}
 	return ReadFull(c, &p.Data, int(size))
@@ -361,9 +360,9 @@ func (p *Packet) ActionMesg(action, remote string, start int64, err error) (m st
 			(time.Now().UnixNano()-start)/1e6, p.IsTransitPkg())
 
 	} else {
-		m = fmt.Sprintf("id[%v] act[%v] remote[%v]" +
+		m = fmt.Sprintf("id[%v] act[%v] remote[%v]"+
 			", err[%v] isTransite[%v]", p.GetUniqLogId(), action,
-			remote, err.Error(),p.IsTransitPkg())
+			remote, err.Error(), p.IsTransitPkg())
 	}
 
 	return

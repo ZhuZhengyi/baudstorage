@@ -266,7 +266,7 @@ errDeal:
 }
 
 func (c *Cluster) dealOfflineMetaPartition(nodeAddr string, resp *proto.MetaPartitionOfflineResponse) {
-	if resp.Status == proto.CmdFailed {
+	if resp.Status == proto.TaskFail {
 		log.LogError(fmt.Sprintf("action[dealOfflineMetaPartition],nodeAddr %v offline meta partition failed,err %v", nodeAddr, resp.Result))
 		return
 	}
@@ -291,7 +291,7 @@ func (c *Cluster) dealLoadMetaPartition(nodeAddr string, resp *proto.LoadMetaPar
 }
 
 func (c *Cluster) dealUpdateMetaPartition(nodeAddr string, resp *proto.UpdateMetaPartitionResponse) {
-	if resp.Status == proto.CmdFailed {
+	if resp.Status == proto.TaskFail {
 		log.LogError(fmt.Sprintf("action[dealUpdateMetaPartition],nodeAddr %v update meta range failed,err %v", nodeAddr, resp.Result))
 		return
 	}
@@ -311,7 +311,7 @@ errDeal:
 }
 
 func (c *Cluster) dealDeleteMetaPartition(nodeAddr string, resp *proto.DeleteMetaPartitionResponse) {
-	if resp.Status == proto.CmdFailed {
+	if resp.Status == proto.TaskFail {
 		log.LogError(fmt.Sprintf("action[dealDeleteMetaPartition],nodeAddr %v delete meta range failed,err %v", nodeAddr, resp.Result))
 		return
 	}
@@ -332,7 +332,7 @@ errDeal:
 }
 
 func (c *Cluster) dealCreateMetaPartition(nodeAddr string, resp *proto.CreateMetaPartitionResponse) {
-	if resp.Status == proto.CmdFailed {
+	if resp.Status == proto.TaskFail {
 		log.LogError(fmt.Sprintf("action[dealCreateMetaPartition],nodeAddr %v create meta range failed,err %v", nodeAddr, resp.Result))
 		return
 	}
@@ -384,7 +384,7 @@ func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHea
 	log.LogDebug(logMsg)
 	metaNode.setNodeAlive()
 	metaNode.metaRangeInfos = resp.MetaPartitionInfo
-	threshold = metaNode.Used/metaNode.Total < DefaultMetaPartitionThreshold
+	threshold = float32(metaNode.Used/metaNode.Total) < DefaultMetaPartitionThreshold
 	c.UpdateMetaNode(metaNode, threshold)
 	metaNode.metaRangeCount = len(metaNode.metaRangeInfos)
 	metaNode.metaRangeInfos = nil
@@ -435,9 +435,9 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 }
 
 func (c *Cluster) dealCreateVolResponse(t *proto.AdminTask, resp *proto.CreateVolResponse) {
-	if resp.Status == proto.CmdSuccess {
+	if resp.Status == proto.TaskSuccess {
 		c.createVolSuccessTriggerOperator(t.OperatorAddr, resp)
-	} else if resp.Status == proto.CmdFailed {
+	} else if resp.Status == proto.TaskFail {
 		c.createVolFailTriggerOperator(t, resp)
 	}
 
@@ -485,7 +485,7 @@ func (c *Cluster) dealDeleteVolResponse(nodeAddr string, resp *proto.DeleteVolRe
 		vg  *VolGroup
 		err error
 	)
-	if resp.Status == proto.CmdSuccess {
+	if resp.Status == proto.TaskSuccess {
 		if vg, err = c.getVolGroupByVolID(resp.VolId); err != nil {
 			return
 		}
@@ -500,7 +500,7 @@ func (c *Cluster) dealDeleteVolResponse(nodeAddr string, resp *proto.DeleteVolRe
 func (c *Cluster) dealLoadVolResponse(nodeAddr string, resp *proto.LoadVolResponse) {
 	var dataNode *DataNode
 	vg, err := c.getVolGroupByVolID(resp.VolId)
-	if err != nil || resp.Status == proto.CmdFailed || resp.VolSnapshot == nil {
+	if err != nil || resp.Status == proto.TaskFail || resp.VolSnapshot == nil {
 		return
 	}
 	if dataNode, err = c.getDataNode(nodeAddr); err != nil {
@@ -516,7 +516,7 @@ func (c *Cluster) dealDeleteFileResponse(nodeAddr string, resp *proto.DeleteFile
 		vg  *VolGroup
 		err error
 	)
-	if resp.Status == proto.CmdSuccess {
+	if resp.Status == proto.TaskSuccess {
 		if vg, err = c.getVolGroupByVolID(resp.VolId); err != nil {
 			return
 		}
