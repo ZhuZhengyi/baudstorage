@@ -1,4 +1,4 @@
-package raftstore
+package main
 
 import (
 	"fmt"
@@ -6,10 +6,12 @@ import (
 	"path"
 	"log"
 	"flag"
+	"strings"
+
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
 	"github.com/tiglabs/baudstorage/util/config"
-	"strings"
+	. "github.com/tiglabs/baudstorage/raftstore"
 )
 
 type testConfig struct {
@@ -105,7 +107,7 @@ func main() {
 		return
 	}
 
-	partitions := make(map[uint64]*partition)
+	partitions := make(map[uint64]Partition)
 
 	raftCfg.NodeID = uint64(cfg.GetInt("nodeid"))
 	raftCfg.WalPath = path.Join("wal", strconv.FormatUint(raftCfg.NodeID, 10))
@@ -130,7 +132,7 @@ func main() {
 		var p Partition
 		p, err = raftServer.CreatePartition(partitionCfg)
 
-		partitions[uint64(i)] = p.(*partition)
+		partitions[uint64(i)] = p
 
 		fmt.Printf("==========new partition %d\n", i)
 
