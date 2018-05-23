@@ -55,11 +55,11 @@ func (m *Master) Start(cfg *config.Config) (err error) {
 	if _, err = log.NewLog(m.logDir, LogModule, m.logLevel); err != nil {
 		return
 	}
-	m.cluster = newCluster(m.clusterName, m.leaderInfo)
-	m.loadMetadata()
 	if err = m.createRaftServer(); err != nil {
 		return
 	}
+	m.cluster = newCluster(m.clusterName, m.leaderInfo)
+	m.loadMetadata()
 	m.startHttpService()
 	m.wg.Add(1)
 	return nil

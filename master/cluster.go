@@ -19,15 +19,17 @@ type Cluster struct {
 	leaderInfo    *LeaderInfo
 	cfg           *ClusterConfig
 	fsm           *MetadataFsm
-	idAlloc       *IDAllocator
 	partition     raftstore.Partition
+	idAlloc       *IDAllocator
 }
 
-func newCluster(name string, leaderInfo *LeaderInfo) (c *Cluster) {
+func newCluster(name string, leaderInfo *LeaderInfo,fsm *MetadataFsm,partition *raftstore.Partition) (c *Cluster) {
 	c = new(Cluster)
 	c.Name = name
 	c.leaderInfo = leaderInfo
 	c.cfg = NewClusterConfig()
+	c.fsm = fsm
+	c.partition = partition
 	c.idAlloc = newIDAllocator(c.fsm.store, c.partition)
 	c.startCheckVolGroups()
 	c.startCheckBackendLoadVolGroups()
