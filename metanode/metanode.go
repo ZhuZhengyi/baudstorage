@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"net"
 	"strings"
 	"sync"
 	"time"
@@ -151,13 +150,10 @@ func (m *MetaNode) validNodeID() (err error) {
 	mAddrSlice := strings.Split(m.masterAddrs, ";")
 	rand.Seed(time.Now().Unix())
 	i := rand.Intn(len(mAddrSlice))
-	conn, _ := net.DialTimeout("tcp", mAddrSlice[i], time.Second)
-	defer func() {
-		if conn != nil {
-			conn.Close()
-		}
-	}()
-	m.localAddr = strings.Split(conn.LocalAddr().String(), ":")[0]
+	m.localAddr, err = util.GetLocalIP()
+	if err != nil {
+		return
+	}
 	masterURL := fmt.Sprintf("http://%s/%s?addr=%s", mAddrSlice[i],
 		metaNodeURL, fmt.Sprintf("%s:%d", m.localAddr, m.listen))
 	data, err := util.PostToNode(nil, masterURL)
