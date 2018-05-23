@@ -10,6 +10,7 @@ import (
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/baudstorage/util/pool"
+	"io"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -27,7 +28,7 @@ var (
 	ErrBadConfFile         = errors.New("bad config file")
 
 	masterAddr string
-	connPool   *pool.ConnPool = pool.NewConnPool()
+	connPool   = pool.NewConnPool()
 )
 
 const (
@@ -37,32 +38,82 @@ const (
 )
 
 const (
-	ConfigKeyPort       = "Port"       // string
+	ConfigKeyPort       = "Port"       // int
 	ConfigKeyClusterID  = "ClusterID"  // string
 	ConfigKeyLogDir     = "LogDir"     // string
 	ConfigKeyMasterAddr = "MasterAddr" // array
 	ConfigKeyRack       = "Rack"       // string
-	ConfigKeyProfPort   = "ProfPort"   // string
+	ConfigKeyProfPort   = "ProfPort"   // int
 	ConfigKeyDisks      = "Disks"      // array
 )
 
 type DataNode struct {
-	space           *SpaceManager
-	masterAddrs     []string
-	masterAddrIndex uint32
-	port            string
-	logDir          string
-	rackName        string
-	profPort        string
-	clusterId       string
-	localIp         string
-	localServeAddr  string
-	state           uint32
-	wg              sync.WaitGroup
+	space            *SpaceManager
+	masterAddrs      []string
+	masterAddrIndex  uint32
+	port             int
+	profPort         int
+	logDir           string
+	rackName         string
+	clusterId        string
+	localIp          string
+	localServeAddr   string
+	tcpListener      net.Listener
+	httpServerCloser io.Closer
+	state            uint32
+	wg               sync.WaitGroup
+}
+
+func (s *DataNode) Start(cfg *config.Config) (err error) {
+	if atomic.CompareAndSwapUint32(&s.state, Standby, Start) {
+		defer func() {
+			if err != nil {
+				atomic.StoreUint32(&s.state, Standby)
+			} else {
+				atomic.StoreUint32(&s.state, Running)
+			}
+		}()
+		if err = s.onStart(cfg); err != nil {
+			return
+		}
+		s.wg.Add(1)
+	}
+	return
+}
+
+func (s *DataNode) Shutdown() {
+	if atomic.CompareAndSwapUint32(&s.state, Running, Shutdown) {
+		defer atomic.StoreUint32(&s.state, Stopped)
+		s.onShutdown()
+		s.wg.Done()
+	}
+}
+
+func (s *DataNode) Sync() {
+	if atomic.LoadUint32(&s.state) == Running {
+		s.wg.Wait()
+	}
+}
+
+func (s *DataNode) onStart(cfg *config.Config) (err error) {
+	if err = s.LoadVol(cfg); err != nil {
+		return
+	}
+	if err = s.startTcpService(); err != nil {
+		return
+	}
+	s.startRestService()
+	return
+}
+
+func (s *DataNode) onShutdown() {
+	s.stopTcpService()
+	s.stopRestService()
+	return
 }
 
 func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
-	s.port = cfg.GetString(ConfigKeyPort)
+	s.port = int(cfg.GetInt(ConfigKeyPort))
 	s.clusterId = cfg.GetString(ConfigKeyClusterID)
 	s.logDir = cfg.GetString(ConfigKeyLogDir)
 	for _, ip := range cfg.GetArray(ConfigKeyMasterAddr) {
@@ -74,10 +125,10 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	if err = s.getIpFromMaster(); err != nil {
 		return
 	}
-	s.profPort = cfg.GetString(ConfigKeyProfPort)
+	s.profPort = int(cfg.GetInt(ConfigKeyProfPort))
 	s.space = NewSpaceManager(s.rackName)
 
-	if err != nil || s.port == "" || s.logDir == "" ||
+	if err != nil || s.port == 0 || s.logDir == "" ||
 		masterAddr == "" {
 		err = ErrBadConfFile
 		return
@@ -87,6 +138,7 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	}
 
 	for _, d := range cfg.GetArray(ConfigKeyDisks) {
+		// Format "PATH:RESET_SIZE:MAX_ERR
 		arr := strings.Split(d.(string), ":")
 		if len(arr) != 3 {
 			return ErrBadConfFile
@@ -124,39 +176,37 @@ func (s *DataNode) getIpFromMaster() error {
 	return nil
 }
 
-func (s *DataNode) Start(cfg *config.Config) (err error) {
-	if atomic.CompareAndSwapUint32(&s.state, StateReady, StateRunning) {
-		defer func() {
-			if err != nil {
-				atomic.StoreUint32(&s.state, StateReady)
-			}
-		}()
-		err = s.LoadVol(cfg)
-	}
-	return
-}
-
-func (s *DataNode) StartRestService() {
+func (s *DataNode) startRestService() {
 	http.HandleFunc("/disks", s.HandleGetDisk)
 	http.HandleFunc("/vols", s.HandleVol)
 	http.HandleFunc("/stats", s.HandleStat)
-	go func() {
-		err := http.ListenAndServe(s.localIp+":"+s.profPort, nil)
+
+	server := &http.Server{}
+	server.Addr = fmt.Sprintf("%s:%d", s.localIp, s.profPort)
+	go func(server *http.Server) {
+		err := server.ListenAndServe()
 		if err != nil {
 			println("Failed to start rest service")
 			s.Shutdown()
 		}
-	}()
+	}(server)
+	s.httpServerCloser = server
 }
 
-func (s *DataNode) listenAndServe() (err error) {
-	log.LogInfo("Start: listenAndServe")
-	l, err := net.Listen(NetType, ":"+s.port)
+func (s *DataNode) stopRestService() {
+	if s.httpServerCloser != nil {
+		s.httpServerCloser.Close()
+	}
+}
+
+func (s *DataNode) startTcpService() (err error) {
+	log.LogInfo("Start: startTcpService")
+	l, err := net.Listen(NetType, fmt.Sprintf(":%d", s.port))
 	if err != nil {
 		log.LogError("failed to listen, err:", err)
 		return
 	}
-
+	s.tcpListener = l
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -166,8 +216,16 @@ func (s *DataNode) listenAndServe() (err error) {
 		go s.serveConn(conn)
 	}
 
-	log.LogError(LogShutdown + " return listenAndServe, listen is closing")
+	log.LogError(LogShutdown + " return startTcpService, listen is closing")
 	return l.Close()
+}
+
+func (s *DataNode) stopTcpService() (err error) {
+	log.LogInfo("Stop: stopTcpService")
+	if s.tcpListener != nil {
+		s.tcpListener.Close()
+	}
+	return
 }
 
 func (s *DataNode) serveConn(conn net.Conn) {
@@ -197,14 +255,6 @@ exitDeal:
 	c.Close()
 
 	return
-}
-
-func (s *DataNode) Shutdown() {
-	panic("implement me")
-}
-
-func (s *DataNode) Sync() {
-	panic("implement me")
 }
 
 func NewServer() *DataNode {
