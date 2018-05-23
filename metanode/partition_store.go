@@ -147,7 +147,7 @@ func (mp *metaPartition) loadApplyID() (err error) {
 func (mp *metaPartition) storeMeta() (err error) {
 	filename := path.Join(mp.config.RootDir, metaFileTmp)
 	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE,
-		0655)
+		0755)
 	if err != nil {
 		return
 	}
