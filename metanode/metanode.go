@@ -218,6 +218,7 @@ func (m *MetaNode) postNodeID(data []byte, reqURL string) (err error) {
 		// Record Master IP
 		m.retryCount++
 		if m.retryCount > 2 {
+			m.retryCount = 0
 			err = errors.New("retry too many")
 			return
 		}
