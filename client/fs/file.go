@@ -1,6 +1,8 @@
 package fs
 
 import (
+	"io"
+
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"golang.org/x/net/context"
@@ -70,8 +72,12 @@ func (f *File) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadR
 	data := make([]byte, req.Size)
 	size, err := f.super.ec.Read(f.inode.ino, data, int(req.Offset), req.Size)
 	if err != nil {
-		f.super.logger.Printf("Read error: (%v) size(%v)", err.Error(), size)
-		return fuse.EIO
+		if err == io.EOF && size == 0 {
+			return nil
+		} else {
+			f.super.logger.Printf("Read error: (%v) size(%v)", err.Error(), size)
+			return fuse.EIO
+		}
 	}
 	if size > req.Size {
 		f.super.logger.Printf("Read error: request size(%v) read size(%v)", req.Size, size)
