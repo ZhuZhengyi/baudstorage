@@ -54,3 +54,10 @@ var (
 	ErrNonLeader = errors.New("non leader")
 	ErrNotLeader = errors.New("not leader")
 )
+
+const (
+	defaultLogDir    = "logs"
+	defaultMetaDir   = "metaDir"
+	defaultRaftDir   = "raftDir"
+	defaultPporfPort = 0
+)
