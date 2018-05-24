@@ -53,6 +53,7 @@ func fillInode(inode *Inode, info *proto.InodeInfo) {
 }
 
 func fillAttr(attr *fuse.Attr, n fs.Node) {
+	attr.Valid = AttrValidDuration
 	var inode *Inode
 	switch v := n.(type) {
 	case *Dir:

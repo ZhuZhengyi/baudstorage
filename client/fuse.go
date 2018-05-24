@@ -11,6 +11,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"path"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
@@ -20,7 +22,14 @@ import (
 )
 
 const (
-	MAX_READ_AHEAD = 128 * 1024
+	MaxReadAhead = 128 * 1024
+)
+
+const (
+	LoggerName     = "fuse.log"
+	LoggerPrefix   = "FUSE:"
+	LoggerFileFlag = os.O_WRONLY | os.O_CREATE | os.O_APPEND
+	LoggerFlag     = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile
 )
 
 var (
@@ -45,10 +54,11 @@ func Mount(cfg *config.Config) error {
 	mnt := cfg.GetString("Mountpoint")
 	namespace := cfg.GetString("Namespace")
 	master := cfg.GetString("Master")
+	logpath := cfg.GetString("Logpath")
 	c, err := fuse.Mount(
 		mnt,
 		fuse.AllowOther(),
-		fuse.MaxReadahead(MAX_READ_AHEAD),
+		fuse.MaxReadahead(MaxReadAhead),
 		fuse.AsyncRead(),
 		fuse.FSName("ContainerFS-"+namespace),
 		fuse.LocalVolume(),
@@ -59,7 +69,14 @@ func Mount(cfg *config.Config) error {
 	}
 	defer c.Close()
 
-	super, err := bdfs.NewSuper(namespace, master)
+	logfile, err := os.OpenFile(path.Join(logpath, LoggerName), LoggerFileFlag, 0644)
+	if err != nil {
+		return err
+	}
+	defer logfile.Close()
+
+	logger := log.New(logfile, LoggerPrefix, LoggerFlag)
+	super, err := bdfs.NewSuper(namespace, master, logpath, logger)
 	if err != nil {
 		return err
 	}

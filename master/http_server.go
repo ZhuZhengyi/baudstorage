@@ -9,42 +9,42 @@ import (
 
 const (
 	// Admin APIs
-	AdminGetVol          = "admin/getVol"
-	AdminLoadVol         = "admin/loadVol"
-	AdminCreateVol       = "admin/createVol"
-	AdminVolOffline      = "admin/volOffline"
-	AdminCreateNamespace = "admin/createNamespace"
-	AdminGetIp           = "admin/getIp"
+	AdminGetVol          = "/admin/getVol"
+	AdminLoadVol         = "/admin/loadVol"
+	AdminCreateVol       = "/admin/createVol"
+	AdminVolOffline      = "/admin/volOffline"
+	AdminCreateNamespace = "/admin/createNamespace"
+	AdminGetIp           = "/admin/getIp"
 
 	// Client APIs
-	ClientVols      = "client/vols"
-	ClientNamespace = "client/namespace"
-	ClientMetaGroup = "client/metaGroup"
+	ClientVols      = "/client/vols"
+	ClientNamespace = "/client/namespace"
+	ClientMetaGroup = "/client/metaGroup"
 
 	// Node APIs
-	AddDataNode               = "dataNode/add"
-	AddMetaNode               = "metaNode/add"
-	DataNodeOffline           = "admin/dataNodeOffline"
-	MetaNodeOffline           = "admin/metaNodeOffline"
-	GetDataNode               = "admin/getDataNode"
-	GetMetaNode               = "admin/getMetaNode"
-	AdminLoadMetaPartition    = "admin/loadMetaPartition"
-	AdminMetaPartitionOffline = "admin/metaPartitionOffline"
+	AddDataNode               = "/dataNode/add"
+	AddMetaNode               = "/metaNode/add"
+	DataNodeOffline           = "/admin/dataNodeOffline"
+	MetaNodeOffline           = "/admin/metaNodeOffline"
+	GetDataNode               = "/admin/getDataNode"
+	GetMetaNode               = "/admin/getMetaNode"
+	AdminLoadMetaPartition    = "/admin/loadMetaPartition"
+	AdminMetaPartitionOffline = "/admin/metaPartitionOffline"
 
 	// Operation response
-	MetaNodeResponse = "metaNode/response" // Method: 'POST', ContentType: 'application/json'
-	DataNodeResponse = "dataNode/response" // Method: 'POST', ContentType: 'application/json'
+	MetaNodeResponse = "/metaNode/response" // Method: 'POST', ContentType: 'application/json'
+	DataNodeResponse = "/dataNode/response" // Method: 'POST', ContentType: 'application/json'
 )
 
 func (m *Master) startHttpService() (err error) {
 	go func() {
 		m.handleFunctions()
-		http.ListenAndServe(m.port, nil)
+		http.ListenAndServe(ColonSplit+m.port, nil)
 	}()
 	return
 }
 
-func (m *Master) handleFunctions() (err error) {
+func (m *Master) handleFunctions() {
 	http.HandleFunc(AdminGetIp, m.getIpAndClusterName)
 	http.Handle(AdminGetVol, m.handlerWithInterceptor())
 	http.Handle(AdminCreateVol, m.handlerWithInterceptor())
