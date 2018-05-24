@@ -33,7 +33,7 @@ var (
 
 const (
 	ModuleName      = "DataNode"
-	GetIpFromMaster = "admin/getIp"
+	GetIpFromMaster = "/admin/getIp"
 	DefaultRackName = "huitian_rack1"
 )
 
