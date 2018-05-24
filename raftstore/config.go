@@ -17,12 +17,19 @@ type Config struct {
 	IpAddr  string // IP address of node
 }
 
+type PeerAddress struct {
+	proto.Peer
+	Address       string
+	HeartbeatPort int
+	ReplicatePort int
+}
+
 // PartitionConfig defined necessary configuration properties for raft store partition.
 type PartitionConfig struct {
 	ID      uint64
 	Applied uint64
 	Leader  uint64
 	Term    uint64
-	Peers   []proto.Peer
+	Peers   []PeerAddress
 	SM      PartitionFsm
 }
