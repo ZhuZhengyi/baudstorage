@@ -51,7 +51,7 @@ func (m *MockServer) volGroupView() (views []*sdk.VolGroup) {
 		for j := 0; j < 3; j++ {
 			hosts[j] = "127.0.0.1:9000"
 		}
-		v := &sdk.VolGroup{VolId: uint32(i), Goal: 3,
+		v := &sdk.VolGroup{VolId: uint32(i), ReplicaNum: 3,
 			Status: uint8((rand.Int()%2 + 1)), Hosts: hosts}
 		views = append(views, v)
 	}
@@ -174,7 +174,8 @@ func (s *MockServer) serveConn(conn net.Conn) {
 }
 
 func (s *MockServer) clientview(w http.ResponseWriter, r *http.Request) {
-	views := s.volGroupView()
+	groups := s.volGroupView()
+	views := &sdk.VolsView{Vols: groups}
 	body, _ := json.Marshal(views)
 	w.Write(body)
 }
@@ -187,7 +188,7 @@ func (s *MockServer) listenAndServe() (err error) {
 		return
 	}
 	go func() {
-		http.HandleFunc("/client/view", s.clientview)
+		http.HandleFunc("/client/vols", s.clientview)
 		http.ListenAndServe(":7778", nil)
 	}()
 
