@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
@@ -32,7 +34,7 @@ func TestValidNodeID(t *testing.T) {
 	}))
 	defer httpServe.Close()
 	masterAddr := httpServe.Listener.Addr().String()
-	m := &MetaNode{}
+	m := NewServer()
 	err = m.validNodeID()
 	if err == nil {
 		t.Fatalf("master addrs is empty, ")
@@ -50,4 +52,43 @@ func TestValidNodeID(t *testing.T) {
 			m.nodeId)
 	}
 	t.Logf("valideNodeID success!")
+}
+
+func Test_parseConfig(t *testing.T) {
+	var mConfig *config.Config
+	m := NewServer()
+	err := m.parseConfig(mConfig)
+	if err == nil {
+		t.Fatalf("parseConfig: failed!")
+	}
+	if err.Error() != "invalid configuration" {
+		t.Fatalf("parseConfig: %s failed!", err.Error())
+	}
+
+	confStr := "{}"
+	mConfig = config.LoadConfigString(confStr)
+	err = m.parseConfig(mConfig)
+	if err == nil {
+		t.Fatalf("parseConfig failed!")
+	}
+	if !strings.Contains(err.Error(), "listen port: ") {
+		t.Logf("parseConfig failed!")
+	}
+	confStr = `{"listen":10}`
+	mConfig = config.LoadConfigString(confStr)
+	err = m.parseConfig(mConfig)
+	if err == nil {
+		t.Fatalf("parseConfig failed!")
+	}
+	if err != nil {
+		if err.Error() != "master Addrs is empty!" {
+			t.Fatalf("parseConfig failed!")
+		}
+	}
+	confStr = `{"listen": 11111, "masterAddrs":"1.1.1.1:11111"}`
+	mConfig = config.LoadConfigString(confStr)
+	if err = m.parseConfig(mConfig); err != nil {
+		t.Fatalf("parseConfig failed!")
+	}
+
 }

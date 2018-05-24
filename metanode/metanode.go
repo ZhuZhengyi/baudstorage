@@ -121,6 +121,28 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 	m.metaDir = cfg.GetString(cfgMetaDir)
 	m.raftDir = cfg.GetString(cfgRaftDir)
 	m.masterAddrs = cfg.GetString(cfgMasterAddrs)
+	err = m.validConfig()
+	return
+}
+
+func (m *MetaNode) validConfig() (err error) {
+	if m.listen <= 0 || m.listen >= 65535 {
+		err = errors.Errorf("listen port: %d", m.listen)
+		return
+	}
+	if m.logDir == "" {
+		m.logDir = defaultLogDir
+	}
+	if m.metaDir == "" {
+		m.metaDir = defaultMetaDir
+	}
+	if m.raftDir == "" {
+		m.raftDir = defaultRaftDir
+	}
+	if m.masterAddrs == "" {
+		err = errors.New("master Addrs is empty!")
+		return
+	}
 	return
 }
 
