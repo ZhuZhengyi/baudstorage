@@ -38,7 +38,7 @@ func NewSpaceManager(rack string) (space *SpaceManager) {
 }
 
 func (space *SpaceManager) getDisk(path string) (d *Disk, err error) {
-	space.diskLock.RLocker()
+	space.diskLock.RLock()
 	defer space.diskLock.RUnlock()
 	d = space.disks[path]
 	if d == nil {
