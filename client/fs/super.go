@@ -13,9 +13,10 @@ import (
 )
 
 type Super struct {
-	name string
-	mw   *meta.MetaWrapper
-	ec   *stream.ExtentClient
+	name   string
+	mw     *meta.MetaWrapper
+	ec     *stream.ExtentClient
+	logger *log.Logger
 }
 
 //functions that Super needs to implement
@@ -24,19 +25,20 @@ var (
 	_ fs.FSStatfser = (*Super)(nil)
 )
 
-func NewSuper(namespace, master, logpath string) (s *Super, err error) {
+func NewSuper(namespace, master, logpath string, logger *log.Logger) (s *Super, err error) {
 	s = new(Super)
 	s.mw, err = meta.NewMetaWrapper(namespace, master)
 	if err != nil {
 		return nil, err
 	}
 	s.name = namespace
+	s.logger = logger
 
 	//FIXME:
 	//s.ec, err = stream.NewExtentClient(path.Join(logpath, "extentclient"), master, s.mw.AppendExtentKey, s.mw.GetExtents)
 	s.ec, err = stream.NewExtentClient(path.Join(logpath, "extentclient"), "localhost:7778", s.mw.AppendExtentKey, s.mw.GetExtents)
 	if err != nil {
-		log.Printf("NewExtentClient failed! %v", err.Error())
+		s.logger.Printf("NewExtentClient failed! %v", err.Error())
 		return nil, err
 	}
 	return s, nil
