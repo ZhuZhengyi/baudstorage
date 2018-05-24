@@ -82,7 +82,7 @@ func Test_parseConfig(t *testing.T) {
 			t.Fatalf("parseConfig failed!")
 		}
 	}
-	confStr = `{"listen": 11111, "masterAddrs":"1.1.1.1:11111"}`
+	confStr = `{"listen": 11111, "master_addrs":"1.1.1.1:11111"}`
 	mConfig = config.LoadConfigString(confStr)
 	if err = m.parseConfig(mConfig); err != nil {
 		t.Fatalf("parseConfig failed!")
