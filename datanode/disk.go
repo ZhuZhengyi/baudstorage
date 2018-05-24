@@ -35,6 +35,7 @@ var (
 )
 
 type Disk struct {
+	sync.Mutex
 	Path                      string
 	ReadErrs                  uint64
 	WriteErrs                 uint64
@@ -48,9 +49,8 @@ type Disk struct {
 	Status                    int
 	VolsName                  []string
 	RestSize                  uint64
-	sync.Mutex
-	compactCh chan *CompactTask
-	space     *SpaceManager
+	compactCh                 chan *CompactTask
+	space                     *SpaceManager
 }
 
 func NewDisk(path string, restSize uint64, maxErrs int) (d *Disk) {
