@@ -224,10 +224,12 @@ func (m *MetaNode) postNodeID(data []byte, reqURL string) (err error) {
 		}
 		masterAddr := string(msg)
 		if masterAddr == "" {
+			m.retryCount = 0
 			err = errors.New("master response emtpy addr")
 			return
 		}
-		reqURL = fmt.Sprintf("http://%s/%s", string(msg), metaNodeURL)
+		reqURL = fmt.Sprintf("http://%s/%s", masterAddr, metaNodeURL)
+		log.LogDebugf("retry connect master url: %s", reqURL)
 		return m.postNodeID(data, reqURL)
 
 	}

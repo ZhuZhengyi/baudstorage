@@ -26,6 +26,11 @@ func TestValidNodeID(t *testing.T) {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
+		if count == 5 {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte("1.1.2.3:12345"))
+			return
+		}
 		w.Write([]byte("55555"))
 		return
 	}))
