@@ -2,6 +2,7 @@ package master
 
 import (
 	"fmt"
+	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/raft/proto"
 	"strconv"
@@ -61,7 +62,7 @@ type ClusterConfig struct {
 	everyLoadVolCount             int
 	replicaNum                    int
 
-	peers     []proto.Peer
+	peers     []raftstore.PeerAddress
 	peerAddrs []string
 }
 
@@ -80,20 +81,6 @@ func NewClusterConfig() (cfg *ClusterConfig) {
 	cfg.everyLoadVolCount = DefaultEveryLoadVolCount
 	cfg.LoadVolFrequencyTime = DefaultLoadVolFrequencyTime
 	return
-}
-
-//AddrInit ...
-func AddrInit(peerAddrs []string) (err error) {
-	fmt.Println("PeerAddrs:")
-	for _, peerAddr := range peerAddrs {
-		id, ip, port, err := parsePeerAddr(peerAddr)
-		if err != nil {
-			return err
-		}
-		AddrDatabase[id] = fmt.Sprintf("%s:%d", ip, port)
-		fmt.Println(AddrDatabase[id])
-	}
-	return nil
 }
 
 func parsePeerAddr(peerAddr string) (id uint64, ip string, port uint64, err error) {
@@ -118,7 +105,7 @@ func (cfg *ClusterConfig) parsePeers(peerStr string) error {
 		if err != nil {
 			return err
 		}
-		cfg.peers = append(cfg.peers, proto.Peer{ID: id})
+		cfg.peers = append(cfg.peers, raftstore.PeerAddress{Peer: proto.Peer{ID: id}, Address: ip})
 		AddrDatabase[id] = fmt.Sprintf("%v:%v", ip, port)
 	}
 	return nil
@@ -128,6 +115,6 @@ func (cfg *ClusterConfig) PeerAddrs() []string {
 	return cfg.peerAddrs
 }
 
-func (cfg *ClusterConfig) Peers() []proto.Peer {
+func (cfg *ClusterConfig) Peers() []raftstore.PeerAddress {
 	return cfg.peers
 }
