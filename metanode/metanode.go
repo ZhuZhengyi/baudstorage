@@ -21,10 +21,10 @@ import (
 // Configuration keys
 const (
 	cfgListen      = "listen"
-	cfgLogDir      = "logDir"
-	cfgMetaDir     = "metaDir"
-	cfgRaftDir     = "raftDir"
-	cfgMasterAddrs = "masterAddrs"
+	cfgLogDir      = "log_dir"
+	cfgMetaDir     = "meta_dir"
+	cfgRaftDir     = "raft_dir"
+	cfgMasterAddrs = "master_addrs"
 )
 
 const (

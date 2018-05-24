@@ -192,13 +192,15 @@ func (mp *metaPartition) stopSchedule() {
 
 func (mp *metaPartition) startRaft() (
 	err error) {
-	peers := make([]raftproto.Peer, len(mp.config.Peers))
+	peers := make([]raftstore.PeerAddress, len(mp.config.Peers))
 	for _, peer := range mp.config.Peers {
-		raftPeer := raftproto.Peer{
-			ID: peer.ID,
+		rp := raftstore.PeerAddress{
+			Peer: raftproto.Peer{
+				ID: peer.ID,
+			},
+			Address: peer.Addr,
 		}
-		peers = append(peers, raftPeer)
-		mp.raftPartition.AddNode(peer.ID, peer.Addr)
+		peers = append(peers, rp)
 	}
 	pc := &raftstore.PartitionConfig{
 		ID:      mp.config.PartitionId,
