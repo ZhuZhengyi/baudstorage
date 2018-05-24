@@ -277,7 +277,7 @@ func LoadFromDisk(path string, restSize uint64, maxErrs int, space *SpaceManager
 		d = NewDisk(path, restSize, maxErrs)
 		d.loadVol(space)
 		space.putDisk(d)
+		err = nil
 	}
-
 	return
 }

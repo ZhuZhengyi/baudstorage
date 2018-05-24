@@ -3,6 +3,7 @@ package raftstore
 import (
 	"fmt"
 	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/raft"
 	"strings"
 	"sync"
@@ -25,6 +26,9 @@ type nodeAddress struct {
 type NodeManager interface {
 	// AddNode used to add node address information.
 	AddNode(nodeId uint64, addr string)
+
+	// AddNode adds node address with specified port.
+	AddNodeWithPort(nodeId uint64, addr string, heartbeat int, replicate int)
 
 	// DeleteNode used to delete node address information
 	// of specified node ID from NodeManager if possible.
@@ -69,10 +73,20 @@ func (r *nodeResolver) NodeAddress(nodeID uint64, stype raft.SocketType) (addr s
 
 // AddNode adds node address information.
 func (r *nodeResolver) AddNode(nodeId uint64, addr string) {
+	r.AddNodeWithPort(nodeId, addr, 0, 0)
+}
+
+func (r *nodeResolver) AddNodeWithPort(nodeId uint64, addr string, heartbeat int, replicate int) {
+	if heartbeat == 0 {
+		heartbeat = HeartbeatPort
+	}
+	if replicate == 0 {
+		replicate = ReplicatePort
+	}
 	if len(strings.TrimSpace(addr)) != 0 {
 		r.nodeMap.Store(nodeId, &nodeAddress{
-			Heartbeat: fmt.Sprintf("%s:%d", addr, HeartbeatPort),
-			Replicate: fmt.Sprintf("%s:%d", addr, ReplicatePort),
+			Heartbeat: fmt.Sprintf("%s:%d", addr, heartbeat),
+			Replicate: fmt.Sprintf("%s:%d", addr, replicate),
 		})
 	}
 }
@@ -88,9 +102,9 @@ func NewNodeResolver() NodeResolver {
 }
 
 // AddNode add node address into specified NodeManger if possible.
-func AddNode(manager NodeManager, nodeId uint64, addr string) {
+func AddNode(manager NodeManager, nodeId uint64, addr string, heartbeat int, replicate int) {
 	if manager != nil {
-		fmt.Printf("add node %d %s\n", nodeId, addr)
+		log.LogInfof("add node %d %s\n", nodeId, addr)
 		manager.AddNode(nodeId, addr)
 	}
 }

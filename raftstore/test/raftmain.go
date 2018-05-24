@@ -1,17 +1,17 @@
 package main
 
 import (
-	"fmt"
-	"strconv"
-	"path"
-	"log"
 	"flag"
+	"fmt"
+	"log"
+	"path"
+	"strconv"
 	"strings"
 
+	. "github.com/tiglabs/baudstorage/raftstore"
+	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
-	"github.com/tiglabs/baudstorage/util/config"
-	. "github.com/tiglabs/baudstorage/raftstore"
 )
 
 type testConfig struct {
