@@ -1,14 +1,12 @@
 package metanode
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
 )
@@ -20,16 +18,15 @@ func TestValidNodeID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("util/log module test failed: %s", err.Error())
 	}
+	count := 0
 	httpServe := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
 		r *http.Request) {
-		data, err := json.Marshal(&proto.RegisterMetaNodeResp{
-			ID: 55555,
-		})
-		if err != nil {
-			w.WriteHeader(http.StatusNotImplemented)
+		count++
+		if count < 5 {
+			w.WriteHeader(http.StatusForbidden)
 			return
 		}
-		w.Write(data)
+		w.Write([]byte("55555"))
 		return
 	}))
 	defer httpServe.Close()

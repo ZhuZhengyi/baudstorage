@@ -2,15 +2,16 @@ package metanode
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/juju/errors"
-	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/config"
@@ -43,6 +44,7 @@ type MetaNode struct {
 	masterAddrs string
 	metaManager MetaManager
 	localAddr   string
+	retryCount  int
 	raftStore   raftstore.RaftStore
 	httpStopC   chan uint8
 	state       ServiceState
@@ -165,7 +167,6 @@ func (m *MetaNode) stopMetaManager() {
 }
 
 func (m *MetaNode) validNodeID() (err error) {
-	var data []byte
 	for {
 		// Register and Get NodeID
 		if m.masterAddrs == "" {
@@ -182,21 +183,57 @@ func (m *MetaNode) validNodeID() (err error) {
 		masterURL := fmt.Sprintf("http://%s/%s", mAddrSlice[i], metaNodeURL)
 		reqBody := bytes.NewBufferString(fmt.Sprintf("addr=%s:%d",
 			m.localAddr, m.listen))
-		data, err = util.PostToNode(reqBody.Bytes(), masterURL)
+		err = m.postNodeID(reqBody.Bytes(), masterURL)
 		if err != nil {
 			log.LogErrorf("connect master: %s", err.Error())
 			time.Sleep(3 * time.Second)
 			continue
 		}
-		node := &proto.RegisterMetaNodeResp{}
-		if err = json.Unmarshal(data, node); err != nil {
-			log.LogErrorf("connect master: %s", err.Error())
-			time.Sleep(3 * time.Second)
-			continue
-		}
-		m.nodeId = node.ID
 		return
 	}
+}
+
+func (m *MetaNode) postNodeID(data []byte, reqURL string) (err error) {
+	client := &http.Client{Timeout: 2 * time.Second}
+	buff := bytes.NewBuffer(data)
+	req, err := http.NewRequest("POST", reqURL, buff)
+	if err != nil {
+		return
+	}
+	req.Header.Set("Connection", "close")
+	resp, err := client.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	msg, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	if resp.StatusCode == http.StatusOK {
+		m.nodeId, err = strconv.ParseUint(string(msg), 10, 64)
+		return
+	}
+	if resp.StatusCode == http.StatusForbidden {
+		// Record Master IP
+		m.retryCount++
+		if m.retryCount > 2 {
+			err = errors.New("retry too many")
+			return
+		}
+		masterAddr := string(msg)
+		if masterAddr == "" {
+			err = errors.New("master response emtpy addr")
+			return
+		}
+		reqURL = fmt.Sprintf("http://%s/%s", string(msg), metaNodeURL)
+		return m.postNodeID(data, reqURL)
+
+	}
+	if resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf(" action[PostToNode] Data send failed,url:%v, status code:%v ", reqURL, strconv.Itoa(resp.StatusCode))
+	}
+	return
 }
 
 // NewServer create an new MetaNode instance.
