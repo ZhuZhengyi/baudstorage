@@ -43,7 +43,7 @@ func NewExtentReader(inode uint64, inInodeOffset int, key proto.ExtentKey,
 	reader.startInodeOffset = inInodeOffset
 	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
 	reader.wrapper = wrapper
-	//reader.exitCh = make(chan bool, 2)
+	reader.exitCh = make(chan bool, 2)
 	//reader.cacheReferCh = make(chan bool, 10)
 	//reader.cacheReferCh <- true
 	//go reader.asyncFillCache()

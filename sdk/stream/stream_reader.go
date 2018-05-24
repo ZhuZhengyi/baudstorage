@@ -101,7 +101,7 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 		return 0, io.EOF
 	}
 	if offset+size > int(stream.fileSize) {
-		return int(stream.fileSize) - (offset + size), io.EOF
+		return int(stream.fileSize) - offset, io.EOF
 	}
 
 	return size, nil
@@ -153,7 +153,7 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *proto.StreamKey) (er
 func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int, err error) {
 	var keyCanRead int
 	keyCanRead, err = stream.initCheck(offset, size)
-	if keyCanRead <= 0 || err != nil {
+	if keyCanRead <= 0 || (err != nil && err != io.EOF) {
 		return
 	}
 	readers, readerOffset, readerSize := stream.GetReader(offset, size)
