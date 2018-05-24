@@ -1,6 +1,7 @@
 package metanode
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -156,9 +157,10 @@ func (m *MetaNode) validNodeID() (err error) {
 		if err != nil {
 			return
 		}
-		masterURL := fmt.Sprintf("http://%s/%s?addr=%s", mAddrSlice[i],
-			metaNodeURL, fmt.Sprintf("%s:%d", m.localAddr, m.listen))
-		data, err = util.PostToNode(nil, masterURL)
+		masterURL := fmt.Sprintf("http://%s/%s", mAddrSlice[i], metaNodeURL)
+		reqBody := bytes.NewBufferString(fmt.Sprintf("addr=%s:%d",
+			m.localAddr, m.listen))
+		data, err = util.PostToNode(reqBody.Bytes(), masterURL)
 		if err != nil {
 			log.LogErrorf("connect master: %s", err.Error())
 			time.Sleep(3 * time.Second)

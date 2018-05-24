@@ -6,12 +6,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
 const (
-	TaskWaitResponseTimeOut = 2
+	TaskWaitResponseTimeOut = 2 * time.Second
 )
 
 func PostToNode(data []byte, url string) (msg []byte, err error) {
