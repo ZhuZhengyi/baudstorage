@@ -383,10 +383,11 @@ func NewLog(dir, module string, level int) (*Log, error) {
 	glog.module = module
 	fi, err := os.Stat(dir)
 	if err != nil {
-		return nil, err
-	}
-	if !fi.IsDir() {
-		return nil, errors.New(dir + " is not a direnctoy")
+		os.MkdirAll(dir, 0755)
+	} else {
+		if !fi.IsDir() {
+			return nil, errors.New(dir + " is not a direnctoy")
+		}
 	}
 
 	err = glog.initLog(dir, module, level)
@@ -418,7 +419,8 @@ func (l *Log) initLog(logDir, module string, level int) error {
 	logNames := [...]string{DebugLogFileName, InfoLogFileName, WarnLogFileName, ErrLogFileName, ReadLogFileName, UpdateLogFileName}
 	logStr := [...]string{"Debug", "Info", "Warn", "Err", "Read", "Update"}
 	for i := range logHandles {
-		if *logHandles[i], err = getNewLog(logNames[i], logStr[i]+"LogFileOpenFailed"); err != nil {
+		if *logHandles[i], err = getNewLog(logNames[i],
+			logStr[i]+"_LogFileOpenFailed"); err != nil {
 			return err
 		}
 	}
