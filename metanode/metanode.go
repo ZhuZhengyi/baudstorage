@@ -194,6 +194,8 @@ func (m *MetaNode) validNodeID() (err error) {
 }
 
 func (m *MetaNode) postNodeID(data []byte, reqURL string) (err error) {
+	log.LogDebugf("post connect master get nodeID: url:%s, reqBody:%s",
+		reqURL, string(data))
 	client := &http.Client{Timeout: 2 * time.Second}
 	buff := bytes.NewBuffer(data)
 	req, err := http.NewRequest("POST", reqURL, buff)
