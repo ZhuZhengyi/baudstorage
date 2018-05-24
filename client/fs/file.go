@@ -67,12 +67,17 @@ func (f *File) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
 func (f *File) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
 	f.super.logger.Printf("Read: HandleID(%v) sizeof Data(%v) offset(%v) size(%v) \n", req.Handle, len(resp.Data), req.Offset, req.Size)
 
-	//	data := make([]byte, req.Size)
-	//	size, err := f.super.ec.Read(f.inode.ino, data, int(req.Offset), req.Size)
-	//	if err != nil {
-	//		f.super.logger.Printf("Read error: (%v) size(%v) data(%v)", err.Error(), size, string(data))
-	//		return nil
-	//	}
+	data := make([]byte, req.Size)
+	size, err := f.super.ec.Read(f.inode.ino, data, int(req.Offset), req.Size)
+	if err != nil {
+		f.super.logger.Printf("Read error: (%v) size(%v)", err.Error(), size)
+		return fuse.EIO
+	}
+	if size > req.Size {
+		f.super.logger.Printf("Read error: request size(%v) read size(%v)", req.Size, size)
+		return fuse.ERANGE
+	}
+	resp.Data = append(resp.Data, data[:size]...)
 	return nil
 }
 
