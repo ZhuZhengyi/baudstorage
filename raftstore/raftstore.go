@@ -86,7 +86,7 @@ func (s *raftStore) CreatePartition(cfg *PartitionConfig) (p Partition, err erro
 	if err != nil {
 		return
 	}
-	peers := make([]proto.Peer, len(cfg.Peers))
+	peers := make([]proto.Peer, 0)
 	for _, peerAddress := range cfg.Peers {
 		peers = append(peers, peerAddress.Peer)
 		s.AddNodeWithPort(
