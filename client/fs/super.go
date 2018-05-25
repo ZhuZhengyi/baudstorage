@@ -35,8 +35,8 @@ func NewSuper(namespace, master, logpath string, logger *log.Logger) (s *Super, 
 	s.logger = logger
 
 	//FIXME:
-	//s.ec, err = stream.NewExtentClient(path.Join(logpath, "extentclient"), master, s.mw.AppendExtentKey, s.mw.GetExtents)
-	s.ec, err = stream.NewExtentClient(path.Join(logpath, "extentclient"), "localhost:7778", s.mw.AppendExtentKey, s.mw.GetExtents)
+	//s.ec, err = stream.NewExtentClient(path.Join(logpath, "extentclient"), namespace, master, s.mw.AppendExtentKey, s.mw.GetExtents)
+	s.ec, err = stream.NewExtentClient(path.Join(logpath, "extentclient"), namespace, "localhost:7778", s.mw.AppendExtentKey, s.mw.GetExtents)
 	if err != nil {
 		s.logger.Printf("NewExtentClient failed! %v", err.Error())
 		return nil, err

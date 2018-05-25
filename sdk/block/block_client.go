@@ -21,7 +21,7 @@ type BlockClient struct {
 	isShutDown  bool
 }
 
-func NewBlockClient(maddrs string) *BlockClient {
+func NewBlockClient(namespace, maddrs string) *BlockClient {
 	clt := &BlockClient{
 		masterAddrs: maddrs,
 		isShutDown:  false,
@@ -29,7 +29,7 @@ func NewBlockClient(maddrs string) *BlockClient {
 		vols:        nil,
 	}
 	var err error
-	clt.vols, err = sdk.NewVolGroupWraper(maddrs)
+	clt.vols, err = sdk.NewVolGroupWraper(namespace, maddrs)
 	if err != nil {
 		return nil
 	}
