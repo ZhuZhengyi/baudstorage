@@ -218,7 +218,7 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	if task == nil {
 		return
 	}
-	log.LogDebugf(fmt.Sprintf("receive task response:%v from %v",task.ID,nodeAddr))
+	log.LogDebugf(fmt.Sprintf("receive task response:%v from %v", task.ID, nodeAddr))
 	var (
 		metaNode *MetaNode
 		err      error
@@ -366,7 +366,7 @@ func (c *Cluster) dealCreateMetaPartition(nodeAddr string, resp *proto.CreateMet
 	mp.Unlock()
 	return
 errDeal:
-	log.LogError(fmt.Sprintf("createVolSuccessTriggerOperatorErr %v", err))
+	log.LogError(fmt.Sprintf("dealCreateMetaPartition %v", err))
 	return
 }
 

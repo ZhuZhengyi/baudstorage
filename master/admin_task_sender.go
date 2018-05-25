@@ -29,8 +29,8 @@ type AdminTaskSender struct {
 	targetAddr string
 	TaskMap    map[string]*proto.AdminTask
 	sync.Mutex
-	exitCh     chan struct{}
-	connPool   *pool.ConnPool
+	exitCh   chan struct{}
+	connPool *pool.ConnPool
 }
 
 func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
@@ -110,7 +110,7 @@ func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) 
 	} else {
 		log.LogError("send task failed,err %v", response.Data)
 	}
-	log.LogDebugf(fmt.Sprintf("sender task:%v to %v",task.ID,sender.targetAddr))
+	log.LogDebugf(fmt.Sprintf("sender task:%v to %v", task.ID, sender.targetAddr))
 	return
 }
 

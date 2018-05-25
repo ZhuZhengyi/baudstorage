@@ -12,11 +12,6 @@ const (
 	ResponseInterval = 30
 	ResponseTimeOut  = 100
 	MaxSendCount     = 5
-	CreateVol        = iota
-	LoadVol
-	CreateMetaRange
-	GetMetaRangeMetric
-	HeartBeat
 )
 
 /*task struct to node*/
