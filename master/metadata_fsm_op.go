@@ -147,7 +147,7 @@ func (c *Cluster) putMetaPartitionInfo(opType uint32, nsName string, mp *MetaPar
 func (c *Cluster) syncAddMetaNode(metaNode *MetaNode) (err error) {
 	metadata := new(Metadata)
 	metadata.Op = OpSyncAddMetaNode
-	metadata.K = MetaNodePrefix + strconv.FormatUint(metaNode.id, 10) + MetaNodePrefix + metaNode.Addr
+	metadata.K = MetaNodePrefix + strconv.FormatUint(metaNode.id, 10) + KeySeparator + metaNode.Addr
 	return c.submit(metadata)
 }
 
