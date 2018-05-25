@@ -34,9 +34,6 @@ func (m *metaManager) respondToMaster(ip string, data interface{}) (err error) {
 	}
 	url := fmt.Sprintf("http://%s/%s", ip, masterResponsePath)
 	_, err = util.PostToNode(jsonBytes, url)
-	if err != nil {
-		log.LogErrorf("response to master: %s", err.Error())
-	}
 	return
 }
 
