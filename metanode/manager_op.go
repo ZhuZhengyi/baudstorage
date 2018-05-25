@@ -75,21 +75,6 @@ func (m *metaManager) opCreateMetaPartition(conn net.Conn, p *Packet) (err error
 		m.respondToClient(conn, p)
 		return
 	}
-	defer func() {
-		// Response task result to master.
-		resp := &proto.CreateMetaPartitionResponse{}
-		if err != nil {
-			// Operation failure.
-			resp.Status = proto.OpErr
-			resp.Result = err.Error()
-		} else {
-			// Operation success.
-			resp.Status = proto.OpOk
-		}
-		adminTask.Response = resp
-		adminTask.Request = nil
-		m.respondToMaster(strings.Split(conn.RemoteAddr().String(), ":")[0], adminTask)
-	}()
 	// Marshal request body.
 	requestJson, err := json.Marshal(adminTask.Request)
 	if err != nil {
