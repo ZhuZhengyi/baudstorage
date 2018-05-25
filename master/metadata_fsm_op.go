@@ -210,7 +210,9 @@ func (c *Cluster) applyAddMetaNode(cmd *Metadata) {
 	keys := strings.Split(cmd.K, KeySeparator)
 
 	if keys[1] == MetaNodeAcronym {
-		if metaNode, err := c.getMetaNode(keys[3]); err != nil {
+		addr := keys[3]
+		if _, err := c.getMetaNode(addr); err != nil {
+			metaNode := NewMetaNode(addr)
 			c.metaNodes.Store(metaNode.Addr, metaNode)
 		}
 	}

@@ -271,6 +271,7 @@ func (c *Cluster) getDataNode(addr string) (dataNode *DataNode, err error) {
 	value, ok := c.dataNodes.Load(addr)
 	if !ok {
 		err = DataNodeNotFound
+		return
 	}
 	dataNode = value.(*DataNode)
 	return
@@ -280,6 +281,7 @@ func (c *Cluster) getMetaNode(addr string) (metaNode *MetaNode, err error) {
 	value, ok := c.metaNodes.Load(addr)
 	if !ok {
 		err = MetaNodeNotFound
+		return
 	}
 	metaNode = value.(*MetaNode)
 	return
