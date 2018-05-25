@@ -235,7 +235,7 @@ func (m *Master) addDataNode(w http.ResponseWriter, r *http.Request) {
 		nodeAddr string
 		err      error
 	)
-	if nodeAddr, err = parseAddMetaNodePara(r); err != nil {
+	if nodeAddr, err = parseAddDataNodePara(r); err != nil {
 		goto errDeal
 	}
 
@@ -354,10 +354,12 @@ errDeal:
 
 func parseAddMetaNodePara(r *http.Request) (nodeAddr string, err error) {
 	r.ParseForm()
-	if nodeAddr = r.FormValue(ParaNodeAddr); nodeAddr == "" {
-		err = paraNotFound(ParaNodeAddr)
-	}
-	return
+	return checkNodeAddr(r)
+}
+
+func parseAddDataNodePara(r *http.Request) (nodeAddr string, err error) {
+	r.ParseForm()
+	return checkNodeAddr(r)
 }
 
 func (m *Master) getMetaNode(w http.ResponseWriter, r *http.Request) {

@@ -137,9 +137,9 @@ func (c *Cluster) addMetaNode(nodeAddr string) (id uint64, err error) {
 	var (
 		metaNode *MetaNode
 	)
-	if _, ok := c.metaNodes.Load(nodeAddr); ok {
-		err = hasExist(nodeAddr)
-		goto errDeal
+	if value, ok := c.metaNodes.Load(nodeAddr); ok {
+		metaNode = value.(*MetaNode)
+		return metaNode.id, nil
 	}
 	metaNode = NewMetaNode(nodeAddr)
 
@@ -161,12 +161,13 @@ errDeal:
 func (c *Cluster) addDataNode(nodeAddr string) (err error) {
 	var dataNode *DataNode
 	if _, ok := c.dataNodes.Load(nodeAddr); ok {
-		err = hasExist(nodeAddr)
-		goto errDeal
+		return
 	}
 
 	dataNode = NewDataNode(nodeAddr)
-	c.syncAddDataNode(dataNode)
+	if err = c.syncAddDataNode(dataNode); err != nil {
+		goto errDeal
+	}
 	c.dataNodes.Store(nodeAddr, dataNode)
 	return
 errDeal:
