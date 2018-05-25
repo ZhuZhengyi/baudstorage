@@ -50,7 +50,7 @@ func (v *Vol) GetVolLocationNode() (node *DataNode) {
 	return v.dataNode
 }
 
-/*check vol location is avail ,must isActive=true and volLoc.Status!=volUnavailable*/
+/*check vol location is avail ,must IsActive=true and volLoc.Status!=volUnavailable*/
 func (v *Vol) CheckLocIsAvailContainsDiskError() (avail bool) {
 	dataNode := v.GetVolLocationNode()
 	dataNode.Lock()

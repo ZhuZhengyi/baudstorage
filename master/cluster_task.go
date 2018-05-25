@@ -32,7 +32,7 @@ func (c *Cluster) putMetaNodeTasks(tasks []*proto.AdminTask) {
 		if node, err := c.getMetaNode(t.OperatorAddr); err != nil {
 			log.LogWarn(fmt.Sprintf("action[putTasks],nodeAddr:%v,taskID:%v,err:%v", node.Addr, t.ID, err.Error()))
 		} else {
-			node.sender.PutTask(t)
+			node.Sender.PutTask(t)
 
 		}
 	}
@@ -218,6 +218,7 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	if task == nil {
 		return
 	}
+	log.LogDebugf(fmt.Sprintf("receive task response:%v from %v",task.ID,nodeAddr))
 	var (
 		metaNode *MetaNode
 		err      error
@@ -226,10 +227,10 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	if metaNode, err = c.getMetaNode(nodeAddr); err != nil {
 		goto errDeal
 	}
-	if _, ok := metaNode.sender.taskMap[task.ID]; !ok {
-		err = taskNotFound(task.ID)
-		goto errDeal
-	}
+	//if _, ok := metaNode.Sender.TaskMap[task.ID]; !ok {
+	//	err = taskNotFound(task.ID)
+	//	goto errDeal
+	//}
 	if err = UnmarshalTaskResponse(task); err != nil {
 		goto errDeal
 	}
@@ -256,6 +257,7 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	default:
 		log.LogError(fmt.Sprintf("unknown operate code %v", task.OpCode))
 	}
+	metaNode.Sender.DelTask(task)
 
 	return
 
@@ -376,17 +378,25 @@ func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHea
 		threshold bool
 	)
 
+	if resp.Status != proto.TaskSuccess {
+		return
+	}
+
 	if metaNode, err = c.getMetaNode(nodeAddr); err != nil {
 		goto errDeal
 	}
 
 	logMsg = fmt.Sprintf("action[dealMetaNodeHeartbeat],metaNode:%v ReportTime:%v  success", metaNode.Addr, time.Now().Unix())
 	log.LogDebug(logMsg)
-	metaNode.setNodeAlive()
 	metaNode.metaRangeInfos = resp.MetaPartitionInfo
+	metaNode.metaRangeCount = len(metaNode.metaRangeInfos)
+	metaNode.Total = resp.Total
+	metaNode.Used = resp.Used
+	metaNode.MaxMemAvailWeight = resp.Total - resp.Used
+	metaNode.RackName = resp.RackName
+	metaNode.setNodeAlive()
 	threshold = float32(metaNode.Used/metaNode.Total) < DefaultMetaPartitionThreshold
 	c.UpdateMetaNode(metaNode, threshold)
-	metaNode.metaRangeCount = len(metaNode.metaRangeInfos)
 	metaNode.metaRangeInfos = nil
 
 	return
@@ -405,7 +415,7 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	if err != nil {
 		return
 	}
-	if _, ok := dataNode.sender.taskMap[task.ID]; !ok {
+	if _, ok := dataNode.sender.TaskMap[task.ID]; !ok {
 		return
 	}
 	if err := UnmarshalTaskResponse(task); err != nil {
@@ -533,6 +543,10 @@ func (c *Cluster) dealDataNodeHeartbeat(nodeAddr string, resp *proto.DataNodeHea
 		err      error
 		logMsg   string
 	)
+
+	if resp.Status != proto.TaskSuccess {
+		return
+	}
 
 	if dataNode, err = c.getDataNode(nodeAddr); err != nil {
 		goto errDeal

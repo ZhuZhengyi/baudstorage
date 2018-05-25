@@ -178,9 +178,9 @@ func (c *Cluster) GetAvailCarryMetaNodeTab(maxTotal uint64, excludeRack string, 
 	nodeTabs = make(NodeTabArrSorterByCarry, 0)
 	c.metaNodes.Range(func(key, value interface{}) bool {
 		metaNode := value.(*MetaNode)
-		if metaNode.RackName == excludeRack {
-			return true
-		}
+		//if metaNode.RackName == excludeRack {
+		//	return true
+		//}
 		if contains(excludeHosts, metaNode.Addr) == true {
 			return true
 		}

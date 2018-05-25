@@ -27,17 +27,17 @@ to master
 
 type AdminTaskSender struct {
 	targetAddr string
-	taskMap    map[string]*proto.AdminTask
+	TaskMap    map[string]*proto.AdminTask
 	sync.Mutex
-	exitCh   chan struct{}
-	connPool *pool.ConnPool
+	exitCh     chan struct{}
+	connPool   *pool.ConnPool
 }
 
 func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
 
 	sender = &AdminTaskSender{
 		targetAddr: targetAddr,
-		taskMap:    make(map[string]*proto.AdminTask),
+		TaskMap:    make(map[string]*proto.AdminTask),
 		exitCh:     make(chan struct{}),
 		connPool:   pool.NewConnPool(),
 	}
@@ -110,25 +110,26 @@ func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) 
 	} else {
 		log.LogError("send task failed,err %v", response.Data)
 	}
+	log.LogDebugf(fmt.Sprintf("sender task:%v to %v",task.ID,sender.targetAddr))
 	return
 }
 
 func (sender *AdminTaskSender) DelTask(t *proto.AdminTask) {
 	sender.Lock()
 	defer sender.Unlock()
-	_, ok := sender.taskMap[t.ID]
+	_, ok := sender.TaskMap[t.ID]
 	if !ok {
 		return
 	}
-	delete(sender.taskMap, t.ID)
+	delete(sender.TaskMap, t.ID)
 }
 
 func (sender *AdminTaskSender) PutTask(t *proto.AdminTask) {
 	sender.Lock()
 	defer sender.Unlock()
-	_, ok := sender.taskMap[t.ID]
+	_, ok := sender.TaskMap[t.ID]
 	if !ok {
-		sender.taskMap[t.ID] = t
+		sender.TaskMap[t.ID] = t
 	}
 }
 
@@ -137,8 +138,8 @@ func (sender *AdminTaskSender) getNeedDealTask() (tasks []*proto.AdminTask) {
 	delTasks := make([]*proto.AdminTask, 0)
 	sender.Lock()
 	defer sender.Unlock()
-	for _, task := range sender.taskMap {
-		if task.Status == proto.TaskFail || task.Status == proto.TaskSuccess || task.CheckTaskTimeOut() {
+	for _, task := range sender.TaskMap {
+		if task.CheckTaskTimeOut() {
 			delTasks = append(delTasks, task)
 		}
 		if !task.CheckTaskNeedRetrySend() {
@@ -150,9 +151,9 @@ func (sender *AdminTaskSender) getNeedDealTask() (tasks []*proto.AdminTask) {
 		}
 	}
 
-	for _, delTask := range delTasks {
-		delete(sender.taskMap, delTask.ID)
-	}
+	//for _, delTask := range delTasks {
+	//	delete(sender.TaskMap, delTask.ID)
+	//}
 
 	return
 }

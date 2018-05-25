@@ -38,6 +38,7 @@ func UnmarshalTaskResponse(task *proto.AdminTask) (err error) {
 	if err != nil {
 		return
 	}
+	log.LogDebug(fmt.Sprintf("received TaskResponse:%v", string(bytes)))
 	var response interface{}
 	switch task.OpCode {
 	case proto.OpCreateVol:
@@ -70,6 +71,7 @@ func UnmarshalTaskResponse(task *proto.AdminTask) (err error) {
 	if err = json.Unmarshal(bytes, response); err != nil {
 		return
 	}
+	log.LogDebug(fmt.Sprintf("UnmarshalTaskResponse:%v", string(bytes)))
 	task.Response = response
 	return
 }

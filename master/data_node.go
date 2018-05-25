@@ -44,12 +44,12 @@ func NewDataNode(addr string) (dataNode *DataNode) {
 	return
 }
 
-/*check node heartbeat if reportTime > DataNodeTimeOut,then isActive is false*/
+/*check node heartbeat if reportTime > DataNodeTimeOut,then IsActive is false*/
 func (dataNode *DataNode) checkHeartBeat() {
 	dataNode.Lock()
 	defer dataNode.Unlock()
 	//if time.Since(dataNode.reportTime) > time.Second*(time.Duration(gConfig.NodeTimeOutSec)) {
-	//	dataNode.isActive = false
+	//	dataNode.IsActive = false
 	//}
 
 	return

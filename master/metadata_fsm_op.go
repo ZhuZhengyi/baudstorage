@@ -278,7 +278,7 @@ func (c *Cluster) loadDataNodes() (err error) {
 		it.Close()
 		c.fsm.store.ReleaseSnapshot(snapshot)
 	}()
-	prefixKey := []byte(NamespacePrefix)
+	prefixKey := []byte(DataNodePrefix)
 	it.Seek(prefixKey)
 
 	for ; it.ValidForPrefix(prefixKey); it.Next() {
@@ -293,8 +293,8 @@ func (c *Cluster) loadDataNodes() (err error) {
 
 func (c *Cluster) decodeMetaNodeKey(key string) (nodeID uint64, addr string, err error) {
 	keys := strings.Split(key, KeySeparator)
-	addr = keys[2]
-	nodeID, err = strconv.ParseUint(keys[1], 10, 64)
+	addr = keys[3]
+	nodeID, err = strconv.ParseUint(keys[2], 10, 64)
 	return
 }
 
@@ -305,7 +305,7 @@ func (c *Cluster) loadMetaNodes() (err error) {
 		it.Close()
 		c.fsm.store.ReleaseSnapshot(snapshot)
 	}()
-	prefixKey := []byte(NamespacePrefix)
+	prefixKey := []byte(MetaNodePrefix)
 	it.Seek(prefixKey)
 
 	for ; it.ValidForPrefix(prefixKey); it.Next() {

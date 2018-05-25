@@ -321,7 +321,7 @@ func (m *Master) dataNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	m.cluster.dealDataNodeTaskResponse(dataNode.HttpAddr, tr)
-
+	io.WriteString(w, fmt.Sprintf("%v", http.StatusOK))
 	return
 
 errDeal:
@@ -489,6 +489,7 @@ func (m *Master) metaNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
 
 	m.cluster.dealMetaNodeTaskResponse(metaNode.Addr, tr)
 
+	io.WriteString(w, fmt.Sprintf("%v", http.StatusOK))
 	return
 
 errDeal:

@@ -11,6 +11,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -213,7 +214,9 @@ func (m *MetaServer) servConn(conn net.Conn) {
 	for {
 		p := &proto.Packet{}
 		if err := p.ReadFromConn(conn, proto.NoReadDeadlineTime); err != nil {
-			log.Println("servConn ReadFromConn:", err)
+			if err != io.EOF {
+				log.Println("servConn ReadFromConn:", err)
+			}
 			return
 		}
 

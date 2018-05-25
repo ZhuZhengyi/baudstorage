@@ -27,6 +27,7 @@ func newCluster(name string, leaderInfo *LeaderInfo, fsm *MetadataFsm, partition
 	c = new(Cluster)
 	c.Name = name
 	c.leaderInfo = leaderInfo
+	c.namespaces = make(map[string]*NameSpace, 0)
 	c.cfg = NewClusterConfig()
 	c.fsm = fsm
 	c.partition = partition
@@ -469,7 +470,7 @@ func (c *Cluster) getAllMetaNodes() (metaNodes []NodeView) {
 	metaNodes = make([]NodeView, 0)
 	c.metaNodes.Range(func(addr, node interface{}) bool {
 		metaNode := node.(*MetaNode)
-		metaNodes = append(metaNodes, NodeView{Addr: metaNode.Addr, Status: metaNode.isActive})
+		metaNodes = append(metaNodes, NodeView{Addr: metaNode.Addr, Status: metaNode.IsActive})
 		return true
 	})
 	return
