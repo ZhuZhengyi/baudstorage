@@ -13,6 +13,11 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"github.com/tiglabs/baudstorage/util"
+)
+
+const (
+	CLIENTREADSIZE = 4 * util.KB
 )
 
 var aalock sync.Mutex
@@ -146,10 +151,10 @@ func TestExtentClient_Write(t *testing.T) {
 		writebytes += write
 	}
 
-	//read size more than write size
-	rdata := make([]byte, CFSBLOCKSIZE)
-	read, err := client.Read(inode, rdata, (writebytes-CFSBLOCKSIZE+1024), CFSBLOCKSIZE)
-	if err != nil || read != (CFSBLOCKSIZE-1024) {
+	//test case: read size more than write size
+	rdata := make([]byte, CLIENTREADSIZE)
+	read, err := client.Read(inode, rdata, (writebytes-CLIENTREADSIZE+1024), CLIENTREADSIZE)
+	if err != nil || read != (CLIENTREADSIZE-1024) {
 		OccoursErr(fmt.Errorf("read inode [%v] bytes[%v] err[%v]\n", inode, read, err), t)
 	}
 
