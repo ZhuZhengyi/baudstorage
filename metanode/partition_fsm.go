@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sync/atomic"
 
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
@@ -169,8 +168,11 @@ func (mp *metaPartition) HandleFatalEvent(err *raft.FatalError) {
 }
 
 func (mp *metaPartition) HandleLeaderChange(leader uint64) {
-	// Take atomic operation for leader changing.
-	atomic.StoreUint64(&mp.leaderID, leader)
+	mp.leaderID = leader
+	if mp.config.Start == 0 && mp.config.Cursor == 0 {
+		id, _ := mp.nextInodeID()
+		mp.createInode(NewInode(id, proto.ModeDir))
+	}
 }
 
 func (mp *metaPartition) Put(key, val interface{}) (resp interface{}, err error) {
