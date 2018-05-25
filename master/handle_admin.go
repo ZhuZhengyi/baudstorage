@@ -235,7 +235,7 @@ func (m *Master) addDataNode(w http.ResponseWriter, r *http.Request) {
 		nodeAddr string
 		err      error
 	)
-	if nodeAddr, err = parseAddMetaNodePara(r); err != nil {
+	if nodeAddr, err = parseAddDataNodePara(r); err != nil {
 		goto errDeal
 	}
 
@@ -344,7 +344,7 @@ func (m *Master) addMetaNode(w http.ResponseWriter, r *http.Request) {
 	if id, err = m.cluster.addMetaNode(nodeAddr); err != nil {
 		goto errDeal
 	}
-	io.WriteString(w, fmt.Sprintf("addMetaNode %v successed,id(%v)", nodeAddr, id))
+	io.WriteString(w, fmt.Sprintf("%v",id))
 	return
 errDeal:
 	logMsg := getReturnMessage("addMetaNode", r.RemoteAddr, err.Error(), http.StatusBadRequest)
@@ -354,10 +354,12 @@ errDeal:
 
 func parseAddMetaNodePara(r *http.Request) (nodeAddr string, err error) {
 	r.ParseForm()
-	if nodeAddr = r.FormValue(ParaNodeAddr); nodeAddr == "" {
-		err = paraNotFound(ParaNodeAddr)
-	}
-	return
+	return checkNodeAddr(r)
+}
+
+func parseAddDataNodePara(r *http.Request) (nodeAddr string, err error) {
+	r.ParseForm()
+	return checkNodeAddr(r)
 }
 
 func (m *Master) getMetaNode(w http.ResponseWriter, r *http.Request) {

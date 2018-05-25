@@ -53,7 +53,7 @@ func initClient(t *testing.T) (client *ExtentClient) {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 	var err error
-	client, err = NewExtentClient("log", "127.0.0.1:7778", saveExtentKey, updateKey)
+	client, err = NewExtentClient("log", "stream_write_test", "127.0.0.1:7778", saveExtentKey, updateKey)
 	if err != nil {
 		OccoursErr(fmt.Errorf("init client err[%v]", err.Error()), t)
 	}

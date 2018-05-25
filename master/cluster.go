@@ -137,9 +137,9 @@ func (c *Cluster) addMetaNode(nodeAddr string) (id uint64, err error) {
 	var (
 		metaNode *MetaNode
 	)
-	if _, ok := c.metaNodes.Load(nodeAddr); ok {
-		err = hasExist(nodeAddr)
-		goto errDeal
+	if value, ok := c.metaNodes.Load(nodeAddr); ok {
+		metaNode = value.(*MetaNode)
+		return metaNode.id, nil
 	}
 	metaNode = NewMetaNode(nodeAddr)
 
@@ -161,31 +161,19 @@ errDeal:
 func (c *Cluster) addDataNode(nodeAddr string) (err error) {
 	var dataNode *DataNode
 	if _, ok := c.dataNodes.Load(nodeAddr); ok {
-		err = hasExist(nodeAddr)
-		goto errDeal
+		return
 	}
 
 	dataNode = NewDataNode(nodeAddr)
-	c.syncAddDataNode(dataNode)
+	if err = c.syncAddDataNode(dataNode); err != nil {
+		goto errDeal
+	}
 	c.dataNodes.Store(nodeAddr, dataNode)
 	return
 errDeal:
 	err = fmt.Errorf("action[addMetaNode],metaNodeAddr:%v err:%v ", nodeAddr, err.Error())
 	log.LogWarn(err.Error())
 	return err
-}
-
-func (c *Cluster) getVolsView() (body []byte, err error) {
-	body = make([]byte, 0)
-	for _, ns := range c.namespaces {
-		if partBody, err := ns.volGroups.updateVolResponseCache(NoNeedUpdateVolResponse, 0); err == nil {
-			body = append(body, partBody...)
-		} else {
-			log.LogError(fmt.Sprintf("getVolsView on namespace %v err:%v", ns.Name, err.Error()))
-		}
-
-	}
-	return
 }
 
 func (c *Cluster) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error) {
@@ -469,8 +457,8 @@ func (c *Cluster) DataNodeCount() (len int) {
 
 func (c *Cluster) getAllDataNodes() (dataNodes []NodeView) {
 	dataNodes = make([]NodeView, 0)
-	c.dataNodes.Range(func(key, value interface{}) bool {
-		dataNode := key.(*DataNode)
+	c.dataNodes.Range(func(addr, node interface{}) bool {
+		dataNode := node.(*DataNode)
 		dataNodes = append(dataNodes, NodeView{Addr: dataNode.TcpAddr, Status: dataNode.isActive})
 		return true
 	})
@@ -479,8 +467,8 @@ func (c *Cluster) getAllDataNodes() (dataNodes []NodeView) {
 
 func (c *Cluster) getAllMetaNodes() (metaNodes []NodeView) {
 	metaNodes = make([]NodeView, 0)
-	c.metaNodes.Range(func(key, value interface{}) bool {
-		metaNode := key.(*MetaNode)
+	c.metaNodes.Range(func(addr, node interface{}) bool {
+		metaNode := node.(*MetaNode)
 		metaNodes = append(metaNodes, NodeView{Addr: metaNode.Addr, Status: metaNode.isActive})
 		return true
 	})
