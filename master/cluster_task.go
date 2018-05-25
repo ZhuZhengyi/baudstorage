@@ -32,7 +32,7 @@ func (c *Cluster) putMetaNodeTasks(tasks []*proto.AdminTask) {
 		if node, err := c.getMetaNode(t.OperatorAddr); err != nil {
 			log.LogWarn(fmt.Sprintf("action[putTasks],nodeAddr:%v,taskID:%v,err:%v", node.Addr, t.ID, err.Error()))
 		} else {
-			node.sender.PutTask(t)
+			node.Sender.PutTask(t)
 
 		}
 	}
@@ -226,7 +226,7 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	if metaNode, err = c.getMetaNode(nodeAddr); err != nil {
 		goto errDeal
 	}
-	if _, ok := metaNode.sender.taskMap[task.ID]; !ok {
+	if _, ok := metaNode.Sender.TaskMap[task.ID]; !ok {
 		err = taskNotFound(task.ID)
 		goto errDeal
 	}
@@ -256,7 +256,7 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	default:
 		log.LogError(fmt.Sprintf("unknown operate code %v", task.OpCode))
 	}
-	metaNode.sender.DelTask(task)
+	metaNode.Sender.DelTask(task)
 
 	return
 
@@ -414,7 +414,7 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	if err != nil {
 		return
 	}
-	if _, ok := dataNode.sender.taskMap[task.ID]; !ok {
+	if _, ok := dataNode.sender.TaskMap[task.ID]; !ok {
 		return
 	}
 	if err := UnmarshalTaskResponse(task); err != nil {

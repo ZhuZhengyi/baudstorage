@@ -10,8 +10,8 @@ type MetaNode struct {
 	id   uint64
 	Addr string
 	//metaPartitions    []*MetaReplica
-	isActive          bool
-	sender            *AdminTaskSender
+	IsActive          bool
+	Sender            *AdminTaskSender
 	RackName          string `json:"Rack"`
 	MaxMemAvailWeight uint64 `json:"MaxMemAvailWeight"`
 	Total             uint64 `json:"TotalWeight"`
@@ -27,12 +27,12 @@ type MetaNode struct {
 func NewMetaNode(addr string) (node *MetaNode) {
 	return &MetaNode{
 		Addr:   addr,
-		sender: NewAdminTaskSender(addr),
+		Sender: NewAdminTaskSender(addr),
 	}
 }
 
 func (metaNode *MetaNode) clean() {
-	metaNode.sender.exitCh <- struct{}{}
+	metaNode.Sender.exitCh <- struct{}{}
 }
 
 func (metaNode *MetaNode) SetCarry(carry float64) {
@@ -51,7 +51,7 @@ func (metaNode *MetaNode) SelectNodeForWrite() {
 func (metaNode *MetaNode) IsWriteAble() (ok bool) {
 	metaNode.Lock()
 	defer metaNode.Unlock()
-	if metaNode.isActive == true && metaNode.MaxMemAvailWeight > DefaultMinMetaPartitionRange {
+	if metaNode.IsActive == true && metaNode.MaxMemAvailWeight > DefaultMinMetaPartitionRange {
 		ok = true
 	}
 	return
@@ -68,7 +68,7 @@ func (metaNode *MetaNode) setNodeAlive() {
 	metaNode.Lock()
 	defer metaNode.Unlock()
 	metaNode.reportTime = time.Now()
-	metaNode.isActive = true
+	metaNode.IsActive = true
 }
 
 func (metaNode *MetaNode) generateHeartbeatTask(masterAddr string) (task *proto.AdminTask) {

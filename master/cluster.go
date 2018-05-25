@@ -470,7 +470,7 @@ func (c *Cluster) getAllMetaNodes() (metaNodes []NodeView) {
 	metaNodes = make([]NodeView, 0)
 	c.metaNodes.Range(func(addr, node interface{}) bool {
 		metaNode := node.(*MetaNode)
-		metaNodes = append(metaNodes, NodeView{Addr: metaNode.Addr, Status: metaNode.isActive})
+		metaNodes = append(metaNodes, NodeView{Addr: metaNode.Addr, Status: metaNode.IsActive})
 		return true
 	})
 	return
