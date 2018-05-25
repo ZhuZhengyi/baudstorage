@@ -231,7 +231,18 @@ func (m *metaManager) createPartition(id uint64, start, end uint64,
 	if err = partition.StoreMeta(); err != nil {
 		return
 	}
-	err = m.attachPartition(id, partition)
+	if err = m.attachPartition(id, partition); err != nil {
+		return
+	}
+	if mpc.Start == 0 {
+		p := &Packet{}
+		err = partition.CreateInode(&CreateInoReq{
+			Mode: proto.ModeDir,
+		}, p)
+		if err != nil || p.ResultCode != proto.OpOk {
+			m.Stop()
+		}
+	}
 	return
 }
 
