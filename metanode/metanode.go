@@ -234,7 +234,9 @@ func (m *MetaNode) postNodeID(reqURL string) (err error) {
 
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("action[PostToNode] Data send failed,url:%v, status code:%v ", reqURL, strconv.Itoa(resp.StatusCode))
+		err = fmt.Errorf("action[PostToNode] Data send failed,url:%v, "+
+			"status code:%v , response body: %v", reqURL,
+			strconv.Itoa(resp.StatusCode), string(msg))
 	}
 	return
 }

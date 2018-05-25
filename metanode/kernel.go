@@ -50,7 +50,7 @@ func (d *Dentry) Less(than btree.Item) (less bool) {
 //  | 84467440737 | demo2 | "         84467440737*demo2" |
 //  +----------------------------------------------------+
 func (d *Dentry) GetKey() (m string) {
-	return fmt.Sprintf("%10d*%s", d.ParentId, d.Name)
+	return fmt.Sprintf("%20d*%s", d.ParentId, d.Name)
 }
 
 // GetKeyBytes is the bytes version of GetKey method which returns byte slice result.
@@ -60,7 +60,7 @@ func (d *Dentry) GetKeyBytes() (m []byte) {
 
 func (d *Dentry) ParseKeyBytes(k []byte) (err error) {
 	key := string(k)
-	_, err = fmt.Sscanf(key, "%d*%s", &d.ParentId, d.Name)
+	_, err = fmt.Sscanf(key, "%d*%s", &d.ParentId, &d.Name)
 	return
 }
 
