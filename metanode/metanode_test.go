@@ -22,13 +22,13 @@ func TestValidNodeID(t *testing.T) {
 	httpServe := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
 		r *http.Request) {
 		count++
-		if count < 5 {
+		if count < 3 {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
-		if count == 5 {
+		if count == 3 {
 			w.WriteHeader(http.StatusForbidden)
-			w.Write([]byte("1.1.2.3:12345"))
+			w.Write([]byte("127.0.0.1:12345"))
 			return
 		}
 		w.Write([]byte("55555"))
