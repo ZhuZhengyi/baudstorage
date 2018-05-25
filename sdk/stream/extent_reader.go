@@ -206,8 +206,8 @@ type CacheBuffer struct {
 	startOffset int
 	endOffset   int
 	sync.Mutex
-	isFull      bool
-	status      int
+	isFull bool
+	status int
 }
 
 func NewCacheBuffer() (buffer *CacheBuffer) {

@@ -55,7 +55,7 @@ func (space *SpaceManager) putDisk(d *Disk) {
 }
 
 func (space *SpaceManager) updateMetrics() {
-	space.diskLock.RLocker()
+	space.diskLock.RLock()
 	var (
 		total, used, free                            uint64
 		createdVolWeights, remainWeightsForCreateVol uint64

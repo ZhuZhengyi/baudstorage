@@ -40,12 +40,13 @@ func (vg *VolGroup) GetAllAddrs() (m string) {
 }
 
 const (
-	VolViewUrl            = "/client/vols"
+	VolViewUrl            = "/client/vols?name="
 	ActionGetVolGroupView = "ActionGetVolGroupView"
 )
 
 type VolGroupWrapper struct {
-	MasterAddrs   []string
+	namespace     string
+	master        []string
 	volGroups     map[uint32]*VolGroup
 	readWriteVols []*VolGroup
 	ConnPool      *pool.ConnPool
@@ -53,10 +54,10 @@ type VolGroupWrapper struct {
 	sync.RWMutex
 }
 
-func NewVolGroupWraper(masterHosts string) (wrapper *VolGroupWrapper, err error) {
+func NewVolGroupWraper(namespace, masterHosts string) (wrapper *VolGroupWrapper, err error) {
 	master := strings.Split(masterHosts, ",")
 	wrapper = new(VolGroupWrapper)
-	wrapper.MasterAddrs = master
+	wrapper.master = master
 	wrapper.ConnPool = pool.NewConnPool()
 	wrapper.readWriteVols = make([]*VolGroup, 0)
 	wrapper.volGroups = make(map[uint32]*VolGroup)
@@ -89,12 +90,12 @@ func (wrapper *VolGroupWrapper) PutExcludeVol(volId uint32) {
 }
 
 func (wrapper *VolGroupWrapper) getVolsFromMaster() (err error) {
-	for _, m := range wrapper.MasterAddrs {
+	for _, m := range wrapper.master {
 		if m == "" {
 			continue
 		}
 		var resp *http.Response
-		resp, err = http.Get("http://" + m + VolViewUrl)
+		resp, err = http.Get("http://" + m + VolViewUrl + wrapper.namespace)
 		if err != nil {
 			log.LogError(fmt.Sprintf(ActionGetVolGroupView+"get VolView from master[%v] err[%v]", m, err.Error()))
 			continue
