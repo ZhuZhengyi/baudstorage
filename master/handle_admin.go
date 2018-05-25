@@ -13,6 +13,53 @@ import (
 	"strings"
 )
 
+type ClusterView struct {
+	Name           string
+	Applied        uint64
+	MaxVolID       uint64
+	MaxMetaNodeID  uint64
+	MaxPartitionID uint64
+	Namespaces     []string
+	MetaNodes      []NodeView
+	DataNodes      []NodeView
+}
+
+type NodeView struct {
+	Addr   string
+	Status bool
+}
+
+func (m *Master) getCluster(w http.ResponseWriter, r *http.Request) {
+	var (
+		body []byte
+		err  error
+	)
+	cv := &ClusterView{
+		Name:           m.cluster.Name,
+		Applied:        m.fsm.applied,
+		MaxVolID:       m.cluster.idAlloc.volID,
+		MaxMetaNodeID:  m.cluster.idAlloc.metaNodeID,
+		MaxPartitionID: m.cluster.idAlloc.partitionID,
+		Namespaces:     make([]string, 0),
+		MetaNodes:      make([]NodeView, 0),
+		DataNodes:      make([]NodeView, 0),
+	}
+
+	cv.Namespaces = m.cluster.getAllNamespaces()
+	cv.MetaNodes = m.cluster.getAllMetaNodes()
+	cv.DataNodes = m.cluster.getAllDataNodes()
+	if body, err = json.Marshal(cv); err != nil {
+		goto errDeal
+	}
+	io.WriteString(w, string(body))
+	return
+
+errDeal:
+	logMsg := getReturnMessage("getCluster", r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	HandleError(logMsg, http.StatusBadRequest, w)
+	return
+}
+
 func (m *Master) getIpAndClusterName(w http.ResponseWriter, r *http.Request) {
 	cInfo := &proto.ClusterInfo{Cluster: m.cluster.Name, Ip: strings.Split(r.RemoteAddr, ":")[0]}
 	bytes, err := json.Marshal(cInfo)

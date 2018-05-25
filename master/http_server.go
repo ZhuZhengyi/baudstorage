@@ -9,6 +9,7 @@ import (
 
 const (
 	// Admin APIs
+	AdminGetCluster      = "admin/getCluster"
 	AdminGetVol          = "/admin/getVol"
 	AdminLoadVol         = "/admin/loadVol"
 	AdminCreateVol       = "/admin/createVol"
@@ -64,6 +65,7 @@ func (m *Master) handleFunctions() {
 	http.Handle(ClientMetaGroup, m.handlerWithInterceptor())
 	http.Handle(DataNodeResponse, m.handlerWithInterceptor())
 	http.Handle(MetaNodeResponse, m.handlerWithInterceptor())
+	http.Handle(AdminGetCluster, m.handlerWithInterceptor())
 	return
 }
 
@@ -80,6 +82,8 @@ func (m *Master) handlerWithInterceptor() http.Handler {
 
 func (m *Master) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
+	case AdminGetCluster:
+		m.getCluster(w, r)
 	case AdminCreateVol:
 		m.createVol(w, r)
 	case GetDataNode:

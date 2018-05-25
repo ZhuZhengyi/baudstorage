@@ -466,3 +466,31 @@ func (c *Cluster) DataNodeCount() (len int) {
 	})
 	return
 }
+
+func (c *Cluster) getAllDataNodes() (dataNodes []NodeView) {
+	dataNodes = make([]NodeView, 0)
+	c.dataNodes.Range(func(key, value interface{}) bool {
+		dataNode := key.(*DataNode)
+		dataNodes = append(dataNodes, NodeView{Addr: dataNode.TcpAddr, Status: dataNode.isActive})
+		return true
+	})
+	return
+}
+
+func (c *Cluster) getAllMetaNodes() (metaNodes []NodeView) {
+	metaNodes = make([]NodeView, 0)
+	c.metaNodes.Range(func(key, value interface{}) bool {
+		metaNode := key.(*MetaNode)
+		metaNodes = append(metaNodes, NodeView{Addr: metaNode.Addr, Status: metaNode.isActive})
+		return true
+	})
+	return
+}
+
+func (c *Cluster) getAllNamespaces() (namespaces []string) {
+	namespaces = make([]string, 0)
+	for name, _ := range c.namespaces {
+		namespaces = append(namespaces, name)
+	}
+	return
+}
