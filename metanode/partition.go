@@ -12,6 +12,7 @@ import (
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/log"
 	raftproto "github.com/tiglabs/raft/proto"
+	"strings"
 )
 
 const (
@@ -197,11 +198,12 @@ func (mp *metaPartition) stopSchedule() {
 func (mp *metaPartition) startRaft() (err error) {
 	peers := make([]raftstore.PeerAddress, len(mp.config.Peers))
 	for _, peer := range mp.config.Peers {
+		addr := strings.Split(peer.Addr, ":")[0]
 		rp := raftstore.PeerAddress{
 			Peer: raftproto.Peer{
 				ID: peer.ID,
 			},
-			Address: peer.Addr,
+			Address: addr,
 		}
 		peers = append(peers, rp)
 	}
