@@ -9,7 +9,7 @@ import (
 
 const (
 	// Admin APIs
-	AdminGetCluster      = "admin/getCluster"
+	AdminGetCluster      = "/admin/getCluster"
 	AdminGetVol          = "/admin/getVol"
 	AdminLoadVol         = "/admin/loadVol"
 	AdminCreateVol       = "/admin/createVol"
