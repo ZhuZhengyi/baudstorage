@@ -34,7 +34,7 @@ func newIDAllocator(store *raftstore.RocksDBStore, partition raftstore.Partition
 }
 
 func (alloc *IDAllocator) restore() {
-	alloc.restoreMaxMetaNodeID()
+	alloc.restoreMaxVolID()
 	alloc.restoreMaxPartitionID()
 	alloc.restoreMaxMetaNodeID()
 }
