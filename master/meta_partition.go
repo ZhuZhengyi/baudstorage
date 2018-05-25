@@ -383,7 +383,7 @@ func (mp *MetaPartition) generateCreateMetaPartitionTasks(specifyAddrs []string)
 	}
 
 	for _, addr := range hosts {
-		tasks = append(tasks, proto.NewAdminTask(OpCreateMetaPartition, addr, req))
+		tasks = append(tasks, proto.NewAdminTask(proto.OpCreateMetaPartition, addr, req))
 	}
 
 	return
@@ -399,14 +399,14 @@ func (mp *MetaPartition) generateOfflineTask(nsName string, removePeer proto.Pee
 		return
 	}
 	req := &proto.MetaPartitionOfflineRequest{PartitionID: mp.PartitionID, NsName: nsName, RemovePeer: removePeer, AddPeer: addPeer}
-	t = proto.NewAdminTask(OpOfflineMetaPartition, mr.Addr, req)
+	t = proto.NewAdminTask(proto.OpOfflineMetaPartition, mr.Addr, req)
 	return
 }
 
 func (mp *MetaPartition) generateLoadMetaPartitionTasks() (tasks []*proto.AdminTask) {
 	req := &proto.LoadMetaPartitionMetricRequest{PartitionID: mp.PartitionID}
 	for _, mr := range mp.Replicas {
-		t := proto.NewAdminTask(OpLoadMetaPartition, mr.Addr, req)
+		t := proto.NewAdminTask(proto.OpLoadMetaPartition, mr.Addr, req)
 		tasks = append(tasks, t)
 	}
 
@@ -420,13 +420,13 @@ func (mp *MetaPartition) generateUpdateMetaReplicaTask(partitionID uint64, end u
 		return
 	}
 	req := &proto.UpdateMetaPartitionRequest{PartitionID: partitionID, End: end, NsName: mp.nsName}
-	t = proto.NewAdminTask(OpUpdateMetaPartition, mr.Addr, req)
+	t = proto.NewAdminTask(proto.OpUpdateMetaPartition, mr.Addr, req)
 	return
 }
 
 func (mr *MetaReplica) generateDeleteReplicaTask(partitionID uint64) (t *proto.AdminTask) {
 	req := &proto.DeleteMetaPartitionRequest{PartitionID: partitionID}
-	t = proto.NewAdminTask(OpDeleteMetaPartition, mr.Addr, req)
+	t = proto.NewAdminTask(proto.OpDeleteMetaPartition, mr.Addr, req)
 	return
 }
 

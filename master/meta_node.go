@@ -76,6 +76,6 @@ func (metaNode *MetaNode) generateHeartbeatTask(masterAddr string) (task *proto.
 		CurrTime:   time.Now().Unix(),
 		MasterAddr: masterAddr,
 	}
-	task = proto.NewAdminTask(OpMetaNodeHeartbeat, metaNode.Addr, request)
+	task = proto.NewAdminTask(proto.OpMetaNodeHeartbeat, metaNode.Addr, request)
 	return
 }

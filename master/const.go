@@ -59,20 +59,20 @@ const (
 )
 
 //OpCode
-const (
-	OpCreateVol            = 0x01
-	OpDeleteVol            = 0x02
-	OpReplicateFile        = 0x03
-	OpDeleteFile           = 0x04
-	OpLoadVol              = 0x05
-	OpCreateMetaPartition  = 0x06
-	OpDataNodeHeartbeat    = 0x07
-	OpMetaNodeHeartbeat    = 0x08
-	OpDeleteMetaPartition  = 0x09
-	OpUpdateMetaPartition  = 0x0A
-	OpLoadMetaPartition    = 0x0B
-	OpOfflineMetaPartition = 0x0C
-)
+//const (
+//	OpCreateVol            = 0x01
+//	OpDeleteVol            = 0x02
+//	OpReplicateFile        = 0x03
+//	OpDeleteFile           = 0x04
+//	OpLoadVol              = 0x05
+//	OpCreateMetaPartition  = 0x06
+//	OpDataNodeHeartbeat    = 0x07
+//	OpMetaNodeHeartbeat    = 0x08
+//	OpDeleteMetaPartition  = 0x09
+//	OpUpdateMetaPartition  = 0x0A
+//	OpLoadMetaPartition    = 0x0B
+//	OpOfflineMetaPartition = 0x0C
+//)
 
 const (
 	OK = iota

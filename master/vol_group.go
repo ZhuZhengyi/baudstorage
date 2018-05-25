@@ -52,7 +52,7 @@ func (vg *VolGroup) checkBadStatus() {
 func (vg *VolGroup) generateCreateVolGroupTasks() (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	for _, addr := range vg.PersistenceHosts {
-		tasks = append(tasks, proto.NewAdminTask(OpCreateVol, addr, newCreateVolRequest(vg.volType, vg.VolID)))
+		tasks = append(tasks, proto.NewAdminTask(proto.OpCreateVol, addr, newCreateVolRequest(vg.volType, vg.VolID)))
 	}
 	return
 }
@@ -154,7 +154,7 @@ func (vg *VolGroup) generateLoadVolTasks() (tasks []*proto.AdminTask) {
 			continue
 		}
 		vol.LoadVolIsResponse = false
-		tasks = append(tasks, proto.NewAdminTask(OpLoadVol, vol.addr, newLoadVolMetricRequest(vg.volType, vg.VolID)))
+		tasks = append(tasks, proto.NewAdminTask(proto.OpLoadVol, vol.addr, newLoadVolMetricRequest(vg.volType, vg.VolID)))
 	}
 	vg.LastLoadTime = time.Now().Unix()
 	return
@@ -364,7 +364,7 @@ func (vg *VolGroup) addLackReplication() (t *proto.AdminTask, lackAddr string, e
 			err = VolReplicationLackError
 			lackAddr = addr
 
-			t = proto.NewAdminTask(OpCreateVol, addr, newCreateVolRequest(vg.volType, vg.VolID))
+			t = proto.NewAdminTask(proto.OpCreateVol, addr, newCreateVolRequest(vg.volType, vg.VolID))
 			vg.isRecover = true
 			break
 		}

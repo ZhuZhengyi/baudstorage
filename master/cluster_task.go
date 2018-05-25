@@ -235,22 +235,22 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	}
 
 	switch task.OpCode {
-	case OpCreateMetaPartition:
+	case proto.OpCreateMetaPartition:
 		response := task.Response.(*proto.CreateMetaPartitionResponse)
 		c.dealCreateMetaPartition(task.OperatorAddr, response)
-	case OpMetaNodeHeartbeat:
+	case proto.OpMetaNodeHeartbeat:
 		response := task.Response.(*proto.MetaNodeHeartbeatResponse)
 		c.dealMetaNodeHeartbeat(task.OperatorAddr, response)
-	case OpDeleteMetaPartition:
+	case proto.OpDeleteMetaPartition:
 		response := task.Response.(*proto.DeleteMetaPartitionResponse)
 		c.dealDeleteMetaPartition(task.OperatorAddr, response)
-	case OpUpdateMetaPartition:
+	case proto.OpUpdateMetaPartition:
 		response := task.Response.(*proto.UpdateMetaPartitionResponse)
 		c.dealUpdateMetaPartition(task.OperatorAddr, response)
-	case OpLoadMetaPartition:
+	case proto.OpLoadMetaPartition:
 		response := task.Response.(*proto.LoadMetaPartitionMetricResponse)
 		c.dealLoadMetaPartition(task.OperatorAddr, response)
-	case OpOfflineMetaPartition:
+	case proto.OpOfflineMetaPartition:
 		response := task.Response.(*proto.MetaPartitionOfflineResponse)
 		c.dealOfflineMetaPartition(task.OperatorAddr, response)
 	default:
@@ -412,19 +412,19 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 		return
 	}
 	switch task.OpCode {
-	case OpCreateVol:
+	case proto.OpCreateVol:
 		response := task.Response.(*proto.CreateVolResponse)
 		c.dealCreateVolResponse(task, response)
-	case OpDeleteVol:
+	case proto.OpDeleteVol:
 		response := task.Response.(*proto.DeleteVolResponse)
 		c.dealDeleteVolResponse(task.OperatorAddr, response)
-	case OpLoadVol:
+	case proto.OpLoadVol:
 		response := task.Response.(*proto.LoadVolResponse)
 		c.dealLoadVolResponse(task.OperatorAddr, response)
-	case OpDeleteFile:
+	case proto.OpDeleteFile:
 		response := task.Response.(*proto.DeleteFileResponse)
 		c.dealDeleteFileResponse(task.OperatorAddr, response)
-	case OpDataNodeHeartbeat:
+	case proto.OpDataNodeHeartbeat:
 		response := task.Response.(*proto.DataNodeHeartBeatResponse)
 		c.dealDataNodeHeartbeat(task.OperatorAddr, response)
 	default:

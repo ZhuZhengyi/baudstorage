@@ -99,5 +99,5 @@ func (fc *FileInCore) generatorLackFileLog(volID uint64, lackLoc *Vol, liveLocs 
 }
 
 func (fc *FileInCore) generatorReplicateFileTask(volID uint64, badLoc *Vol, liveLocs []*Vol) (t *proto.AdminTask) {
-	return proto.NewAdminTask(OpReplicateFile, badLoc.addr, nil)
+	return proto.NewAdminTask(proto.OpReplicateFile, badLoc.addr, nil)
 }
