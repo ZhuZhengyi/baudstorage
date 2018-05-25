@@ -156,7 +156,7 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 		}
 	}
 	mp.peers = peers
-	tasks = mp.generateCreateMetaPartitionTasks(newHosts)
+	tasks = mp.generateCreateMetaPartitionTasks(newHosts, nsName)
 	if t, err = mp.generateOfflineTask(nsName, removePeer, peers[0]); err != nil {
 		goto errDeal
 	}
@@ -208,7 +208,7 @@ func (c *Cluster) checkMetaGroups(ns *NameSpace) {
 	for _, mp := range ns.MetaPartitions {
 		mp.checkStatus(true, int(ns.mpReplicaNum))
 		mp.checkReplicas(c, ns.Name)
-		tasks = append(tasks, mp.generateReplicaTask()...)
+		tasks = append(tasks, mp.generateReplicaTask(ns.Name)...)
 	}
 	c.putMetaNodeTasks(tasks)
 
