@@ -469,8 +469,8 @@ func (c *Cluster) DataNodeCount() (len int) {
 
 func (c *Cluster) getAllDataNodes() (dataNodes []NodeView) {
 	dataNodes = make([]NodeView, 0)
-	c.dataNodes.Range(func(key, value interface{}) bool {
-		dataNode := key.(*DataNode)
+	c.dataNodes.Range(func(addr, node interface{}) bool {
+		dataNode := node.(*DataNode)
 		dataNodes = append(dataNodes, NodeView{Addr: dataNode.TcpAddr, Status: dataNode.isActive})
 		return true
 	})
@@ -479,8 +479,8 @@ func (c *Cluster) getAllDataNodes() (dataNodes []NodeView) {
 
 func (c *Cluster) getAllMetaNodes() (metaNodes []NodeView) {
 	metaNodes = make([]NodeView, 0)
-	c.metaNodes.Range(func(key, value interface{}) bool {
-		metaNode := key.(*MetaNode)
+	c.metaNodes.Range(func(addr, node interface{}) bool {
+		metaNode := node.(*MetaNode)
 		metaNodes = append(metaNodes, NodeView{Addr: metaNode.Addr, Status: metaNode.isActive})
 		return true
 	})

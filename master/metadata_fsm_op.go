@@ -211,7 +211,7 @@ func (c *Cluster) applyAddMetaNode(cmd *Metadata) {
 
 	if keys[1] == MetaNodeAcronym {
 		metaNode := NewMetaNode(keys[2])
-		c.dataNodes.Store(metaNode.Addr, metaNode)
+		c.metaNodes.Store(metaNode.Addr, metaNode)
 	}
 }
 
