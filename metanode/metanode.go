@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -148,6 +149,11 @@ func (m *MetaNode) validConfig() (err error) {
 }
 
 func (m *MetaNode) startMetaManager() (err error) {
+	if _, err = os.Stat(m.metaDir); err != nil {
+		if err = os.MkdirAll(m.metaDir, 0755); err != nil {
+			return
+		}
+	}
 	// Load metaManager
 	conf := MetaManagerConfig{
 		NodeID:    m.nodeId,
