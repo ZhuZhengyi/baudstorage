@@ -70,7 +70,7 @@ func initInode(inode uint64) (sk *proto.StreamKey) {
 	return
 }
 
-func prepare(inode uint64, t *testing.T, data []byte) (localWriteFp *os.File, localReadFp *os.File) {
+func prepare(inode uint64, t *testing.T) (localWriteFp *os.File, localReadFp *os.File) {
 	var err error
 	localWriteFp, err = openFileForWrite(inode, "write")
 	if err != nil {
@@ -101,26 +101,31 @@ func TestExtentClient_Write(t *testing.T) {
 	writebytes := 0
 	writeStr := randSeq(CFSBLOCKSIZE*5 + 1)
 	data := ([]byte)(writeStr)
-	localWriteFp, _ := prepare(inode, t, data)
-	localReadFp, _ := openFileForWrite(inode, "read")
+	localWriteFp, localReadFp := prepare(inode, t)
+
 	client.Open(inode)
 	client.Open(inode)
 	client.Open(inode)
 	for seqNo := 0; seqNo < CFSBLOCKSIZE; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
 		ndata := data[:rand.Intn(CFSBLOCKSIZE*5)]
+
+		//write
 		write, err := client.Write(inode, ndata)
 		if err != nil || write != len(ndata) {
 			OccoursErr(fmt.Errorf("write inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 		}
+		fmt.Printf("hahah ,write ok [%v]\n", seqNo)
+
+		//flush
 		err = client.Flush(inode)
 		if err != nil {
 			OccoursErr(fmt.Errorf("flush inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 		}
-		fmt.Printf("hahah ,write ok [%v]\n", seqNo)
+		fmt.Printf("hahah ,flush ok [%v]\n", seqNo)
 
+		//read
 		rdata := make([]byte, len(ndata))
-
 		read, err = client.Read(inode, rdata, writebytes, len(ndata))
 		if err != nil || read != len(ndata) {
 			OccoursErr(fmt.Errorf("read inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, read, err), t)
@@ -140,11 +145,22 @@ func TestExtentClient_Write(t *testing.T) {
 		}
 		writebytes += write
 	}
+
+	//read size more than write size
+	rdata := make([]byte, CFSBLOCKSIZE)
+	read, err := client.Read(inode, rdata, (writebytes-CFSBLOCKSIZE+1024), CFSBLOCKSIZE)
+	if err != nil || read != (CFSBLOCKSIZE-1024) {
+		OccoursErr(fmt.Errorf("read inode [%v] bytes[%v] err[%v]\n", inode, read, err), t)
+	}
+
+	//finish
 	client.Close(inode)
 	client.Close(inode)
 	client.Close(inode)
-	fmt.Println("sum write bytes:", writebytes)
+
 	localWriteFp.Close()
+	localReadFp.Close()
+
 	for {
 		time.Sleep(time.Second)
 		if sk.Size() == uint64(writebytes) {
