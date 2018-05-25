@@ -346,7 +346,7 @@ func (mp *MetaPartition) addVolHosts(addAddr string, c *Cluster, nsName string) 
 	return
 }
 
-func (mp *MetaPartition) generateReplicaTask() (tasks []*proto.AdminTask) {
+func (mp *MetaPartition) generateReplicaTask(nsName string) (tasks []*proto.AdminTask) {
 	var msg string
 	tasks = make([]*proto.AdminTask, 0)
 	if excessAddr, task, excessErr := mp.deleteExcessReplication(); excessErr != nil {
@@ -361,13 +361,13 @@ func (mp *MetaPartition) generateReplicaTask() (tasks []*proto.AdminTask) {
 			" on :%v PersistenceHosts:%v",
 			mp.PartitionID, lackAddrs, mp.PersistenceHosts)
 		log.LogWarn(msg)
-		tasks = append(tasks, mp.generateAddLackMetaReplicaTask(lackAddrs)...)
+		tasks = append(tasks, mp.generateAddLackMetaReplicaTask(lackAddrs, nsName)...)
 	}
 
 	return
 }
 
-func (mp *MetaPartition) generateCreateMetaPartitionTasks(specifyAddrs []string) (tasks []*proto.AdminTask) {
+func (mp *MetaPartition) generateCreateMetaPartitionTasks(specifyAddrs []string, nsName string) (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	hosts := make([]string, 0)
 	req := &proto.CreateMetaPartitionRequest{
@@ -375,6 +375,7 @@ func (mp *MetaPartition) generateCreateMetaPartitionTasks(specifyAddrs []string)
 		End:         mp.End,
 		PartitionID: mp.PartitionID,
 		Members:     mp.peers,
+		NsName:      nsName,
 	}
 	if specifyAddrs == nil {
 		hosts = mp.PersistenceHosts
@@ -389,8 +390,8 @@ func (mp *MetaPartition) generateCreateMetaPartitionTasks(specifyAddrs []string)
 	return
 }
 
-func (mp *MetaPartition) generateAddLackMetaReplicaTask(addrs []string) (tasks []*proto.AdminTask) {
-	return mp.generateCreateMetaPartitionTasks(addrs)
+func (mp *MetaPartition) generateAddLackMetaReplicaTask(addrs []string, nsName string) (tasks []*proto.AdminTask) {
+	return mp.generateCreateMetaPartitionTasks(addrs, nsName)
 }
 
 func (mp *MetaPartition) generateOfflineTask(nsName string, removePeer proto.Peer, addPeer proto.Peer) (t *proto.AdminTask, err error) {

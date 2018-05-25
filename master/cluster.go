@@ -411,7 +411,7 @@ func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err err
 		return
 	}
 	ns.AddMetaPartition(mp)
-	c.putMetaNodeTasks(mp.generateCreateMetaPartitionTasks(nil))
+	c.putMetaNodeTasks(mp.generateCreateMetaPartitionTasks(nil, nsName))
 	return
 }
 
