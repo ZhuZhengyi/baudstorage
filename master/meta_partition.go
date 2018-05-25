@@ -16,8 +16,8 @@ type MetaReplica struct {
 	end        uint64
 	nodeId     uint64
 	ReportTime int64
-	status     uint8
-	isLeader   bool
+	Status     uint8
+	IsLeader   bool
 	metaNode   *MetaNode
 }
 
@@ -27,10 +27,10 @@ type MetaPartition struct {
 	End              uint64
 	Replicas         []*MetaReplica
 	CurReplicaNum    uint8
-	status           uint8
+	Status           uint8
 	nsName           string
 	PersistenceHosts []string
-	peers            []proto.Peer
+	Peers            []proto.Peer
 	MissNodes        map[string]int64
 	sync.Mutex
 }
@@ -45,7 +45,7 @@ func NewMetaReplica(start, end uint64, metaNode *MetaNode) (mr *MetaReplica) {
 func NewMetaPartition(partitionID, start, end uint64, nsName string) (mp *MetaPartition) {
 	mp = &MetaPartition{PartitionID: partitionID, Start: start, End: end, nsName: nsName}
 	mp.Replicas = make([]*MetaReplica, 0)
-	mp.status = MetaPartitionUnavailable
+	mp.Status = MetaPartitionUnavailable
 	return
 }
 
@@ -140,22 +140,22 @@ func (mp *MetaPartition) checkStatus(writeLog bool, replicaNum int) {
 			mp.addMissNode(metaReplica.Addr, metaReplica.ReportTime)
 			missedCount++
 		}
-		mp.status = metaReplica.status & metaReplica.status
+		mp.Status = metaReplica.Status & metaReplica.Status
 	}
 
 	if missedCount < replicaNum/2 {
-		mp.status = MetaPartitionReadOnly
+		mp.Status = MetaPartitionReadOnly
 	}
 
 	if writeLog {
 		log.LogInfo(fmt.Sprintf("action[checkStatus],id:%v,status:%v,replicaNum:%v",
-			mp.PartitionID, mp.status, mp.CurReplicaNum))
+			mp.PartitionID, mp.Status, mp.CurReplicaNum))
 	}
 }
 
 func (mp *MetaPartition) getLeaderMetaReplica() (mr *MetaReplica, err error) {
 	for _, mr = range mp.Replicas {
-		if mr.isLeader {
+		if mr.IsLeader {
 			return
 		}
 	}
@@ -194,7 +194,7 @@ func (mp *MetaPartition) deleteExcessReplication() (excessAddr string, t *proto.
 
 	var leaderMr *MetaReplica
 	for _, mr := range mp.Replicas {
-		if mr.isLeader {
+		if mr.IsLeader {
 			leaderMr = mr
 		}
 		if !contains(mp.PersistenceHosts, mr.Addr) {
@@ -245,8 +245,8 @@ func (mp *MetaPartition) updateMetaPartition(mgr *proto.MetaPartitionReport, met
 		mr = NewMetaReplica(mp.Start, mp.End, metaNode)
 		mp.AddReplica(mr)
 	}
-	mr.status = (uint8)(mgr.Status)
-	mr.isLeader = mgr.IsLeader
+	mr.Status = (uint8)(mgr.Status)
+	mr.IsLeader = mgr.IsLeader
 	mr.setLastReportTime()
 	mp.Lock()
 	mp.checkAndRemoveMissMetaReplica(metaNode.Addr)
@@ -371,7 +371,7 @@ func (mp *MetaPartition) generateCreateMetaPartitionTasks(specifyAddrs []string,
 		Start:       mp.Start,
 		End:         mp.End,
 		PartitionID: mp.PartitionID,
-		Members:     mp.peers,
+		Members:     mp.Peers,
 		NsName:      nsName,
 	}
 	if specifyAddrs == nil {
@@ -430,12 +430,12 @@ func (mr *MetaReplica) generateDeleteReplicaTask(partitionID uint64) (t *proto.A
 
 func (mr *MetaReplica) checkStatus() {
 	if time.Now().Unix()-mr.ReportTime > DefaultMetaPartitionTimeOutSec {
-		mr.status = MetaPartitionUnavailable
+		mr.Status = MetaPartitionUnavailable
 	}
 }
 
 func (mr *MetaReplica) setStatus(status uint8) {
-	mr.status = status
+	mr.Status = status
 }
 
 func (mr *MetaReplica) isMissed() (miss bool) {

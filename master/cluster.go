@@ -408,7 +408,7 @@ func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err err
 		return
 	}
 	mp.PersistenceHosts = hosts
-	mp.peers = peers
+	mp.Peers = peers
 	if err = c.syncAddMetaPartition(nsName, mp); err != nil {
 		return
 	}

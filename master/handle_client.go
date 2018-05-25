@@ -124,7 +124,7 @@ func getMetaPartitionView(mp *MetaPartition) (mpView *MetaPartitionView) {
 	mpView = NewMetaGroupView(mp.PartitionID, mp.Start, mp.End)
 	for _, metaReplica := range mp.Replicas {
 		mpView.Members = append(mpView.Members, metaReplica.Addr)
-		if metaReplica.isLeader {
+		if metaReplica.IsLeader {
 			mpView.LeaderAddr = metaReplica.Addr
 		}
 	}
@@ -153,7 +153,7 @@ func (m *Master) getMetaPartition(w http.ResponseWriter, r *http.Request) {
 		err = MetaGroupNotFound
 		goto errDeal
 	}
-	if body, err = json.Marshal(getMetaPartitionView(metaGroup)); err != nil {
+	if body, err = json.Marshal(metaGroup); err != nil {
 		code = http.StatusMethodNotAllowed
 		goto errDeal
 	}

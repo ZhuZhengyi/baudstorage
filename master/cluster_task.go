@@ -155,7 +155,7 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 			peers = append(peers, proto.Peer{ID: mr.nodeId, Addr: mr.Addr})
 		}
 	}
-	mp.peers = peers
+	mp.Peers = peers
 	tasks = mp.generateCreateMetaPartitionTasks(newHosts, nsName)
 	if t, err = mp.generateOfflineTask(nsName, removePeer, peers[0]); err != nil {
 		goto errDeal
@@ -358,7 +358,7 @@ func (c *Cluster) dealCreateMetaPartition(nodeAddr string, resp *proto.CreateMet
 	}
 
 	mr = NewMetaReplica(mp.Start, mp.End, metaNode)
-	mr.status = MetaPartitionReadWrite
+	mr.Status = MetaPartitionReadWrite
 	mp.AddReplica(mr)
 	mp.AddHostsByReplica(mr, c, resp.NsName)
 	mp.Lock()
