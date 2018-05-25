@@ -17,9 +17,6 @@ const (
 	MetaPartitionViewURL = "/client/namespace?name="
 
 	RefreshMetaPartitionsInterval = time.Minute * 5
-	CreateInodeTimeout            = time.Second * 5
-
-	MetaAllocBufSize = 1000
 )
 
 const (
@@ -37,10 +34,15 @@ type MetaWrapper struct {
 	master    []string
 	conns     *pool.ConnPool
 
-	// partitions and ranges should be modified together.
-	// do not use partitions and ranges directly, use the helper functions instead.
+	// Partitions and ranges should be modified together. So do not
+	// use partitions and ranges directly. Use the helper functions instead.
+
+	// Partition map indexed by ID
 	partitions map[uint64]*MetaPartition
-	ranges     *btree.BTree // *MetaPartition tree indexed by Start
+
+	// Partition tree indexed by Start, in order to find a partition in which
+	// a specific inode locate.
+	ranges *btree.BTree
 
 	currStart uint64
 }
