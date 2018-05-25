@@ -111,7 +111,7 @@ func TestExtentClient_Write(t *testing.T) {
 	client.Open(inode)
 	client.Open(inode)
 	client.Open(inode)
-	for seqNo := 0; seqNo < CFSBLOCKSIZE; seqNo++ {
+	for seqNo := 0; seqNo < 10000; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
 		ndata := data[:rand.Intn(CFSBLOCKSIZE*5)]
 
