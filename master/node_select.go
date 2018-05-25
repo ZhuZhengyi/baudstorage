@@ -163,7 +163,7 @@ func (c *Cluster) getAvailMetaNodeHosts(excludeRack string, excludeHosts []strin
 		node := nodeTabs[i].Ptr.(*MetaNode)
 		node.SelectNodeForWrite()
 		orderHosts = append(orderHosts, node.Addr)
-		peer := proto.Peer{ID: node.id, Addr: node.Addr}
+		peer := proto.Peer{ID: node.ID, Addr: node.Addr}
 		peers = append(peers, peer)
 	}
 
