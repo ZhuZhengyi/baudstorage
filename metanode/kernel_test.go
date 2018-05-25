@@ -2,6 +2,7 @@ package metanode
 
 import (
 	"bytes"
+	"github.com/tiglabs/baudstorage/proto"
 	"reflect"
 	"testing"
 )
@@ -71,6 +72,16 @@ func Test_Dentry(t *testing.T) {
 
 func Test_Inode(t *testing.T) {
 	ino := NewInode(1, 0)
+	ino.Extents.Put(proto.ExtentKey{
+		VolId:    1000,
+		ExtentId: 1222,
+		Size:     10234,
+	})
+	ino.Extents.Put(proto.ExtentKey{
+		VolId:    1020,
+		ExtentId: 28,
+		Size:     150,
+	})
 	// Test Dump and Load func
 	data, err := ino.Dump()
 	if err != nil || len(data) == 0 {
@@ -84,6 +95,25 @@ func Test_Inode(t *testing.T) {
 		t.Fatalf("inode Load vlid: %s", err.Error())
 	}
 
-	// Test GetKey
+	// Test Key
+	if ino.GetKey() != "1" {
+		t.Fatalf("inode GetKey: %s", err.Error())
+	}
+	if true {
+		havBytes := ino.GetKeyBytes()
+		expBytes := []byte("1")
+		if bytes.Compare(havBytes, expBytes) != 0 {
+			t.Fatalf("inode GetKeyBytes func test failed!")
+		}
+		inoTmp = NewInode(0, 0)
+		if err = inoTmp.ParseKeyBytes(expBytes); err != nil {
+			t.Fatalf("inode ParseKeyBytes: %s", err.Error())
+		}
+		if inoTmp.Inode != 1 {
+			t.Fatalf("inode ParseKeyBytes failed")
+		}
+		//haveStr := ino.GetValue()
+		//expStr := fmt.Sprintf("%d*%d*")
+	}
 
 }
