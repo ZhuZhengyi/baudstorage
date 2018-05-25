@@ -191,7 +191,7 @@ func parseGetNamespacePara(r *http.Request) (name string, err error) {
 }
 
 func checkNamespace(r *http.Request) (name string, err error) {
-	if name := r.FormValue(ParaName); name == "" {
+	if name = r.FormValue(ParaName); name == "" {
 		err = paraNotFound(name)
 	}
 	return
