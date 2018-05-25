@@ -53,7 +53,7 @@ const (
 )
 
 const (
-	DefaultMaxMetaPartitionRange = 1<<64 - 1
+	DefaultMaxMetaPartitionRange = 1<<63 - 1
 	DefaultMinMetaPartitionRange = 1 << 34
 	RuntimeStackBufSize          = 4096
 )
