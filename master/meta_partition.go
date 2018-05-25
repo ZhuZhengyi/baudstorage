@@ -236,7 +236,7 @@ func (mp *MetaPartition) updateMetaPartition(mgr *proto.MetaPartitionReport, met
 	mp.Lock()
 	mr, err := mp.getMetaReplica(metaNode.Addr)
 	mp.Unlock()
-
+	log.LogDebugf(fmt.Sprintf("mp persistenceHosts:%v,metaNode.Addr:%v",mp.PersistenceHosts,metaNode.Addr))
 	if err != nil && !contains(mp.PersistenceHosts, metaNode.Addr) {
 		return
 	}

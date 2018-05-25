@@ -178,7 +178,7 @@ func parseGetMetaPartitionPara(r *http.Request) (name string, partitionID uint64
 
 func checkMetaPartitionID(r *http.Request) (partitionID uint64, err error) {
 	var value string
-	if value := r.FormValue(ParaId); value == "" {
+	if value = r.FormValue(ParaId); value == "" {
 		err = paraNotFound(ParaId)
 		return
 	}

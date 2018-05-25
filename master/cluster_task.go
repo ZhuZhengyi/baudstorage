@@ -588,14 +588,14 @@ func (c *Cluster) UpdateMetaNode(metaNode *MetaNode, threshold bool) {
 		mp, err := c.getMetaPartitionByID(mr.PartitionID)
 		if err != nil {
 			log.LogError(fmt.Sprintf("action[UpdateMetaNode],err:%v", err))
+			err = nil
+			continue
 		}
-		if err == nil {
-			mp.updateMetaPartition(mr, metaNode)
-			if threshold {
-				end := mr.MaxInodeID + DefaultMinMetaPartitionRange
-				t := mp.generateUpdateMetaReplicaTask(mp.PartitionID, end)
-				tasks = append(tasks, t)
-			}
+		mp.updateMetaPartition(mr, metaNode)
+		if threshold {
+			end := mr.MaxInodeID + DefaultMinMetaPartitionRange
+			t := mp.generateUpdateMetaReplicaTask(mp.PartitionID, end)
+			tasks = append(tasks, t)
 		}
 	}
 	c.putMetaNodeTasks(tasks)
