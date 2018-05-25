@@ -106,6 +106,7 @@ func (cfg *ClusterConfig) parsePeers(peerStr string) error {
 			return err
 		}
 		cfg.peers = append(cfg.peers, raftstore.PeerAddress{Peer: proto.Peer{ID: id}, Address: ip})
+		fmt.Println(fmt.Sprintf("%v:%v", ip, port))
 		AddrDatabase[id] = fmt.Sprintf("%v:%v", ip, port)
 	}
 	return nil
