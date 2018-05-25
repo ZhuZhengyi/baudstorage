@@ -3,7 +3,6 @@ package metanode
 import (
 	"encoding/json"
 	"net"
-	"strings"
 
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"
