@@ -1,7 +1,6 @@
 package metanode
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -167,6 +166,7 @@ func (m *MetaNode) stopMetaManager() {
 }
 
 func (m *MetaNode) validNodeID() (err error) {
+	rand.Seed(time.Now().Unix())
 	for {
 		// Register and Get NodeID
 		if m.masterAddrs == "" {
@@ -174,16 +174,15 @@ func (m *MetaNode) validNodeID() (err error) {
 			return
 		}
 		mAddrSlice := strings.Split(m.masterAddrs, ";")
-		rand.Seed(time.Now().Unix())
 		i := rand.Intn(len(mAddrSlice))
 		m.localAddr, err = util.GetLocalIP()
 		if err != nil {
 			return
 		}
-		masterURL := fmt.Sprintf("http://%s/%s", mAddrSlice[i], metaNodeURL)
-		reqBody := bytes.NewBufferString(fmt.Sprintf("addr=%s:%d",
-			m.localAddr, m.listen))
-		err = m.postNodeID(reqBody.Bytes(), masterURL)
+		reqParam := fmt.Sprintf("addr=%s:%d", m.localAddr, m.listen)
+		masterURL := fmt.Sprintf("http://%s/%s?%s", mAddrSlice[i],
+			metaNodeURL, reqParam)
+		err = m.postNodeID(masterURL)
 		if err != nil {
 			log.LogErrorf("connect master: %s", err.Error())
 			time.Sleep(3 * time.Second)
@@ -193,12 +192,10 @@ func (m *MetaNode) validNodeID() (err error) {
 	}
 }
 
-func (m *MetaNode) postNodeID(data []byte, reqURL string) (err error) {
-	log.LogDebugf("post connect master get nodeID: url:%s, reqBody:%s",
-		reqURL, string(data))
+func (m *MetaNode) postNodeID(reqURL string) (err error) {
+	log.LogDebugf("action[postNodeID] post connect master get nodeID: url:%s", reqURL)
 	client := &http.Client{Timeout: 2 * time.Second}
-	buff := bytes.NewBuffer(data)
-	req, err := http.NewRequest("POST", reqURL, buff)
+	req, err := http.NewRequest("POST", reqURL, nil)
 	if err != nil {
 		return
 	}
@@ -217,26 +214,27 @@ func (m *MetaNode) postNodeID(data []byte, reqURL string) (err error) {
 		return
 	}
 	if resp.StatusCode == http.StatusForbidden {
-		// Record Master IP
 		m.retryCount++
 		if m.retryCount > 2 {
 			m.retryCount = 0
 			err = errors.New("retry too many")
 			return
 		}
-		masterAddr := string(msg)
+		masterAddr := strings.TrimSpace(string(msg))
 		if masterAddr == "" {
 			m.retryCount = 0
 			err = errors.New("master response emtpy addr")
 			return
 		}
-		reqURL = fmt.Sprintf("http://%s/%s", masterAddr, metaNodeURL)
-		log.LogDebugf("retry connect master url: %s", reqURL)
-		return m.postNodeID(data, reqURL)
+		reqParam := fmt.Sprintf("addr=%s:%d", m.localAddr, m.listen)
+		reqURL = fmt.Sprintf("http://%s/%s?%s", masterAddr, metaNodeURL,
+			reqParam)
+		log.LogDebugf("action[postNodeID] retry connect master url: %s", reqURL)
+		return m.postNodeID(reqURL)
 
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf(" action[PostToNode] Data send failed,url:%v, status code:%v ", reqURL, strconv.Itoa(resp.StatusCode))
+		err = fmt.Errorf("action[PostToNode] Data send failed,url:%v, status code:%v ", reqURL, strconv.Itoa(resp.StatusCode))
 	}
 	return
 }
