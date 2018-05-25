@@ -3,7 +3,7 @@ package metanode
 import (
 	"os"
 
-	"github.com/henrylee2cn/goutil/errors"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/raftstore"
 )
 
