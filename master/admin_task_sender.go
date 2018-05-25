@@ -138,7 +138,7 @@ func (sender *AdminTaskSender) getNeedDealTask() (tasks []*proto.AdminTask) {
 	sender.Lock()
 	defer sender.Unlock()
 	for _, task := range sender.taskMap {
-		if task.Status == proto.TaskFail || task.Status == proto.TaskSuccess || task.CheckTaskTimeOut() {
+		if task.CheckTaskTimeOut() {
 			delTasks = append(delTasks, task)
 		}
 		if !task.CheckTaskNeedRetrySend() {

@@ -78,10 +78,10 @@ func (t *AdminTask) CheckTaskIsFail() (isFail bool) {
 
 func NewAdminTask(opcode uint8, opAddr string, request interface{}) (t *AdminTask) {
 	t = new(AdminTask)
-	t.ID = fmt.Sprintf("addr[%v]_op[%v]", t.OperatorAddr, t.OpCode)
 	t.OpCode = opcode
 	t.Request = request
 	t.OperatorAddr = opAddr
+	t.ID = fmt.Sprintf("addr[%v]_op[%v]", t.OperatorAddr, t.OpCode)
 
 	return
 }

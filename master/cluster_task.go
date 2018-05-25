@@ -256,6 +256,7 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	default:
 		log.LogError(fmt.Sprintf("unknown operate code %v", task.OpCode))
 	}
+	metaNode.sender.DelTask(task)
 
 	return
 
@@ -386,7 +387,6 @@ func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHea
 
 	logMsg = fmt.Sprintf("action[dealMetaNodeHeartbeat],metaNode:%v ReportTime:%v  success", metaNode.Addr, time.Now().Unix())
 	log.LogDebug(logMsg)
-	metaNode.setNodeAlive()
 	metaNode.metaRangeInfos = resp.MetaPartitionInfo
 	threshold = float32(metaNode.Used/metaNode.Total) < DefaultMetaPartitionThreshold
 	c.UpdateMetaNode(metaNode, threshold)
