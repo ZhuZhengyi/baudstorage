@@ -151,9 +151,13 @@ func (mp *metaPartition) Stop() {
 
 func (mp *metaPartition) onStart() (err error) {
 	if err = mp.load(); err != nil {
+		err = errors.Errorf("load partition id=%d: %s",
+			mp.config.PartitionId, err.Error())
 		return
 	}
 	if err = mp.startRaft(); err != nil {
+		err = errors.Errorf("start raft id=%d: %s", mp.config.PartitionId,
+			err.Error())
 		return
 	}
 	mp.startSchedule()
@@ -190,8 +194,7 @@ func (mp *metaPartition) stopSchedule() {
 	}
 }
 
-func (mp *metaPartition) startRaft() (
-	err error) {
+func (mp *metaPartition) startRaft() (err error) {
 	peers := make([]raftstore.PeerAddress, len(mp.config.Peers))
 	for _, peer := range mp.config.Peers {
 		rp := raftstore.PeerAddress{

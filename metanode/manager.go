@@ -162,7 +162,7 @@ func (m *metaManager) loadPartitions() (err error) {
 					return
 				}
 				var id uint64
-				partitionId := fileInfo.Name()[10:]
+				partitionId := fileInfo.Name()[len(partitionPrefix):]
 				id, err = strconv.ParseUint(partitionId, 10, 64)
 				if err != nil {
 					log.LogWarnf("ignore path: %s,not partition", partitionId)
@@ -182,6 +182,7 @@ func (m *metaManager) loadPartitions() (err error) {
 					log.LogErrorf("start partition %d: %s", id, err.Error())
 				}
 				wg.Done()
+				log.LogDebugf("load partition id=%d success.", id)
 			}()
 		}
 	}
