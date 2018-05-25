@@ -101,6 +101,9 @@ func (alloc *IDAllocator) allocatorVolID() (volID uint64, err error) {
 	var cmd []byte
 	metadata := new(Metadata)
 	volID = atomic.AddUint64(&alloc.volID, 1)
+	metadata.K = MaxVolIDKey
+	value := strconv.FormatUint(uint64(volID), 10)
+	metadata.V = []byte(value)
 	cmd, err = metadata.Marshal()
 	if err != nil {
 		goto errDeal
@@ -119,7 +122,10 @@ func (alloc *IDAllocator) allocatorPartitionID() (partitionID uint64, err error)
 	alloc.partitionIDLock.Lock()
 	defer alloc.partitionIDLock.Unlock()
 	metadata := new(Metadata)
+	metadata.K = MaxPartitionIDKey
 	partitionID = atomic.AddUint64(&alloc.partitionID, 1)
+	value := strconv.FormatUint(uint64(partitionID), 10)
+	metadata.V = []byte(value)
 	cmd, err = metadata.Marshal()
 	if err != nil {
 		goto errDeal
@@ -138,7 +144,10 @@ func (alloc *IDAllocator) allocatorMetaNodeID() (metaNodeID uint64, err error) {
 	alloc.metaNodeIDLock.Lock()
 	defer alloc.metaNodeIDLock.Unlock()
 	metadata := new(Metadata)
+	metadata.K = MaxMetaNodeIDKey
 	metaNodeID = atomic.AddUint64(&alloc.metaNodeID, 1)
+	value := strconv.FormatUint(uint64(metaNodeID), 10)
+	metadata.V = []byte(value)
 	cmd, err = metadata.Marshal()
 	if err != nil {
 		goto errDeal
