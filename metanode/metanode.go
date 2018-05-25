@@ -1,7 +1,6 @@
 package metanode
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -180,10 +179,10 @@ func (m *MetaNode) validNodeID() (err error) {
 		if err != nil {
 			return
 		}
-		masterURL := fmt.Sprintf("http://%s/%s", mAddrSlice[i], metaNodeURL)
-		reqBody := bytes.NewBufferString(fmt.Sprintf("addr=%s:%d",
-			m.localAddr, m.listen))
-		err = m.postNodeID(reqBody.Bytes(), masterURL)
+		reqParam := fmt.Sprintf("addr=%s:%d", m.localAddr, m.listen)
+		masterURL := fmt.Sprintf("http://%s/%s?%s", mAddrSlice[i],
+			metaNodeURL, reqParam)
+		err = m.postNodeID(masterURL)
 		if err != nil {
 			log.LogErrorf("connect master: %s", err.Error())
 			time.Sleep(3 * time.Second)
@@ -193,13 +192,10 @@ func (m *MetaNode) validNodeID() (err error) {
 	}
 }
 
-func (m *MetaNode) postNodeID(data []byte, reqURL string) (err error) {
-	log.LogDebugf("action[postNodeID] post connect master get nodeID: url:%s,"+
-		" reqBody:%s",
-		reqURL, string(data))
+func (m *MetaNode) postNodeID(reqURL string) (err error) {
+	log.LogDebugf("action[postNodeID] post connect master get nodeID: url:%s", reqURL)
 	client := &http.Client{Timeout: 2 * time.Second}
-	buff := bytes.NewBuffer(data)
-	req, err := http.NewRequest("POST", reqURL, buff)
+	req, err := http.NewRequest("POST", reqURL, nil)
 	if err != nil {
 		return
 	}
@@ -230,9 +226,11 @@ func (m *MetaNode) postNodeID(data []byte, reqURL string) (err error) {
 			err = errors.New("master response emtpy addr")
 			return
 		}
-		reqURL = fmt.Sprintf("http://%s/%s", masterAddr, metaNodeURL)
+		reqParam := fmt.Sprintf("addr=%s:%d", m.localAddr, m.listen)
+		reqURL = fmt.Sprintf("http://%s/%s?%s", masterAddr, metaNodeURL,
+			reqParam)
 		log.LogDebugf("action[postNodeID] retry connect master url: %s", reqURL)
-		return m.postNodeID(data, reqURL)
+		return m.postNodeID(reqURL)
 
 	}
 	if resp.StatusCode != http.StatusOK {
