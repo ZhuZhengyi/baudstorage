@@ -205,4 +205,6 @@ func (i *Inode) ParseValueBytes(val []byte) (err error) {
 
 func (i *Inode) AppendExtents(ext proto.ExtentKey) {
 	i.Extents.Put(ext)
+	i.Size = i.Extents.Size()
+	i.ModifyTime = time.Now().Unix()
 }
