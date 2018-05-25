@@ -53,11 +53,12 @@ func (mp *metaPartition) loadMeta() (err error) {
 // Load inode info from inode snapshot file
 func (mp *metaPartition) loadInode() (err error) {
 	filename := path.Join(mp.config.RootDir, inodeFile)
+	if _, err = os.Stat(filename); err != nil {
+		err = nil
+		return
+	}
 	fp, err := os.OpenFile(filename, os.O_RDONLY, 0644)
 	if err != nil {
-		if err == os.ErrNotExist {
-			err = nil
-		}
 		return
 	}
 	defer fp.Close()
@@ -93,6 +94,10 @@ func (mp *metaPartition) loadInode() (err error) {
 // Load dentry from dentry snapshot file
 func (mp *metaPartition) loadDentry() (err error) {
 	filename := path.Join(mp.config.RootDir, dentryFile)
+	if _, err = os.Stat(filename); err != nil {
+		err = nil
+		return
+	}
 	fp, err := os.OpenFile(filename, os.O_RDONLY, 0644)
 	if err != nil {
 		if err == os.ErrNotExist {
@@ -128,6 +133,10 @@ func (mp *metaPartition) loadDentry() (err error) {
 
 func (mp *metaPartition) loadApplyID() (err error) {
 	filename := path.Join(mp.config.RootDir, applyIDFile)
+	if _, err = os.Stat(filename); err != nil {
+		err = nil
+		return
+	}
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		if err == os.ErrNotExist {
