@@ -182,6 +182,7 @@ func (m *metaManager) loadPartitions() (err error) {
 					log.LogErrorf("start partition %d: %s", id, err.Error())
 				}
 				wg.Done()
+				log.LogDebugf("load partition id=%d success.", id)
 			}()
 		}
 	}
