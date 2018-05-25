@@ -60,9 +60,9 @@ func Mount(cfg *config.Config) error {
 		fuse.AllowOther(),
 		fuse.MaxReadahead(MaxReadAhead),
 		fuse.AsyncRead(),
-		fuse.FSName("ContainerFS-"+namespace),
+		fuse.FSName("bdfs-"+namespace),
 		fuse.LocalVolume(),
-		fuse.VolumeName("ContainerFS-"+namespace))
+		fuse.VolumeName("bdfs-"+namespace))
 
 	if err != nil {
 		return err

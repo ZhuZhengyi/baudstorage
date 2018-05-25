@@ -16,7 +16,7 @@ import (
 
 type testConfig struct {
 	NodeId    uint64
-	peers     []proto.Peer
+	peers     []PeerAddress
 	peerAddrs []string
 }
 
@@ -70,7 +70,8 @@ func (cfg *testConfig) parsePeers(peerStr string) error {
 		if err != nil {
 			return err
 		}
-		cfg.peers = append(cfg.peers, proto.Peer{ID: id})
+
+		cfg.peers = append(cfg.peers, PeerAddress{Peer: proto.Peer{ID: id}, Address: ip})
 		TestAddresses[id] = fmt.Sprintf("%v", ip)
 	}
 	return nil
@@ -101,14 +102,6 @@ func main() {
 	flag.Parse()
 	cfg := config.LoadConfigFile(*configFile)
 
-	peerAddrs := cfg.GetString("peers")
-	if err = testCfg.parsePeers(peerAddrs); err != nil {
-		log.Fatal("parse peers fail", err)
-		return
-	}
-
-	partitions := make(map[uint64]Partition)
-
 	nodeId := cfg.GetString("nodeid")
 	raftCfg.NodeID, _ = strconv.ParseUint(nodeId, 10, 10)
 	raftCfg.WalPath = path.Join("wal", strconv.FormatUint(raftCfg.NodeID, 10))
@@ -118,6 +111,13 @@ func main() {
 		return
 	}
 
+	peerAddrs := cfg.GetString("peers")
+	if err = testCfg.parsePeers(peerAddrs); err != nil {
+		log.Fatal("parse peers fail", err)
+		return
+	}
+
+	partitions := make(map[uint64]Partition)
 	for id, peer := range TestAddresses {
 		raftServer.AddNode(uint64(id), peer)
 	}
