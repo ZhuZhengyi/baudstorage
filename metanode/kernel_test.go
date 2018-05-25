@@ -68,3 +68,22 @@ func Test_Dentry(t *testing.T) {
 	}
 
 }
+
+func Test_Inode(t *testing.T) {
+	ino := NewInode(1, 0)
+	// Test Dump and Load func
+	data, err := ino.Dump()
+	if err != nil || len(data) == 0 {
+		t.Fatalf("inode Dump: %s", err.Error())
+	}
+	inoTmp := NewInode(0, 0)
+	if err = inoTmp.Load(data); err != nil {
+		t.Fatalf("inode Load: %s", err.Error())
+	}
+	if inoTmp.Inode != ino.Inode || inoTmp.Type != ino.Type {
+		t.Fatalf("inode Load vlid: %s", err.Error())
+	}
+
+	// Test GetKey
+
+}
