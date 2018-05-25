@@ -162,6 +162,7 @@ func (m *MetaNode) startMetaManager() (err error) {
 	}
 	m.metaManager = NewMetaManager(conf)
 	err = m.metaManager.Start()
+	log.LogDebugf("loadMetaManager over...")
 	return
 }
 
