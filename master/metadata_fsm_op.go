@@ -293,8 +293,8 @@ func (c *Cluster) loadDataNodes() (err error) {
 
 func (c *Cluster) decodeMetaNodeKey(key string) (nodeID uint64, addr string, err error) {
 	keys := strings.Split(key, KeySeparator)
-	addr = keys[2]
-	nodeID, err = strconv.ParseUint(keys[1], 10, 64)
+	addr = keys[3]
+	nodeID, err = strconv.ParseUint(keys[2], 10, 64)
 	return
 }
 

@@ -376,6 +376,10 @@ func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHea
 		threshold bool
 	)
 
+	if resp.Status != proto.TaskSuccess {
+		return
+	}
+
 	if metaNode, err = c.getMetaNode(nodeAddr); err != nil {
 		goto errDeal
 	}
@@ -387,6 +391,10 @@ func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHea
 	threshold = float32(metaNode.Used/metaNode.Total) < DefaultMetaPartitionThreshold
 	c.UpdateMetaNode(metaNode, threshold)
 	metaNode.metaRangeCount = len(metaNode.metaRangeInfos)
+	metaNode.Total = resp.Total
+	metaNode.Used = resp.Used
+	metaNode.RackName = resp.RackName
+	metaNode.setNodeAlive()
 	metaNode.metaRangeInfos = nil
 
 	return
@@ -533,6 +541,10 @@ func (c *Cluster) dealDataNodeHeartbeat(nodeAddr string, resp *proto.DataNodeHea
 		err      error
 		logMsg   string
 	)
+
+	if resp.Status != proto.TaskSuccess {
+		return
+	}
 
 	if dataNode, err = c.getDataNode(nodeAddr); err != nil {
 		goto errDeal
