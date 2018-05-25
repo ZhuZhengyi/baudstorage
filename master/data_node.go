@@ -129,6 +129,6 @@ func (dataNode *DataNode) generateHeartbeatTask(masterAddr string) (task *proto.
 		CurrTime:   time.Now().Unix(),
 		MasterAddr: masterAddr,
 	}
-	task = proto.NewAdminTask(OpDataNodeHeartbeat, dataNode.HttpAddr, request)
+	task = proto.NewAdminTask(proto.OpDataNodeHeartbeat, dataNode.HttpAddr, request)
 	return
 }
