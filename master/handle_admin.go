@@ -344,7 +344,7 @@ func (m *Master) addMetaNode(w http.ResponseWriter, r *http.Request) {
 	if id, err = m.cluster.addMetaNode(nodeAddr); err != nil {
 		goto errDeal
 	}
-	io.WriteString(w, fmt.Sprintf("addMetaNode %v successed,id(%v)", nodeAddr, id))
+	io.WriteString(w, fmt.Sprintf("%v",id))
 	return
 errDeal:
 	logMsg := getReturnMessage("addMetaNode", r.RemoteAddr, err.Error(), http.StatusBadRequest)
