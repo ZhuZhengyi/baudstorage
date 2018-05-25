@@ -155,14 +155,14 @@ func (m *metaManager) loadPartitions() (err error) {
 	for _, fileInfo := range fileInfoList {
 		if fileInfo.IsDir() && strings.HasPrefix(fileInfo.Name(), partitionPrefix) {
 			wg.Add(1)
-			go func() {
-				if len(fileInfo.Name()) < 10 {
-					log.LogWarnf("ignore unknown partition dir: %s", fileInfo.Name())
+			go func(fileName string) {
+				if len(fileName) < 10 {
+					log.LogWarnf("ignore unknown partition dir: %s", fileName)
 					wg.Done()
 					return
 				}
 				var id uint64
-				partitionId := fileInfo.Name()[len(partitionPrefix):]
+				partitionId := fileName[len(partitionPrefix):]
 				id, err = strconv.ParseUint(partitionId, 10, 64)
 				if err != nil {
 					log.LogWarnf("ignore path: %s,not partition", partitionId)
@@ -172,7 +172,7 @@ func (m *metaManager) loadPartitions() (err error) {
 				partitionConfig := &MetaPartitionConfig{
 					NodeId:    m.nodeId,
 					RaftStore: m.raftStore,
-					RootDir:   path.Join(m.rootDir, fileInfo.Name()),
+					RootDir:   path.Join(m.rootDir, fileName),
 				}
 				partitionConfig.AfterStop = func() {
 					m.detachPartition(id)
@@ -183,7 +183,7 @@ func (m *metaManager) loadPartitions() (err error) {
 				}
 				wg.Done()
 				log.LogDebugf("load partition id=%d success.", id)
-			}()
+			}(fileInfo.Name())
 		}
 	}
 	wg.Wait()
