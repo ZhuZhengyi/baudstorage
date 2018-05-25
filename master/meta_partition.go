@@ -18,8 +18,6 @@ type MetaReplica struct {
 	ReportTime int64
 	status     uint8
 	isLeader   bool
-	Total      uint64 `json:"TotalSize"`
-	Used       uint64 `json:"UsedSize"`
 	metaNode   *MetaNode
 }
 
@@ -41,7 +39,6 @@ func NewMetaReplica(start, end uint64, metaNode *MetaNode) (mr *MetaReplica) {
 	mr = &MetaReplica{start: start, end: end, nodeId: metaNode.ID, Addr: metaNode.Addr}
 	mr.metaNode = metaNode
 	mr.ReportTime = time.Now().Unix()
-	mr.Total = DefaultMetaPartitionMemSize
 	return
 }
 
