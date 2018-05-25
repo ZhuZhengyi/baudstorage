@@ -140,14 +140,14 @@ func (c *Cluster) addMetaNode(nodeAddr string) (id uint64, err error) {
 	)
 	if value, ok := c.metaNodes.Load(nodeAddr); ok {
 		metaNode = value.(*MetaNode)
-		return metaNode.id, nil
+		return metaNode.ID, nil
 	}
 	metaNode = NewMetaNode(nodeAddr)
 
 	if id, err = c.idAlloc.allocatorMetaNodeID(); err != nil {
 		goto errDeal
 	}
-	metaNode.id = id
+	metaNode.ID = id
 	if err = c.syncAddMetaNode(metaNode); err != nil {
 		goto errDeal
 	}

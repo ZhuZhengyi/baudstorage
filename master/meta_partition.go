@@ -38,7 +38,7 @@ type MetaPartition struct {
 }
 
 func NewMetaReplica(start, end uint64, metaNode *MetaNode) (mr *MetaReplica) {
-	mr = &MetaReplica{start: start, end: end, nodeId: metaNode.id, Addr: metaNode.Addr}
+	mr = &MetaReplica{start: start, end: end, nodeId: metaNode.ID, Addr: metaNode.Addr}
 	mr.metaNode = metaNode
 	mr.ReportTime = time.Now().Unix()
 	mr.Total = DefaultMetaPartitionMemSize

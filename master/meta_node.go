@@ -7,7 +7,7 @@ import (
 )
 
 type MetaNode struct {
-	id   uint64
+	ID   uint64
 	Addr string
 	//metaPartitions    []*MetaReplica
 	IsActive          bool
