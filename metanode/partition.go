@@ -196,20 +196,15 @@ func (mp *metaPartition) stopSchedule() {
 }
 
 func (mp *metaPartition) startRaft() (err error) {
-	peers := make([]raftstore.PeerAddress, len(mp.config.Peers))
+	var peers []raftstore.PeerAddress
 	for _, peer := range mp.config.Peers {
 		addr := strings.Split(peer.Addr, ":")[0]
-		/*
-			rp := raftstore.PeerAddress{
-				Peer: raftproto.Peer{
-					ID: peer.ID,
-				},
-				Address: addr,
-			}
-		*/
-		rp := raftstore.PeerAddress{}
-		rp.ID = peer.ID
-		rp.Address = addr
+		rp := raftstore.PeerAddress{
+			Peer: raftproto.Peer{
+				ID: peer.ID,
+			},
+			Address: addr,
+		}
 		peers = append(peers, rp)
 	}
 	log.LogDebugf("start partition id=%d raft peers: %s",
