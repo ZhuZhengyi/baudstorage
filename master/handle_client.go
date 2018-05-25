@@ -58,9 +58,20 @@ func (m *Master) getVols(w http.ResponseWriter, r *http.Request) {
 	var (
 		body []byte
 		code int
+		name string
+		ns   *NameSpace
+		ok   bool
 		err  error
 	)
-	if body, err = m.cluster.getVolsView(); err != nil {
+	if name, err = parseGetNamespacePara(r); err != nil {
+		goto errDeal
+	}
+	if ns, ok = m.cluster.namespaces[name]; !ok {
+		err = NamespaceNotFound
+		goto errDeal
+	}
+
+	if body, err = ns.getVolsView(); err != nil {
 		code = http.StatusMethodNotAllowed
 		goto errDeal
 	}

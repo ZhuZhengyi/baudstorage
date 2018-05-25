@@ -176,19 +176,6 @@ errDeal:
 	return err
 }
 
-func (c *Cluster) getVolsView() (body []byte, err error) {
-	body = make([]byte, 0)
-	for _, ns := range c.namespaces {
-		if partBody, err := ns.volGroups.updateVolResponseCache(NoNeedUpdateVolResponse, 0); err == nil {
-			body = append(body, partBody...)
-		} else {
-			log.LogError(fmt.Sprintf("getVolsView on namespace %v err:%v", ns.Name, err.Error()))
-		}
-
-	}
-	return
-}
-
 func (c *Cluster) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error) {
 	for _, ns := range c.namespaces {
 		if vol, err = ns.getVolGroupByVolID(volID); err == nil {
