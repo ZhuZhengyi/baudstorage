@@ -27,6 +27,7 @@ func newCluster(name string, leaderInfo *LeaderInfo, fsm *MetadataFsm, partition
 	c = new(Cluster)
 	c.Name = name
 	c.leaderInfo = leaderInfo
+	c.namespaces = make(map[string]*NameSpace,0)
 	c.cfg = NewClusterConfig()
 	c.fsm = fsm
 	c.partition = partition
