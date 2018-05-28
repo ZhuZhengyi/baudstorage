@@ -150,9 +150,9 @@ func (sender *AdminTaskSender) getNeedDealTask() (tasks []*proto.AdminTask) {
 		if task.CheckTaskTimeOut() {
 			delTasks = append(delTasks, task)
 		}
-		if !task.CheckTaskNeedRetrySend() {
-			continue
-		}
+		//if !task.CheckTaskNeedRetrySend() {
+		//	continue
+		//}
 		tasks = append(tasks, task)
 		if len(tasks) == TaskSendCount {
 			break
