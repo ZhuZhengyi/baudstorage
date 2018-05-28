@@ -47,19 +47,22 @@ func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
 }
 
 func (sender *AdminTaskSender) process() {
-	ticker := time.Tick(TaskWorkerInterval)
+	ticker := time.NewTicker(TaskWorkerInterval)
+	defer func() {
+		ticker.Stop()
+		log.LogDebugf("%v sender stop", sender.targetAddr)
+	}()
 	for {
 		select {
 		case <-sender.exitCh:
 			return
-		case <-ticker:
+		case <-ticker.C:
 			tasks := sender.getNeedDealTask()
 			if len(tasks) == 0 {
 				time.Sleep(time.Second)
 				continue
 			}
 			sender.sendTasks(tasks)
-
 		}
 	}
 
