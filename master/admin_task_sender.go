@@ -47,17 +47,15 @@ func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
 }
 
 func (sender *AdminTaskSender) process() {
-	ticker := time.Tick(time.Second)
+	ticker := time.Tick(TaskWorkerInterval)
 	for {
 		select {
 		case <-sender.exitCh:
 			return
 		case <-ticker:
-			time.Sleep(time.Millisecond * 100)
-		default:
 			tasks := sender.getNeedDealTask()
 			if len(tasks) == 0 {
-				time.Sleep(time.Millisecond * 100)
+				time.Sleep(time.Second)
 				continue
 			}
 			sender.sendTasks(tasks)
@@ -102,6 +100,7 @@ func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) 
 	if err = packet.WriteToConn(conn); err != nil {
 		return
 	}
+	log.LogDebugf("send task success[%v]", task.ToString())
 	response := proto.NewPacket()
 	if err = response.ReadFromConn(conn, TaskWaitResponseTimeOut); err != nil {
 		return
