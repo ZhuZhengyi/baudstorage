@@ -57,6 +57,12 @@ func uppercaseSeq(n int, a int) string {
 	return string(b)
 }
 
+func uint32ToBytes(v uint32) []byte {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, v)
+	return b
+}
+
 func updateKey(inode uint64) (extents []proto.ExtentKey, err error) {
 	aalock.Lock()
 	defer aalock.Unlock()
@@ -237,7 +243,7 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 
 		//add checksum
 		tempData := writeData[:CLIENTWRITESIZE]
-		crc := util2.Uint32ToBytes(crc32.ChecksumIEEE(tempData))
+		crc := uint32ToBytes(crc32.ChecksumIEEE(tempData))
 		fmt.Printf("write crc seqNo[%v], Crc[%v]\n", seqNo, crc)
 		for i := 0; i < CRCBYTELEN; i++ {
 			writeData[CLIENTWRITESIZE+i] = crc[i]
@@ -277,7 +283,7 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 
 		//check crc
 		tempData := rdata[:CLIENTWRITESIZE]
-		crc := util2.Uint32ToBytes(crc32.ChecksumIEEE(tempData))
+		crc := uint32ToBytes(crc32.ChecksumIEEE(tempData))
 		crcData := rdata[CLIENTWRITESIZE:]
 
 		fmt.Printf("readCrc[%v] writeCrc[%v]\n", crc, crcData)
