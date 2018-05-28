@@ -111,7 +111,7 @@ type MetaPartitionReport struct {
 }
 
 type MetaNodeHeartbeatResponse struct {
-	RackName                  string
+	RackName          string
 	Total             uint64
 	Used              uint64
 	MetaPartitionInfo []*MetaPartitionReport

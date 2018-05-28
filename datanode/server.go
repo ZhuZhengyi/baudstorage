@@ -192,15 +192,10 @@ func (s *DataNode) startRestService() {
 	http.HandleFunc("/vols", s.HandleVol)
 	http.HandleFunc("/stats", s.HandleStat)
 
-	server := &http.Server{}
-	server.Addr = fmt.Sprintf("%s:%d", s.localIp, s.profPort)
-	go func(server *http.Server) {
-		err := server.ListenAndServe()
-		if err != nil {
-			println("Failed to start rest service")
-			s.Shutdown()
-		}
-	}(server)
+	server := &http.Server{
+		Addr: fmt.Sprintf("%s:%d", s.localIp, s.profPort),
+	}
+	go server.ListenAndServe()
 	s.httpServerCloser = server
 }
 
@@ -224,6 +219,7 @@ func (s *DataNode) startTcpService() (err error) {
 			log.LogError("failed to accept, err:", err)
 			break
 		}
+		log.LogDebugf("action[DataNode.startTcpService] accept connection from %s.", conn.RemoteAddr().String())
 		go s.serveConn(conn)
 	}
 
@@ -253,6 +249,7 @@ func (s *DataNode) serveConn(conn net.Conn) {
 	for {
 		select {
 		case <-msgH.exitCh:
+			log.LogDebugf("action[DataNode.serveConn] received data from exitCh.")
 			goto exitDeal
 		default:
 			if err := s.readFromCliAndDeal(msgH); err != nil {

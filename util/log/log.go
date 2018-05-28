@@ -470,7 +470,9 @@ func LogWarn(v ...interface{}) {
 }
 
 func LogWarnf(format string, v ...interface{}) {
-	LogWarn(fmt.Sprintf(format, v...))
+	s := fmt.Sprintf(format, v...)
+	s = glog.SetPrefix(s, levels[2])
+	glog.warn.Print(s)
 }
 
 func LogInfo(v ...interface{}) {
@@ -480,7 +482,9 @@ func LogInfo(v ...interface{}) {
 }
 
 func LogInfof(format string, v ...interface{}) {
-	LogInfo(fmt.Sprintf(format, v...))
+	s := fmt.Sprintf(format, v...)
+	s = glog.SetPrefix(s, levels[2])
+	glog.info.Print(s)
 }
 
 func LogError(v ...interface{}) {
@@ -490,7 +494,9 @@ func LogError(v ...interface{}) {
 }
 
 func LogErrorf(format string, v ...interface{}) {
-	LogError(fmt.Sprintf(format, v...))
+	s := fmt.Sprintf(format, v...)
+	s = glog.SetPrefix(s, levels[4])
+	glog.err.Print(s)
 }
 
 func LogDebug(v ...interface{}) {
@@ -500,7 +506,9 @@ func LogDebug(v ...interface{}) {
 }
 
 func LogDebugf(format string, v ...interface{}) {
-	LogDebug(fmt.Sprintf(format, v...))
+	s := fmt.Sprintf(format, v...)
+	s = glog.SetPrefix(s, levels[0])
+	glog.debug.Print(s)
 }
 
 func LogFatal(v ...interface{}) {
@@ -511,7 +519,10 @@ func LogFatal(v ...interface{}) {
 }
 
 func LogFatalf(format string, v ...interface{}) {
-	LogFatal(fmt.Sprintf(format, v...))
+	s := fmt.Sprintf(format, v...)
+	s = glog.SetPrefix(s, levels[4])
+	glog.err.Output(2, s)
+	os.Exit(1)
 }
 
 func LogRead(v ...interface{}) {
@@ -520,8 +531,20 @@ func LogRead(v ...interface{}) {
 	glog.read.Print(s)
 }
 
+func LogReadf(format string, v ...interface{}) {
+	s := fmt.Sprintf(format, v...)
+	s = glog.SetPrefix(s, levels[5])
+	glog.read.Print(s)
+}
+
 func LogWrite(v ...interface{}) {
 	s := fmt.Sprintln(v...)
+	s = glog.SetPrefix(s, levels[6])
+	glog.update.Print(s)
+}
+
+func LogWritef(format string, v ...interface{}) {
+	s := fmt.Sprintf(format, v...)
 	s = glog.SetPrefix(s, levels[6])
 	glog.update.Print(s)
 }

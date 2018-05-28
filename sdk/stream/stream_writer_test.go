@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util"
 	"log"
 	"math/rand"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"github.com/tiglabs/baudstorage/util"
 )
 
 const (
@@ -153,7 +153,7 @@ func TestExtentClient_Write(t *testing.T) {
 
 	//test case: read size more than write size
 	rdata := make([]byte, CLIENTREADSIZE)
-	read, err := client.Read(inode, rdata, (writebytes-CLIENTREADSIZE+1024), CLIENTREADSIZE)
+	read, err := client.Read(inode, rdata, (writebytes - CLIENTREADSIZE + 1024), CLIENTREADSIZE)
 	if err != nil || read != (CLIENTREADSIZE-1024) {
 		OccoursErr(fmt.Errorf("read inode [%v] bytes[%v] err[%v]\n", inode, read, err), t)
 	}

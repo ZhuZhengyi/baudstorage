@@ -20,6 +20,8 @@ func (s *DataNode) readFromCliAndDeal(msgH *MessageHandler) (err error) {
 	if err = pkg.ReadFromConn(msgH.inConn, proto.NoReadDeadlineTime); err != nil {
 		goto errDeal
 	}
+	log.LogDebugf("action[DataNode.readFromCliAndDeal] read packet %v from remote %s.",
+		pkg, msgH.inConn.RemoteAddr().String())
 	pkg.beforeTp(s.clusterId)
 
 	if err = s.CheckPacket(pkg); err != nil {
@@ -33,12 +35,12 @@ func (s *DataNode) readFromCliAndDeal(msgH *MessageHandler) (err error) {
 
 	return nil
 errDeal:
-	conn_tag := fmt.Sprintf("connection[%v <----> %v] ", msgH.inConn.LocalAddr, msgH.inConn.RemoteAddr)
+	connTag := fmt.Sprintf("connection[%v <----> %v] ", msgH.inConn.LocalAddr(), msgH.inConn.RemoteAddr())
 	if err == io.EOF {
-		err = fmt.Errorf("%v was closed by peer[%v]", conn_tag, remote)
+		err = fmt.Errorf("%v was closed by peer[%v]", connTag, remote)
 	}
 	if err == nil {
-		err = fmt.Errorf("msghandler(%v) requestCh is full requestChan len [%v]", conn_tag, len(msgH.requestCh))
+		err = fmt.Errorf("msghandler(%v) requestCh is full requestChan len [%v]", connTag, len(msgH.requestCh))
 	}
 	msgH.ExitSign()
 
