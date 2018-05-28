@@ -47,19 +47,18 @@ func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
 }
 
 func (sender *AdminTaskSender) process() {
-	ticker := time.Tick(TaskWorkerInterval)
+	ticker := time.NewTicker(TaskWorkerInterval)
 	for {
 		select {
 		case <-sender.exitCh:
 			return
-		case <-ticker:
+		case <-ticker.C:
 			tasks := sender.getNeedDealTask()
 			if len(tasks) == 0 {
 				time.Sleep(time.Second)
 				continue
 			}
 			sender.sendTasks(tasks)
-
 		}
 	}
 
@@ -112,7 +111,7 @@ func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) 
 	} else {
 		log.LogError("send task failed,err %v", response.Data)
 	}
-	log.LogDebugf(fmt.Sprintf("sender task:%v to %v,send time:%v,sendCount:%v,status:%v ", task.ID, sender.targetAddr,task.SendTime,task.SendCount,task.Status))
+	log.LogDebugf(fmt.Sprintf("sender task:%v to %v,send time:%v,sendCount:%v,status:%v ", task.ID, sender.targetAddr, task.SendTime, task.SendCount, task.Status))
 	return
 }
 

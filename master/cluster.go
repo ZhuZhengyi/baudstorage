@@ -86,6 +86,7 @@ func (c *Cluster) startCheckReleaseVolGroups() {
 func (c *Cluster) startCheckHeartbeat() {
 	go func() {
 		for {
+			log.LogDebugf("isLeader:%v",c.partition.IsLeader())
 			if c.partition.IsLeader() {
 				c.checkDataNodeHeartbeat()
 				time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
