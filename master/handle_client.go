@@ -58,9 +58,20 @@ func (m *Master) getVols(w http.ResponseWriter, r *http.Request) {
 	var (
 		body []byte
 		code int
+		name string
+		ns   *NameSpace
+		ok   bool
 		err  error
 	)
-	if body, err = m.cluster.getVolsView(); err != nil {
+	if name, err = parseGetNamespacePara(r); err != nil {
+		goto errDeal
+	}
+	if ns, ok = m.cluster.namespaces[name]; !ok {
+		err = NamespaceNotFound
+		goto errDeal
+	}
+
+	if body, err = ns.getVolsView(); err != nil {
 		code = http.StatusMethodNotAllowed
 		goto errDeal
 	}
@@ -113,7 +124,7 @@ func getMetaPartitionView(mp *MetaPartition) (mpView *MetaPartitionView) {
 	mpView = NewMetaGroupView(mp.PartitionID, mp.Start, mp.End)
 	for _, metaReplica := range mp.Replicas {
 		mpView.Members = append(mpView.Members, metaReplica.Addr)
-		if metaReplica.isLeader {
+		if metaReplica.IsLeader {
 			mpView.LeaderAddr = metaReplica.Addr
 		}
 	}
@@ -128,7 +139,7 @@ func (m *Master) getMetaPartition(w http.ResponseWriter, r *http.Request) {
 		name        string
 		partitionID uint64
 		namespace   *NameSpace
-		metaGroup   *MetaPartition
+		mp          *MetaPartition
 		ok          bool
 	)
 	if name, partitionID, err = parseGetMetaPartitionPara(r); err != nil {
@@ -138,11 +149,11 @@ func (m *Master) getMetaPartition(w http.ResponseWriter, r *http.Request) {
 		err = NamespaceNotFound
 		goto errDeal
 	}
-	if metaGroup, ok = namespace.MetaPartitions[partitionID]; !ok {
+	if mp, ok = namespace.MetaPartitions[partitionID]; !ok {
 		err = MetaGroupNotFound
 		goto errDeal
 	}
-	if body, err = json.Marshal(getMetaPartitionView(metaGroup)); err != nil {
+	if body, err = json.Marshal(mp); err != nil {
 		code = http.StatusMethodNotAllowed
 		goto errDeal
 	}
@@ -167,7 +178,7 @@ func parseGetMetaPartitionPara(r *http.Request) (name string, partitionID uint64
 
 func checkMetaPartitionID(r *http.Request) (partitionID uint64, err error) {
 	var value string
-	if value := r.FormValue(ParaId); value == "" {
+	if value = r.FormValue(ParaId); value == "" {
 		err = paraNotFound(ParaId)
 		return
 	}
@@ -180,7 +191,7 @@ func parseGetNamespacePara(r *http.Request) (name string, err error) {
 }
 
 func checkNamespace(r *http.Request) (name string, err error) {
-	if name := r.FormValue(ParaName); name == "" {
+	if name = r.FormValue(ParaName); name == "" {
 		err = paraNotFound(name)
 	}
 	return

@@ -3,6 +3,7 @@ package raftstore
 import (
 	"fmt"
 	"github.com/tiglabs/raft"
+	"github.com/tiglabs/raft/proto"
 	"github.com/tiglabs/raft/storage/wal"
 	"path"
 	"strconv"
@@ -23,7 +24,15 @@ type raftStore struct {
 }
 
 func (s *raftStore) AddNode(nodeId uint64, addr string) {
-	AddNode(s.resolver, nodeId, addr)
+	if s.resolver != nil {
+		s.resolver.AddNode(nodeId, addr)
+	}
+}
+
+func (s *raftStore) AddNodeWithPort(nodeId uint64, addr string, heartbeat int, replicate int) {
+	if s.resolver != nil {
+		s.resolver.AddNodeWithPort(nodeId, addr, heartbeat, replicate)
+	}
 }
 
 func (s *raftStore) DeleteNode(nodeId uint64) {
@@ -41,8 +50,14 @@ func NewRaftStore(cfg *Config) (mr RaftStore, err error) {
 	rc := raft.DefaultConfig()
 	rc.NodeID = cfg.NodeID
 	rc.LeaseCheck = true
-	rc.HeartbeatAddr = fmt.Sprintf("%s:%d", cfg.IpAddr, HeartbeatPort)
-	rc.ReplicateAddr = fmt.Sprintf("%s:%d", cfg.IpAddr, ReplicatePort)
+	if cfg.HeartbeatPort <= 0 {
+		cfg.HeartbeatPort = HeartbeatPort
+	}
+	if cfg.ReplicatePort <= 0 {
+		cfg.ReplicatePort = ReplicatePort
+	}
+	rc.HeartbeatAddr = fmt.Sprintf("%s:%d", cfg.IpAddr, cfg.HeartbeatPort)
+	rc.ReplicateAddr = fmt.Sprintf("%s:%d", cfg.IpAddr, cfg.ReplicatePort)
 	rc.Resolver = resolver
 	rs, err := raft.NewRaftServer(rc)
 	if err != nil {
@@ -71,9 +86,19 @@ func (s *raftStore) CreatePartition(cfg *PartitionConfig) (p Partition, err erro
 	if err != nil {
 		return
 	}
+	peers := make([]proto.Peer, 0)
+	for _, peerAddress := range cfg.Peers {
+		peers = append(peers, peerAddress.Peer)
+		s.AddNodeWithPort(
+			peerAddress.ID,
+			peerAddress.Address,
+			peerAddress.HeartbeatPort,
+			peerAddress.ReplicatePort,
+		)
+	}
 	rc := &raft.RaftConfig{
 		ID:           cfg.ID,
-		Peers:        cfg.Peers,
+		Peers:        peers,
 		Leader:       cfg.Leader,
 		Term:         cfg.Term,
 		Storage:      ws,

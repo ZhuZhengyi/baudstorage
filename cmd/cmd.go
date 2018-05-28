@@ -53,7 +53,7 @@ func interceptSignal(s Server) {
 }
 
 func main() {
-	log.Println("Hello, Containerfs")
+	log.Println("Hello, Baud Storage")
 	flag.Parse()
 	cfg := config.LoadConfigFile(*configFile)
 	role := cfg.GetString(ConfigKeyRole)
@@ -78,7 +78,7 @@ func main() {
 	interceptSignal(server)
 	err := server.Start(cfg)
 	if err != nil {
-		log.Fatal("Fatal: failed to start the jfs daemon - ", err)
+		log.Fatal("Fatal: failed to start the baud storage daemon - ", err)
 		os.Exit(1)
 		return
 	}

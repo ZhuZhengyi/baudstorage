@@ -1,13 +1,13 @@
 package master
 
 import (
+	"encoding/json"
 	"fmt"
-	"sync"
-
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
 	"strconv"
+	"sync"
 )
 
 //config keys
@@ -157,6 +157,8 @@ func (m *Master) createRaftServer() (err error) {
 	fsm.RegisterApplyHandler(m.handleApply)
 	fsm.restore()
 	m.fsm = fsm
+	bytes, _ := json.Marshal(m.config.Peers())
+	fmt.Println(string(bytes))
 	partitionCfg := &raftstore.PartitionConfig{
 		ID:      GroupId,
 		Peers:   m.config.Peers(),

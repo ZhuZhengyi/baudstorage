@@ -28,17 +28,16 @@ func PostToNode(data []byte, url string) (msg []byte, err error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Connection", "close")
 	resp, err := client.Do(req)
-
 	if err != nil {
 		log.LogError(fmt.Sprintf("action[PostToNode],url:%v, err:%v", url, err.Error()))
 		return nil, err
 	}
+	defer resp.Body.Close()
+	msg, _ = ioutil.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf(" action[PostToNode] Data send failed,url:%v, status code:%v ", url, strconv.Itoa(resp.StatusCode))
-		return nil, err
+		return msg, err
 	}
-	msg, _ = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
 
 	return msg, nil
 }

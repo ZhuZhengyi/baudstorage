@@ -163,7 +163,7 @@ func (c *Cluster) getAvailMetaNodeHosts(excludeRack string, excludeHosts []strin
 		node := nodeTabs[i].Ptr.(*MetaNode)
 		node.SelectNodeForWrite()
 		orderHosts = append(orderHosts, node.Addr)
-		peer := proto.Peer{ID: node.id, Addr: node.Addr}
+		peer := proto.Peer{ID: node.ID, Addr: node.Addr}
 		peers = append(peers, peer)
 	}
 
@@ -178,9 +178,9 @@ func (c *Cluster) GetAvailCarryMetaNodeTab(maxTotal uint64, excludeRack string, 
 	nodeTabs = make(NodeTabArrSorterByCarry, 0)
 	c.metaNodes.Range(func(key, value interface{}) bool {
 		metaNode := value.(*MetaNode)
-		if metaNode.RackName == excludeRack {
-			return true
-		}
+		//if metaNode.RackName == excludeRack {
+		//	return true
+		//}
 		if contains(excludeHosts, metaNode.Addr) == true {
 			return true
 		}

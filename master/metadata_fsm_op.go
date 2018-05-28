@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	bsProto "github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/raft/proto"
 	"strconv"
 	"strings"
@@ -39,6 +41,7 @@ type MetaPartitionValue struct {
 	Start       uint64
 	End         uint64
 	Hosts       string
+	Peers       []bsProto.Peer
 }
 
 func newMetaPartitionValue(mp *MetaPartition) (mpv *MetaPartitionValue) {
@@ -48,6 +51,7 @@ func newMetaPartitionValue(mp *MetaPartition) (mpv *MetaPartitionValue) {
 		Start:       mp.Start,
 		End:         mp.End,
 		Hosts:       mp.hostsToString(),
+		Peers:       mp.Peers,
 	}
 	return
 }
@@ -56,6 +60,7 @@ type VolGroupValue struct {
 	VolID      uint64
 	ReplicaNum uint8
 	Hosts      string
+	VolType    string
 }
 
 func newVolGroupValue(vg *VolGroup) (vgv *VolGroupValue) {
@@ -63,6 +68,7 @@ func newVolGroupValue(vg *VolGroup) (vgv *VolGroupValue) {
 		VolID:      vg.VolID,
 		ReplicaNum: vg.replicaNum,
 		Hosts:      vg.VolHostsToString(),
+		VolType:    vg.volType,
 	}
 	return
 }
@@ -147,7 +153,7 @@ func (c *Cluster) putMetaPartitionInfo(opType uint32, nsName string, mp *MetaPar
 func (c *Cluster) syncAddMetaNode(metaNode *MetaNode) (err error) {
 	metadata := new(Metadata)
 	metadata.Op = OpSyncAddMetaNode
-	metadata.K = MetaNodePrefix + strconv.FormatUint(metaNode.id, 10) + metaNode.Addr
+	metadata.K = MetaNodePrefix + strconv.FormatUint(metaNode.ID, 10) + KeySeparator + metaNode.Addr
 	return c.submit(metadata)
 }
 
@@ -182,6 +188,8 @@ func (c *Cluster) handleApply(cmd *Metadata) (err error) {
 		return fmt.Errorf("metadata can't be null")
 	}
 
+	log.LogDebugf("action[handleApply],receive cmd[%v]", cmd)
+
 	switch cmd.Op {
 	case OpSyncAddDataNode:
 		c.applyAddDataNode(cmd)
@@ -210,8 +218,11 @@ func (c *Cluster) applyAddMetaNode(cmd *Metadata) {
 	keys := strings.Split(cmd.K, KeySeparator)
 
 	if keys[1] == MetaNodeAcronym {
-		metaNode := NewMetaNode(keys[2])
-		c.dataNodes.Store(metaNode.Addr, metaNode)
+		addr := keys[3]
+		if _, err := c.getMetaNode(addr); err != nil {
+			metaNode := NewMetaNode(addr)
+			c.metaNodes.Store(metaNode.Addr, metaNode)
+		}
 	}
 }
 
@@ -228,8 +239,12 @@ func (c *Cluster) applyAddMetaPartition(cmd *Metadata) {
 	keys := strings.Split(cmd.K, KeySeparator)
 	if keys[1] == MetaPartitionAcronym {
 		mpv := &MetaPartitionValue{}
-		json.Unmarshal(cmd.V, mpv)
+		if err := json.Unmarshal(cmd.V, mpv); err != nil {
+			log.LogError(fmt.Sprintf("action[applyAddMetaPartition] failed,err:%v", err))
+		}
 		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End, keys[2])
+		mp.Peers = mpv.Peers
+		mp.PersistenceHosts = strings.Split(mpv.Hosts, UnderlineSeparator)
 		ns, _ := c.getNamespace(keys[2])
 		ns.MetaPartitions[mp.PartitionID] = mp
 	}
@@ -242,6 +257,7 @@ func (c *Cluster) applyAddVolGroup(cmd *Metadata) {
 		json.Unmarshal(cmd.V, vgv)
 		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum)
 		ns, _ := c.getNamespace(keys[2])
+		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
 		ns.volGroups.volGroups = append(ns.volGroups.volGroups, vg)
 
 	}
@@ -278,7 +294,7 @@ func (c *Cluster) loadDataNodes() (err error) {
 		it.Close()
 		c.fsm.store.ReleaseSnapshot(snapshot)
 	}()
-	prefixKey := []byte(NamespacePrefix)
+	prefixKey := []byte(DataNodePrefix)
 	it.Seek(prefixKey)
 
 	for ; it.ValidForPrefix(prefixKey); it.Next() {
@@ -293,8 +309,8 @@ func (c *Cluster) loadDataNodes() (err error) {
 
 func (c *Cluster) decodeMetaNodeKey(key string) (nodeID uint64, addr string, err error) {
 	keys := strings.Split(key, KeySeparator)
-	addr = keys[2]
-	nodeID, err = strconv.ParseUint(keys[1], 10, 64)
+	addr = keys[3]
+	nodeID, err = strconv.ParseUint(keys[2], 10, 64)
 	return
 }
 
@@ -305,7 +321,7 @@ func (c *Cluster) loadMetaNodes() (err error) {
 		it.Close()
 		c.fsm.store.ReleaseSnapshot(snapshot)
 	}()
-	prefixKey := []byte(NamespacePrefix)
+	prefixKey := []byte(MetaNodePrefix)
 	it.Seek(prefixKey)
 
 	for ; it.ValidForPrefix(prefixKey); it.Next() {
@@ -316,7 +332,7 @@ func (c *Cluster) loadMetaNodes() (err error) {
 			return err
 		}
 		metaNode := NewMetaNode(addr)
-		metaNode.id = nodeID
+		metaNode.ID = nodeID
 		c.metaNodes.Store(addr, metaNode)
 		encodedKey.Free()
 	}
@@ -370,7 +386,8 @@ func (c *Cluster) loadMetaPartitions() (err error) {
 			return err
 		}
 		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End, nsName)
-		mp.PersistenceHosts = strings.Split(mpv.Hosts, UnderlineSeparator)
+		mp.setPersistenceHosts(strings.Split(mpv.Hosts, UnderlineSeparator))
+		mp.setPeers(mpv.Peers)
 		ns.MetaPartitions[mp.PartitionID] = mp
 		encodedKey.Free()
 		encodedValue.Free()

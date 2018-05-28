@@ -155,14 +155,14 @@ func (m *metaManager) loadPartitions() (err error) {
 	for _, fileInfo := range fileInfoList {
 		if fileInfo.IsDir() && strings.HasPrefix(fileInfo.Name(), partitionPrefix) {
 			wg.Add(1)
-			go func() {
-				if len(fileInfo.Name()) < 10 {
-					log.LogWarnf("ignore unknown partition dir: %s", fileInfo.Name())
+			go func(fileName string) {
+				if len(fileName) < 10 {
+					log.LogWarnf("ignore unknown partition dir: %s", fileName)
 					wg.Done()
 					return
 				}
 				var id uint64
-				partitionId := fileInfo.Name()[10:]
+				partitionId := fileName[len(partitionPrefix):]
 				id, err = strconv.ParseUint(partitionId, 10, 64)
 				if err != nil {
 					log.LogWarnf("ignore path: %s,not partition", partitionId)
@@ -172,7 +172,7 @@ func (m *metaManager) loadPartitions() (err error) {
 				partitionConfig := &MetaPartitionConfig{
 					NodeId:    m.nodeId,
 					RaftStore: m.raftStore,
-					RootDir:   path.Join(m.rootDir, fileInfo.Name()),
+					RootDir:   path.Join(m.rootDir, fileName),
 				}
 				partitionConfig.AfterStop = func() {
 					m.detachPartition(id)
@@ -182,7 +182,8 @@ func (m *metaManager) loadPartitions() (err error) {
 					log.LogErrorf("start partition %d: %s", id, err.Error())
 				}
 				wg.Done()
-			}()
+				log.LogDebugf("load partition id=%d success.", id)
+			}(fileInfo.Name())
 		}
 	}
 	wg.Wait()
@@ -212,6 +213,12 @@ func (m *metaManager) detachPartition(id uint64) (err error) {
 
 func (m *metaManager) createPartition(id uint64, start, end uint64,
 	peers []proto.Peer) (err error) {
+	/* Check Partition */
+	if _, err = m.getPartition(id); err == nil {
+		err = errors.Errorf("create partition id=%d is exsited!", id)
+		return
+	}
+	err = nil
 	/* Create metaPartition and add metaManager */
 	partId := fmt.Sprintf("%d", id)
 	mpc := &MetaPartitionConfig{
@@ -229,9 +236,13 @@ func (m *metaManager) createPartition(id uint64, start, end uint64,
 	}
 	partition := NewMetaPartition(mpc)
 	if err = partition.StoreMeta(); err != nil {
+		err = errors.Errorf("[createPartition]->%s", err.Error())
 		return
 	}
-	err = m.attachPartition(id, partition)
+	if err = m.attachPartition(id, partition); err != nil {
+		err = errors.Errorf("[createPartition]->%s", err.Error())
+		return
+	}
 	return
 }
 

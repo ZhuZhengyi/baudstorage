@@ -38,27 +38,28 @@ func UnmarshalTaskResponse(task *proto.AdminTask) (err error) {
 	if err != nil {
 		return
 	}
+	log.LogDebug(fmt.Sprintf("received TaskResponse:%v", string(bytes)))
 	var response interface{}
 	switch task.OpCode {
-	case OpCreateVol:
+	case proto.OpCreateVol:
 		response = &proto.CreateVolResponse{}
-	case OpDeleteVol:
+	case proto.OpDeleteVol:
 		response = &proto.DeleteVolResponse{}
-	case OpLoadVol:
+	case proto.OpLoadVol:
 		response = &proto.LoadVolResponse{}
-	case OpCreateMetaPartition:
+	case proto.OpCreateMetaPartition:
 		response = &proto.CreateMetaPartitionResponse{}
-	case OpDeleteFile:
+	case proto.OpDeleteFile:
 		response = &proto.DeleteFileResponse{}
-	case OpDeleteMetaPartition:
+	case proto.OpDeleteMetaPartition:
 		response = &proto.DeleteMetaPartitionResponse{}
-	case OpUpdateMetaPartition:
+	case proto.OpUpdateMetaPartition:
 		response = &proto.UpdateMetaPartitionResponse{}
-	case OpLoadMetaPartition:
+	case proto.OpLoadMetaPartition:
 		response = task.Response.(*proto.LoadMetaPartitionMetricResponse)
-	case OpDataNodeHeartbeat:
+	case proto.OpDataNodeHeartbeat:
 		response = &proto.DataNodeHeartBeatResponse{}
-	case OpMetaNodeHeartbeat:
+	case proto.OpMetaNodeHeartbeat:
 		response = &proto.MetaNodeHeartbeatResponse{}
 	default:
 		log.LogError(fmt.Sprintf("unknown operate code(%v)", task.OpCode))
@@ -70,6 +71,7 @@ func UnmarshalTaskResponse(task *proto.AdminTask) (err error) {
 	if err = json.Unmarshal(bytes, response); err != nil {
 		return
 	}
+	log.LogDebug(fmt.Sprintf("UnmarshalTaskResponse:%v", string(bytes)))
 	task.Response = response
 	return
 }

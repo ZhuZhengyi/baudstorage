@@ -34,7 +34,7 @@ func newIDAllocator(store *raftstore.RocksDBStore, partition raftstore.Partition
 }
 
 func (alloc *IDAllocator) restore() {
-	alloc.restoreMaxMetaNodeID()
+	alloc.restoreMaxVolID()
 	alloc.restoreMaxPartitionID()
 	alloc.restoreMaxMetaNodeID()
 }
@@ -98,13 +98,17 @@ func (alloc *IDAllocator) restoreMaxMetaNodeID() {
 func (alloc *IDAllocator) allocatorVolID() (volID uint64, err error) {
 	alloc.volIDLock.Lock()
 	defer alloc.volIDLock.Unlock()
+	var cmd []byte
 	metadata := new(Metadata)
 	volID = atomic.AddUint64(&alloc.volID, 1)
-	cmd, err := metadata.Marshal()
+	metadata.K = MaxVolIDKey
+	value := strconv.FormatUint(uint64(volID), 10)
+	metadata.V = []byte(value)
+	cmd, err = metadata.Marshal()
 	if err != nil {
 		goto errDeal
 	}
-	if _, err := alloc.partition.Submit(cmd); err != nil {
+	if _, err = alloc.partition.Submit(cmd); err != nil {
 		goto errDeal
 	}
 	return
@@ -114,15 +118,19 @@ errDeal:
 }
 
 func (alloc *IDAllocator) allocatorPartitionID() (partitionID uint64, err error) {
+	var cmd []byte
 	alloc.partitionIDLock.Lock()
 	defer alloc.partitionIDLock.Unlock()
 	metadata := new(Metadata)
+	metadata.K = MaxPartitionIDKey
 	partitionID = atomic.AddUint64(&alloc.partitionID, 1)
-	cmd, err := metadata.Marshal()
+	value := strconv.FormatUint(uint64(partitionID), 10)
+	metadata.V = []byte(value)
+	cmd, err = metadata.Marshal()
 	if err != nil {
 		goto errDeal
 	}
-	if _, err := alloc.partition.Submit(cmd); err != nil {
+	if _, err = alloc.partition.Submit(cmd); err != nil {
 		goto errDeal
 	}
 	return
@@ -132,15 +140,19 @@ errDeal:
 }
 
 func (alloc *IDAllocator) allocatorMetaNodeID() (metaNodeID uint64, err error) {
+	var cmd []byte
 	alloc.metaNodeIDLock.Lock()
 	defer alloc.metaNodeIDLock.Unlock()
 	metadata := new(Metadata)
+	metadata.K = MaxMetaNodeIDKey
 	metaNodeID = atomic.AddUint64(&alloc.metaNodeID, 1)
-	cmd, err := metadata.Marshal()
+	value := strconv.FormatUint(uint64(metaNodeID), 10)
+	metadata.V = []byte(value)
+	cmd, err = metadata.Marshal()
 	if err != nil {
 		goto errDeal
 	}
-	if _, err := alloc.partition.Submit(cmd); err != nil {
+	if _, err = alloc.partition.Submit(cmd); err != nil {
 		goto errDeal
 	}
 	return

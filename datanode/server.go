@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/master"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util"
@@ -33,7 +34,7 @@ var (
 
 const (
 	ModuleName      = "DataNode"
-	GetIpFromMaster = "admin/getIp"
+	GetIpFromMaster = "/admin/getIp"
 	DefaultRackName = "huitian_rack1"
 )
 
@@ -122,7 +123,7 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 
 	s.rackName = cfg.GetString(ConfigKeyRack)
 	_, err = log.NewLog(s.logDir, ModuleName, log.DebugLevel)
-	if err = s.getIpFromMaster(); err != nil {
+	if err = s.registerToMaster(); err != nil {
 		return
 	}
 	s.profPort = int(cfg.GetFloat(ConfigKeyProfPort))
@@ -160,10 +161,13 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	return nil
 }
 
-func (s *DataNode) getIpFromMaster() error {
-	data, err := s.postToMaster(nil, GetIpFromMaster)
+func (s *DataNode) registerToMaster() (err error) {
+	var data []byte
+	// Get IP address and cluster ID from master.
+	data, err = s.postToMaster(nil, GetIpFromMaster)
 	if err != nil {
-		panic(fmt.Sprintf("cannot get ip from master[%v] err[%v]", s.masterAddrs, err))
+		err = fmt.Errorf("cannot get ip from master[%v] err[%v]", s.masterAddrs, err)
+		return
 	}
 	cInfo := new(proto.ClusterInfo)
 	json.Unmarshal(data, cInfo)
@@ -171,9 +175,16 @@ func (s *DataNode) getIpFromMaster() error {
 	s.clusterId = cInfo.Cluster
 	s.localServeAddr = fmt.Sprintf("%s:%v", s.localIp, s.port)
 	if !util.IP(s.localIp) {
-		panic(fmt.Sprintf("unavalid ip from master[%v] err[%v]", s.masterAddrs, s.localIp))
+		err = fmt.Errorf("unavalid ip from master[%v] err[%v]", s.masterAddrs, s.localIp)
+		return
 	}
-	return nil
+	// Register this data node to master.
+	data, err = s.postToMaster(nil, fmt.Sprintf("%s?addr=%s:%d", master.AddDataNode, s.localIp, s.port))
+	if err != nil {
+		err = fmt.Errorf("cannot add this data node to master[%v] err[%v]", s.masterAddrs, err)
+		return
+	}
+	return
 }
 
 func (s *DataNode) startRestService() {
@@ -181,15 +192,10 @@ func (s *DataNode) startRestService() {
 	http.HandleFunc("/vols", s.HandleVol)
 	http.HandleFunc("/stats", s.HandleStat)
 
-	server := &http.Server{}
-	server.Addr = fmt.Sprintf("%s:%d", s.localIp, s.profPort)
-	go func(server *http.Server) {
-		err := server.ListenAndServe()
-		if err != nil {
-			println("Failed to start rest service")
-			s.Shutdown()
-		}
-	}(server)
+	server := &http.Server{
+		Addr: fmt.Sprintf("%s:%d", s.localIp, s.profPort),
+	}
+	go server.ListenAndServe()
 	s.httpServerCloser = server
 }
 
@@ -213,6 +219,7 @@ func (s *DataNode) startTcpService() (err error) {
 			log.LogError("failed to accept, err:", err)
 			break
 		}
+		log.LogDebugf("action[DataNode.startTcpService] accept connection from %s.", conn.RemoteAddr().String())
 		go s.serveConn(conn)
 	}
 
@@ -242,6 +249,7 @@ func (s *DataNode) serveConn(conn net.Conn) {
 	for {
 		select {
 		case <-msgH.exitCh:
+			log.LogDebugf("action[DataNode.serveConn] received data from exitCh.")
 			goto exitDeal
 		default:
 			if err := s.readFromCliAndDeal(msgH); err != nil {

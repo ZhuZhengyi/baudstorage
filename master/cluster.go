@@ -27,6 +27,7 @@ func newCluster(name string, leaderInfo *LeaderInfo, fsm *MetadataFsm, partition
 	c = new(Cluster)
 	c.Name = name
 	c.leaderInfo = leaderInfo
+	c.namespaces = make(map[string]*NameSpace, 0)
 	c.cfg = NewClusterConfig()
 	c.fsm = fsm
 	c.partition = partition
@@ -85,15 +86,19 @@ func (c *Cluster) startCheckReleaseVolGroups() {
 func (c *Cluster) startCheckHeartbeat() {
 	go func() {
 		for {
-			c.checkDataNodeHeartbeat()
-			time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
+			if c.partition.IsLeader() {
+				c.checkDataNodeHeartbeat()
+				time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
+			}
 		}
 	}()
 
 	go func() {
 		for {
-			c.checkMetaNodeHeartbeat()
-			time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
+			if c.partition.IsLeader() {
+				c.checkMetaNodeHeartbeat()
+				time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
+			}
 		}
 	}()
 }
@@ -137,16 +142,16 @@ func (c *Cluster) addMetaNode(nodeAddr string) (id uint64, err error) {
 	var (
 		metaNode *MetaNode
 	)
-	if _, ok := c.metaNodes.Load(nodeAddr); ok {
-		err = hasExist(nodeAddr)
-		goto errDeal
+	if value, ok := c.metaNodes.Load(nodeAddr); ok {
+		metaNode = value.(*MetaNode)
+		return metaNode.ID, nil
 	}
 	metaNode = NewMetaNode(nodeAddr)
 
 	if id, err = c.idAlloc.allocatorMetaNodeID(); err != nil {
 		goto errDeal
 	}
-	metaNode.id = id
+	metaNode.ID = id
 	if err = c.syncAddMetaNode(metaNode); err != nil {
 		goto errDeal
 	}
@@ -161,31 +166,19 @@ errDeal:
 func (c *Cluster) addDataNode(nodeAddr string) (err error) {
 	var dataNode *DataNode
 	if _, ok := c.dataNodes.Load(nodeAddr); ok {
-		err = hasExist(nodeAddr)
-		goto errDeal
+		return
 	}
 
 	dataNode = NewDataNode(nodeAddr)
-	c.syncAddDataNode(dataNode)
+	if err = c.syncAddDataNode(dataNode); err != nil {
+		goto errDeal
+	}
 	c.dataNodes.Store(nodeAddr, dataNode)
 	return
 errDeal:
 	err = fmt.Errorf("action[addMetaNode],metaNodeAddr:%v err:%v ", nodeAddr, err.Error())
 	log.LogWarn(err.Error())
 	return err
-}
-
-func (c *Cluster) getVolsView() (body []byte, err error) {
-	body = make([]byte, 0)
-	for _, ns := range c.namespaces {
-		if partBody, err := ns.volGroups.updateVolResponseCache(NoNeedUpdateVolResponse, 0); err == nil {
-			body = append(body, partBody...)
-		} else {
-			log.LogError(fmt.Sprintf("getVolsView on namespace %v err:%v", ns.Name, err.Error()))
-		}
-
-	}
-	return
 }
 
 func (c *Cluster) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error) {
@@ -282,6 +275,7 @@ func (c *Cluster) getDataNode(addr string) (dataNode *DataNode, err error) {
 	value, ok := c.dataNodes.Load(addr)
 	if !ok {
 		err = DataNodeNotFound
+		return
 	}
 	dataNode = value.(*DataNode)
 	return
@@ -291,6 +285,7 @@ func (c *Cluster) getMetaNode(addr string) (metaNode *MetaNode, err error) {
 	value, ok := c.metaNodes.Load(addr)
 	if !ok {
 		err = MetaNodeNotFound
+		return
 	}
 	metaNode = value.(*MetaNode)
 	return
@@ -347,7 +342,7 @@ func (c *Cluster) volOffline(offlineAddr, nsName string, vg *VolGroup, errMsg st
 	}
 	vg.volOffLineInMem(offlineAddr)
 	vg.checkAndRemoveMissVol(offlineAddr)
-	task = proto.NewAdminTask(OpCreateVol, offlineAddr, newCreateVolRequest(vg.volType, vg.VolID))
+	task = proto.NewAdminTask(proto.OpCreateVol, offlineAddr, newCreateVolRequest(vg.volType, vg.VolID))
 	tasks = make([]*proto.AdminTask, 0)
 	tasks = append(tasks, task)
 	c.putDataNodeTasks(tasks)
@@ -416,13 +411,15 @@ func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err err
 	if hosts, peers, err = c.ChooseTargetMetaHosts(int(ns.mpReplicaNum)); err != nil {
 		return
 	}
-	mp.PersistenceHosts = hosts
-	mp.peers = peers
+
+	log.LogDebugf("target meta hosts:%v,peers:%v", hosts, peers)
+	mp.setPersistenceHosts(hosts)
+	mp.setPeers(peers)
 	if err = c.syncAddMetaPartition(nsName, mp); err != nil {
 		return
 	}
 	ns.AddMetaPartition(mp)
-	c.putMetaNodeTasks(mp.generateCreateMetaPartitionTasks(nil))
+	c.putMetaNodeTasks(mp.generateCreateMetaPartitionTasks(nil, nsName))
 	return
 }
 
@@ -464,5 +461,33 @@ func (c *Cluster) DataNodeCount() (len int) {
 		len++
 		return true
 	})
+	return
+}
+
+func (c *Cluster) getAllDataNodes() (dataNodes []NodeView) {
+	dataNodes = make([]NodeView, 0)
+	c.dataNodes.Range(func(addr, node interface{}) bool {
+		dataNode := node.(*DataNode)
+		dataNodes = append(dataNodes, NodeView{Addr: dataNode.HttpAddr, Status: dataNode.isActive})
+		return true
+	})
+	return
+}
+
+func (c *Cluster) getAllMetaNodes() (metaNodes []NodeView) {
+	metaNodes = make([]NodeView, 0)
+	c.metaNodes.Range(func(addr, node interface{}) bool {
+		metaNode := node.(*MetaNode)
+		metaNodes = append(metaNodes, NodeView{Addr: metaNode.Addr, Status: metaNode.IsActive})
+		return true
+	})
+	return
+}
+
+func (c *Cluster) getAllNamespaces() (namespaces []string) {
+	namespaces = make([]string, 0)
+	for name, _ := range c.namespaces {
+		namespaces = append(namespaces, name)
+	}
 	return
 }

@@ -38,7 +38,7 @@ func NewSpaceManager(rack string) (space *SpaceManager) {
 }
 
 func (space *SpaceManager) getDisk(path string) (d *Disk, err error) {
-	space.diskLock.RLocker()
+	space.diskLock.RLock()
 	defer space.diskLock.RUnlock()
 	d = space.disks[path]
 	if d == nil {
@@ -55,7 +55,7 @@ func (space *SpaceManager) putDisk(d *Disk) {
 }
 
 func (space *SpaceManager) updateMetrics() {
-	space.diskLock.RLocker()
+	space.diskLock.RLock()
 	var (
 		total, used, free                            uint64
 		createdVolWeights, remainWeightsForCreateVol uint64
@@ -100,7 +100,7 @@ func (space *SpaceManager) getMinVolCntDisk() (d *Disk) {
 }
 
 func (space *SpaceManager) getVol(volId uint32) (v *Vol) {
-	space.volLock.RLocker()
+	space.volLock.RLock()
 	defer space.volLock.RUnlock()
 	v = space.vols[volId]
 

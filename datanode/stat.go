@@ -129,7 +129,7 @@ func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error)
 		if scode == http.StatusForbidden {
 			masterAddr = string(msg)
 			masterAddr = strings.Replace(masterAddr, "\n", "", -1)
-			log.LogWarn(fmt.Sprintf("%v master Addr change to %v, retry post to master", ActionPostToMaster, string(msg)))
+			log.LogWarn(fmt.Sprintf("action[DataNode.postToMaster] master Addr change to %v, retry post to master", string(msg)))
 			continue
 		}
 		if scode != http.StatusOK {

@@ -61,7 +61,15 @@ type partition struct {
 }
 
 func (p *partition) AddNode(nodeId uint64, addr string) {
-	AddNode(p.resolver, nodeId, addr)
+	if p.resolver != nil {
+		p.resolver.AddNode(nodeId, addr)
+	}
+}
+
+func (p *partition) AddNodeWithPort(nodeId uint64, addr string, heartbeat int, replicate int) {
+	if p.resolver != nil {
+		p.resolver.AddNodeWithPort(nodeId, addr, heartbeat, replicate)
+	}
 }
 
 func (p *partition) DeleteNode(nodeId uint64) {

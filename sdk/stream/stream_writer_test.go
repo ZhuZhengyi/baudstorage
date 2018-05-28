@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util"
+	"hash/crc32"
 	"log"
 	"math/rand"
 	"net/http"
@@ -13,6 +15,13 @@ import (
 	"sync"
 	"testing"
 	"time"
+)
+
+const (
+	CLIENTREADSIZE  = 4 * util.KB
+	CLIENTWRITESIZE = 4 * util.KB
+	CLIENTWRITENUM  = 1000
+	TOTALREADSIZE   = (CLIENTWRITESIZE + 1) * CLIENTWRITENUM
 )
 
 var aalock sync.Mutex
@@ -29,10 +38,20 @@ func saveExtentKey(inode uint64, k proto.ExtentKey) (err error) {
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
+var uppercaseLetters = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
 func randSeq(n int) string {
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
+func uppercaseSeq(n int, a int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = uppercaseLetters[a%26]
 	}
 	return string(b)
 }
@@ -53,7 +72,7 @@ func initClient(t *testing.T) (client *ExtentClient) {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 	var err error
-	client, err = NewExtentClient("log", "127.0.0.1:7778", saveExtentKey, updateKey)
+	client, err = NewExtentClient("log", "stream_write_test", "127.0.0.1:7778", saveExtentKey, updateKey)
 	if err != nil {
 		OccoursErr(fmt.Errorf("init client err[%v]", err.Error()), t)
 	}
@@ -70,7 +89,7 @@ func initInode(inode uint64) (sk *proto.StreamKey) {
 	return
 }
 
-func prepare(inode uint64, t *testing.T, data []byte) (localWriteFp *os.File, localReadFp *os.File) {
+func prepare(inode uint64, t *testing.T) (localWriteFp *os.File, localReadFp *os.File) {
 	var err error
 	localWriteFp, err = openFileForWrite(inode, "write")
 	if err != nil {
@@ -101,26 +120,31 @@ func TestExtentClient_Write(t *testing.T) {
 	writebytes := 0
 	writeStr := randSeq(CFSBLOCKSIZE*5 + 1)
 	data := ([]byte)(writeStr)
-	localWriteFp, _ := prepare(inode, t, data)
-	localReadFp, _ := openFileForWrite(inode, "read")
+	localWriteFp, localReadFp := prepare(inode, t)
+
 	client.Open(inode)
 	client.Open(inode)
 	client.Open(inode)
-	for seqNo := 0; seqNo < CFSBLOCKSIZE; seqNo++ {
+	for seqNo := 0; seqNo < 10000; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
 		ndata := data[:rand.Intn(CFSBLOCKSIZE*5)]
+
+		//write
 		write, err := client.Write(inode, ndata)
 		if err != nil || write != len(ndata) {
 			OccoursErr(fmt.Errorf("write inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 		}
+		fmt.Printf("hahah ,write ok [%v]\n", seqNo)
+
+		//flush
 		err = client.Flush(inode)
 		if err != nil {
 			OccoursErr(fmt.Errorf("flush inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 		}
-		fmt.Printf("hahah ,write ok [%v]\n", seqNo)
+		fmt.Printf("hahah ,flush ok [%v]\n", seqNo)
 
+		//read
 		rdata := make([]byte, len(ndata))
-
 		read, err = client.Read(inode, rdata, writebytes, len(ndata))
 		if err != nil || read != len(ndata) {
 			OccoursErr(fmt.Errorf("read inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, read, err), t)
@@ -140,16 +164,133 @@ func TestExtentClient_Write(t *testing.T) {
 		}
 		writebytes += write
 	}
+
+	//test case: read size more than write size
+	readData := make([]byte, CLIENTREADSIZE)
+	readOffset := (writebytes - CLIENTWRITESIZE + 1024)
+	read, err := client.Read(inode, readData, readOffset, CLIENTREADSIZE)
+	if err != nil || read != (CLIENTREADSIZE-1024) {
+		OccoursErr(fmt.Errorf("read inode [%v] bytes[%v] err[%v]\n", inode, read, err), t)
+	}
+
+	//finish
 	client.Close(inode)
 	client.Close(inode)
 	client.Close(inode)
-	fmt.Println("sum write bytes:", writebytes)
+
 	localWriteFp.Close()
+	localReadFp.Close()
+
 	for {
 		time.Sleep(time.Second)
 		if sk.Size() == uint64(writebytes) {
 			break
 		}
 	}
+}
 
+func writeFlushReadTest(t *testing.T, inode uint64, seqNo int, client *ExtentClient,
+	writeData []byte, localWriteFp *os.File) (write int, err error) {
+
+	//write
+	write, err = client.Write(inode, writeData)
+	if err != nil || write != len(writeData) {
+		OccoursErr(fmt.Errorf("write seqNO[%v] bytes[%v] len[%v] err[%v]\n", seqNo, write, len(writeData), err), t)
+	}
+	fmt.Printf("write ok seqNo[%v], Size[%v], Crc[%v]\n", seqNo, write, writeData[CLIENTWRITESIZE])
+
+	//flush
+	err = client.Flush(inode)
+	if err != nil {
+		OccoursErr(fmt.Errorf("flush inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
+	}
+	fmt.Printf("flush ok [%v]\n", seqNo)
+
+	_, err = localWriteFp.Write(writeData)
+	if err != nil {
+		OccoursErr(fmt.Errorf("write localFile write inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
+	}
+
+	return write, nil
+}
+
+func TestExtentClient_MultiRoutineWrite(t *testing.T) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	allKeys = make(map[uint64]*proto.StreamKey)
+	client := initClient(t)
+	var (
+		inode uint64
+	)
+	inode = 3
+	sk := initInode(inode)
+	writeBytes := 0
+	readBytes := 0
+	localWriteFp, localReadFp := prepare(inode, t)
+
+	client.Open(inode)
+	client.Open(inode)
+	client.Open(inode)
+	for seqNo := 0; seqNo < CLIENTWRITENUM; seqNo++ {
+		rand.Seed(time.Now().UnixNano())
+		writeStr := uppercaseSeq(CLIENTWRITESIZE+1, seqNo)
+		writeData := ([]byte)(writeStr)
+
+		//add checksum
+		tempData := writeData[:CLIENTWRITESIZE]
+		crc := crc32.ChecksumIEEE(tempData)
+		writeData[CLIENTWRITESIZE] = byte(crc)
+
+		go func(seqNo int) {
+			write, err := writeFlushReadTest(t, inode, seqNo, client, writeData, localWriteFp)
+			if err != nil {
+				OccoursErr(fmt.Errorf("write inode[%v] seqNO[%v]  err[%v]\n", inode, seqNo, err), t)
+			}
+			writeBytes += write
+		}(seqNo)
+	}
+
+	time.Sleep(time.Second * 2)
+	fmt.Printf("write size [%v]\n", writeBytes)
+
+	//read check
+	for seqNo := 0; seqNo < CLIENTWRITENUM; seqNo++ {
+		rand.Seed(time.Now().UnixNano())
+
+		rdata := make([]byte, CLIENTWRITESIZE+1)
+		read, err := client.Read(inode, rdata, readBytes, CLIENTWRITESIZE+1)
+		if err != nil || read != CLIENTWRITESIZE+1 {
+			OccoursErr(fmt.Errorf("read bytes[%v] err[%v]\n", read, err), t)
+		}
+
+		_, err = localReadFp.Write(rdata)
+		if err != nil {
+			OccoursErr(fmt.Errorf("write localFile read inode[%v] err[%v]\n", inode, err), t)
+		}
+
+		//check crc
+		tempData := rdata[:CLIENTWRITESIZE]
+		crc := crc32.ChecksumIEEE(tempData)
+		fmt.Printf("readCrc[%v] writeCrc[%v]\n", byte(crc), rdata[CLIENTWRITESIZE])
+		if byte(crc) != rdata[CLIENTWRITESIZE] {
+			OccoursErr(fmt.Errorf("wrong data crc[%v] writecrc[%v]\n", crc, rdata[CLIENTWRITESIZE]), t)
+		}
+
+		readBytes += read
+	}
+
+	if readBytes != TOTALREADSIZE {
+		OccoursErr(fmt.Errorf("read err size [%v]", readBytes), t)
+	}
+
+	time.Sleep(time.Second)
+
+	//finish
+	client.Close(inode)
+	client.Close(inode)
+	client.Close(inode)
+
+	localReadFp.Close()
+	localWriteFp.Close()
+
+	fmt.Printf("fileSize %d \n", sk.Size())
 }

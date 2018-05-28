@@ -43,7 +43,7 @@ func NewExtentReader(inode uint64, inInodeOffset int, key proto.ExtentKey,
 	reader.startInodeOffset = inInodeOffset
 	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
 	reader.wrapper = wrapper
-	//reader.exitCh = make(chan bool, 2)
+	reader.exitCh = make(chan bool, 2)
 	//reader.cacheReferCh = make(chan bool, 10)
 	//reader.cacheReferCh <- true
 	//go reader.asyncFillCache()
@@ -76,7 +76,7 @@ func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
 
 func (reader *ExtentReader) readDataFromVol(p *Packet, data []byte) (err error) {
 	rand.Seed(time.Now().UnixNano())
-	index := rand.Intn(int(reader.vol.Goal))
+	index := rand.Intn(int(reader.vol.ReplicaNum))
 	host := reader.vol.Hosts[index]
 	if _, err = reader.readDataFromHost(p, host, data); err != nil {
 		log.LogError(err.Error())

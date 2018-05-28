@@ -39,17 +39,17 @@ func NewDataNode(addr string) (dataNode *DataNode) {
 	dataNode = new(DataNode)
 	dataNode.carry = rand.Float64()
 	dataNode.Total = 1
-	dataNode.sender = NewAdminTaskSender(dataNode.HttpAddr)
 	dataNode.HttpAddr = addr
+	dataNode.sender = NewAdminTaskSender(dataNode.HttpAddr)
 	return
 }
 
-/*check node heartbeat if reportTime > DataNodeTimeOut,then isActive is false*/
+/*check node heartbeat if reportTime > DataNodeTimeOut,then IsActive is false*/
 func (dataNode *DataNode) checkHeartBeat() {
 	dataNode.Lock()
 	defer dataNode.Unlock()
 	//if time.Since(dataNode.reportTime) > time.Second*(time.Duration(gConfig.NodeTimeOutSec)) {
-	//	dataNode.isActive = false
+	//	dataNode.IsActive = false
 	//}
 
 	return
@@ -129,6 +129,6 @@ func (dataNode *DataNode) generateHeartbeatTask(masterAddr string) (task *proto.
 		CurrTime:   time.Now().Unix(),
 		MasterAddr: masterAddr,
 	}
-	task = proto.NewAdminTask(OpDataNodeHeartbeat, dataNode.HttpAddr, request)
+	task = proto.NewAdminTask(proto.OpDataNodeHeartbeat, dataNode.HttpAddr, request)
 	return
 }

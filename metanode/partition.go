@@ -12,6 +12,7 @@ import (
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/log"
 	raftproto "github.com/tiglabs/raft/proto"
+	"strings"
 )
 
 const (
@@ -19,7 +20,7 @@ const (
 )
 
 const (
-	storeTimeTicker = time.Hour * 1
+	storeTimeTicker = time.Minute * 5
 )
 
 // Errors
@@ -57,6 +58,27 @@ func (c *MetaPartitionConfig) Load(bytes []byte) error {
 	return json.Unmarshal(bytes, c)
 }
 
+func (c *MetaPartitionConfig) checkMeta() (err error) {
+	if c.PartitionId <= 0 {
+		err = errors.Errorf("[checkMeta]: partition id at least 1, "+
+			"now partition id is: %d", c.PartitionId)
+		return
+	}
+	if c.Start < 0 {
+		err = errors.Errorf("[checkMeta]: start at least 0")
+		return
+	}
+	if c.End <= c.Start {
+		err = errors.Errorf("[checkMeta]: end at least 'start'")
+		return
+	}
+	if len(c.Peers) <= 0 {
+		err = errors.Errorf("[checkMeta]: must have peers, now peers is 0")
+		return
+	}
+	return
+}
+
 type OpInode interface {
 	CreateInode(req *CreateInoReq, p *Packet) (err error)
 	DeleteInode(req *DeleteInoReq, p *Packet) (err error)
@@ -86,7 +108,7 @@ type OpMeta interface {
 type OpPartition interface {
 	IsLeader() (leaderAddr string, isLeader bool)
 	GetCursor() uint64
-	GetBaseConfig() *MetaPartitionConfig
+	GetBaseConfig() MetaPartitionConfig
 	StoreMeta() (err error)
 	ChangeMember(changeType raftproto.ConfChangeType, peer raftproto.Peer, context []byte) (resp interface{}, err error)
 	DeletePartition() (err error)
@@ -129,7 +151,10 @@ func (mp *metaPartition) Start() (err error) {
 		if mp.config.BeforeStart != nil {
 			mp.config.BeforeStart()
 		}
-		err = mp.onStart()
+		if err = mp.onStart(); err != nil {
+			err = errors.Errorf("[Start]->%s", err.Error())
+			return
+		}
 		if mp.config.AfterStart != nil {
 			mp.config.AfterStart()
 		}
@@ -151,9 +176,14 @@ func (mp *metaPartition) Stop() {
 
 func (mp *metaPartition) onStart() (err error) {
 	if err = mp.load(); err != nil {
+		err = errors.Errorf("[onStart]:load partition id=%d: %s",
+			mp.config.PartitionId, err.Error())
 		return
 	}
 	if err = mp.startRaft(); err != nil {
+		err = errors.Errorf("[onStart]start raft id=%d: %s",
+			mp.config.PartitionId,
+			err.Error())
 		return
 	}
 	mp.startSchedule()
@@ -190,16 +220,20 @@ func (mp *metaPartition) stopSchedule() {
 	}
 }
 
-func (mp *metaPartition) startRaft() (
-	err error) {
-	peers := make([]raftproto.Peer, len(mp.config.Peers))
+func (mp *metaPartition) startRaft() (err error) {
+	var peers []raftstore.PeerAddress
 	for _, peer := range mp.config.Peers {
-		raftPeer := raftproto.Peer{
-			ID: peer.ID,
+		addr := strings.Split(peer.Addr, ":")[0]
+		rp := raftstore.PeerAddress{
+			Peer: raftproto.Peer{
+				ID: peer.ID,
+			},
+			Address: addr,
 		}
-		peers = append(peers, raftPeer)
-		mp.raftPartition.AddNode(peer.ID, peer.Addr)
+		peers = append(peers, rp)
 	}
+	log.LogDebugf("start partition id=%d raft peers: %s",
+		mp.config.PartitionId, peers)
 	pc := &raftstore.PartitionConfig{
 		ID:      mp.config.PartitionId,
 		Applied: mp.applyID,
@@ -308,8 +342,8 @@ func (mp *metaPartition) ChangeMember(changeType raftproto.ConfChangeType, peer 
 	return
 }
 
-func (mp *metaPartition) GetBaseConfig() *MetaPartitionConfig {
-	return mp.config
+func (mp *metaPartition) GetBaseConfig() MetaPartitionConfig {
+	return *mp.config
 }
 
 func (mp *metaPartition) DeletePartition() (err error) {

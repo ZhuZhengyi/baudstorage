@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sync/atomic"
 
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/raft"
 	raftproto "github.com/tiglabs/raft/proto"
 )
@@ -169,14 +169,21 @@ func (mp *metaPartition) HandleFatalEvent(err *raft.FatalError) {
 }
 
 func (mp *metaPartition) HandleLeaderChange(leader uint64) {
-	// Take atomic operation for leader changing.
-	atomic.StoreUint64(&mp.leaderID, leader)
+	mp.leaderID = leader
+	if mp.config.Start == 0 && mp.config.Cursor == 0 {
+		id, _ := mp.nextInodeID()
+		if mp.createInode(NewInode(id, proto.ModeDir)) != proto.OpOk {
+			log.LogErrorf("[HandleLeaderChange]: create root dir inode failed!")
+		}
+	}
 }
 
 func (mp *metaPartition) Put(key, val interface{}) (resp interface{}, err error) {
 	snap := NewMetaPartitionSnapshot(0, nil, nil)
 	snap.Op = key.(uint32)
-	snap.V = val.([]byte)
+	if val != nil {
+		snap.V = val.([]byte)
+	}
 	cmd, err := json.Marshal(snap)
 	if err != nil {
 		return

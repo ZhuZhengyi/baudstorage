@@ -13,6 +13,53 @@ import (
 	"strings"
 )
 
+type ClusterView struct {
+	Name           string
+	Applied        uint64
+	MaxVolID       uint64
+	MaxMetaNodeID  uint64
+	MaxPartitionID uint64
+	Namespaces     []string
+	MetaNodes      []NodeView
+	DataNodes      []NodeView
+}
+
+type NodeView struct {
+	Addr   string
+	Status bool
+}
+
+func (m *Master) getCluster(w http.ResponseWriter, r *http.Request) {
+	var (
+		body []byte
+		err  error
+	)
+	cv := &ClusterView{
+		Name:           m.cluster.Name,
+		Applied:        m.fsm.applied,
+		MaxVolID:       m.cluster.idAlloc.volID,
+		MaxMetaNodeID:  m.cluster.idAlloc.metaNodeID,
+		MaxPartitionID: m.cluster.idAlloc.partitionID,
+		Namespaces:     make([]string, 0),
+		MetaNodes:      make([]NodeView, 0),
+		DataNodes:      make([]NodeView, 0),
+	}
+
+	cv.Namespaces = m.cluster.getAllNamespaces()
+	cv.MetaNodes = m.cluster.getAllMetaNodes()
+	cv.DataNodes = m.cluster.getAllDataNodes()
+	if body, err = json.Marshal(cv); err != nil {
+		goto errDeal
+	}
+	io.WriteString(w, string(body))
+	return
+
+errDeal:
+	logMsg := getReturnMessage("getCluster", r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	HandleError(logMsg, http.StatusBadRequest, w)
+	return
+}
+
 func (m *Master) getIpAndClusterName(w http.ResponseWriter, r *http.Request) {
 	cInfo := &proto.ClusterInfo{Cluster: m.cluster.Name, Ip: strings.Split(r.RemoteAddr, ":")[0]}
 	bytes, err := json.Marshal(cInfo)
@@ -188,7 +235,7 @@ func (m *Master) addDataNode(w http.ResponseWriter, r *http.Request) {
 		nodeAddr string
 		err      error
 	)
-	if nodeAddr, err = parseAddMetaNodePara(r); err != nil {
+	if nodeAddr, err = parseAddDataNodePara(r); err != nil {
 		goto errDeal
 	}
 
@@ -274,7 +321,7 @@ func (m *Master) dataNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	m.cluster.dealDataNodeTaskResponse(dataNode.HttpAddr, tr)
-
+	io.WriteString(w, fmt.Sprintf("%v", http.StatusOK))
 	return
 
 errDeal:
@@ -297,7 +344,7 @@ func (m *Master) addMetaNode(w http.ResponseWriter, r *http.Request) {
 	if id, err = m.cluster.addMetaNode(nodeAddr); err != nil {
 		goto errDeal
 	}
-	io.WriteString(w, fmt.Sprintf("addMetaNode %v successed,id(%v)", nodeAddr, id))
+	io.WriteString(w, fmt.Sprintf("%v", id))
 	return
 errDeal:
 	logMsg := getReturnMessage("addMetaNode", r.RemoteAddr, err.Error(), http.StatusBadRequest)
@@ -307,10 +354,12 @@ errDeal:
 
 func parseAddMetaNodePara(r *http.Request) (nodeAddr string, err error) {
 	r.ParseForm()
-	if nodeAddr = r.FormValue(ParaNodeAddr); nodeAddr == "" {
-		err = paraNotFound(ParaNodeAddr)
-	}
-	return
+	return checkNodeAddr(r)
+}
+
+func parseAddDataNodePara(r *http.Request) (nodeAddr string, err error) {
+	r.ParseForm()
+	return checkNodeAddr(r)
 }
 
 func (m *Master) getMetaNode(w http.ResponseWriter, r *http.Request) {
@@ -440,6 +489,7 @@ func (m *Master) metaNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
 
 	m.cluster.dealMetaNodeTaskResponse(metaNode.Addr, tr)
 
+	io.WriteString(w, fmt.Sprintf("%v", http.StatusOK))
 	return
 
 errDeal:

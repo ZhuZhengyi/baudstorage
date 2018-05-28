@@ -1,7 +1,8 @@
 {
   "Mountpoint": "/mnt",
   "Namespace": "simserver",
-  "Master": "localhost:8900"
+  "Master": "localhost:8900",
+  "Logpath": "/tmp"
 }
 
 

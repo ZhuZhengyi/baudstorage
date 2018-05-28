@@ -34,6 +34,7 @@ func (m *MetaNode) startServer() (err error) {
 			go m.servConn(conn, stopC)
 		}
 	}(m.httpStopC)
+	log.LogDebugf("start Server over...")
 	return
 }
 

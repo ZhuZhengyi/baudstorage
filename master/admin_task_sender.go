@@ -27,7 +27,7 @@ to master
 
 type AdminTaskSender struct {
 	targetAddr string
-	taskMap    map[string]*proto.AdminTask
+	TaskMap    map[string]*proto.AdminTask
 	sync.Mutex
 	exitCh   chan struct{}
 	connPool *pool.ConnPool
@@ -37,7 +37,7 @@ func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
 
 	sender = &AdminTaskSender{
 		targetAddr: targetAddr,
-		taskMap:    make(map[string]*proto.AdminTask),
+		TaskMap:    make(map[string]*proto.AdminTask),
 		exitCh:     make(chan struct{}),
 		connPool:   pool.NewConnPool(),
 	}
@@ -47,17 +47,15 @@ func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
 }
 
 func (sender *AdminTaskSender) process() {
-	ticker := time.Tick(time.Second)
+	ticker := time.Tick(TaskWorkerInterval)
 	for {
 		select {
 		case <-sender.exitCh:
 			return
 		case <-ticker:
-			time.Sleep(time.Millisecond * 100)
-		default:
 			tasks := sender.getNeedDealTask()
 			if len(tasks) == 0 {
-				time.Sleep(time.Millisecond * 100)
+				time.Sleep(time.Second)
 				continue
 			}
 			sender.sendTasks(tasks)
@@ -73,7 +71,8 @@ func (sender *AdminTaskSender) sendTasks(tasks []*proto.AdminTask) {
 		conn, err := sender.connPool.Get(sender.targetAddr)
 		if err != nil {
 			log.LogError(fmt.Sprintf("get connection to %v,err,%v", sender.targetAddr, err.Error()))
-			continue
+			//if get connection failed,the task is sent in the next ticker
+			break
 		}
 		if err = sender.singleSend(task, conn); err != nil {
 			log.LogError(fmt.Sprintf("send task %v to %v,err,%v", task.ToString(), sender.targetAddr, err.Error()))
@@ -96,39 +95,46 @@ func (sender *AdminTaskSender) buildPacket(task *proto.AdminTask) (packet *proto
 }
 
 func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) (err error) {
+	log.LogDebugf("task info[%v]", task.ToString())
 	packet := sender.buildPacket(task)
 	if err = packet.WriteToConn(conn); err != nil {
 		return
 	}
+	log.LogDebugf("send task success[%v]", task.ToString())
 	response := proto.NewPacket()
 	if err = response.ReadFromConn(conn, TaskWaitResponseTimeOut); err != nil {
 		return
 	}
 	if response.IsOkReply() {
 		task.SendTime = time.Now().Unix()
+		task.Status = proto.TaskStart
 		task.SendCount++
 	} else {
 		log.LogError("send task failed,err %v", response.Data)
 	}
+	log.LogDebugf(fmt.Sprintf("sender task:%v to %v,send time:%v,sendCount:%v,status:%v ", task.ID, sender.targetAddr, task.SendTime, task.SendCount, task.Status))
 	return
 }
 
 func (sender *AdminTaskSender) DelTask(t *proto.AdminTask) {
 	sender.Lock()
 	defer sender.Unlock()
-	_, ok := sender.taskMap[t.ID]
+	_, ok := sender.TaskMap[t.ID]
 	if !ok {
 		return
 	}
-	delete(sender.taskMap, t.ID)
+	if t.OpCode != proto.OpMetaNodeHeartbeat && t.OpCode != proto.OpDataNodeHeartbeat {
+		log.LogDebugf("delete task[%v]", t.ToString())
+	}
+	delete(sender.TaskMap, t.ID)
 }
 
 func (sender *AdminTaskSender) PutTask(t *proto.AdminTask) {
 	sender.Lock()
 	defer sender.Unlock()
-	_, ok := sender.taskMap[t.ID]
+	_, ok := sender.TaskMap[t.ID]
 	if !ok {
-		sender.taskMap[t.ID] = t
+		sender.TaskMap[t.ID] = t
 	}
 }
 
@@ -137,8 +143,8 @@ func (sender *AdminTaskSender) getNeedDealTask() (tasks []*proto.AdminTask) {
 	delTasks := make([]*proto.AdminTask, 0)
 	sender.Lock()
 	defer sender.Unlock()
-	for _, task := range sender.taskMap {
-		if task.Status == proto.TaskFail || task.Status == proto.TaskSuccess || task.CheckTaskTimeOut() {
+	for _, task := range sender.TaskMap {
+		if task.CheckTaskTimeOut() {
 			delTasks = append(delTasks, task)
 		}
 		if !task.CheckTaskNeedRetrySend() {
@@ -150,8 +156,8 @@ func (sender *AdminTaskSender) getNeedDealTask() (tasks []*proto.AdminTask) {
 		}
 	}
 
-	for _, delTask := range delTasks {
-		delete(sender.taskMap, delTask.ID)
+	for _, t := range delTasks {
+		sender.DelTask(t)
 	}
 
 	return

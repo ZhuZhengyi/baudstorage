@@ -12,9 +12,18 @@ const (
 
 // Config defined necessary configuration properties for raft store.
 type Config struct {
-	NodeID  uint64 // Identity of raft server instance.
-	WalPath string // Path of WAL(Write after Log)
-	IpAddr  string // IP address of node
+	NodeID        uint64 // Identity of raft server instance.
+	WalPath       string // Path of WAL(Write after Log)
+	IpAddr        string // IP address of node
+	HeartbeatPort int
+	ReplicatePort int
+}
+
+type PeerAddress struct {
+	proto.Peer
+	Address       string
+	HeartbeatPort int
+	ReplicatePort int
 }
 
 // PartitionConfig defined necessary configuration properties for raft store partition.
@@ -23,6 +32,6 @@ type PartitionConfig struct {
 	Applied uint64
 	Leader  uint64
 	Term    uint64
-	Peers   []proto.Peer
+	Peers   []PeerAddress
 	SM      PartitionFsm
 }

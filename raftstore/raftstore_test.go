@@ -71,7 +71,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 		cfg     Config
 		err     error
 		testFsm TestFsm
-		peers   []proto.Peer
+		peers   []PeerAddress
 		data    []byte
 	)
 
@@ -98,7 +98,7 @@ func TestRaftStore_CreateRaftStore(t *testing.T) {
 
 		raftServers[uint64(n)] = raftServer.(*raftStore)
 
-		peers = append(peers, proto.Peer{ID: uint64(n)})
+		peers = append(peers, PeerAddress{Peer: proto.Peer{ID: uint64(n)}, Address: cfg.IpAddr})
 
 		for k, v := range TestAddresses {
 			raftServer.AddNode(uint64(k), v.ip)

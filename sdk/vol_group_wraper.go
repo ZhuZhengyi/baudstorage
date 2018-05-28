@@ -18,10 +18,14 @@ import (
 )
 
 type VolGroup struct {
-	VolId  uint32
-	Goal   uint8
-	Hosts  []string
-	Status uint8
+	VolId      uint32
+	Status     uint8
+	ReplicaNum uint8
+	Hosts      []string
+}
+
+type VolsView struct {
+	Vols []*VolGroup
 }
 
 func (vg *VolGroup) GetAllAddrs() (m string) {
@@ -36,12 +40,13 @@ func (vg *VolGroup) GetAllAddrs() (m string) {
 }
 
 const (
-	VolViewUrl            = "/client/view"
+	VolViewUrl            = "/client/vols?name="
 	ActionGetVolGroupView = "ActionGetVolGroupView"
 )
 
 type VolGroupWrapper struct {
-	MasterAddrs   []string
+	namespace     string
+	master        []string
 	volGroups     map[uint32]*VolGroup
 	readWriteVols []*VolGroup
 	ConnPool      *pool.ConnPool
@@ -49,10 +54,10 @@ type VolGroupWrapper struct {
 	sync.RWMutex
 }
 
-func NewVolGroupWraper(masterHosts string) (wrapper *VolGroupWrapper, err error) {
+func NewVolGroupWraper(namespace, masterHosts string) (wrapper *VolGroupWrapper, err error) {
 	master := strings.Split(masterHosts, ",")
 	wrapper = new(VolGroupWrapper)
-	wrapper.MasterAddrs = master
+	wrapper.master = master
 	wrapper.ConnPool = pool.NewConnPool()
 	wrapper.readWriteVols = make([]*VolGroup, 0)
 	wrapper.volGroups = make(map[uint32]*VolGroup)
@@ -85,12 +90,12 @@ func (wrapper *VolGroupWrapper) PutExcludeVol(volId uint32) {
 }
 
 func (wrapper *VolGroupWrapper) getVolsFromMaster() (err error) {
-	for _, m := range wrapper.MasterAddrs {
+	for _, m := range wrapper.master {
 		if m == "" {
 			continue
 		}
 		var resp *http.Response
-		resp, err = http.Get("http://" + m + VolViewUrl)
+		resp, err = http.Get("http://" + m + VolViewUrl + wrapper.namespace)
 		if err != nil {
 			log.LogError(fmt.Sprintf(ActionGetVolGroupView+"get VolView from master[%v] err[%v]", m, err.Error()))
 			continue
@@ -100,12 +105,12 @@ func (wrapper *VolGroupWrapper) getVolsFromMaster() (err error) {
 		if err != nil {
 			continue
 		}
-		views := make([]VolGroup, 0)
-		if err = json.Unmarshal(body, &views); err != nil {
+		views := new(VolsView)
+		if err = json.Unmarshal(body, views); err != nil {
 			log.LogError(fmt.Sprintf(ActionGetVolGroupView+"get VolView from master[%v] err[%v]", m, err.Error()))
 			continue
 		}
-		wrapper.updateVolGroup(views)
+		wrapper.updateVolGroup(views.Vols)
 		break
 	}
 
@@ -118,16 +123,16 @@ func (wrapper *VolGroupWrapper) insertVol(vg VolGroup) {
 	wrapper.RUnlock()
 	wrapper.Lock()
 	if volGroup == nil {
-		wrapper.volGroups[vg.VolId] = &VolGroup{VolId: vg.VolId, Status: vg.Status, Hosts: vg.Hosts, Goal: vg.Goal}
+		wrapper.volGroups[vg.VolId] = &VolGroup{VolId: vg.VolId, Status: vg.Status, Hosts: vg.Hosts, ReplicaNum: vg.ReplicaNum}
 	} else {
 		volGroup.Status = vg.Status
 		volGroup.Hosts = vg.Hosts
-		volGroup.Goal = vg.Goal
+		volGroup.ReplicaNum = vg.ReplicaNum
 	}
 	wrapper.Unlock()
 }
 
-func (wrapper *VolGroupWrapper) updateVolGroup(views []VolGroup) {
+func (wrapper *VolGroupWrapper) updateVolGroup(views []*VolGroup) {
 	wrapper.RLock()
 	if len(views) < len(wrapper.volGroups) {
 		wrapper.RUnlock()
@@ -135,7 +140,7 @@ func (wrapper *VolGroupWrapper) updateVolGroup(views []VolGroup) {
 	}
 	wrapper.RUnlock()
 	for _, vg := range views {
-		wrapper.insertVol(vg)
+		wrapper.insertVol(*vg)
 	}
 	wrapper.Lock()
 	readWriteVols := make([]*VolGroup, 0)
