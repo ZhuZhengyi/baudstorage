@@ -20,6 +20,7 @@ func (s *DataNode) readFromCliAndDeal(msgH *MessageHandler) (err error) {
 	if err = pkg.ReadFromConn(msgH.inConn, proto.NoReadDeadlineTime); err != nil {
 		goto errDeal
 	}
+	log.LogDebugf("action[DataNode.readFromCliAndDeal] read packet %v from %v.", pkg, msgH.inConn.RemoteAddr())
 	if pkg.IsMasterCommand(){
 		msgH.requestCh <- pkg
 		return
