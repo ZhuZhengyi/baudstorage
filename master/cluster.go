@@ -86,15 +86,19 @@ func (c *Cluster) startCheckReleaseVolGroups() {
 func (c *Cluster) startCheckHeartbeat() {
 	go func() {
 		for {
-			c.checkDataNodeHeartbeat()
-			time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
+			if c.partition.IsLeader() {
+				c.checkDataNodeHeartbeat()
+				time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
+			}
 		}
 	}()
 
 	go func() {
 		for {
-			c.checkMetaNodeHeartbeat()
-			time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
+			if c.partition.IsLeader() {
+				c.checkMetaNodeHeartbeat()
+				time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
+			}
 		}
 	}()
 }
