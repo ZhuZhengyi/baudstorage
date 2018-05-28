@@ -178,7 +178,9 @@ func (mp *metaPartition) HandleLeaderChange(leader uint64) {
 func (mp *metaPartition) Put(key, val interface{}) (resp interface{}, err error) {
 	snap := NewMetaPartitionSnapshot(0, nil, nil)
 	snap.Op = key.(uint32)
-	snap.V = val.([]byte)
+	if val != nil {
+		snap.V = val.([]byte)
+	}
 	cmd, err := json.Marshal(snap)
 	if err != nil {
 		return
