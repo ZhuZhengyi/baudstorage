@@ -270,7 +270,7 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 		//check crc
 		tempData := rdata[:CLIENTWRITESIZE]
 		crc := crc32.ChecksumIEEE(tempData)
-		fmt.Printf("readCrc[%v] writeCrc[%v]\n", crc, rdata[CLIENTWRITESIZE])
+		fmt.Printf("readCrc[%v] writeCrc[%v]\n", byte(crc), rdata[CLIENTWRITESIZE])
 		if byte(crc) != rdata[CLIENTWRITESIZE] {
 			OccoursErr(fmt.Errorf("wrong data crc[%v] writecrc[%v]\n", crc, rdata[CLIENTWRITESIZE]), t)
 		}
