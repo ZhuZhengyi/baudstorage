@@ -4,9 +4,9 @@ import (
 	"github.com/tiglabs/baudstorage/datanode"
 	"github.com/tiglabs/baudstorage/master"
 	"github.com/tiglabs/baudstorage/metanode"
+	"github.com/tiglabs/baudstorage/util/log"
 
 	"flag"
-	"log"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -43,11 +43,12 @@ type Server interface {
 }
 
 func interceptSignal(s Server) {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
+	sigC := make(chan os.Signal, 1)
+	signal.Notify(sigC, syscall.SIGINT, syscall.SIGTERM)
+	log.LogDebugf("action[interceptSignal] register system signal.")
 	go func() {
-		<-sigs
+		sig := <-sigC
+		log.LogDebugf("action[interceptSignal] received signal: %s.", sig.String())
 		s.Shutdown()
 	}()
 }
@@ -71,7 +72,7 @@ func main() {
 	case RoleData:
 		server = datanode.NewServer()
 	default:
-		log.Println("Fatal: unmath role: ", role)
+		log.Println("Fatal: role mismatch: ", role)
 		os.Exit(1)
 		return
 	}
