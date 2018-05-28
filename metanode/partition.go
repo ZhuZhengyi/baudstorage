@@ -58,6 +58,27 @@ func (c *MetaPartitionConfig) Load(bytes []byte) error {
 	return json.Unmarshal(bytes, c)
 }
 
+func (c *MetaPartitionConfig) checkMeta() (err error) {
+	if c.PartitionId <= 0 {
+		err = errors.Errorf("[checkMeta]: partition id at least 1, "+
+			"now partition id is: %d", c.PartitionId)
+		return
+	}
+	if c.Start < 0 {
+		err = errors.Errorf("[checkMeta]: start at least 0")
+		return
+	}
+	if c.End <= c.Start {
+		err = errors.Errorf("[checkMeta]: end at least 'start'")
+		return
+	}
+	if len(c.Peers) <= 0 {
+		err = errors.Errorf("[checkMeta]: must have peers, now peers is 0")
+		return
+	}
+	return
+}
+
 type OpInode interface {
 	CreateInode(req *CreateInoReq, p *Packet) (err error)
 	DeleteInode(req *DeleteInoReq, p *Packet) (err error)

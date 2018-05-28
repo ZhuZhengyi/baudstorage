@@ -7,6 +7,7 @@ import (
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"
+	"github.com/tiglabs/baudstorage/util/log"
 	raftproto "github.com/tiglabs/raft/proto"
 )
 
@@ -77,6 +78,8 @@ func (m *metaManager) opCreateMetaPartition(conn net.Conn, p *Packet) (err error
 			" struct: %s", err.Error())
 		return
 	}
+	log.LogDebugf("[opCreateMetaPartition] accept a from master message: %v",
+		adminTask)
 	// Marshal request body.
 	requestJson, err := json.Marshal(adminTask.Request)
 	if err != nil {
