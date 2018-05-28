@@ -97,6 +97,7 @@ func (sender *AdminTaskSender) buildPacket(task *proto.AdminTask) (packet *proto
 }
 
 func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) (err error) {
+	log.LogDebugf("task info[%v]", task.ToString())
 	packet := sender.buildPacket(task)
 	if err = packet.WriteToConn(conn); err != nil {
 		return

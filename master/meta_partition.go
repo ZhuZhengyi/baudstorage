@@ -46,9 +46,9 @@ func NewMetaPartition(partitionID, start, end uint64, nsName string) (mp *MetaPa
 	mp = &MetaPartition{PartitionID: partitionID, Start: start, End: end, nsName: nsName}
 	mp.Replicas = make([]*MetaReplica, 0)
 	mp.Status = MetaPartitionUnavailable
-	mp.MissNodes = make(map[string]int64,0)
-	mp.Peers = make([]proto.Peer,0)
-	mp.PersistenceHosts = make([]string,0)
+	mp.MissNodes = make(map[string]int64, 0)
+	mp.Peers = make([]proto.Peer, 0)
+	mp.PersistenceHosts = make([]string, 0)
 	return
 }
 
@@ -383,7 +383,6 @@ func (mp *MetaPartition) generateCreateMetaPartitionTasks(specifyAddrs []string,
 	for _, addr := range hosts {
 		tasks = append(tasks, proto.NewAdminTask(proto.OpCreateMetaPartition, addr, req))
 	}
-
 	return
 }
 
