@@ -107,6 +107,7 @@ func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) 
 	}
 	if response.IsOkReply() {
 		task.SendTime = time.Now().Unix()
+		task.Status = proto.TaskStart
 		task.SendCount++
 	} else {
 		log.LogError("send task failed,err %v", response.Data)
