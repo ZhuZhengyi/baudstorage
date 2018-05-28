@@ -112,7 +112,7 @@ func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) 
 	} else {
 		log.LogError("send task failed,err %v", response.Data)
 	}
-	log.LogDebugf(fmt.Sprintf("sender task:%v to %v", task.ID, sender.targetAddr))
+	log.LogDebugf(fmt.Sprintf("sender task:%v to %v,send time:%v,sendCount:%v,status:%v ", task.ID, sender.targetAddr,task.SendTime,task.SendCount,task.Status))
 	return
 }
 
@@ -122,6 +122,9 @@ func (sender *AdminTaskSender) DelTask(t *proto.AdminTask) {
 	_, ok := sender.TaskMap[t.ID]
 	if !ok {
 		return
+	}
+	if t.OpCode != proto.OpMetaNodeHeartbeat && t.OpCode != proto.OpDataNodeHeartbeat {
+		log.LogDebugf("delete task[%v]", t.ToString())
 	}
 	delete(sender.TaskMap, t.ID)
 }
@@ -153,9 +156,9 @@ func (sender *AdminTaskSender) getNeedDealTask() (tasks []*proto.AdminTask) {
 		}
 	}
 
-	//for _, delTask := range delTasks {
-	//	delete(sender.TaskMap, delTask.ID)
-	//}
+	for _, t := range delTasks {
+		sender.DelTask(t)
+	}
 
 	return
 }

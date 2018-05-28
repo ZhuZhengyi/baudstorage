@@ -9,7 +9,7 @@ const (
 	TaskFail         = 2
 	TaskStart        = 0
 	TaskSuccess      = 1
-	ResponseInterval = 30
+	ResponseInterval = 5
 	ResponseTimeOut  = 100
 	MaxSendCount     = 5
 )
@@ -53,6 +53,10 @@ func (t *AdminTask) CheckTaskTimeOut() (notResponse bool) {
 	}
 
 	return
+}
+
+func (t *AdminTask) SetStatus(status int8) {
+	t.Status  = status
 }
 
 func (t *AdminTask) CheckTaskIsSuccess() (isSuccess bool) {

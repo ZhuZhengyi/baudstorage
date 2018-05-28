@@ -25,6 +25,7 @@ type MetaPartition struct {
 	PartitionID      uint64
 	Start            uint64
 	End              uint64
+	MaxNodeID        uint64
 	Replicas         []*MetaReplica
 	CurReplicaNum    uint8
 	Status           uint8
@@ -120,12 +121,16 @@ func (mp *MetaPartition) checkStatus(writeLog bool, replicaNum int) {
 	defer mp.Unlock()
 	missedCount := 0
 	for _, metaReplica := range mp.Replicas {
-		metaReplica.checkStatus()
+		metaReplica.checkStatus(mp.MaxNodeID)
 		if metaReplica.isMissed() {
 			mp.addMissNode(metaReplica.Addr, metaReplica.ReportTime)
 			missedCount++
 		}
-		mp.Status = metaReplica.Status & metaReplica.Status
+		mp.Status = mp.Status & metaReplica.Status
+	}
+
+	if mp.Status == MetaPartitionUnavailable {
+		mp.Status = MetaPartitionReadOnly
 	}
 
 	if missedCount < replicaNum/2 {
@@ -411,10 +416,16 @@ func (mr *MetaReplica) generateDeleteReplicaTask(partitionID uint64) (t *proto.A
 	return
 }
 
-func (mr *MetaReplica) checkStatus() {
+func (mr *MetaReplica) checkStatus(maxInodeID uint64) {
 	if time.Now().Unix()-mr.ReportTime > DefaultMetaPartitionTimeOutSec {
 		mr.Status = MetaPartitionUnavailable
 	}
+	if maxInodeID < mr.end {
+		mr.Status = MetaPartitionReadWrite
+	} else {
+		mr.Status = MetaPartitionReadOnly
+	}
+
 }
 
 func (mr *MetaReplica) setStatus(status uint8) {
