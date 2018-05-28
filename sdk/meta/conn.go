@@ -19,8 +19,16 @@ type MetaConn struct {
 
 func (mw *MetaWrapper) getConn(mp *MetaPartition) (*MetaConn, error) {
 	addr := mp.LeaderAddr
-	//TODO: deal with member 0 is not leader
 	conn, err := mw.conns.Get(addr)
+	if err != nil {
+		for _, addr = range mp.Members {
+			conn, err = mw.conns.Get(addr)
+			if err == nil {
+				break
+			}
+		}
+	}
+
 	if err != nil {
 		return nil, err
 	}

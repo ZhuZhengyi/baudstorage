@@ -2,6 +2,7 @@ package meta
 
 import (
 	"log"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/tiglabs/baudstorage/proto"
@@ -18,6 +19,7 @@ func (mw *MetaWrapper) Create_ll(parentID uint64, name string, mode uint32) (*pr
 		inodeCreated bool
 		info         *proto.InodeInfo
 		inodeConn    *MetaConn
+		mp           *MetaPartition
 	)
 
 	parentConn, err := mw.connect(parentID)
@@ -28,12 +30,13 @@ func (mw *MetaWrapper) Create_ll(parentID uint64, name string, mode uint32) (*pr
 
 	// Create Inode
 
-	mp := mw.getPartitionByInode(mw.currStart)
-	if mp == nil {
-		return nil, syscall.ENOMEM
-	}
-
 	for {
+		currStart := mw.currStart
+		mp = mw.getPartitionByInode(currStart)
+		if mp == nil {
+			return nil, syscall.ENOMEM
+		}
+
 		inodeConn, err = mw.getConn(mp)
 		if err != nil {
 			break
@@ -47,15 +50,11 @@ func (mw *MetaWrapper) Create_ll(parentID uint64, name string, mode uint32) (*pr
 		}
 		mw.putConn(inodeConn, err)
 
-		if err != nil || status != statusFull {
-			break
-		}
-
-		mp = mw.getNextPartition(mw.currStart)
+		mp = mw.getNextPartition(currStart)
 		if mp == nil {
-			break
+			continue
 		}
-		mw.currStart = mp.Start
+		atomic.CompareAndSwapUint64(&mw.currStart, currStart, mp.Start)
 	}
 
 	if !inodeCreated {

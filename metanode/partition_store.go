@@ -2,8 +2,8 @@ package metanode
 
 import (
 	"bufio"
-	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -42,7 +42,9 @@ func (mp *metaPartition) loadMeta() (err error) {
 		return
 	}
 	// TODO: Valid PartitionConfig
-
+	if mConf.checkMeta() != nil {
+		return
+	}
 	mp.config.PartitionId = mConf.PartitionId
 	mp.config.Start = mConf.Start
 	mp.config.End = mConf.End
@@ -148,12 +150,18 @@ func (mp *metaPartition) loadApplyID() (err error) {
 		err = errors.New("read applyid empty error")
 		return
 	}
-	mp.applyID = binary.BigEndian.Uint64(data)
+	if _, err = fmt.Sscanf(string(data), "%d", &mp.applyID); err != nil {
+		return
+	}
 	return
 }
 
 // Store Meta to file
 func (mp *metaPartition) storeMeta() (err error) {
+	if err = mp.config.checkMeta(); err != nil {
+		err = errors.Errorf("[storeMeta]->%s", err.Error())
+		return
+	}
 	os.MkdirAll(mp.config.RootDir, 0755)
 	filename := path.Join(mp.config.RootDir, metaFileTmp)
 	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE,
@@ -164,9 +172,7 @@ func (mp *metaPartition) storeMeta() (err error) {
 	defer func() {
 		fp.Sync()
 		fp.Close()
-		if err != nil {
-			os.Remove(filename)
-		}
+		os.Remove(filename)
 	}()
 	data, err := json.Marshal(mp.config)
 	if err != nil {
@@ -181,18 +187,17 @@ func (mp *metaPartition) storeMeta() (err error) {
 
 func (mp *metaPartition) storeApplyID(appID uint64) (err error) {
 	filename := path.Join(mp.config.RootDir, applyIDFileTmp)
-	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_TRUNC, 0644)
+	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_TRUNC|os.
+		O_CREATE, 0755)
 	if err != nil {
 		return
 	}
 	defer func() {
 		fp.Sync()
 		fp.Close()
-		if err != nil {
-			os.Remove(filename)
-		}
+		os.Remove(filename)
 	}()
-	if err = binary.Write(fp, binary.BigEndian, appID); err != nil {
+	if _, err = fp.WriteString(fmt.Sprintf("%d", appID)); err != nil {
 		return
 	}
 	err = os.Rename(filename, path.Join(mp.config.RootDir, applyIDFile))
@@ -201,7 +206,8 @@ func (mp *metaPartition) storeApplyID(appID uint64) (err error) {
 
 func (mp *metaPartition) storeInode() (err error) {
 	filename := path.Join(mp.config.RootDir, inodeFileTmp)
-	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND, 0644)
+	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.
+		O_CREATE, 0755)
 	if err != nil {
 		return
 	}
@@ -233,16 +239,15 @@ func (mp *metaPartition) storeInode() (err error) {
 
 func (mp *metaPartition) storeDentry() (err error) {
 	filename := path.Join(mp.config.RootDir, dentryFileTmp)
-	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND, 0644)
+	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.
+		O_CREATE, 0755)
 	if err != nil {
 		return
 	}
 	defer func() {
 		fp.Sync()
 		fp.Close()
-		if err != nil {
-			os.Remove(filename)
-		}
+		os.Remove(filename)
 	}()
 	denTree := mp.dentryTree
 	denTree.Ascend(func(i btree.Item) bool {

@@ -47,17 +47,15 @@ func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
 }
 
 func (sender *AdminTaskSender) process() {
-	ticker := time.Tick(time.Second)
+	ticker := time.Tick(TaskWorkerInterval)
 	for {
 		select {
 		case <-sender.exitCh:
 			return
 		case <-ticker:
-			time.Sleep(time.Millisecond * 100)
-		default:
 			tasks := sender.getNeedDealTask()
 			if len(tasks) == 0 {
-				time.Sleep(time.Millisecond * 100)
+				time.Sleep(time.Second)
 				continue
 			}
 			sender.sendTasks(tasks)
@@ -97,21 +95,24 @@ func (sender *AdminTaskSender) buildPacket(task *proto.AdminTask) (packet *proto
 }
 
 func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) (err error) {
+	log.LogDebugf("task info[%v]", task.ToString())
 	packet := sender.buildPacket(task)
 	if err = packet.WriteToConn(conn); err != nil {
 		return
 	}
+	log.LogDebugf("send task success[%v]", task.ToString())
 	response := proto.NewPacket()
 	if err = response.ReadFromConn(conn, TaskWaitResponseTimeOut); err != nil {
 		return
 	}
 	if response.IsOkReply() {
 		task.SendTime = time.Now().Unix()
+		task.Status = proto.TaskStart
 		task.SendCount++
 	} else {
 		log.LogError("send task failed,err %v", response.Data)
 	}
-	log.LogDebugf(fmt.Sprintf("sender task:%v to %v", task.ID, sender.targetAddr))
+	log.LogDebugf(fmt.Sprintf("sender task:%v to %v,send time:%v,sendCount:%v,status:%v ", task.ID, sender.targetAddr, task.SendTime, task.SendCount, task.Status))
 	return
 }
 
@@ -121,6 +122,9 @@ func (sender *AdminTaskSender) DelTask(t *proto.AdminTask) {
 	_, ok := sender.TaskMap[t.ID]
 	if !ok {
 		return
+	}
+	if t.OpCode != proto.OpMetaNodeHeartbeat && t.OpCode != proto.OpDataNodeHeartbeat {
+		log.LogDebugf("delete task[%v]", t.ToString())
 	}
 	delete(sender.TaskMap, t.ID)
 }
@@ -152,9 +156,9 @@ func (sender *AdminTaskSender) getNeedDealTask() (tasks []*proto.AdminTask) {
 		}
 	}
 
-	//for _, delTask := range delTasks {
-	//	delete(sender.TaskMap, delTask.ID)
-	//}
+	for _, t := range delTasks {
+		sender.DelTask(t)
+	}
 
 	return
 }

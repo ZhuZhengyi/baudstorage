@@ -86,15 +86,19 @@ func (c *Cluster) startCheckReleaseVolGroups() {
 func (c *Cluster) startCheckHeartbeat() {
 	go func() {
 		for {
-			c.checkDataNodeHeartbeat()
-			time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
+			if c.partition.IsLeader() {
+				c.checkDataNodeHeartbeat()
+				time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
+			}
 		}
 	}()
 
 	go func() {
 		for {
-			c.checkMetaNodeHeartbeat()
-			time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
+			if c.partition.IsLeader() {
+				c.checkMetaNodeHeartbeat()
+				time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
+			}
 		}
 	}()
 }
@@ -407,8 +411,10 @@ func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err err
 	if hosts, peers, err = c.ChooseTargetMetaHosts(int(ns.mpReplicaNum)); err != nil {
 		return
 	}
-	mp.PersistenceHosts = hosts
-	mp.Peers = peers
+
+	log.LogDebugf("target meta hosts:%v,peers:%v", hosts, peers)
+	mp.setPersistenceHosts(hosts)
+	mp.setPeers(peers)
 	if err = c.syncAddMetaPartition(nsName, mp); err != nil {
 		return
 	}

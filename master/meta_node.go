@@ -7,9 +7,8 @@ import (
 )
 
 type MetaNode struct {
-	ID   uint64
-	Addr string
-	//metaPartitions    []*MetaReplica
+	ID                uint64
+	Addr              string
 	IsActive          bool
 	Sender            *AdminTaskSender
 	RackName          string `json:"Rack"`
@@ -69,6 +68,20 @@ func (metaNode *MetaNode) setNodeAlive() {
 	defer metaNode.Unlock()
 	metaNode.reportTime = time.Now()
 	metaNode.IsActive = true
+}
+
+func (metaNode *MetaNode) updateMetric(resp *proto.MetaNodeHeartbeatResponse) {
+	metaNode.metaRangeInfos = resp.MetaPartitionInfo
+	metaNode.metaRangeCount = len(metaNode.metaRangeInfos)
+	metaNode.Total = resp.Total
+	metaNode.Used = resp.Used
+	metaNode.MaxMemAvailWeight = resp.Total - resp.Used
+	metaNode.RackName = resp.RackName
+	metaNode.setNodeAlive()
+}
+
+func (metaNode *MetaNode) isArriveThreshold() bool {
+	return float32(metaNode.Used/metaNode.Total) > DefaultMetaPartitionThreshold
 }
 
 func (metaNode *MetaNode) generateHeartbeatTask(masterAddr string) (task *proto.AdminTask) {

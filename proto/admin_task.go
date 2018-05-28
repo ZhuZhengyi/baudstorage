@@ -9,7 +9,7 @@ const (
 	TaskFail         = 2
 	TaskStart        = 0
 	TaskSuccess      = 1
-	ResponseInterval = 30
+	ResponseInterval = 5
 	ResponseTimeOut  = 100
 	MaxSendCount     = 5
 )
@@ -27,8 +27,8 @@ type AdminTask struct {
 }
 
 func (t *AdminTask) ToString() (msg string) {
-	msg = fmt.Sprintf("FileIdId[%v] Status[%d] LastSendTime[%v]  SendCount[%v] ",
-		t.ID, t.Status, t.SendTime, t.SendCount)
+	msg = fmt.Sprintf("Id[%v] Status[%d] LastSendTime[%v]  SendCount[%v] Request[%v]",
+		t.ID, t.Status, t.SendTime, t.SendCount, t.Request)
 
 	return
 }
@@ -53,6 +53,10 @@ func (t *AdminTask) CheckTaskTimeOut() (notResponse bool) {
 	}
 
 	return
+}
+
+func (t *AdminTask) SetStatus(status int8) {
+	t.Status = status
 }
 
 func (t *AdminTask) CheckTaskIsSuccess() (isSuccess bool) {
