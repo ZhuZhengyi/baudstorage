@@ -187,8 +187,8 @@ func (mp *metaPartition) storeMeta() (err error) {
 
 func (mp *metaPartition) storeApplyID(appID uint64) (err error) {
 	filename := path.Join(mp.config.RootDir, applyIDFileTmp)
-	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_TRUNC|os.O_CREATE,
-		0644)
+	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_TRUNC|os.
+		O_CREATE, 0755)
 	if err != nil {
 		return
 	}
@@ -208,8 +208,8 @@ func (mp *metaPartition) storeApplyID(appID uint64) (err error) {
 
 func (mp *metaPartition) storeInode() (err error) {
 	filename := path.Join(mp.config.RootDir, inodeFileTmp)
-	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE,
-		0644)
+	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.
+		O_CREATE, 0755)
 	if err != nil {
 		return
 	}
@@ -241,8 +241,8 @@ func (mp *metaPartition) storeInode() (err error) {
 
 func (mp *metaPartition) storeDentry() (err error) {
 	filename := path.Join(mp.config.RootDir, dentryFileTmp)
-	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE,
-		0644)
+	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.
+		O_CREATE, 0755)
 	if err != nil {
 		return
 	}
