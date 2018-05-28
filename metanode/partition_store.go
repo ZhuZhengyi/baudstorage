@@ -158,6 +158,7 @@ func (mp *metaPartition) loadApplyID() (err error) {
 func (mp *metaPartition) storeMeta() (err error) {
 	if err = mp.config.checkMeta(); err != nil {
 		err = errors.Errorf("[storeMeta]->%s", err.Error())
+		return
 	}
 	os.MkdirAll(mp.config.RootDir, 0755)
 	filename := path.Join(mp.config.RootDir, metaFileTmp)
