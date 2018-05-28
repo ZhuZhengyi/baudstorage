@@ -2,8 +2,8 @@ package metanode
 
 import (
 	"bufio"
-	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -150,7 +150,9 @@ func (mp *metaPartition) loadApplyID() (err error) {
 		err = errors.New("read applyid empty error")
 		return
 	}
-	mp.applyID = binary.BigEndian.Uint64(data)
+	if _, err = fmt.Sscanf(string(data), "%d", &mp.applyID); err != nil {
+		return
+	}
 	return
 }
 
@@ -170,9 +172,7 @@ func (mp *metaPartition) storeMeta() (err error) {
 	defer func() {
 		fp.Sync()
 		fp.Close()
-		if err != nil {
-			os.Remove(filename)
-		}
+		os.Remove(filename)
 	}()
 	data, err := json.Marshal(mp.config)
 	if err != nil {
@@ -195,11 +195,9 @@ func (mp *metaPartition) storeApplyID(appID uint64) (err error) {
 	defer func() {
 		fp.Sync()
 		fp.Close()
-		if err != nil {
-			os.Remove(filename)
-		}
+		os.Remove(filename)
 	}()
-	if err = binary.Write(fp, binary.BigEndian, appID); err != nil {
+	if _, err = fp.WriteString(fmt.Sprintf("%d", appID)); err != nil {
 		return
 	}
 	err = os.Rename(filename, path.Join(mp.config.RootDir, applyIDFile))
@@ -249,9 +247,7 @@ func (mp *metaPartition) storeDentry() (err error) {
 	defer func() {
 		fp.Sync()
 		fp.Close()
-		if err != nil {
-			os.Remove(filename)
-		}
+		os.Remove(filename)
 	}()
 	denTree := mp.dentryTree
 	denTree.Ascend(func(i btree.Item) bool {
