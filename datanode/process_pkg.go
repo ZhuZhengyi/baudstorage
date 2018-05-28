@@ -20,8 +20,12 @@ func (s *DataNode) readFromCliAndDeal(msgH *MessageHandler) (err error) {
 	if err = pkg.ReadFromConn(msgH.inConn, proto.NoReadDeadlineTime); err != nil {
 		goto errDeal
 	}
-	pkg.beforeTp(s.clusterId)
+	if pkg.IsMasterCommand(){
+		msgH.requestCh <- pkg
+		return
+	}
 
+	pkg.beforeTp(s.clusterId)
 	if err = s.CheckPacket(pkg); err != nil {
 		goto errDeal
 	}
