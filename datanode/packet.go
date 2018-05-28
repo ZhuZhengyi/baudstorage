@@ -70,8 +70,8 @@ func NewPacket() (p *Packet) {
 	return
 }
 
-func (p *Packet)IsMasterCommand()(bool){
-	if p.Opcode==proto.OpDataNodeHeartbeat|| p.Opcode==proto.OpLoadVol || p.Opcode==proto.OpCreateVol{
+func (p *Packet) IsMasterCommand() bool {
+	if p.Opcode == proto.OpDataNodeHeartbeat || p.Opcode == proto.OpLoadVol || p.Opcode == proto.OpCreateVol {
 		return true
 	}
 	return false

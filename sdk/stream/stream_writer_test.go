@@ -2,6 +2,7 @@ package stream
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"
@@ -15,7 +16,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"encoding/binary"
 )
 
 const (
@@ -286,7 +286,7 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 		crc := uint32ToBytes(crc32.ChecksumIEEE(tempData))
 		crcData := rdata[CLIENTWRITESIZE:]
 
-//		fmt.Printf("readCrc[%v] writeCrc[%v]\n", crc, crcData)
+		//		fmt.Printf("readCrc[%v] writeCrc[%v]\n", crc, crcData)
 		for i := 0; i < CRCBYTELEN; i++ {
 			if crc[i] != crcData[i] {
 				OccoursErr(fmt.Errorf("wrong[%v] readcrc[%v] writecrc[%v]\n", i, crc[i], crcData[i]), t)

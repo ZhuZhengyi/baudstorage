@@ -21,7 +21,7 @@ func (s *DataNode) readFromCliAndDeal(msgH *MessageHandler) (err error) {
 		goto errDeal
 	}
 	log.LogDebugf("action[DataNode.readFromCliAndDeal] read packet %v from %v.", pkg, msgH.inConn.RemoteAddr())
-	if pkg.IsMasterCommand(){
+	if pkg.IsMasterCommand() {
 		msgH.requestCh <- pkg
 		return
 	}
@@ -30,7 +30,7 @@ func (s *DataNode) readFromCliAndDeal(msgH *MessageHandler) (err error) {
 	if err = s.CheckPacket(pkg); err != nil {
 		goto errDeal
 	}
-	if err = s.checkAndAddInfos(pkg); err != nil {
+	if err = s.checkAndAddInfo(pkg); err != nil {
 		msgH.replyCh <- pkg
 		return nil
 	}
@@ -38,12 +38,12 @@ func (s *DataNode) readFromCliAndDeal(msgH *MessageHandler) (err error) {
 
 	return nil
 errDeal:
-	conn_tag := fmt.Sprintf("connection[%v <----> %v] ", msgH.inConn.LocalAddr, msgH.inConn.RemoteAddr)
+	connTag := fmt.Sprintf("connection[%v <----> %v] ", msgH.inConn.LocalAddr(), msgH.inConn.RemoteAddr())
 	if err == io.EOF {
-		err = fmt.Errorf("%v was closed by peer[%v]", conn_tag, remote)
+		err = fmt.Errorf("%v was closed by peer[%v]", connTag, remote)
 	}
 	if err == nil {
-		err = fmt.Errorf("msghandler(%v) requestCh is full requestChan len [%v]", conn_tag, len(msgH.requestCh))
+		err = fmt.Errorf("msghandler(%v) requestCh is full requestChan len [%v]", connTag, len(msgH.requestCh))
 	}
 	msgH.ExitSign()
 
@@ -51,7 +51,7 @@ errDeal:
 
 }
 
-func (s *DataNode) checkAndAddInfos(pkg *Packet) error {
+func (s *DataNode) checkAndAddInfo(pkg *Packet) error {
 	var err error
 	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
@@ -64,7 +64,7 @@ func (s *DataNode) checkAndAddInfos(pkg *Packet) error {
 	return err
 }
 
-func (s *DataNode) handleReqs(msgH *MessageHandler) {
+func (s *DataNode) handleRequest(msgH *MessageHandler) {
 	for {
 		select {
 		case <-msgH.handleCh:
@@ -72,11 +72,11 @@ func (s *DataNode) handleReqs(msgH *MessageHandler) {
 			s.headNodePutChunk(pkg)
 			if exit {
 				msgH.ExitSign()
-				log.LogError(fmt.Sprintf("recive from next notifyall because [%v] exit [%v]", pkg.GetUniqLogId(),
-					msgH.inConn.LocalAddr().String()))
+				log.LogErrorf("action[DataNode.handleRequest] received from next notify all because [%v] exit [%v]",
+					pkg.GetUniqLogId(), msgH.inConn.LocalAddr().String())
 			}
-
 		case <-msgH.exitCh:
+			log.LogDebugf("action[DataNode.handleRequest] event loop for %v exit.", msgH.inConn.RemoteAddr())
 			return
 		}
 	}
@@ -120,7 +120,7 @@ func (s *DataNode) doReplyCh(reply *Packet, msgH *MessageHandler) {
 			msgH.ExitSign()
 		}
 	}
-	if !reply.IsMasterCommand(){
+	if !reply.IsMasterCommand() {
 		reply.afterTp()
 	}
 
@@ -133,10 +133,16 @@ func (s *DataNode) writeToCli(msgH *MessageHandler) {
 	for {
 		select {
 		case req := <-msgH.requestCh:
+			log.LogDebugf("action[DataNode.writeToCli] received request[%v] from remote[%v].",
+				req, msgH.inConn.RemoteAddr())
 			s.doRequestCh(req, msgH)
 		case reply := <-msgH.replyCh:
+			log.LogDebugf("action[DataNode.writeToCli] received reply[%v] from remote[%v].",
+				reply, msgH.inConn.RemoteAddr())
 			s.doReplyCh(reply, msgH)
 		case <-msgH.exitCh:
+			log.LogDebugf("action[DataNode.writeToCli] event loop for %v exit.",
+				msgH.inConn.RemoteAddr())
 			msgH.ClearReqs(s)
 			return
 		}

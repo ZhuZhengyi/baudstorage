@@ -22,8 +22,8 @@ const (
 )
 
 const (
-	ConfigKeyRole = "role"
-	ConfigKeyLogDir = "logDir"
+	ConfigKeyRole     = "role"
+	ConfigKeyLogDir   = "logDir"
 	ConfigKeyLogLevel = "logLevel"
 )
 
@@ -35,8 +35,8 @@ const (
 
 const (
 	ModuleMaster = "Master"
-	ModuleMeta = "MetaNode"
-	ModuleData = "DataNode"
+	ModuleMeta   = "MetaNode"
+	ModuleData   = "DataNode"
 )
 
 var (
@@ -71,7 +71,6 @@ func main() {
 
 	//for multi-cpu scheduling
 	runtime.GOMAXPROCS(runtime.NumCPU())
-
 
 	// Init server instance with specified role configuration.
 	var (
