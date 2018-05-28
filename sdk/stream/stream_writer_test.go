@@ -251,6 +251,8 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 
 	}
 
+	time.Sleep(time.Second*10)
+
 	//finish
 	client.Close(inode)
 	client.Close(inode)
@@ -259,8 +261,5 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 	localWriteFp.Close()
 	localReadFp.Close()
 
-	for {
-		time.Sleep(time.Second*30)
-	}
 	fmt.Printf("fileSize %d \n", sk.Size())
 }
