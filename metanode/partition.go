@@ -20,7 +20,7 @@ const (
 )
 
 const (
-	storeTimeTicker = time.Hour * 1
+	storeTimeTicker = time.Minute * 5
 )
 
 // Errors

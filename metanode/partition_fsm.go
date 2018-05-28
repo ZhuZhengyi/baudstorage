@@ -7,6 +7,7 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/raft"
 	raftproto "github.com/tiglabs/raft/proto"
 )
@@ -171,7 +172,9 @@ func (mp *metaPartition) HandleLeaderChange(leader uint64) {
 	mp.leaderID = leader
 	if mp.config.Start == 0 && mp.config.Cursor == 0 {
 		id, _ := mp.nextInodeID()
-		mp.createInode(NewInode(id, proto.ModeDir))
+		if mp.createInode(NewInode(id, proto.ModeDir)) != proto.OpOk {
+			log.LogErrorf("[HandleLeaderChange]: create root dir inode failed!")
+		}
 	}
 }
 
