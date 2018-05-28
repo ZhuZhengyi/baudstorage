@@ -79,7 +79,6 @@ func (m *MetaNode) servConn(conn net.Conn, stopC chan uint8) {
 // RoutePacket check the OpCode in specified packet and route it to handler.
 func (m *MetaNode) handlePacket(conn net.Conn, p *Packet) (err error) {
 	// Handle request
-	log.LogDebugf("accept message and start proc")
 	err = m.metaManager.HandleMetaOperation(conn, p)
 	return
 }

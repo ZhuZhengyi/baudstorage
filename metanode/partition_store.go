@@ -42,7 +42,9 @@ func (mp *metaPartition) loadMeta() (err error) {
 		return
 	}
 	// TODO: Valid PartitionConfig
-
+	if mConf.checkMeta() != nil {
+		return
+	}
 	mp.config.PartitionId = mConf.PartitionId
 	mp.config.Start = mConf.Start
 	mp.config.End = mConf.End
@@ -154,6 +156,9 @@ func (mp *metaPartition) loadApplyID() (err error) {
 
 // Store Meta to file
 func (mp *metaPartition) storeMeta() (err error) {
+	if err = mp.config.checkMeta(); err != nil {
+		err = errors.Errorf("[storeMeta]->%s", err.Error())
+	}
 	os.MkdirAll(mp.config.RootDir, 0755)
 	filename := path.Join(mp.config.RootDir, metaFileTmp)
 	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE,
