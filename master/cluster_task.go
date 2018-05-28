@@ -271,6 +271,10 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 		task.Status = int8(taskStatus)
 	}
 
+	if task.CheckTaskIsSuccess() {
+		metaNode.Sender.DelTask(task)
+	}
+
 	return
 
 errDeal:

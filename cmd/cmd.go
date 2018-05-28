@@ -4,7 +4,6 @@ import (
 	"github.com/tiglabs/baudstorage/datanode"
 	"github.com/tiglabs/baudstorage/master"
 	"github.com/tiglabs/baudstorage/metanode"
-	"github.com/tiglabs/baudstorage/util/log"
 
 	"flag"
 	_ "net/http/pprof"
@@ -14,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/tiglabs/baudstorage/util/config"
+	"log"
 )
 
 const (
@@ -45,10 +45,10 @@ type Server interface {
 func interceptSignal(s Server) {
 	sigC := make(chan os.Signal, 1)
 	signal.Notify(sigC, syscall.SIGINT, syscall.SIGTERM)
-	log.LogDebugf("action[interceptSignal] register system signal.")
+	log.Println("action[interceptSignal] register system signal.")
 	go func() {
 		sig := <-sigC
-		log.LogDebugf("action[interceptSignal] received signal: %s.", sig.String())
+		log.Printf("action[interceptSignal] received signal: %s.", sig.String())
 		s.Shutdown()
 	}()
 }
