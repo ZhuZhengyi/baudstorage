@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	bsProto "github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/raft/proto"
 	"strconv"
 	"strings"
@@ -39,6 +41,7 @@ type MetaPartitionValue struct {
 	Start       uint64
 	End         uint64
 	Hosts       string
+	Peers       []bsProto.Peer
 }
 
 func newMetaPartitionValue(mp *MetaPartition) (mpv *MetaPartitionValue) {
@@ -48,6 +51,7 @@ func newMetaPartitionValue(mp *MetaPartition) (mpv *MetaPartitionValue) {
 		Start:       mp.Start,
 		End:         mp.End,
 		Hosts:       mp.hostsToString(),
+		Peers:       mp.Peers,
 	}
 	return
 }
@@ -56,6 +60,7 @@ type VolGroupValue struct {
 	VolID      uint64
 	ReplicaNum uint8
 	Hosts      string
+	VolType    string
 }
 
 func newVolGroupValue(vg *VolGroup) (vgv *VolGroupValue) {
@@ -63,6 +68,7 @@ func newVolGroupValue(vg *VolGroup) (vgv *VolGroupValue) {
 		VolID:      vg.VolID,
 		ReplicaNum: vg.replicaNum,
 		Hosts:      vg.VolHostsToString(),
+		VolType:    vg.volType,
 	}
 	return
 }
@@ -231,8 +237,12 @@ func (c *Cluster) applyAddMetaPartition(cmd *Metadata) {
 	keys := strings.Split(cmd.K, KeySeparator)
 	if keys[1] == MetaPartitionAcronym {
 		mpv := &MetaPartitionValue{}
-		json.Unmarshal(cmd.V, mpv)
+		if err := json.Unmarshal(cmd.V, mpv); err != nil {
+			log.LogError(fmt.Sprintf("action[applyAddMetaPartition] failed,err:%v", err))
+		}
 		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End, keys[2])
+		mp.Peers = mpv.Peers
+		mp.PersistenceHosts = strings.Split(mpv.Hosts, UnderlineSeparator)
 		ns, _ := c.getNamespace(keys[2])
 		ns.MetaPartitions[mp.PartitionID] = mp
 	}
@@ -245,6 +255,7 @@ func (c *Cluster) applyAddVolGroup(cmd *Metadata) {
 		json.Unmarshal(cmd.V, vgv)
 		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum)
 		ns, _ := c.getNamespace(keys[2])
+		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
 		ns.volGroups.volGroups = append(ns.volGroups.volGroups, vg)
 
 	}
@@ -373,7 +384,8 @@ func (c *Cluster) loadMetaPartitions() (err error) {
 			return err
 		}
 		mp := NewMetaPartition(mpv.PartitionID, mpv.Start, mpv.End, nsName)
-		mp.PersistenceHosts = strings.Split(mpv.Hosts, UnderlineSeparator)
+		mp.setPersistenceHosts(strings.Split(mpv.Hosts, UnderlineSeparator))
+		mp.setPeers(mpv.Peers)
 		ns.MetaPartitions[mp.PartitionID] = mp
 		encodedKey.Free()
 		encodedValue.Free()
