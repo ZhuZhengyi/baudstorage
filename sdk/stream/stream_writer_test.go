@@ -21,7 +21,8 @@ const (
 	CLIENTREADSIZE  = 4 * util.KB
 	CLIENTWRITESIZE = 4 * util.KB
 	CLIENTWRITENUM  = 1000
-	TOTALREADSIZE   = (CLIENTWRITESIZE + 1) * CLIENTWRITENUM
+	CRCBYTELEN      = 4
+	TOTALSIZE       = (CLIENTWRITESIZE + CRCBYTELEN) * CLIENTWRITENUM
 )
 
 var aalock sync.Mutex
@@ -231,14 +232,16 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 	client.Open(inode)
 	client.Open(inode)
 	for seqNo := 0; seqNo < CLIENTWRITENUM; seqNo++ {
-		rand.Seed(time.Now().UnixNano())
-		writeStr := uppercaseSeq(CLIENTWRITESIZE+1, seqNo)
+		writeStr := uppercaseSeq(CLIENTWRITESIZE+CRCBYTELEN, seqNo)
 		writeData := ([]byte)(writeStr)
 
 		//add checksum
 		tempData := writeData[:CLIENTWRITESIZE]
-		crc := crc32.ChecksumIEEE(tempData)
-		writeData[CLIENTWRITESIZE] = byte(crc)
+		crc := util2.Uint32ToBytes(crc32.ChecksumIEEE(tempData))
+		fmt.Printf("write crc seqNo[%v], Crc[%v]\n", seqNo, crc)
+		for i := 0; i < CRCBYTELEN; i++ {
+			writeData[CLIENTWRITESIZE+i] = crc[i]
+		}
 
 		go func(seqNo int) {
 			write, err := writeFlushReadTest(t, inode, seqNo, client, writeData, localWriteFp)
@@ -249,16 +252,21 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 		}(seqNo)
 	}
 
-	time.Sleep(time.Second * 2)
+	for {
+		time.Sleep(time.Second)
+		if writeBytes == TOTALSIZE {
+			break
+		}
+	}
 	fmt.Printf("write size [%v]\n", writeBytes)
 
 	//read check
 	for seqNo := 0; seqNo < CLIENTWRITENUM; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
 
-		rdata := make([]byte, CLIENTWRITESIZE+1)
-		read, err := client.Read(inode, rdata, readBytes, CLIENTWRITESIZE+1)
-		if err != nil || read != CLIENTWRITESIZE+1 {
+		rdata := make([]byte, CLIENTWRITESIZE+CRCBYTELEN)
+		read, err := client.Read(inode, rdata, readBytes, CLIENTWRITESIZE+CRCBYTELEN)
+		if err != nil || read != CLIENTWRITESIZE+CRCBYTELEN {
 			OccoursErr(fmt.Errorf("read bytes[%v] err[%v]\n", read, err), t)
 		}
 
@@ -269,16 +277,20 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 
 		//check crc
 		tempData := rdata[:CLIENTWRITESIZE]
-		crc := crc32.ChecksumIEEE(tempData)
-		fmt.Printf("readCrc[%v] writeCrc[%v]\n", byte(crc), rdata[CLIENTWRITESIZE])
-		if byte(crc) != rdata[CLIENTWRITESIZE] {
-			OccoursErr(fmt.Errorf("wrong data crc[%v] writecrc[%v]\n", crc, rdata[CLIENTWRITESIZE]), t)
+		crc := util2.Uint32ToBytes(crc32.ChecksumIEEE(tempData))
+		crcData := rdata[CLIENTWRITESIZE:]
+
+		fmt.Printf("readCrc[%v] writeCrc[%v]\n", crc, crcData)
+		for i := 0; i < CRCBYTELEN; i++ {
+			if crc[i] != crcData[i] {
+				OccoursErr(fmt.Errorf("wrong[%i] readcrc[%v] writecrc[%v]\n", i, crc[i], crcData[i]), t)
+			}
 		}
 
 		readBytes += read
 	}
 
-	if readBytes != TOTALREADSIZE {
+	if readBytes != TOTALSIZE {
 		OccoursErr(fmt.Errorf("read err size [%v]", readBytes), t)
 	}
 
