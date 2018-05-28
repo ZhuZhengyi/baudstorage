@@ -112,6 +112,7 @@ func (mp *metaPartition) openFile(ino *Inode) (status uint8) {
 }
 
 func (mp *metaPartition) readDir(req *ReadDirReq) (resp *ReadDirResp) {
+	resp = &ReadDirResp{}
 	begDentry := &Dentry{
 		ParentId: req.ParentID,
 	}
