@@ -85,6 +85,7 @@ type Inode struct {
 	Inode      uint64 // Inode ID
 	Type       uint32
 	Size       uint64
+	Generation uint64
 	CreateTime int64
 	AccessTime int64
 	ModifyTime int64
@@ -129,7 +130,6 @@ func (i *Inode) GetKey() (m string) {
 
 // GetKeyBytes is the bytes version of GetKey method which returns byte slice result.
 func (i *Inode) GetKeyBytes() (m []byte) {
-
 	return []byte(i.GetKey())
 }
 
@@ -146,7 +146,7 @@ func (i *Inode) ParseKeyBytes(k []byte) (err error) {
 // GetValue returns string value of this Inode which consists of Name, Size, AccessTime and
 // ModifyTime properties and connected by '*'.
 func (i *Inode) GetValue() (m string) {
-	s := fmt.Sprintf("%d*%d*%d*%d*%d", i.Type, i.Size, i.CreateTime, i.AccessTime, i.ModifyTime)
+	s := fmt.Sprintf("%d*%d*%d*%d*%d*%d", i.Type, i.Size, i.Generation, i.CreateTime, i.AccessTime, i.ModifyTime)
 	var exts []string
 	exts = append(exts, s)
 	i.Extents.Range(func(i int, v proto.ExtentKey) bool {
@@ -173,24 +173,29 @@ func (i *Inode) ParseValueBytes(val []byte) (err error) {
 	if err != nil {
 		return
 	}
-	ctime, err := strconv.ParseInt(valSlice[2], 10, 64)
+	generation, err := strconv.ParseUint(valSlice[2], 10, 64)
 	if err != nil {
 		return
 	}
-	atime, err := strconv.ParseInt(valSlice[3], 10, 64)
+	ctime, err := strconv.ParseInt(valSlice[3], 10, 64)
 	if err != nil {
 		return
 	}
-	mtime, err := strconv.ParseInt(valSlice[4], 10, 64)
+	atime, err := strconv.ParseInt(valSlice[4], 10, 64)
+	if err != nil {
+		return
+	}
+	mtime, err := strconv.ParseInt(valSlice[5], 10, 64)
 	if err != nil {
 		return
 	}
 	i.Type = uint32(ttype)
 	i.Size = size
+	i.Generation = generation
 	i.CreateTime = ctime
 	i.AccessTime = atime
 	i.ModifyTime = mtime
-	if len(valSlice) <= 5 {
+	if len(valSlice) <= 6 {
 		return
 	}
 	for _, value = range valSlice[6:] {
