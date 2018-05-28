@@ -584,7 +584,6 @@ func (c *Cluster) UpdateMetaNode(metaNode *MetaNode, threshold bool) {
 		if mr == nil {
 			continue
 		}
-		log.LogDebugf(fmt.Sprintf("mr addr:%v,isLeader:%v", metaNode.Addr, mr.IsLeader))
 		mp, err := c.getMetaPartitionByID(mr.PartitionID)
 		if err != nil {
 			log.LogError(fmt.Sprintf("action[UpdateMetaNode],err:%v", err))

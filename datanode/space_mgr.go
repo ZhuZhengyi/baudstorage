@@ -100,7 +100,7 @@ func (space *SpaceManager) getMinVolCntDisk() (d *Disk) {
 }
 
 func (space *SpaceManager) getVol(volId uint32) (v *Vol) {
-	space.volLock.RLocker()
+	space.volLock.RLock()
 	defer space.volLock.RUnlock()
 	v = space.vols[volId]
 

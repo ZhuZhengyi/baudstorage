@@ -407,6 +407,8 @@ func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err err
 	if hosts, peers, err = c.ChooseTargetMetaHosts(int(ns.mpReplicaNum)); err != nil {
 		return
 	}
+
+	log.LogDebugf("target meta hosts:%v,peers:%v", hosts, peers)
 	mp.PersistenceHosts = hosts
 	mp.Peers = peers
 	if err = c.syncAddMetaPartition(nsName, mp); err != nil {
@@ -462,7 +464,7 @@ func (c *Cluster) getAllDataNodes() (dataNodes []NodeView) {
 	dataNodes = make([]NodeView, 0)
 	c.dataNodes.Range(func(addr, node interface{}) bool {
 		dataNode := node.(*DataNode)
-		dataNodes = append(dataNodes, NodeView{Addr: dataNode.TcpAddr, Status: dataNode.isActive})
+		dataNodes = append(dataNodes, NodeView{Addr: dataNode.HttpAddr, Status: dataNode.isActive})
 		return true
 	})
 	return
