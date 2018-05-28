@@ -204,7 +204,7 @@ func writeFlushReadTest(t *testing.T, inode uint64, writebytes, seqNo int,
 		OccoursErr(fmt.Errorf("read inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, read, err), t)
 	}
 	if !bytes.Equal(rdata, ndata) {
-		fmt.Printf("acatual read bytes[%v]\n", string(rdata))
+		//fmt.Printf("acatual read bytes[%v]\n", string(rdata))
 		OccoursErr(fmt.Errorf("acatual read is differ to writestr"), t)
 	}
 	_, err = localWriteFp.Write(ndata)
