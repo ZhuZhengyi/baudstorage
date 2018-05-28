@@ -267,6 +267,7 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	if err != nil {
 		log.LogError(fmt.Sprintf("process task[%v] failed", task.ToString()))
 	} else {
+		log.LogDebugf("task:%v status:%v", task.ID, task.Status)
 		task.Status = int8(taskStatus)
 	}
 

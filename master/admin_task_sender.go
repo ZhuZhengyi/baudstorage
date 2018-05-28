@@ -48,6 +48,10 @@ func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
 
 func (sender *AdminTaskSender) process() {
 	ticker := time.NewTicker(TaskWorkerInterval)
+	defer func() {
+		ticker.Stop()
+		log.LogDebugf("%v sender stop", sender.targetAddr)
+	}()
 	for {
 		select {
 		case <-sender.exitCh:

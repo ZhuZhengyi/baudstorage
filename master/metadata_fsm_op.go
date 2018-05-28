@@ -188,7 +188,6 @@ func (c *Cluster) handleApply(cmd *Metadata) (err error) {
 		return fmt.Errorf("metadata can't be null")
 	}
 
-
 	switch cmd.Op {
 	case OpSyncAddDataNode:
 		c.applyAddDataNode(cmd)
