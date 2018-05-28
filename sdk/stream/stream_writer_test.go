@@ -257,7 +257,7 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 		rand.Seed(time.Now().UnixNano())
 
 		rdata := make([]byte, CLIENTWRITESIZE+1)
-		read, err := client.Read(inode, rdata, 0, CLIENTWRITESIZE+1)
+		read, err := client.Read(inode, rdata, readBytes, CLIENTWRITESIZE+1)
 		if err != nil || read != CLIENTWRITESIZE+1 {
 			OccoursErr(fmt.Errorf("read bytes[%v] err[%v]\n", read, err), t)
 		}
@@ -270,7 +270,7 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 		//check crc
 		tempData := rdata[:CLIENTWRITESIZE]
 		crc := crc32.ChecksumIEEE(tempData)
-		fmt.Printf("Crc[%v]\n", rdata[CLIENTWRITESIZE])
+		fmt.Printf("readCrc[%v] writeCrc[%v]\n", crc, rdata[CLIENTWRITESIZE])
 		if byte(crc) != rdata[CLIENTWRITESIZE] {
 			OccoursErr(fmt.Errorf("wrong data crc[%v] writecrc[%v]\n", crc, rdata[CLIENTWRITESIZE]), t)
 		}
