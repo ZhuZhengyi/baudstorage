@@ -130,7 +130,10 @@ func (mp *metaPartition) Start() (err error) {
 		if mp.config.BeforeStart != nil {
 			mp.config.BeforeStart()
 		}
-		err = mp.onStart()
+		if err = mp.onStart(); err != nil {
+			err = errors.Errorf("[Start]->%s", err.Error())
+			return
+		}
 		if mp.config.AfterStart != nil {
 			mp.config.AfterStart()
 		}
@@ -152,12 +155,13 @@ func (mp *metaPartition) Stop() {
 
 func (mp *metaPartition) onStart() (err error) {
 	if err = mp.load(); err != nil {
-		err = errors.Errorf("load partition id=%d: %s",
+		err = errors.Errorf("[onStart]:load partition id=%d: %s",
 			mp.config.PartitionId, err.Error())
 		return
 	}
 	if err = mp.startRaft(); err != nil {
-		err = errors.Errorf("start raft id=%d: %s", mp.config.PartitionId,
+		err = errors.Errorf("[onStart]start raft id=%d: %s",
+			mp.config.PartitionId,
 			err.Error())
 		return
 	}

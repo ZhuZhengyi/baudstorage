@@ -230,9 +230,11 @@ func (m *metaManager) createPartition(id uint64, start, end uint64,
 	}
 	partition := NewMetaPartition(mpc)
 	if err = partition.StoreMeta(); err != nil {
+		err = errors.Errorf("[createPartition]->%s", err.Error())
 		return
 	}
 	if err = m.attachPartition(id, partition); err != nil {
+		err = errors.Errorf("[createPartition]->%s", err.Error())
 		return
 	}
 	return

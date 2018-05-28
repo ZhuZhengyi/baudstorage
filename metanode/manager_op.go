@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net"
 
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"
 	raftproto "github.com/tiglabs/raft/proto"
@@ -72,6 +73,8 @@ func (m *metaManager) opCreateMetaPartition(conn net.Conn, p *Packet) (err error
 	if err = json.Unmarshal(p.Data, adminTask); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		m.respondToClient(conn, p)
+		err = errors.Errorf("[opCreateMetaPartition]: Unmarshal AdminTask"+
+			" struct: %s", err.Error())
 		return
 	}
 	// Marshal request body.
@@ -79,6 +82,8 @@ func (m *metaManager) opCreateMetaPartition(conn net.Conn, p *Packet) (err error
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		m.respondToClient(conn, p)
+		err = errors.Errorf("[opCreateMetaPartition]: Marshal AdminTask."+
+			"Request: %s", err.Error())
 		return
 	}
 	// Unmarshal request to entity
@@ -86,6 +91,8 @@ func (m *metaManager) opCreateMetaPartition(conn net.Conn, p *Packet) (err error
 	if err = json.Unmarshal(requestJson, req); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		m.respondToClient(conn, p)
+		err = errors.Errorf("[opCreateMetaPartition]: Unmarshal AdminTask."+
+			"Request to CreateMetaPartitionRequest: %s", err.Error())
 		return
 	}
 	m.responseAckOKToMaster(conn, p)
@@ -100,6 +107,8 @@ func (m *metaManager) opCreateMetaPartition(conn net.Conn, p *Packet) (err error
 		req.Members); err != nil {
 		resp.Status = proto.TaskFail
 		resp.Result = err.Error()
+		err = errors.Errorf("[opCreateMetaPartition]->%s; request message: %v",
+			err.Error(), adminTask.Request)
 	}
 	adminTask.Response = resp
 	m.respondToMaster(m.masterAddr, adminTask)

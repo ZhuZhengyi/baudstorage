@@ -42,7 +42,9 @@ func (mp *metaPartition) loadMeta() (err error) {
 		return
 	}
 	// TODO: Valid PartitionConfig
-
+	if mp.checkMeta() != nil {
+		return
+	}
 	mp.config.PartitionId = mConf.PartitionId
 	mp.config.Start = mConf.Start
 	mp.config.End = mConf.End
@@ -154,6 +156,9 @@ func (mp *metaPartition) loadApplyID() (err error) {
 
 // Store Meta to file
 func (mp *metaPartition) storeMeta() (err error) {
+	if err = mp.checkMeta(); err != nil {
+		err = errors.Errorf("[storeMeta]->%s", err.Error())
+	}
 	os.MkdirAll(mp.config.RootDir, 0755)
 	filename := path.Join(mp.config.RootDir, metaFileTmp)
 	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE,
@@ -261,5 +266,25 @@ func (mp *metaPartition) storeDentry() (err error) {
 		return true
 	})
 	err = os.Rename(filename, path.Join(mp.config.RootDir, dentryFile))
+	return
+}
+
+func (mp *metaPartition) checkMeta() (err error) {
+	if mp.config.PartitionId <= 0 {
+		err = errors.Errorf("[checkMeta]: partition id at least 1, "+
+			"now partition id is: %d", mp.config.PartitionId)
+	}
+	if mp.config.Start < 0 {
+		err = errors.Errorf("[checkMeta]: start at least 0")
+		return
+	}
+	if mp.config.End <= mp.config.Start {
+		err = errors.Errorf("[checkMeta]: end at least 'start'")
+		return
+	}
+	if len(mp.config.Peers) <= 0 {
+		err = errors.Errorf("[checkMeta]: must have peers, now peers is 0")
+		return
+	}
 	return
 }
