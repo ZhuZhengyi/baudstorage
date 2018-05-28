@@ -18,6 +18,7 @@ import (
 
 const (
 	CLIENTREADSIZE = 4 * util.KB
+	CLIENTWRITESIZE = 4 * util.KB
 )
 
 var aalock sync.Mutex
@@ -175,45 +176,26 @@ func TestExtentClient_Write(t *testing.T) {
 }
 
 
-func writeFlushReadTest(t *testing.T, inode uint64, writebytes, seqNo int,
-	client *ExtentClient, ndata []byte) (write int, err error){
-	var (
-		read int
-	)
-
-	localWriteFp, localReadFp := prepare(uint64(seqNo), t)
+func writeFlushReadTest(t *testing.T, inode uint64, seqNo int,	client *ExtentClient,
+	ndata []byte, localWriteFp *os.File) (write int, err error){
 
 	//write
 	write, err = client.Write(inode, ndata)
 	if err != nil || write != len(ndata) {
-		OccoursErr(fmt.Errorf("write inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
+		OccoursErr(fmt.Errorf("write seqNO[%v] bytes[%v] len[%v] err[%v]\n", seqNo, write, len(ndata), err), t)
 	}
-	fmt.Printf("hahah ,write ok [%v]\n", seqNo)
+	fmt.Printf("write ok seqNo[%v], Size[%v]\n", seqNo, write)
 
 	//flush
 	err = client.Flush(inode)
 	if err != nil {
 		OccoursErr(fmt.Errorf("flush inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 	}
-	fmt.Printf("hahah ,flush ok [%v]\n", seqNo)
+	fmt.Printf("flush ok [%v]\n", seqNo)
 
-	//read
-	rdata := make([]byte, len(ndata))
-	read, err = client.Read(inode, rdata, writebytes, len(ndata))
-	if err != nil || read != len(ndata) {
-		OccoursErr(fmt.Errorf("read inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, read, err), t)
-	}
-	if !bytes.Equal(rdata, ndata) {
-		//fmt.Printf("acatual read bytes[%v]\n", string(rdata))
-		OccoursErr(fmt.Errorf("acatual read is differ to writestr"), t)
-	}
 	_, err = localWriteFp.Write(ndata)
 	if err != nil {
 		OccoursErr(fmt.Errorf("write localFile write inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
-	}
-	_, err = localReadFp.Write(rdata)
-	if err != nil {
-		OccoursErr(fmt.Errorf("write localFile read inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
 	}
 
 	return write, nil
@@ -239,16 +221,30 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 	client.Open(inode)
 	for seqNo := 0; seqNo < 100; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
-		ndata := data[:rand.Intn(CFSBLOCKSIZE*5)]
+		ndata := data[:CLIENTWRITESIZE]
+
+		ndata[0] = byte(seqNo)
 
 		go func()	{
-			write, err := writeFlushReadTest(t, inode, writebytes, seqNo, client, ndata)
+			write, err := writeFlushReadTest(t, inode, seqNo, client, ndata, localWriteFp)
 			if err != nil{
 				OccoursErr(fmt.Errorf("write inode[%v] seqNO[%v]  err[%v]\n", inode, seqNo, err), t)
 			}
 			writebytes += write
 		}()
 
+	}
+
+	//read
+	rdata := make([]byte, CLIENTWRITESIZE*100)
+	read, err := client.Read(inode, rdata, 0, CLIENTWRITESIZE*100)
+	if err != nil || read != CLIENTWRITESIZE*100 {
+		OccoursErr(fmt.Errorf("read bytes[%v] err[%v]\n", read, err), t)
+	}
+
+	_, err = localReadFp.Write(rdata)
+	if err != nil {
+		OccoursErr(fmt.Errorf("write localFile read inode[%v] err[%v]\n", inode, err), t)
 	}
 
 	time.Sleep(time.Second*10)
@@ -258,8 +254,8 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 	client.Close(inode)
 	client.Close(inode)
 
-	localWriteFp.Close()
 	localReadFp.Close()
+	localWriteFp.Close()
 
 	fmt.Printf("fileSize %d \n", sk.Size())
 }
