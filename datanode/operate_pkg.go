@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/master"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util"
@@ -135,13 +136,13 @@ func (s *DataNode) heartBeats(pkg *Packet) {
 		masterAddr = request.MasterAddr
 	} else {
 		response.Status = proto.OpErr
-		response.Result = "unavali opcode "
+		response.Result = "illegal opcode "
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
-	_, err := s.postToMaster(data, "/node/Repost")
+	_, err := s.postToMaster(data, master.DataNodeResponse)
 	if err != nil {
-		err = errors.Annotatef(err, "heaerbeat to master[%v] failed", request.MasterAddr)
+		err = errors.Annotatef(err, "heartbeat to master[%v] failed", request.MasterAddr)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
