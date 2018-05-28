@@ -84,9 +84,9 @@ func (s *DataNode) Start(cfg *config.Config) (err error) {
 
 func (s *DataNode) Shutdown() {
 	if atomic.CompareAndSwapUint32(&s.state, Running, Shutdown) {
-		defer atomic.StoreUint32(&s.state, Stopped)
 		s.onShutdown()
 		s.wg.Done()
+		atomic.StoreUint32(&s.state, Stopped)
 	}
 }
 
@@ -103,13 +103,17 @@ func (s *DataNode) onStart(cfg *config.Config) (err error) {
 	if err = s.startTcpService(); err != nil {
 		return
 	}
+	log.LogDebugf("action[DataNode.onStart] tcp service start.")
 	s.startRestService()
+	log.LogDebugf("action[DataNode.onStart] rest service start.")
 	return
 }
 
 func (s *DataNode) onShutdown() {
 	s.stopTcpService()
+	log.LogDebugf("action[DataNode.onShutdown] tcp service stooped.")
 	s.stopRestService()
+	log.LogDebugf("action[DataNode.onShutdown] rest service stooped.")
 	return
 }
 
@@ -192,15 +196,10 @@ func (s *DataNode) startRestService() {
 	http.HandleFunc("/vols", s.HandleVol)
 	http.HandleFunc("/stats", s.HandleStat)
 
-	server := &http.Server{}
-	server.Addr = fmt.Sprintf("%s:%d", s.localIp, s.profPort)
-	go func(server *http.Server) {
-		err := server.ListenAndServe()
-		if err != nil {
-			println("Failed to start rest service")
-			s.Shutdown()
-		}
-	}(server)
+	server := &http.Server{
+		Addr: fmt.Sprintf("%s:%d", s.localIp, s.profPort),
+	}
+	go server.ListenAndServe()
 	s.httpServerCloser = server
 }
 
@@ -224,6 +223,7 @@ func (s *DataNode) startTcpService() (err error) {
 			log.LogError("failed to accept, err:", err)
 			break
 		}
+		log.LogDebugf("action[DataNode.startTcpService] accept connection from %s.", conn.RemoteAddr().String())
 		go s.serveConn(conn)
 	}
 
@@ -232,7 +232,6 @@ func (s *DataNode) startTcpService() (err error) {
 }
 
 func (s *DataNode) stopTcpService() (err error) {
-	log.LogInfo("Stop: stopTcpService")
 	if s.tcpListener != nil {
 		s.tcpListener.Close()
 	}
@@ -253,6 +252,7 @@ func (s *DataNode) serveConn(conn net.Conn) {
 	for {
 		select {
 		case <-msgH.exitCh:
+			log.LogDebugf("action[DataNode.serveConn] received data from exitCh.")
 			goto exitDeal
 		default:
 			if err := s.readFromCliAndDeal(msgH); err != nil {

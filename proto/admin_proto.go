@@ -105,15 +105,15 @@ type DataNodeHeartBeatResponse struct {
 
 type MetaPartitionReport struct {
 	PartitionID uint64
-	Start uint64
-	End uint64
+	Start       uint64
+	End         uint64
 	Status      int
 	MaxInodeID  uint64
 	IsLeader    bool
 }
 
 type MetaNodeHeartbeatResponse struct {
-	RackName                  string
+	RackName          string
 	Total             uint64
 	Used              uint64
 	MetaPartitionInfo []*MetaPartitionReport

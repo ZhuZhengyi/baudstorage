@@ -30,7 +30,9 @@ func (mp *metaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 		reply  []byte
 	)
 	if status == proto.OpOk {
-		resp := &CreateInoResp{}
+		resp := &CreateInoResp{
+			Info: &proto.InodeInfo{},
+		}
 		resp.Info.Inode = ino.Inode
 		resp.Info.Mode = ino.Type
 		resp.Info.Size = ino.Size

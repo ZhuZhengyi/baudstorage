@@ -28,7 +28,7 @@ type AdminTask struct {
 
 func (t *AdminTask) ToString() (msg string) {
 	msg = fmt.Sprintf("Id[%v] Status[%d] LastSendTime[%v]  SendCount[%v] Request[%v]",
-		t.ID, t.Status, t.SendTime, t.SendCount,t.Request)
+		t.ID, t.Status, t.SendTime, t.SendCount, t.Request)
 
 	return
 }
@@ -56,7 +56,7 @@ func (t *AdminTask) CheckTaskTimeOut() (notResponse bool) {
 }
 
 func (t *AdminTask) SetStatus(status int8) {
-	t.Status  = status
+	t.Status = status
 }
 
 func (t *AdminTask) CheckTaskIsSuccess() (isSuccess bool) {

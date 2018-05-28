@@ -65,7 +65,7 @@ func (mp *metaPartition) ReadDir(req *ReadDirReq, p *Packet) (err error) {
 
 func (mp *metaPartition) Lookup(req *LookupReq, p *Packet) (err error) {
 	dentry := &Dentry{
-		ParentId: req.PartitionID,
+		ParentId: req.ParentID,
 		Name:     req.Name,
 	}
 	status := mp.getDentry(dentry)
