@@ -269,3 +269,52 @@ func NewMetaManager(conf MetaManagerConfig) MetaManager {
 		partitions: make(map[uint64]MetaPartition),
 	}
 }
+
+/*
+func (m *metaManager) postToMaster(data []byte, url string) (msg []byte,
+	err error) {
+	success := false
+	var err1 error
+	for i := 0; i < len(s.masterAddrs); i++ {
+		var resp *http.Response
+		if masterAddr == "" {
+			index := atomic.AddUint32(&s.masterAddrIndex, 1)
+			if index >= uint32(len(s.masterAddrs)) {
+				index = 0
+			}
+			masterAddr = s.masterAddrs[index]
+		}
+		err = nil
+		resp, err = post(data, "http://"+masterAddr+url)
+		if err != nil {
+			index := atomic.AddUint32(&s.masterAddrIndex, 1)
+			if index >= uint32(len(s.masterAddrs)) {
+				index = 0
+			}
+			masterAddr = s.masterAddrs[index]
+			err = errors.Annotatef(err, ActionPostToMaster+" url[%v] Index[%v]", url, i)
+			continue
+		}
+		scode := resp.StatusCode
+		msg, _ = ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		if scode == http.StatusForbidden {
+			masterAddr = string(msg)
+			masterAddr = strings.Replace(masterAddr, "\n", "", -1)
+			log.LogWarn(fmt.Sprintf("%v master Addr change to %v, retry post to master", ActionPostToMaster, string(msg)))
+			continue
+		}
+		if scode != http.StatusOK {
+			return nil, fmt.Errorf("postTo %v scode %v msg %v", url, scode, string(msg))
+		}
+		success = true
+		break
+	}
+	if !success {
+		return nil, fmt.Errorf("postToMaster err[%v]", err)
+	}
+
+	return msg, err1
+}
+
+*/
