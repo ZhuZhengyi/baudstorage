@@ -108,7 +108,7 @@ type OpMeta interface {
 type OpPartition interface {
 	IsLeader() (leaderAddr string, isLeader bool)
 	GetCursor() uint64
-	GetBaseConfig() *MetaPartitionConfig
+	GetBaseConfig() MetaPartitionConfig
 	StoreMeta() (err error)
 	ChangeMember(changeType raftproto.ConfChangeType, peer raftproto.Peer, context []byte) (resp interface{}, err error)
 	DeletePartition() (err error)
@@ -342,8 +342,8 @@ func (mp *metaPartition) ChangeMember(changeType raftproto.ConfChangeType, peer 
 	return
 }
 
-func (mp *metaPartition) GetBaseConfig() *MetaPartitionConfig {
-	return mp.config
+func (mp *metaPartition) GetBaseConfig() MetaPartitionConfig {
+	return *mp.config
 }
 
 func (mp *metaPartition) DeletePartition() (err error) {

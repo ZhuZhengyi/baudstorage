@@ -46,16 +46,19 @@ func (m *metaManager) opMasterHeartbeat(conn net.Conn, p *Packet) (err error) {
 	}
 	// every partition used
 	m.Range(func(id uint64, partition MetaPartition) bool {
+		mConf := partition.GetBaseConfig()
 		mpr := &proto.MetaPartitionReport{
-			PartitionID: id,
+			PartitionID: mConf.PartitionId,
+			Start:       mConf.Start,
+			End:         mConf.End,
 			Status:      proto.TaskSuccess,
+			MaxInodeID:  mConf.Cursor,
 		}
 		addr, isLeader := partition.IsLeader()
 		if addr == "" {
 			mpr.Status = proto.TaskFail
 		}
 		mpr.IsLeader = isLeader
-		mpr.MaxInodeID = partition.GetCursor()
 		resp.MetaPartitionInfo = append(resp.MetaPartitionInfo, mpr)
 		return true
 	})
@@ -259,18 +262,23 @@ func (m *metaManager) opMetaInodeGet(conn net.Conn, p *Packet) (err error) {
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		m.respondToClient(conn, p)
+		err = errors.Errorf("[opMetaInodeGet]: %s", err.Error())
 		return
 	}
+	log.LogDebugf("[opMetaInodeGet] Get request: %v", req)
 	mp, err := m.getPartition(req.PartitionID)
 	if err != nil {
 		p.PackErrorWithBody(proto.OpNotExistErr, nil)
 		m.respondToClient(conn, p)
+		err = errors.Errorf("[opMetaInodeGet]%s", err.Error())
 		return
 	}
-	if m.serveProxy(conn, mp, p) {
+	if !m.serveProxy(conn, mp, p) {
 		return
 	}
-	err = mp.InodeGet(req, p)
+	if err = mp.InodeGet(req, p); err != nil {
+		err = errors.Errorf("[opMetaInodeGet]%s", err.Error())
+	}
 	m.respondToClient(conn, p)
 	return
 }
