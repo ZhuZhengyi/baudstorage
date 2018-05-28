@@ -172,5 +172,95 @@ func TestExtentClient_Write(t *testing.T) {
 			break
 		}
 	}
+}
 
+
+func writeFlushReadTest(t *testing.T, inode uint64, writebytes, seqNo int,
+	client *ExtentClient, ndata []byte) (write int, err error){
+	var (
+		read int
+	)
+
+	localWriteFp, localReadFp := prepare(uint64(seqNo), t)
+
+	//write
+	write, err = client.Write(inode, ndata)
+	if err != nil || write != len(ndata) {
+		OccoursErr(fmt.Errorf("write inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
+	}
+	fmt.Printf("hahah ,write ok [%v]\n", seqNo)
+
+	//flush
+	err = client.Flush(inode)
+	if err != nil {
+		OccoursErr(fmt.Errorf("flush inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
+	}
+	fmt.Printf("hahah ,flush ok [%v]\n", seqNo)
+
+	//read
+	rdata := make([]byte, len(ndata))
+	read, err = client.Read(inode, rdata, writebytes, len(ndata))
+	if err != nil || read != len(ndata) {
+		OccoursErr(fmt.Errorf("read inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, read, err), t)
+	}
+	if !bytes.Equal(rdata, ndata) {
+		fmt.Printf("acatual read bytes[%v]\n", string(rdata))
+		OccoursErr(fmt.Errorf("acatual read is differ to writestr"), t)
+	}
+	_, err = localWriteFp.Write(ndata)
+	if err != nil {
+		OccoursErr(fmt.Errorf("write localFile write inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
+	}
+	_, err = localReadFp.Write(rdata)
+	if err != nil {
+		OccoursErr(fmt.Errorf("write localFile read inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, write, err), t)
+	}
+
+	return write, nil
+}
+
+
+func TestExtentClient_MultiRoutineWrite(t *testing.T) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	allKeys = make(map[uint64]*proto.StreamKey)
+	client := initClient(t)
+	var (
+		inode uint64
+	)
+	inode = 3
+	sk := initInode(inode)
+	writebytes := 0
+	writeStr := randSeq(CFSBLOCKSIZE*5 + 1)
+	data := ([]byte)(writeStr)
+	localWriteFp, localReadFp := prepare(inode, t)
+
+	client.Open(inode)
+	client.Open(inode)
+	client.Open(inode)
+	for seqNo := 0; seqNo < 100; seqNo++ {
+		rand.Seed(time.Now().UnixNano())
+		ndata := data[:rand.Intn(CFSBLOCKSIZE*5)]
+
+		go func()	{
+			write, err := writeFlushReadTest(t, inode, writebytes, seqNo, client, ndata)
+			if err != nil{
+				OccoursErr(fmt.Errorf("write inode[%v] seqNO[%v]  err[%v]\n", inode, seqNo, err), t)
+			}
+			writebytes += write
+		}()
+
+	}
+
+	//finish
+	client.Close(inode)
+	client.Close(inode)
+	client.Close(inode)
+
+	localWriteFp.Close()
+	localReadFp.Close()
+
+	for {
+		time.Sleep(time.Second*30)
+	}
+	fmt.Printf("fileSize %d \n", sk.Size())
 }
