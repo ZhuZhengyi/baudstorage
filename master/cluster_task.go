@@ -207,7 +207,7 @@ func (c *Cluster) checkMetaGroups(ns *NameSpace) {
 	var tasks []*proto.AdminTask
 	for _, mp := range ns.MetaPartitions {
 		mp.checkStatus(true, int(ns.mpReplicaNum))
-		mp.checkReplicas(c, ns.Name)
+		mp.checkReplicas(c, ns.Name, ns.mpReplicaNum)
 		tasks = append(tasks, mp.generateReplicaTask(ns.Name)...)
 	}
 	c.putMetaNodeTasks(tasks)
@@ -280,7 +280,6 @@ func (c *Cluster) dealOfflineMetaPartition(nodeAddr string, resp *proto.MetaPart
 	if err = mp.removePersistenceHosts(nodeAddr, c, resp.NsName); err != nil {
 		goto errDeal
 	}
-	mp.RemoveReplicaByAddr(nodeAddr)
 	mp.checkAndRemoveMissMetaReplica(nodeAddr)
 	return
 errDeal:
@@ -298,8 +297,6 @@ func (c *Cluster) dealUpdateMetaPartition(nodeAddr string, resp *proto.UpdateMet
 		return
 	}
 	mp, err := c.getMetaPartitionByID(resp.PartitionID)
-	mp.End = resp.End
-	mp.updateEnd()
 	if err != nil {
 		goto errDeal
 	}
@@ -308,7 +305,7 @@ func (c *Cluster) dealUpdateMetaPartition(nodeAddr string, resp *proto.UpdateMet
 	}
 	return
 errDeal:
-	log.LogError(fmt.Sprintf("createVolSuccessTriggerOperatorErr %v", err))
+	log.LogError(fmt.Sprintf("dealUpdateMetaPartition err %v", err))
 	return
 }
 
@@ -329,7 +326,7 @@ func (c *Cluster) dealDeleteMetaPartition(nodeAddr string, resp *proto.DeleteMet
 	return
 
 errDeal:
-	log.LogError(fmt.Sprintf("createVolSuccessTriggerOperatorErr %v", err))
+	log.LogError(fmt.Sprintf("dealDeleteMetaPartition %v", err))
 	return
 }
 
@@ -360,10 +357,7 @@ func (c *Cluster) dealCreateMetaPartition(nodeAddr string, resp *proto.CreateMet
 	mr = NewMetaReplica(mp.Start, mp.End, metaNode)
 	mr.Status = MetaPartitionReadWrite
 	mp.AddReplica(mr)
-	mp.AddHostsByReplica(mr, c, resp.NsName)
-	mp.Lock()
 	mp.checkAndRemoveMissMetaReplica(mr.Addr)
-	mp.Unlock()
 	return
 errDeal:
 	log.LogError(fmt.Sprintf("dealCreateMetaPartition %v", err))
@@ -372,10 +366,9 @@ errDeal:
 
 func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHeartbeatResponse) {
 	var (
-		metaNode  *MetaNode
-		err       error
-		logMsg    string
-		threshold bool
+		metaNode *MetaNode
+		err      error
+		logMsg   string
 	)
 
 	if resp.Status != proto.TaskSuccess {
@@ -388,15 +381,8 @@ func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHea
 
 	logMsg = fmt.Sprintf("action[dealMetaNodeHeartbeat],metaNode:%v ReportTime:%v  success", metaNode.Addr, time.Now().Unix())
 	log.LogDebug(logMsg)
-	metaNode.metaRangeInfos = resp.MetaPartitionInfo
-	metaNode.metaRangeCount = len(metaNode.metaRangeInfos)
-	metaNode.Total = resp.Total
-	metaNode.Used = resp.Used
-	metaNode.MaxMemAvailWeight = resp.Total - resp.Used
-	metaNode.RackName = resp.RackName
-	metaNode.setNodeAlive()
-	threshold = float32(metaNode.Used/metaNode.Total) > DefaultMetaPartitionThreshold
-	c.UpdateMetaNode(metaNode, threshold)
+	metaNode.updateMetric(resp)
+	c.UpdateMetaNode(metaNode, metaNode.isArriveThreshold())
 	metaNode.metaRangeInfos = nil
 
 	return
@@ -592,7 +578,8 @@ func (c *Cluster) UpdateMetaNode(metaNode *MetaNode, threshold bool) {
 		}
 		mp.updateMetaPartition(mr, metaNode)
 		if threshold {
-			end := mr.MaxInodeID + DefaultMinMetaPartitionRange
+			end := mr.MaxInodeID + mr.End + DefaultMinMetaPartitionRange
+			mp.updateEnd()
 			t := mp.generateUpdateMetaReplicaTask(mp.PartitionID, end)
 			tasks = append(tasks, t)
 		}

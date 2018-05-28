@@ -139,7 +139,7 @@ func (m *Master) getMetaPartition(w http.ResponseWriter, r *http.Request) {
 		name        string
 		partitionID uint64
 		namespace   *NameSpace
-		metaGroup   *MetaPartition
+		mp          *MetaPartition
 		ok          bool
 	)
 	if name, partitionID, err = parseGetMetaPartitionPara(r); err != nil {
@@ -149,11 +149,11 @@ func (m *Master) getMetaPartition(w http.ResponseWriter, r *http.Request) {
 		err = NamespaceNotFound
 		goto errDeal
 	}
-	if metaGroup, ok = namespace.MetaPartitions[partitionID]; !ok {
+	if mp, ok = namespace.MetaPartitions[partitionID]; !ok {
 		err = MetaGroupNotFound
 		goto errDeal
 	}
-	if body, err = json.Marshal(metaGroup); err != nil {
+	if body, err = json.Marshal(mp); err != nil {
 		code = http.StatusMethodNotAllowed
 		goto errDeal
 	}
