@@ -6,6 +6,8 @@ import (
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"golang.org/x/net/context"
+
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type File struct {
@@ -38,9 +40,10 @@ func NewFile(s *Super, p *Dir) *File {
 }
 
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
-	f.super.logger.Printf("Attr: ino(%v)", f.inode.ino)
+	log.LogDebugf("Attr: ino(%v)", f.inode.ino)
 	err := f.super.InodeGet(f.inode.ino, &f.inode)
 	if err != nil {
+		log.LogErrorf("Attr: ino(%v) err(%v)", f.inode.ino, err.Error())
 		return ParseError(err)
 	}
 	fillAttr(a, f)
@@ -51,23 +54,23 @@ func (f *File) Forget() {
 }
 
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
-	f.super.logger.Printf("Open: ino(%v)", f.inode.ino)
+	log.LogDebugf("Open: ino(%v)", f.inode.ino)
 	f.super.ec.Open(f.inode.ino)
 	return f, nil
 }
 
 func (f *File) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
-	f.super.logger.Printf("Close: ino(%v)", f.inode.ino)
+	log.LogDebugf("Close: ino(%v)", f.inode.ino)
 	err := f.super.ec.Close(f.inode.ino)
 	if err != nil {
-		f.super.logger.Printf("Close returns error (%v)", err.Error())
+		log.LogErrorf("Close returns error (%v)", err.Error())
 		return fuse.EIO
 	}
 	return nil
 }
 
 func (f *File) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
-	f.super.logger.Printf("Read: HandleID(%v) sizeof Data(%v) offset(%v) size(%v) \n", req.Handle, len(resp.Data), req.Offset, req.Size)
+	log.LogDebugf("Read: HandleID(%v) sizeof Data(%v) offset(%v) size(%v) \n", req.Handle, len(resp.Data), req.Offset, req.Size)
 
 	data := make([]byte, req.Size)
 	size, err := f.super.ec.Read(f.inode.ino, data, int(req.Offset), req.Size)
@@ -75,12 +78,12 @@ func (f *File) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadR
 		if err == io.EOF && size == 0 {
 			return nil
 		} else {
-			f.super.logger.Printf("Read error: (%v) size(%v)", err.Error(), size)
+			log.LogErrorf("Read error: (%v) size(%v)", err.Error(), size)
 			return fuse.EIO
 		}
 	}
 	if size > req.Size {
-		f.super.logger.Printf("Read error: request size(%v) read size(%v)", req.Size, size)
+		log.LogErrorf("Read error: request size(%v) read size(%v)", req.Size, size)
 		return fuse.ERANGE
 	}
 	resp.Data = append(resp.Data, data[:size]...)
@@ -88,10 +91,10 @@ func (f *File) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadR
 }
 
 func (f *File) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
-	f.super.logger.Printf("Write: ino(%v) HandleID(%v) offset(%v) data(%v)\n", f.inode.ino, req.Handle, req.Offset, req.Data)
+	log.LogDebugf("Write: ino(%v) HandleID(%v) offset(%v) data(%v)\n", f.inode.ino, req.Handle, req.Offset, req.Data)
 	size, err := f.super.ec.Write(f.inode.ino, req.Data)
 	if err != nil {
-		f.super.logger.Printf("Write returns error (%v)", err.Error())
+		log.LogErrorf("Write returns error (%v)", err.Error())
 		return fuse.EIO
 	}
 	resp.Size = size
@@ -99,20 +102,20 @@ func (f *File) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.Wri
 }
 
 func (f *File) Flush(ctx context.Context, req *fuse.FlushRequest) error {
-	f.super.logger.Printf("Flush: ino(%v) HandleID(%v)\n", f.inode.ino, req.Handle)
+	log.LogDebugf("Flush: ino(%v) HandleID(%v)\n", f.inode.ino, req.Handle)
 	err := f.super.ec.Flush(f.inode.ino)
 	if err != nil {
-		f.super.logger.Printf("Flush error (%v)", err.Error())
+		log.LogErrorf("Flush error (%v)", err.Error())
 		return fuse.EIO
 	}
 	return nil
 }
 
 func (f *File) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
-	f.super.logger.Printf("Fsync: ino(%v) HandleID(%v)\n", f.inode.ino, req.Handle)
+	log.LogDebugf("Fsync: ino(%v) HandleID(%v)\n", f.inode.ino, req.Handle)
 	err := f.super.ec.Flush(f.inode.ino)
 	if err != nil {
-		f.super.logger.Printf("Flush error (%v)", err.Error())
+		log.LogErrorf("Flush error (%v)", err.Error())
 		return fuse.EIO
 	}
 	return nil
