@@ -15,6 +15,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"encoding/binary"
 )
 
 const (
