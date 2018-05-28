@@ -1,7 +1,6 @@
 package meta
 
 import (
-	"log"
 	"strings"
 	"sync"
 	"time"
@@ -45,10 +44,6 @@ type MetaWrapper struct {
 	ranges *btree.BTree
 
 	currStart uint64
-}
-
-func init() {
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
 }
 
 func NewMetaWrapper(namespace, masterHosts string) (*MetaWrapper, error) {

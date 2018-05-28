@@ -26,13 +26,9 @@ type ExtentClient struct {
 	getExtents      GetExtentsFunc
 }
 
-func NewExtentClient(logdir string, namespace, master string, appendExtentKey AppendExtentKeyFunc, getExtents GetExtentsFunc) (client *ExtentClient, err error) {
+func NewExtentClient(namespace, master string, appendExtentKey AppendExtentKeyFunc, getExtents GetExtentsFunc) (client *ExtentClient, err error) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	client = new(ExtentClient)
-	_, err = log.NewLog(logdir, "extentclient", log.DebugLevel)
-	if err != nil {
-		return nil, fmt.Errorf("init Log Failed[%v]", err.Error())
-	}
 	client.wrapper, err = sdk.NewVolGroupWraper(namespace, master)
 	if err != nil {
 		return nil, fmt.Errorf("init volGroup Wrapper failed [%v]", err.Error())

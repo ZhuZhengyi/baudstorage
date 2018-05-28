@@ -1,12 +1,14 @@
 package meta
 
 import (
+	"fmt"
 	"io"
 	"net"
 
 	"github.com/juju/errors"
 
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type MetaConn struct {
@@ -19,6 +21,7 @@ type MetaConn struct {
 
 func (mw *MetaWrapper) getConn(mp *MetaPartition) (*MetaConn, error) {
 	addr := mp.LeaderAddr
+	log.LogDebugf("Get connection: PartitionID(%v) addr(%v)\n", mp.PartitionID, addr)
 	conn, err := mw.conns.Get(addr)
 	if err != nil {
 		for _, addr = range mp.Members {
@@ -33,6 +36,7 @@ func (mw *MetaWrapper) getConn(mp *MetaPartition) (*MetaConn, error) {
 		return nil, err
 	}
 
+	log.LogDebugf("Get connection: PartitionID(%v) addr(%v)\n", mp.PartitionID, addr)
 	mc := &MetaConn{conn: conn, id: mp.PartitionID}
 	return mc, nil
 }
@@ -60,11 +64,13 @@ func (mw *MetaWrapper) connect(inode uint64) (*MetaConn, error) {
 func (mc *MetaConn) send(req *proto.Packet) (*proto.Packet, error) {
 	err := req.WriteToConn(mc.conn)
 	if err != nil {
+		fmt.Println("Write to conn error: ", err)
 		return nil, err
 	}
 	resp := proto.NewPacket()
 	err = resp.ReadFromConn(mc.conn, proto.ReadDeadlineTime)
 	if err != nil && err != io.EOF {
+		fmt.Println("Read from conn error: ", err)
 		return nil, err
 	}
 	return resp, nil
