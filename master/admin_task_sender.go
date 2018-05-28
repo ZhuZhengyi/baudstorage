@@ -73,7 +73,8 @@ func (sender *AdminTaskSender) sendTasks(tasks []*proto.AdminTask) {
 		conn, err := sender.connPool.Get(sender.targetAddr)
 		if err != nil {
 			log.LogError(fmt.Sprintf("get connection to %v,err,%v", sender.targetAddr, err.Error()))
-			continue
+			//if get connection failed,the task is sent in the next ticker
+			break
 		}
 		if err = sender.singleSend(task, conn); err != nil {
 			log.LogError(fmt.Sprintf("send task %v to %v,err,%v", task.ToString(), sender.targetAddr, err.Error()))

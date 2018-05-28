@@ -39,8 +39,8 @@ func NewDataNode(addr string) (dataNode *DataNode) {
 	dataNode = new(DataNode)
 	dataNode.carry = rand.Float64()
 	dataNode.Total = 1
-	dataNode.sender = NewAdminTaskSender(dataNode.HttpAddr)
 	dataNode.HttpAddr = addr
+	dataNode.sender = NewAdminTaskSender(dataNode.HttpAddr)
 	return
 }
 

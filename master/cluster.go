@@ -462,7 +462,7 @@ func (c *Cluster) getAllDataNodes() (dataNodes []NodeView) {
 	dataNodes = make([]NodeView, 0)
 	c.dataNodes.Range(func(addr, node interface{}) bool {
 		dataNode := node.(*DataNode)
-		dataNodes = append(dataNodes, NodeView{Addr: dataNode.TcpAddr, Status: dataNode.isActive})
+		dataNodes = append(dataNodes, NodeView{Addr: dataNode.HttpAddr, Status: dataNode.isActive})
 		return true
 	})
 	return

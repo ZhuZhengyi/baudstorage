@@ -237,7 +237,6 @@ func (mp *MetaPartition) updateHosts(c *Cluster, nsName string) (err error) {
 
 func (mp *MetaPartition) updateMetaPartition(mgr *proto.MetaPartitionReport, metaNode *MetaNode) {
 	mr, err := mp.getMetaReplica(metaNode.Addr)
-	log.LogDebugf(fmt.Sprintf("mp persistenceHosts:%v,metaNode.Addr:%v",mp.PersistenceHosts,metaNode.Addr))
 	if err != nil && !contains(mp.PersistenceHosts, metaNode.Addr) {
 		return
 	}
