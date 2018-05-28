@@ -46,16 +46,19 @@ func (m *metaManager) opMasterHeartbeat(conn net.Conn, p *Packet) (err error) {
 	}
 	// every partition used
 	m.Range(func(id uint64, partition MetaPartition) bool {
+		mConf := partition.GetBaseConfig()
 		mpr := &proto.MetaPartitionReport{
-			PartitionID: id,
+			PartitionID: mConf.PartitionId,
+			Start:       mConf.Start,
+			End:         mConf.End,
 			Status:      proto.TaskSuccess,
+			MaxInodeID:  mConf.Cursor,
 		}
 		addr, isLeader := partition.IsLeader()
 		if addr == "" {
 			mpr.Status = proto.TaskFail
 		}
 		mpr.IsLeader = isLeader
-		mpr.MaxInodeID = partition.GetCursor()
 		resp.MetaPartitionInfo = append(resp.MetaPartitionInfo, mpr)
 		return true
 	})
