@@ -10,25 +10,25 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
-type File struct {
-	InodeCommon
-	inode Inode
-}
-
-//functions that File needs to implement
-var (
-	_ fs.Node           = (*File)(nil)
-	_ fs.Handle         = (*File)(nil)
-	_ fs.NodeForgetter  = (*File)(nil)
-	_ fs.NodeOpener     = (*File)(nil)
-	_ fs.HandleReleaser = (*File)(nil)
-	_ fs.HandleReader   = (*File)(nil)
-	_ fs.HandleWriter   = (*File)(nil)
-	_ fs.HandleFlusher  = (*File)(nil)
-	_ fs.NodeFsyncer    = (*File)(nil)
+type File interface {
+	fs.Node
+	fs.Handle
+	fs.NodeForgetter
+	fs.NodeOpener
+	fs.HandleReleaser
+	fs.HandleReader
+	fs.HandleWriter
+	fs.HandleFlusher
+	fs.NodeFsyncer
 
 	//TODO:HandleReadAller, NodeSetattrer
-)
+}
+
+type regular struct {
+	Inode
+	super  Super
+	parent Dir
+}
 
 func NewFile(s *Super, p *Dir) *File {
 	file := new(File)

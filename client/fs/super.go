@@ -10,20 +10,22 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
-type Super struct {
+type Super interface {
+	fs.FS
+	fs.FSStatfser
+	Name() string
+	Meta() *meta.MetaWrapper
+	Data() *stream.ExtentClient
+}
+
+type superblock struct {
 	name string
 	mw   *meta.MetaWrapper
 	ec   *stream.ExtentClient
 }
 
-//functions that Super needs to implement
-var (
-	_ fs.FS         = (*Super)(nil)
-	_ fs.FSStatfser = (*Super)(nil)
-)
-
-func NewSuper(namespace, master string) (s *Super, err error) {
-	s = new(Super)
+func NewSuper(namespace, master string) (s Super, err error) {
+	s = new(superblock)
 	s.mw, err = meta.NewMetaWrapper(namespace, master)
 	if err != nil {
 		log.LogErrorf("NewMetaWrapper failed! %v", err.Error())
@@ -41,15 +43,27 @@ func NewSuper(namespace, master string) (s *Super, err error) {
 	return s, nil
 }
 
-func (s *Super) Root() (fs.Node, error) {
+func (s *superblock) Root() (fs.Node, error) {
 	root := NewDir(s, nil)
-	if err := s.InodeGet(ROOT_INO, &root.inode); err != nil {
+	if err := root.InodeGet(ROOT_INO); err != nil {
 		return nil, err
 	}
 	root.parent = root
 	return root, nil
 }
 
-func (s *Super) Statfs(ctx context.Context, req *fuse.StatfsRequest, resp *fuse.StatfsResponse) error {
+func (s *superblock) Statfs(ctx context.Context, req *fuse.StatfsRequest, resp *fuse.StatfsResponse) error {
 	return nil
+}
+
+func (s *superblock) Namespace() string {
+	return s.name
+}
+
+func (s *superblock) MetaWrapper() *meta.MetaWrapper {
+	return s.mw
+}
+
+func (s *superblock) ExtentClient() *stream.ExtentClient {
+	return s.ec
 }
