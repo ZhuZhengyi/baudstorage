@@ -1,0 +1,14 @@
+{
+  "role": "datanode",
+  "port": 5000,
+  "profPort": 5001,
+  "clusterID": "demo",
+  "logDir": "/baudstorage/log",
+  "masterAddr": [
+    "10.196.30.200:80",
+    "10.196.31.141:80",
+    "10.196.31.173:80"
+  ],
+  "rack": "",
+  "disks": ""
+}
