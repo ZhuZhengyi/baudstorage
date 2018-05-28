@@ -58,7 +58,7 @@ const (
 	DefaultMaxMetaPartitionRange = 1<<63 - 1
 	DefaultMinMetaPartitionRange = 1 << 34
 	RuntimeStackBufSize          = 4096
-	TaskWorkerInterval      = time.Second * time.Duration(5)
+	TaskWorkerInterval           = time.Second * time.Duration(5)
 )
 
 const (
