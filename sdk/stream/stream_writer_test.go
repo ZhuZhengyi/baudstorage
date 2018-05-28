@@ -186,7 +186,7 @@ func writeFlushReadTest(t *testing.T, inode uint64, seqNo int, client *ExtentCli
 	if err != nil || write != len(ndata) {
 		OccoursErr(fmt.Errorf("write seqNO[%v] bytes[%v] len[%v] err[%v]\n", seqNo, write, len(ndata), err), t)
 	}
-	fmt.Printf("write ok seqNo[%v], Size[%v]\n", seqNo, write)
+	fmt.Printf("write ok seqNo[%v], Size[%v], Crc[%v]\n", seqNo, write, ndata[CLIENTWRITESIZE])
 
 	//flush
 	err = client.Flush(inode)
@@ -261,6 +261,7 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 		//check crc
 		tempData := rdata[:CLIENTWRITESIZE]
 		crc := crc32.ChecksumIEEE(tempData)
+		fmt.Printf("Crc[%v]\n", rdata[CLIENTWRITESIZE])
 		if byte(crc) != rdata[CLIENTWRITESIZE] {
 			OccoursErr(fmt.Errorf("wrong data crc[%v] writecrc[%v]\n", crc, rdata[CLIENTWRITESIZE]), t)
 		}
