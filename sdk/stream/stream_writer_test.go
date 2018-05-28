@@ -289,7 +289,7 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 		fmt.Printf("readCrc[%v] writeCrc[%v]\n", crc, crcData)
 		for i := 0; i < CRCBYTELEN; i++ {
 			if crc[i] != crcData[i] {
-				OccoursErr(fmt.Errorf("wrong[%i] readcrc[%v] writecrc[%v]\n", i, crc[i], crcData[i]), t)
+				OccoursErr(fmt.Errorf("wrong[%v] readcrc[%v] writecrc[%v]\n", i, crc[i], crcData[i]), t)
 			}
 		}
 
