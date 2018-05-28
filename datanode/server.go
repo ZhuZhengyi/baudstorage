@@ -33,7 +33,6 @@ var (
 )
 
 const (
-	ModuleName      = "DataNode"
 	GetIpFromMaster = "/admin/getIp"
 	DefaultRackName = "huitian_rack1"
 )
@@ -41,7 +40,6 @@ const (
 const (
 	ConfigKeyPort       = "port"       // int
 	ConfigKeyClusterID  = "clusterID"  // string
-	ConfigKeyLogDir     = "logDir"     // string
 	ConfigKeyMasterAddr = "masterAddr" // array
 	ConfigKeyRack       = "rack"       // string
 	ConfigKeyProfPort   = "profPort"   // int
@@ -120,13 +118,11 @@ func (s *DataNode) onShutdown() {
 func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	s.port = int(cfg.GetFloat(ConfigKeyPort))
 	s.clusterId = cfg.GetString(ConfigKeyClusterID)
-	s.logDir = cfg.GetString(ConfigKeyLogDir)
 	for _, ip := range cfg.GetArray(ConfigKeyMasterAddr) {
 		s.masterAddrs = append(s.masterAddrs, ip.(string))
 	}
 
 	s.rackName = cfg.GetString(ConfigKeyRack)
-	_, err = log.NewLog(s.logDir, ModuleName, log.DebugLevel)
 	if err = s.registerToMaster(); err != nil {
 		return
 	}

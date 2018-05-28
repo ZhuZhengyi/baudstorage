@@ -83,6 +83,9 @@ func (m *MetaNode) onStart(cfg *config.Config) (err error) {
 	if err = m.parseConfig(cfg); err != nil {
 		return
 	}
+	if _, err = log.NewLog(m.logDir, moduleName, log.DebugLevel); err != nil {
+		return
+	}
 	if err = m.validNodeID(); err != nil {
 		return
 	}

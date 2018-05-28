@@ -4,6 +4,8 @@ import (
 	"github.com/tiglabs/baudstorage/datanode"
 	"github.com/tiglabs/baudstorage/master"
 	"github.com/tiglabs/baudstorage/metanode"
+	"github.com/tiglabs/baudstorage/util/log"
+	"strings"
 
 	"flag"
 	_ "net/http/pprof"
@@ -13,7 +15,6 @@ import (
 	"syscall"
 
 	"github.com/tiglabs/baudstorage/util/config"
-	"log"
 )
 
 const (
@@ -22,17 +23,24 @@ const (
 
 const (
 	ConfigKeyRole = "role"
+	ConfigKeyLogDir = "logDir"
+	ConfigKeyLogLevel = "logLevel"
 )
 
 const (
-	RoleMastrer = "master"
-	RoleMeta    = "metanode"
-	RoleData    = "datanode"
+	RoleMaster = "master"
+	RoleMeta   = "metanode"
+	RoleData   = "datanode"
+)
+
+const (
+	ModuleMaster = "Master"
+	ModuleMeta = "MetaNode"
+	ModuleData = "DataNode"
 )
 
 var (
 	configFile = flag.String("c", "", "config file path")
-	logLevel   = flag.Int("log", 0, "log level, as DebugLevel = 0")
 )
 
 type Server interface {
@@ -58,24 +66,55 @@ func main() {
 	flag.Parse()
 	cfg := config.LoadConfigFile(*configFile)
 	role := cfg.GetString(ConfigKeyRole)
+	logDir := cfg.GetString(ConfigKeyLogDir)
+	logLevel := cfg.GetString(ConfigKeyLogLevel)
 
 	//for multi-cpu scheduling
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	var server Server
 
+	// Init server instance with specified role configuration.
+	var (
+		server Server
+		module string
+	)
 	switch role {
 	case RoleMeta:
 		server = metanode.NewServer()
-	case RoleMastrer:
+		module = ModuleMeta
+	case RoleMaster:
 		server = master.NewServer()
+		module = ModuleMaster
 	case RoleData:
 		server = datanode.NewServer()
+		module = ModuleData
 	default:
 		log.Println("Fatal: role mismatch: ", role)
 		os.Exit(1)
 		return
 	}
+
+	// Init logging
+	var (
+		level int
+	)
+	switch strings.ToLower(logLevel) {
+	case "debug":
+		level = log.DebugLevel
+	case "info":
+		level = log.InfoLevel
+	case "warn":
+		level = log.WarnLevel
+	case "error":
+		level = log.ErrorLevel
+	default:
+		level = log.ErrorLevel
+	}
+	if _, err := log.NewLog(logDir, module, level); err != nil {
+		os.Exit(1)
+		return
+	}
+
 	interceptSignal(server)
 	err := server.Start(cfg)
 	if err != nil {
