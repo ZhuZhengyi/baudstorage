@@ -14,12 +14,14 @@ import (
 	"testing"
 	"time"
 	"github.com/tiglabs/baudstorage/util"
+	"hash/crc32"
 )
 
 const (
 	CLIENTREADSIZE  = 4 * util.KB
 	CLIENTWRITESIZE = 4 * util.KB
 	CLIENTWRITENUM  = 10
+	TOTALREADSIZE   = (CLIENTWRITESIZE + 1) * CLIENTWRITENUM
 )
 
 var aalock sync.Mutex
@@ -36,20 +38,10 @@ func saveExtentKey(inode uint64, k proto.ExtentKey) (err error) {
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-var uppercaseLetters = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
 func randSeq(n int) string {
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
-}
-
-func uppercaseSeq(n int, a int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = uppercaseLetters[a]
 	}
 	return string(b)
 }
@@ -220,7 +212,10 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 	)
 	inode = 3
 	sk := initInode(inode)
-	writebytes := 0
+	writeBytes := 0
+	readBytes := 0
+	writeStr := randSeq(CLIENTWRITESIZE*2 + 1)
+	data := ([]byte)(writeStr)
 	localWriteFp, localReadFp := prepare(inode, t)
 
 	client.Open(inode)
@@ -228,34 +223,56 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 	client.Open(inode)
 	for seqNo := 0; seqNo < CLIENTWRITENUM; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
-		writeStr := uppercaseSeq(CLIENTWRITESIZE, seqNo)
-		ndata := ([]byte)(writeStr)
+
+		ndata := data[:CLIENTWRITESIZE+1]
+
+		//add checksum
+		tempData := ndata[:CLIENTWRITESIZE]
+		crc := crc32.ChecksumIEEE(tempData)
+		ndata[CLIENTWRITESIZE] = byte(crc)
 
 		go func(seqNo int) {
 			write, err := writeFlushReadTest(t, inode, seqNo, client, ndata, localWriteFp)
 			if err != nil {
 				OccoursErr(fmt.Errorf("write inode[%v] seqNO[%v]  err[%v]\n", inode, seqNo, err), t)
 			}
-			writebytes += write
+			writeBytes += write
 		}(seqNo)
-
 	}
 
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 2)
+	fmt.Printf("write size [%v]\n", writeBytes)
 
-	//read
-	rdata := make([]byte, CLIENTWRITESIZE*CLIENTWRITENUM)
-	read, err := client.Read(inode, rdata, 0, CLIENTWRITESIZE*CLIENTWRITENUM)
-	if err != nil || read != CLIENTWRITESIZE*CLIENTWRITENUM {
-		OccoursErr(fmt.Errorf("read bytes[%v] err[%v]\n", read, err), t)
+	//read check
+	for seqNo := 0; seqNo < CLIENTWRITENUM; seqNo++ {
+		rand.Seed(time.Now().UnixNano())
+
+		rdata := make([]byte, CLIENTWRITESIZE+1)
+		read, err := client.Read(inode, rdata, 0, CLIENTWRITESIZE+1)
+		if err != nil || read != CLIENTWRITESIZE+1 {
+			OccoursErr(fmt.Errorf("read bytes[%v] err[%v]\n", read, err), t)
+		}
+
+		_, err = localReadFp.Write(rdata)
+		if err != nil {
+			OccoursErr(fmt.Errorf("write localFile read inode[%v] err[%v]\n", inode, err), t)
+		}
+
+		//check crc
+		tempData := rdata[:CLIENTWRITESIZE]
+		crc := crc32.ChecksumIEEE(tempData)
+		if byte(crc) != rdata[CLIENTWRITESIZE] {
+			OccoursErr(fmt.Errorf("wrong data crc[%v] writecrc[%v]\n", crc, rdata[CLIENTWRITESIZE]), t)
+		}
+
+		readBytes += read
 	}
 
-	_, err = localReadFp.Write(rdata)
-	if err != nil {
-		OccoursErr(fmt.Errorf("write localFile read inode[%v] err[%v]\n", inode, err), t)
+	if readBytes != TOTALREADSIZE {
+		OccoursErr(fmt.Errorf("read err size [%v]", readBytes), t)
 	}
 
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second)
 
 	//finish
 	client.Close(inode)
