@@ -235,6 +235,8 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 
 	}
 
+	time.Sleep(time.Second*10)
+
 	//read
 	rdata := make([]byte, CLIENTWRITESIZE*100)
 	read, err := client.Read(inode, rdata, 0, CLIENTWRITESIZE*100)
