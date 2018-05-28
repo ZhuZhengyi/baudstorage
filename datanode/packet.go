@@ -70,6 +70,13 @@ func NewPacket() (p *Packet) {
 	return
 }
 
+func (p *Packet)IsMasterCommand()(bool){
+	if p.Opcode==proto.OpDataNodeHeartbeat|| p.Opcode==proto.OpLoadVol || p.Opcode==proto.OpCreateVol{
+		return true
+	}
+	return false
+}
+
 func (p *Packet) GetNextAddr(addrs []string) error {
 	sub := p.goals - p.Nodes
 	if sub < 0 || sub > p.goals || (sub == p.goals && p.Nodes != 0) {

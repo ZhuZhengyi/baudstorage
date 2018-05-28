@@ -71,8 +71,8 @@ const (
 	OpDeleteVol         uint8 = 0x27
 	OpLoadVol           uint8 = 0x28
 	OpDataNodeHeartbeat uint8 = 0x29
-	OpReplicateFile uint8 = 0x2A
-	OpDeleteFile uint8 = 0x2B
+	OpReplicateFile     uint8 = 0x2A
+	OpDeleteFile        uint8 = 0x2B
 
 	// Commons
 	OpIntraGroupNetErr uint8 = 0xF3

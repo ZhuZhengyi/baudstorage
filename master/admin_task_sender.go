@@ -112,7 +112,7 @@ func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) 
 	} else {
 		log.LogError("send task failed,err %v", response.Data)
 	}
-	log.LogDebugf(fmt.Sprintf("sender task:%v to %v,send time:%v,sendCount:%v,status:%v ", task.ID, sender.targetAddr,task.SendTime,task.SendCount,task.Status))
+	log.LogDebugf(fmt.Sprintf("sender task:%v to %v,send time:%v,sendCount:%v,status:%v ", task.ID, sender.targetAddr, task.SendTime, task.SendCount, task.Status))
 	return
 }
 

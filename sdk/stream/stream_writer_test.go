@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util"
+	"hash/crc32"
 	"log"
 	"math/rand"
 	"net/http"
@@ -13,8 +15,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"github.com/tiglabs/baudstorage/util"
-	"hash/crc32"
 )
 
 const (
@@ -51,7 +51,7 @@ func randSeq(n int) string {
 func uppercaseSeq(n int, a int) string {
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = uppercaseLetters[a % 26]
+		b[i] = uppercaseLetters[a%26]
 	}
 	return string(b)
 }
@@ -232,7 +232,7 @@ func TestExtentClient_MultiRoutineWrite(t *testing.T) {
 	client.Open(inode)
 	for seqNo := 0; seqNo < CLIENTWRITENUM; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
-		writeStr := uppercaseSeq(CLIENTWRITESIZE + 1, seqNo)
+		writeStr := uppercaseSeq(CLIENTWRITESIZE+1, seqNo)
 		writeData := ([]byte)(writeStr)
 
 		//add checksum
