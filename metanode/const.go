@@ -51,6 +51,11 @@ const (
 )
 
 var (
+	masterAddrs   []string
+	curMasterAddr string
+)
+
+var (
 	ErrNonLeader = errors.New("non leader")
 	ErrNotLeader = errors.New("not leader")
 )

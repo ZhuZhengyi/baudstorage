@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 func (mp *metaPartition) CreateDentry(req *CreateDentryReq, p *Packet) (err error) {
@@ -79,6 +80,7 @@ func (mp *metaPartition) Lookup(req *LookupReq, p *Packet) (err error) {
 		if err != nil {
 			status = proto.OpErr
 		}
+		log.LogDebugf("Lookup: %v", resp)
 	}
 	p.PackErrorWithBody(status, reply)
 	return
