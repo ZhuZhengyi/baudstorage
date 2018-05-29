@@ -2,6 +2,7 @@ package metanode
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -12,22 +13,12 @@ import (
 	"time"
 
 	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
-)
-
-// Configuration keys
-const (
-	cfgListen      = "listen"
-	cfgMetaDir     = "metaDir"
-	cfgRaftDir     = "raftDir"
-	cfgMasterAddrs = "masterAddrs"
-)
-
-const (
-	metaNodeURL = "/metaNode/add"
+	"github.com/tiglabs/baudstorage/util/ump"
 )
 
 // The MetaNode manage Dentry and Inode information in multiple metaPartition, and
@@ -88,6 +79,9 @@ func (m *MetaNode) onStart(cfg *config.Config) (err error) {
 	if err = m.startMetaManager(); err != nil {
 		return
 	}
+	if err = m.startUMP(); err != nil {
+		return
+	}
 	if err = m.startServer(); err != nil {
 		return
 	}
@@ -114,6 +108,7 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 	m.listen = int(cfg.GetFloat(cfgListen))
 	m.metaDir = cfg.GetString(cfgMetaDir)
 	m.raftDir = cfg.GetString(cfgRaftDir)
+	UMPKey = cfg.GetString(cfgUMPKey)
 	addrs := cfg.GetArray(cfgMasterAddrs)
 	for _, addr := range addrs {
 		masterAddrs = append(masterAddrs, addr.(string))
@@ -132,6 +127,9 @@ func (m *MetaNode) validConfig() (err error) {
 	}
 	if m.raftDir == "" {
 		m.raftDir = defaultRaftDir
+	}
+	if UMPKey == "" {
+		UMPKey = defaultUMPKey
 	}
 	if len(masterAddrs) == 0 {
 		err = errors.New("master Addrs is empty!")
@@ -245,6 +243,33 @@ func postToMaster(reqPath string, body []byte) (msg []byte, err error) {
 			" status_code=%d, msg: %v", reqURL, resp.StatusCode, string(msg))
 		log.LogErrorf(err.Error())
 	}
+	return
+}
+
+func (m *MetaNode) startUMP() (err error) {
+	defaultTimeout := http.DefaultClient.Timeout
+	defer func() {
+		http.DefaultClient.Timeout = defaultTimeout
+	}()
+	// Get cluster name from master
+	http.DefaultClient.Timeout = 2 * time.Second
+	resp, err := http.Get(fmt.Sprintf("http://%s%s", curMasterAddr, metaNodeGetName))
+	if err != nil {
+		err = errors.Errorf("[startUMP]: %s", err.Error())
+		return
+	}
+	defer resp.Body.Close()
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		err = errors.Errorf("[startUMP]: %s", err.Error())
+		return
+	}
+	req := &proto.ClusterInfo{}
+	if err = json.Unmarshal(data, req); err != nil {
+		err = errors.Errorf("[startUMP]: %s", err.Error())
+		return
+	}
+	ump.InitUmp(req.Cluster + "_metaNode")
 	return
 }
 

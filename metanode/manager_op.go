@@ -8,6 +8,7 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/baudstorage/util/ump"
 	raftproto "github.com/tiglabs/raft/proto"
 )
 
@@ -125,6 +126,8 @@ func (m *metaManager) opCreateMetaPartition(conn net.Conn, p *Packet) (err error
 
 // Handle OpCreate Inode
 func (m *metaManager) opCreateInode(conn net.Conn, p *Packet) (err error) {
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	req := &CreateInoReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -148,6 +151,8 @@ func (m *metaManager) opCreateInode(conn net.Conn, p *Packet) (err error) {
 
 // Handle OpCreate
 func (m *metaManager) opCreateDentry(conn net.Conn, p *Packet) (err error) {
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	req := &CreateDentryReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -171,6 +176,8 @@ func (m *metaManager) opCreateDentry(conn net.Conn, p *Packet) (err error) {
 
 // Handle OpDelete Dentry
 func (m *metaManager) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	req := &DeleteDentryReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -193,6 +200,8 @@ func (m *metaManager) opDeleteDentry(conn net.Conn, p *Packet) (err error) {
 }
 
 func (m *metaManager) opDeleteInode(conn net.Conn, p *Packet) (err error) {
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	req := &DeleteInoReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -215,6 +224,8 @@ func (m *metaManager) opDeleteInode(conn net.Conn, p *Packet) (err error) {
 
 // Handle OpReadDir
 func (m *metaManager) opReadDir(conn net.Conn, p *Packet) (err error) {
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	req := &proto.ReadDirRequest{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -238,6 +249,8 @@ func (m *metaManager) opReadDir(conn net.Conn, p *Packet) (err error) {
 
 // Handle OpOpen
 func (m *metaManager) opOpen(conn net.Conn, p *Packet) (err error) {
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	req := &proto.OpenRequest{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -260,6 +273,8 @@ func (m *metaManager) opOpen(conn net.Conn, p *Packet) (err error) {
 }
 
 func (m *metaManager) opMetaInodeGet(conn net.Conn, p *Packet) (err error) {
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	req := &InodeGetReq{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -285,6 +300,8 @@ func (m *metaManager) opMetaInodeGet(conn net.Conn, p *Packet) (err error) {
 }
 
 func (m *metaManager) opMetaLookup(conn net.Conn, p *Packet) (err error) {
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	req := &proto.LookupRequest{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -306,6 +323,8 @@ func (m *metaManager) opMetaLookup(conn net.Conn, p *Packet) (err error) {
 }
 
 func (m *metaManager) opMetaExtentsAdd(conn net.Conn, p *Packet) (err error) {
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	req := &proto.AppendExtentKeyRequest{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -327,6 +346,8 @@ func (m *metaManager) opMetaExtentsAdd(conn net.Conn, p *Packet) (err error) {
 }
 
 func (m *metaManager) opMetaExtentsList(conn net.Conn, p *Packet) (err error) {
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	req := &proto.GetExtentsRequest{}
 	if err = json.Unmarshal(p.Data, req); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -350,10 +371,14 @@ func (m *metaManager) opMetaExtentsList(conn net.Conn, p *Packet) (err error) {
 
 //TODO: not implement
 func (m *metaManager) opMetaExtentsDel(conn net.Conn, p *Packet) (err error) {
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	return
 }
 
 func (m *metaManager) opDeleteMetaPartition(conn net.Conn, p *Packet) (err error) {
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	adminTask := &proto.AdminTask{}
 	if err = json.Unmarshal(p.Data, adminTask); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -400,6 +425,8 @@ end:
 }
 
 func (m *metaManager) opUpdateMetaPartition(conn net.Conn, p *Packet) (err error) {
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	adminTask := &proto.AdminTask{}
 	if err = json.Unmarshal(p.Data, adminTask); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -445,6 +472,8 @@ func (m *metaManager) opUpdateMetaPartition(conn net.Conn, p *Packet) (err error
 }
 
 func (m *metaManager) opLoadMetaPartition(conn net.Conn, p *Packet) (err error) {
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	adminTask := &proto.AdminTask{}
 	if err = json.Unmarshal(p.Data, adminTask); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -492,6 +521,8 @@ func (m *metaManager) opOfflineMetaPartition(conn net.Conn, p *Packet) (err erro
 		reqData []byte
 		req     = &proto.MetaPartitionOfflineRequest{}
 	)
+	tpObject := ump.BeforeTP(UMPKey)
+	defer ump.AfterTP(tpObject, err)
 	adminTask := &proto.AdminTask{}
 	if err = json.Unmarshal(p.Data, adminTask); err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)

@@ -53,6 +53,7 @@ const (
 var (
 	masterAddrs   []string
 	curMasterAddr string
+	UMPKey        string
 )
 
 var (
@@ -65,4 +66,19 @@ const (
 	defaultMetaDir   = "metaDir"
 	defaultRaftDir   = "raftDir"
 	defaultPporfPort = 0
+	defaultUMPKey    = "baudfs"
+)
+
+const (
+	metaNodeURL     = "/metaNode/add"
+	metaNodeGetName = "/admin/getIp"
+)
+
+// Configuration keys
+const (
+	cfgListen      = "listen"
+	cfgMetaDir     = "metaDir"
+	cfgRaftDir     = "raftDir"
+	cfgUMPKey      = "umpKey"
+	cfgMasterAddrs = "masterAddrs"
 )
