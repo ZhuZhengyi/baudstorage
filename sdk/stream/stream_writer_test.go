@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"
+	"github.com/tiglabs/baudstorage/util/log"
 	"hash/crc32"
-	"log"
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
@@ -25,6 +25,13 @@ const (
 	CRCBYTELEN      = 4
 	TOTALSIZE       = (CLIENTWRITESIZE + CRCBYTELEN) * CLIENTWRITENUM
 )
+
+func init() {
+	_, err := log.NewLog("log", "writer_test", log.DebugLevel)
+	if err != nil {
+		panic("Log module init failed")
+	}
+}
 
 var aalock sync.Mutex
 var allKeys map[uint64]*proto.StreamKey
@@ -77,10 +84,10 @@ func openFileForWrite(inode uint64, action string) (f *os.File, err error) {
 
 func initClient(t *testing.T) (client *ExtentClient) {
 	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
+		fmt.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 	var err error
-	client, err = NewExtentClient("log", "stream_write_test", "127.0.0.1:7778", saveExtentKey, updateKey)
+	client, err = NewExtentClient("stream_write_test", "127.0.0.1:7778", saveExtentKey, updateKey)
 	if err != nil {
 		OccoursErr(fmt.Errorf("init client err[%v]", err.Error()), t)
 	}
