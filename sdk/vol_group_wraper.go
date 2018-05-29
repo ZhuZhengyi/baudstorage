@@ -58,6 +58,7 @@ func NewVolGroupWraper(namespace, masterHosts string) (wrapper *VolGroupWrapper,
 	master := strings.Split(masterHosts, ",")
 	wrapper = new(VolGroupWrapper)
 	wrapper.master = master
+	wrapper.namespace = namespace
 	wrapper.ConnPool = pool.NewConnPool()
 	wrapper.readWriteVols = make([]*VolGroup, 0)
 	wrapper.volGroups = make(map[uint32]*VolGroup)
