@@ -342,7 +342,7 @@ func (mp *MetaPartition) generateReplicaTask(nsName string) (tasks []*proto.Admi
 		log.LogWarn(msg)
 		tasks = append(tasks, task)
 	}
-	if lackAddrs := mp.getLackReplication(); lackAddrs == nil {
+	if lackAddrs := mp.getLackReplication(); lackAddrs != nil {
 		msg = fmt.Sprintf("action[getLackReplication], metaPartition:%v  lack replication"+
 			" on :%v PersistenceHosts:%v",
 			mp.PartitionID, lackAddrs, mp.PersistenceHosts)
