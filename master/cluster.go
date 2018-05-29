@@ -225,11 +225,11 @@ func (c *Cluster) createVolGroup(nsName string) (vg *VolGroup, err error) {
 	if volID, err = c.idAlloc.allocatorVolID(); err != nil {
 		goto errDeal
 	}
-	//volID++
-	vg = newVolGroup(volID, ns.volReplicaNum)
 	if targetHosts, err = c.ChooseTargetDataHosts(int(ns.volReplicaNum)); err != nil {
 		goto errDeal
 	}
+	//volID++
+	vg = newVolGroup(volID, ns.volReplicaNum)
 	vg.PersistenceHosts = targetHosts
 	if err = c.syncAddVolGroup(nsName, vg); err != nil {
 		goto errDeal
@@ -407,15 +407,15 @@ func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err err
 		err = elementNotFound(nsName)
 		return
 	}
+
+	if hosts, peers, err = c.ChooseTargetMetaHosts(int(ns.mpReplicaNum)); err != nil {
+		return
+	}
+	log.LogDebugf("target meta hosts:%v,peers:%v", hosts, peers)
 	if partitionID, err = c.idAlloc.allocatorPartitionID(); err != nil {
 		return
 	}
 	mp = NewMetaPartition(partitionID, start, end, nsName)
-	if hosts, peers, err = c.ChooseTargetMetaHosts(int(ns.mpReplicaNum)); err != nil {
-		return
-	}
-
-	log.LogDebugf("target meta hosts:%v,peers:%v", hosts, peers)
 	mp.setPersistenceHosts(hosts)
 	mp.setPeers(peers)
 	if err = c.syncAddMetaPartition(nsName, mp); err != nil {
@@ -492,5 +492,21 @@ func (c *Cluster) getAllNamespaces() (namespaces []string) {
 	for name, _ := range c.namespaces {
 		namespaces = append(namespaces, name)
 	}
+	return
+}
+
+func (c *Cluster) getCanCreateVolCount(ns *NameSpace) (count int) {
+	var (
+		totalCount uint64
+		mutex      sync.Mutex
+	)
+	mutex.Lock()
+	defer mutex.Unlock()
+	c.dataNodes.Range(func(addr, value interface{}) bool {
+		dataNode := value.(*DataNode)
+		totalCount = totalCount + dataNode.RemainWeightsForCreateVol
+		return true
+	})
+	count = int(totalCount / uint64(ns.volReplicaNum))
 	return
 }

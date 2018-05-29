@@ -76,29 +76,32 @@ errDeal:
 
 func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 	var (
-		rstMsg string
-		nsName string
-		ns     *NameSpace
-		count  int
-		err    error
+		rstMsg         string
+		nsName         string
+		ns             *NameSpace
+		reqCreateCount int
+		capacity       int
+		err            error
 	)
 
-	if count, nsName, err = parseCreateVolPara(r); err != nil {
+	if reqCreateCount, nsName, err = parseCreateVolPara(r); err != nil {
 		goto errDeal
 	}
 
 	if ns, err = m.cluster.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
-	for i := 0; i < count; i++ {
-		if count < len(ns.volGroups.volGroups) {
+	capacity = m.cluster.getCanCreateVolCount(ns)
+	for i := 0; i < reqCreateCount; i++ {
+		if reqCreateCount < int(m.cluster.idAlloc.volID) {
 			break
 		}
 		if _, err = m.cluster.createVolGroup(nsName); err != nil {
 			goto errDeal
 		}
 	}
-	rstMsg = fmt.Sprintf(" createVol success")
+	rstMsg = fmt.Sprintf(" createVol success.reqeustCount:%v,cluster volume capacity:%v ,last MaxVolID:%v",
+		reqCreateCount, capacity, m.cluster.idAlloc.volID)
 	io.WriteString(w, rstMsg)
 
 	return

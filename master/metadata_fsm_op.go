@@ -187,7 +187,9 @@ func (c *Cluster) handleApply(cmd *Metadata) (err error) {
 	if cmd == nil {
 		return fmt.Errorf("metadata can't be null")
 	}
-
+	if c.partition.IsLeader() {
+		return
+	}
 	switch cmd.Op {
 	case OpSyncAddDataNode:
 		c.applyAddDataNode(cmd)
@@ -256,8 +258,7 @@ func (c *Cluster) applyAddVolGroup(cmd *Metadata) {
 		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum)
 		ns, _ := c.getNamespace(keys[2])
 		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
-		ns.volGroups.volGroups = append(ns.volGroups.volGroups, vg)
-
+		ns.volGroups.putVol(vg)
 	}
 }
 
