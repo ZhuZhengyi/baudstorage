@@ -104,7 +104,7 @@ func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error)
 	var err1 error
 	for i := 0; i < len(s.masterAddrs); i++ {
 		var resp *http.Response
-		log.LogInfo(fmt.Sprintf("post to master url[%v] chongshi[%v]",url,i))
+		log.LogInfo(fmt.Sprintf("post to master[%v] url[%v] chongshi[%v]",masterAddr,url,i))
 		if masterAddr == "" {
 			index := atomic.AddUint32(&s.masterAddrIndex, 1)
 			if index >= uint32(len(s.masterAddrs)) {
