@@ -147,14 +147,18 @@ func (sender *AdminTaskSender) getNeedDealTask() (tasks []*proto.AdminTask) {
 	delTasks := make([]*proto.AdminTask, 0)
 	sender.Lock()
 	for _, task := range sender.TaskMap {
-		if task.CheckTaskTimeOut() {
-			delTasks = append(delTasks, task)
-			continue
+		if !task.CheckTaskTimeOut() {
+			tasks = append(tasks, task)
 		}
 		if !task.CheckTaskNeedRetrySend() {
 			continue
 		}
-		tasks = append(tasks, task)
+
+		if task.CheckTaskTimeOut() {
+			delTasks = append(delTasks, task)
+			continue
+		}
+
 		if len(tasks) == MinTaskLen {
 			break
 		}

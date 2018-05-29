@@ -86,7 +86,6 @@ func (c *Cluster) startCheckReleaseVolGroups() {
 func (c *Cluster) startCheckHeartbeat() {
 	go func() {
 		for {
-			log.LogDebugf("isLeader:%v", c.partition.IsLeader())
 			if c.partition.IsLeader() {
 				c.checkDataNodeHeartbeat()
 				time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
@@ -112,7 +111,6 @@ func (c *Cluster) checkDataNodeHeartbeat() {
 		tasks = append(tasks, task)
 		return true
 	})
-	log.LogDebugf("checkDataNodeHeartbeat task len:%v", len(tasks))
 	c.putDataNodeTasks(tasks)
 }
 
@@ -124,7 +122,6 @@ func (c *Cluster) checkMetaNodeHeartbeat() {
 		tasks = append(tasks, task)
 		return true
 	})
-	log.LogDebugf("checkMetaNodeHeartbeat task len:%v", len(tasks))
 	c.putMetaNodeTasks(tasks)
 }
 
