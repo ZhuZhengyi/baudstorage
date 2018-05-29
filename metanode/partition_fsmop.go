@@ -6,41 +6,30 @@ import (
 
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util/log"
 )
 
 // GetDentry query dentry from DentryTree with specified dentry info;
-// if it exist, the required parameter is the dentry entity,
-// if not exist, not change
-func (mp *metaPartition) getDentry(dentry *Dentry) (status uint8) {
-	status = proto.OpOk
-	log.LogDebugf("[getDentry1]: %v", dentry)
+func (mp *metaPartition) getDentry(dentry *Dentry) (*Dentry, uint8) {
+	status := proto.OpOk
 	item := mp.dentryTree.Get(dentry)
 	if item == nil {
 		status = proto.OpNotExistErr
-		mp.dentryTree.Ascend(func(i btree.Item) bool {
-			log.LogDebugf("current dentry tree: %v", i)
-			return true
-		})
-		return
+		return nil, status
 	}
 	dentry = item.(*Dentry)
-	log.LogDebugf("[getDentry2]: %v", dentry)
-	return
+	return dentry, status
 }
 
 // GetInode query inode from InodeTree with specified inode info;
-// if it exist, the required parameter is the inode entity,
-// if not exist, not change
-func (mp *metaPartition) getInode(ino *Inode) (status uint8) {
-	status = proto.OpOk
+func (mp *metaPartition) getInode(ino *Inode) (*Inode, uint8) {
+	status := proto.OpOk
 	item := mp.inodeTree.Get(ino)
 	if item == nil {
 		status = proto.OpNotExistErr
-		return
+		return nil, status
 	}
 	ino = item.(*Inode)
-	return
+	return ino, status
 }
 
 func (mp *metaPartition) getInodeTree() *btree.BTree {
@@ -63,18 +52,18 @@ func (mp *metaPartition) createDentry(dentry *Dentry) (status uint8) {
 }
 
 // DeleteDentry delete dentry from dentry tree.
-func (mp *metaPartition) deleteDentry(dentry *Dentry) (status uint8) {
+func (mp *metaPartition) deleteDentry(dentry *Dentry) (*Dentry, uint8) {
 	// TODO: Implement it.
-	status = proto.OpOk
+	status := proto.OpOk
 	mp.dentryMu.Lock()
 	item := mp.dentryTree.Delete(dentry)
 	mp.dentryMu.Unlock()
 	if item == nil {
 		status = proto.OpNotExistErr
-		return
+		return nil, status
 	}
 	dentry = item.(*Dentry)
-	return
+	return dentry, status
 }
 
 // CreateInode create inode to inode tree.
@@ -93,18 +82,18 @@ func (mp *metaPartition) createInode(ino *Inode) (status uint8) {
 }
 
 // DeleteInode delete specified inode item from inode tree.
-func (mp *metaPartition) deleteInode(ino *Inode) (status uint8) {
+func (mp *metaPartition) deleteInode(ino *Inode) (*Inode, uint8) {
 	// TODO: Implement it.
-	status = proto.OpOk
+	status := proto.OpOk
 	mp.inodeMu.Lock()
 	item := mp.inodeTree.Delete(ino)
 	mp.inodeMu.Unlock()
 	if item == nil {
 		status = proto.OpNotExistErr
-		return
+		return nil, status
 	}
 	ino = item.(*Inode)
-	return
+	return ino, status
 }
 
 func (mp *metaPartition) openFile(ino *Inode) (status uint8) {
