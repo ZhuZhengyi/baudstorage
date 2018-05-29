@@ -17,6 +17,11 @@ import (
 	"github.com/tiglabs/baudstorage/util/pool"
 )
 
+const (
+	VolViewUrl            = "/client/vols?name="
+	ActionGetVolGroupView = "ActionGetVolGroupView"
+)
+
 type VolGroup struct {
 	VolId      uint32
 	Status     uint8
@@ -39,17 +44,12 @@ func (vg *VolGroup) GetAllAddrs() (m string) {
 	return
 }
 
-const (
-	VolViewUrl            = "/client/vols?name="
-	ActionGetVolGroupView = "ActionGetVolGroupView"
-)
-
 type VolGroupWrapper struct {
 	namespace     string
 	master        []string
 	volGroups     map[uint32]*VolGroup
 	readWriteVols []*VolGroup
-	ConnPool      *pool.ConnPool
+	conns         *pool.ConnPool
 	execludeVolCh chan uint32
 	sync.RWMutex
 }
@@ -59,7 +59,7 @@ func NewVolGroupWraper(namespace, masterHosts string) (wrapper *VolGroupWrapper,
 	wrapper = new(VolGroupWrapper)
 	wrapper.master = master
 	wrapper.namespace = namespace
-	wrapper.ConnPool = pool.NewConnPool()
+	wrapper.conns = pool.NewConnPool()
 	wrapper.readWriteVols = make([]*VolGroup, 0)
 	wrapper.volGroups = make(map[uint32]*VolGroup)
 	wrapper.execludeVolCh = make(chan uint32, 10000)
@@ -158,17 +158,16 @@ func (wrapper *VolGroupWrapper) updateVolGroup(views []*VolGroup) {
 	return
 }
 
-func isExcluse(volId uint32, excludes *[]uint32) (exclude bool) {
-	for _, eId := range *excludes {
-		if eId == volId {
+func isExcluded(volID uint32, excludes []uint32) bool {
+	for _, eid := range excludes {
+		if eid == volID {
 			return true
 		}
 	}
-
-	return
+	return false
 }
 
-func (wrapper *VolGroupWrapper) GetWriteVol(exclude *[]uint32) (v *VolGroup, err error) {
+func (wrapper *VolGroupWrapper) GetWriteVol(exclude []uint32) (v *VolGroup, err error) {
 	wrapper.RLock()
 	if len(wrapper.readWriteVols) == 0 {
 		wrapper.RUnlock()
@@ -178,13 +177,13 @@ func (wrapper *VolGroupWrapper) GetWriteVol(exclude *[]uint32) (v *VolGroup, err
 	randomIndex := rand.Intn(len(wrapper.readWriteVols))
 	v = wrapper.readWriteVols[randomIndex]
 	wrapper.RUnlock()
-	if !isExcluse(v.VolId, exclude) {
+	if !isExcluded(v.VolId, exclude) {
 		return
 	}
 	wrapper.RLock()
 	defer wrapper.RUnlock()
 	for _, v = range wrapper.readWriteVols {
-		if !isExcluse(v.VolId, exclude) {
+		if !isExcluded(v.VolId, exclude) {
 			return
 		}
 	}
@@ -203,10 +202,9 @@ func (wrapper *VolGroupWrapper) GetVol(volId uint32) (v *VolGroup, err error) {
 }
 
 func (wrapper *VolGroupWrapper) GetConnect(addr string) (conn net.Conn, err error) {
-	return wrapper.ConnPool.Get(addr)
+	return wrapper.conns.Get(addr)
 }
 
 func (wrapper *VolGroupWrapper) PutConnect(conn net.Conn) {
-	wrapper.ConnPool.Put(conn)
-
+	wrapper.conns.Put(conn)
 }

@@ -252,7 +252,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	)
 	err = fmt.Errorf("cannot alloct new extent after maxrery")
 	for i := 0; i < MaxSelectVolForWrite; i++ {
-		if vol, err = stream.wrapper.GetWriteVol(&stream.execludeVols); err != nil {
+		if vol, err = stream.wrapper.GetWriteVol(stream.execludeVols); err != nil {
 			continue
 		}
 		if extentId, err = stream.createExtent(vol); err != nil {
