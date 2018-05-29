@@ -70,7 +70,7 @@ func (mp *metaPartition) Lookup(req *LookupReq, p *Packet) (err error) {
 		Name:     req.Name,
 	}
 	log.LogDebugf("Lookup1: %v", dentry)
-	status := mp.getDentry(dentry)
+	dentry, status := mp.getDentry(dentry)
 	var reply []byte
 	if status == proto.OpOk {
 		resp := &LookupResp{

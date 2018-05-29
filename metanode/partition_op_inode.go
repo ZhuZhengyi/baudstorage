@@ -82,7 +82,7 @@ func (mp *metaPartition) InodeGet(req *InodeGetReq, p *Packet) (err error) {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
-	status := mp.getInode(ino)
+	ino, status := mp.getInode(ino)
 	var reply []byte
 	if status == proto.OpOk {
 		resp := &proto.InodeGetResponse{

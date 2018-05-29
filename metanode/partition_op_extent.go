@@ -26,7 +26,7 @@ func (mp *metaPartition) ExtentAppend(req *proto.AppendExtentKeyRequest, p *Pack
 func (mp *metaPartition) ExtentsList(req *proto.GetExtentsRequest,
 	p *Packet) (err error) {
 	ino := NewInode(req.Inode, 0)
-	status := mp.getInode(ino)
+	ino, status := mp.getInode(ino)
 	var reply []byte
 	if status == proto.OpOk {
 		resp := &proto.GetExtentsResponse{}
