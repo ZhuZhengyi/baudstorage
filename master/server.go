@@ -52,9 +52,9 @@ func (m *Master) Start(cfg *config.Config) (err error) {
 	if err = m.checkConfig(cfg); err != nil {
 		return
 	}
-	if _, err = log.NewLog(m.logDir, LogModule, m.logLevel); err != nil {
-		return
-	}
+	//if _, err = log.NewLog(m.logDir, LogModule, m.logLevel); err != nil {
+	//	return
+	//}
 	if err = m.createRaftServer(); err != nil {
 		return
 	}
