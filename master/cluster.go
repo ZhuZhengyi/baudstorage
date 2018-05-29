@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
+	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 	"sync"
 	"time"
@@ -221,14 +222,13 @@ func (c *Cluster) createVolGroup(nsName string) (vg *VolGroup, err error) {
 	if ns, err = c.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
-
-	if volID, err = c.idAlloc.allocatorVolID(); err != nil {
-		goto errDeal
-	}
 	if targetHosts, err = c.ChooseTargetDataHosts(int(ns.volReplicaNum)); err != nil {
 		goto errDeal
 	}
 	//volID++
+	if volID, err = c.idAlloc.allocatorVolID(); err != nil {
+		goto errDeal
+	}
 	vg = newVolGroup(volID, ns.volReplicaNum)
 	vg.PersistenceHosts = targetHosts
 	if err = c.syncAddVolGroup(nsName, vg); err != nil {
@@ -495,7 +495,7 @@ func (c *Cluster) getAllNamespaces() (namespaces []string) {
 	return
 }
 
-func (c *Cluster) getCanCreateVolCount(ns *NameSpace) (count int) {
+func (c *Cluster) getVolCapacity(ns *NameSpace) (count int) {
 	var (
 		totalCount uint64
 		mutex      sync.Mutex
@@ -504,7 +504,7 @@ func (c *Cluster) getCanCreateVolCount(ns *NameSpace) (count int) {
 	defer mutex.Unlock()
 	c.dataNodes.Range(func(addr, value interface{}) bool {
 		dataNode := value.(*DataNode)
-		totalCount = totalCount + dataNode.RemainWeightsForCreateVol
+		totalCount = totalCount + dataNode.RemainWeightsForCreateVol/util.DefaultVolSize
 		return true
 	})
 	count = int(totalCount / uint64(ns.volReplicaNum))

@@ -91,7 +91,7 @@ func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 	if ns, err = m.cluster.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
-	capacity = m.cluster.getCanCreateVolCount(ns)
+	capacity = m.cluster.getVolCapacity(ns)
 	for i := 0; i < reqCreateCount; i++ {
 		if reqCreateCount < int(m.cluster.idAlloc.volID) {
 			break
