@@ -79,9 +79,6 @@ func (vm *VolGroupMap) GetVolsView(minVolID uint64) (vrs []*VolResponse) {
 		if vol.VolID <= minVolID {
 			continue
 		}
-		if vol.status == VolUnavailable {
-			continue
-		}
 		vr := vol.convertToVolResponse()
 		vrs = append(vrs, vr)
 	}
