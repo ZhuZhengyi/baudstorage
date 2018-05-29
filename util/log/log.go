@@ -483,7 +483,7 @@ func LogInfo(v ...interface{}) {
 
 func LogInfof(format string, v ...interface{}) {
 	s := fmt.Sprintf(format, v...)
-	s = glog.SetPrefix(s, levels[2])
+	s = glog.SetPrefix(s, levels[1])
 	glog.info.Print(s)
 }
 
