@@ -143,6 +143,7 @@ func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (statu
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
+		log.LogErrorf("lookup: ResultCode(%v)", packet.ResultCode)
 		return
 	}
 
@@ -161,6 +162,8 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 		Inode:       inode,
 	}
 
+	log.LogDebugf("iget request: Namespace(%v) PartitionID(%v) Inode(%v)", mw.namespace, mc.id, inode)
+
 	packet := proto.NewPacket()
 	packet.Opcode = proto.OpMetaInodeGet
 	err = packet.MarshalData(req)
@@ -177,6 +180,7 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
+		log.LogErrorf("iget: status not OK (%v)", packet.ResultCode)
 		return
 	}
 
