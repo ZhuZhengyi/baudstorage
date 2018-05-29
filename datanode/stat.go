@@ -3,7 +3,6 @@ package datanode
 import (
 	"bytes"
 	"fmt"
-	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/util/log"
 	"io/ioutil"
 	"net/http"
@@ -120,8 +119,7 @@ func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error)
 				index = 0
 			}
 			masterAddr = s.masterAddrs[index]
-			err = errors.Annotatef(err, ActionPostToMaster+" url[%v] Index[%v]", url, i)
-			continue
+			resp, err = post(data, "http://"+masterAddr+url)
 		}
 		scode := resp.StatusCode
 		msg, _ = ioutil.ReadAll(resp.Body)
@@ -136,6 +134,7 @@ func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error)
 			return nil, fmt.Errorf("postTo %v scode %v msg %v", url, scode, string(msg))
 		}
 		success = true
+		log.LogInfo(fmt.Sprintf("url[%v] to master[%v] response[%v] code[%v]",url,masterAddr,string(msg),scode))
 		break
 	}
 	if !success {

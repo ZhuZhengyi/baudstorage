@@ -104,7 +104,8 @@ func (s *DataNode) createVol(pkg *Packet) {
 	response := &proto.CreateVolResponse{}
 	request := &proto.CreateVolRequest{}
 	if task.OpCode == proto.OpCreateVol {
-		request = task.Request.(*proto.CreateVolRequest)
+		bytes, _ := json.Marshal(task.Request)
+		json.Unmarshal(bytes,request)
 		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
 		if err != nil {
 			response.Status = proto.OpErr
@@ -132,6 +133,8 @@ func (s *DataNode) heartBeats(pkg *Packet) {
 	request := &proto.HeartBeatRequest{}
 	response := &proto.DataNodeHeartBeatResponse{}
 	if task.OpCode == proto.OpDataNodeHeartbeat {
+		bytes, _ := json.Marshal(task.Request)
+		json.Unmarshal(bytes,request)
 		response.Status = proto.OpOk
 		masterAddr = request.MasterAddr
 	} else {
@@ -154,7 +157,8 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	request := &proto.DeleteVolRequest{}
 	response := &proto.DeleteVolResponse{}
 	if task.OpCode == proto.OpCreateVol {
-		request = task.Request.(*proto.DeleteVolRequest)
+		bytes, _ := json.Marshal(task.Request)
+		json.Unmarshal(bytes,request)
 		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
 		if err != nil {
 			response.Status = proto.OpErr
@@ -182,7 +186,8 @@ func (s *DataNode) loadVol(pkg *Packet) {
 	request := &proto.LoadVolRequest{}
 	response := &proto.LoadVolResponse{}
 	if task.OpCode == proto.OpCreateVol {
-		request = task.Request.(*proto.LoadVolRequest)
+		bytes, _ := json.Marshal(task.Request)
+		json.Unmarshal(bytes,request)
 		v := s.space.getVol(uint32(request.VolId))
 		if v == nil {
 			response.Status = proto.OpErr
