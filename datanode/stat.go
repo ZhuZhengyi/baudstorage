@@ -121,8 +121,7 @@ func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error)
 				index = 0
 			}
 			masterAddr = s.masterAddrs[index]
-			err = errors.Annotatef(err, ActionPostToMaster+" url[%v] Index[%v]", url, i)
-			continue
+			resp, err = post(data, "http://"+masterAddr+url)
 		}
 		scode := resp.StatusCode
 		msg, _ = ioutil.ReadAll(resp.Body)
