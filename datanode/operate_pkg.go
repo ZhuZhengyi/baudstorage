@@ -108,10 +108,12 @@ func (s *DataNode) createVol(pkg *Packet) {
 		json.Unmarshal(bytes,request)
 		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
 		if err != nil {
+			response.VolId = uint64(request.VolId)
 			response.Status = proto.TaskFail
 			response.Result = err.Error()
 		} else {
 			response.Status = proto.TaskSuccess
+			response.VolId=request.VolId
 		}
 	} else {
 		response.VolId = uint64(request.VolId)
@@ -162,11 +164,12 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	pkg.PackOkReply()
 	request := &proto.DeleteVolRequest{}
 	response := &proto.DeleteVolResponse{}
-	if task.OpCode == proto.OpCreateVol {
+	if task.OpCode == proto.OpDeleteVol {
 		bytes, _ := json.Marshal(task.Request)
 		json.Unmarshal(bytes,request)
 		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
 		if err != nil {
+			response.VolId = uint64(request.VolId)
 			response.Status = proto.TaskFail
 			response.Result = err.Error()
 		} else {
@@ -174,6 +177,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 			response.Status = proto.TaskSuccess
 		}
 	} else {
+		response.VolId = uint64(request.VolId)
 		response.Status = proto.TaskFail
 		response.Result = "unavali opcode "
 	}
@@ -192,17 +196,20 @@ func (s *DataNode) loadVol(pkg *Packet) {
 	pkg.PackOkReply()
 	request := &proto.LoadVolRequest{}
 	response := &proto.LoadVolResponse{}
-	if task.OpCode == proto.OpCreateVol {
+	if task.OpCode == proto.OpLoadVol {
 		bytes, _ := json.Marshal(task.Request)
 		json.Unmarshal(bytes,request)
 		v := s.space.getVol(uint32(request.VolId))
 		if v == nil {
 			response.Status = proto.TaskFail
+			response.VolId = uint64(request.VolId)
 			response.Result = fmt.Sprintf("vol[%v] not found", request.VolId)
 		} else {
 			response = v.LoadVol()
+			response.VolId = uint64(request.VolId)
 		}
 	} else {
+		response.VolId = uint64(request.VolId)
 		response.Status = proto.TaskFail
 		response.Result = "unavali opcode "
 	}
