@@ -88,8 +88,8 @@ func (c *Cluster) startCheckHeartbeat() {
 		for {
 			if c.partition.IsLeader() {
 				c.checkDataNodeHeartbeat()
-				time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
 			}
+			time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
 		}
 	}()
 
@@ -97,8 +97,8 @@ func (c *Cluster) startCheckHeartbeat() {
 		for {
 			if c.partition.IsLeader() {
 				c.checkMetaNodeHeartbeat()
-				time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
 			}
+			time.Sleep(time.Second * DefaultCheckHeartbeatIntervalSeconds)
 		}
 	}()
 }

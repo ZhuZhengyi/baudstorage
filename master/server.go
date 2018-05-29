@@ -85,7 +85,7 @@ func (m *Master) checkConfig(cfg *config.Config) (err error) {
 		return fmt.Errorf("%v,err:%v", ErrBadConfFile, err.Error())
 	}
 
-	if m.ip == "" || m.port == "" ||  m.walDir == "" || m.storeDir == "" || m.clusterName == "" {
+	if m.ip == "" || m.port == "" || m.walDir == "" || m.storeDir == "" || m.clusterName == "" {
 		return fmt.Errorf("%v,err:%v", ErrBadConfFile, "one of (ip,port,walDir,storeDir,clusterName) is null")
 	}
 
