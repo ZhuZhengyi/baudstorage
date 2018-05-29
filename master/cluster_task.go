@@ -227,10 +227,10 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	if metaNode, err = c.getMetaNode(nodeAddr); err != nil {
 		goto errDeal
 	}
-	if _, ok := metaNode.Sender.TaskMap[task.ID]; !ok {
-		err = taskNotFound(task.ID)
-		goto errDeal
-	}
+	//if _, ok := metaNode.Sender.TaskMap[task.ID]; !ok {
+	//	err = taskNotFound(task.ID)
+	//	goto errDeal
+	//}
 	if err = UnmarshalTaskResponse(task); err != nil {
 		goto errDeal
 	}
