@@ -83,7 +83,7 @@ func (space *SpaceManager) updateMetrics() {
 }
 
 func (space *SpaceManager) getMinVolCntDisk() (d *Disk) {
-	space.diskLock.RLocker()
+	space.diskLock.RLock()
 	defer space.diskLock.RUnlock()
 	var minVolCnt uint64
 	minVolCnt = math.MaxUint64
