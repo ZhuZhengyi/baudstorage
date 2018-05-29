@@ -169,6 +169,10 @@ func isExcluse(volId uint32, excludes *[]uint32) (exclude bool) {
 
 func (wrapper *VolGroupWrapper) GetWriteVol(exclude *[]uint32) (v *VolGroup, err error) {
 	wrapper.RLock()
+	if len(wrapper.readWriteVols) == 0 {
+		wrapper.RUnlock()
+		return nil, fmt.Errorf("no volGroup for write")
+	}
 	rand.Seed(time.Now().UnixNano())
 	randomIndex := rand.Intn(len(wrapper.readWriteVols))
 	v = wrapper.readWriteVols[randomIndex]
