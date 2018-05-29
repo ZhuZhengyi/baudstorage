@@ -157,6 +157,52 @@ func (p *Packet) GetOpMesg(opcode uint8) (m string) {
 		m = "ArgUnmatchErr"
 	case OpNotExistErr:
 		m = "NotExistErr"
+	case OpMetaCreateInode:
+		m="OpMetaCreateInode"
+	case OpMetaDeleteInode:
+		m="OpMetaDeleteInode"
+	case OpMetaCreateDentry:
+		m="OpMetaCreateDentry"
+	case OpMetaDeleteDentry:
+		m="OpMetaDeleteDentry"
+	case OpMetaOpen:
+		m="OpMetaOpen"
+	case OpMetaLookup:
+		m="OpMetaLookup"
+	case OpMetaReadDir:
+		m="OpMetaReadDir"
+	case OpMetaInodeGet:
+		m="OpMetaInodeGet"
+	case OpMetaExtentsAdd:
+		m="OpMetaExtentsAdd"
+	case OpMetaExtentsDel:
+		m="OpMetaExtentsDel"
+	case OpMetaExtentsList:
+		m="OpMetaExtentsList"
+	case OpCreateMetaPartition:
+		m="OpCreateMetaPartition"
+	case OpMetaNodeHeartbeat:
+		m="OpMetaNodeHeartbeat"
+	case OpDeleteMetaPartition:
+		m="OpDeleteMetaPartition"
+	case OpUpdateMetaPartition:
+		m="OpUpdateMetaPartition"
+	case OpLoadMetaPartition:
+		m="OpLoadMetaPartition"
+	case OpOfflineMetaPartition:
+		m="OpOfflineMetaPartition"
+	case OpCreateVol:
+		m="OpCreateVol"
+	case OpDeleteVol:
+		m="OpDeleteVol"
+	case OpLoadVol:
+		m="OpLoadVol"
+	case OpDataNodeHeartbeat:
+		m="OpDataNodeHeartbeat"
+	case OpReplicateFile:
+		m="OpReplicateFile"
+	case OpDeleteFile:
+		m="OpDeleteFile"
 	case OpDiskNoSpaceErr:
 		m = "DiskNoSpaceErr"
 	case OpDiskErr:
@@ -174,7 +220,7 @@ func (p *Packet) GetOpMesg(opcode uint8) (m string) {
 	case OpInodeFullErr:
 		m = "InodeFullErr"
 	default:
-		return ""
+		return fmt.Sprintf("unknow opcode %v",opcode)
 
 	}
 	return
