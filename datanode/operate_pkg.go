@@ -169,6 +169,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 		json.Unmarshal(bytes,request)
 		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
 		if err != nil {
+			response.VolId = uint64(request.VolId)
 			response.Status = proto.TaskFail
 			response.Result = err.Error()
 		} else {
@@ -176,6 +177,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 			response.Status = proto.TaskSuccess
 		}
 	} else {
+		response.VolId = uint64(request.VolId)
 		response.Status = proto.TaskFail
 		response.Result = "unavali opcode "
 	}
@@ -200,11 +202,14 @@ func (s *DataNode) loadVol(pkg *Packet) {
 		v := s.space.getVol(uint32(request.VolId))
 		if v == nil {
 			response.Status = proto.TaskFail
+			response.VolId = uint64(request.VolId)
 			response.Result = fmt.Sprintf("vol[%v] not found", request.VolId)
 		} else {
 			response = v.LoadVol()
+			response.VolId = uint64(request.VolId)
 		}
 	} else {
+		response.VolId = uint64(request.VolId)
 		response.Status = proto.TaskFail
 		response.Result = "unavali opcode "
 	}
