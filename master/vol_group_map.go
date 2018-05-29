@@ -75,7 +75,7 @@ func (vm *VolGroupMap) updateVolResponseCache(needUpdate bool, minVolID uint64) 
 
 func (vm *VolGroupMap) GetVolsView(minVolID uint64) (vrs []*VolResponse) {
 	vrs = make([]*VolResponse, 0)
-	log.LogDebugf("volGroupMapLen[%v],volGroupsLen[%v],minVolID[%v]",len(vm.volGroupMap),len(vm.volGroups),minVolID)
+	log.LogDebugf("volGroupMapLen[%v],volGroupsLen[%v],minVolID[%v],volGroupMap[%v],volGroups[%v]", len(vm.volGroupMap), len(vm.volGroups), minVolID, vm.volGroupMap, vm.volGroups)
 	for _, vol := range vm.volGroupMap {
 		if vol.VolID <= minVolID {
 			continue

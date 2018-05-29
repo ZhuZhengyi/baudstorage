@@ -89,7 +89,9 @@ func (fc *FileInCore) generateFileCrcTask(volID uint64, liveVols []*Vol, volType
 }
 
 func generateOpDeleteFileTask(addr string, volId uint64, name string) (task *proto.AdminTask) {
-	return proto.NewAdminTask(proto.OpDeleteFile, addr, newDeleteFileRequest(volId, name))
+	t := proto.NewAdminTask(proto.OpDeleteFile, addr, newDeleteFileRequest(volId, name))
+	t.ID = fmt.Sprintf("%v_volID[%v]_fName[%v]", t.ID, volId, name)
+	return t
 }
 
 func (fc *FileInCore) isCheckCrc() bool {

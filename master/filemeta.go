@@ -84,7 +84,9 @@ func (fc *FileInCore) generatorDeleteFileTask(volID uint64) (tasks []*proto.Admi
 		vfDeleteNode := fm.getLocationAddr()
 		msg := fmt.Sprintf(DeleteFileInCoreInfo+"volID:%v  File:%v  Delete on Node:%v ", volID, fc.Name, vfDeleteNode)
 		log.LogDebug(msg)
-		tasks = append(tasks, proto.NewAdminTask(proto.OpDeleteFile, vfDeleteNode, newDeleteFileRequest(volID, fc.Name)))
+		t := proto.NewAdminTask(proto.OpDeleteFile, vfDeleteNode, newDeleteFileRequest(volID, fc.Name))
+		t.ID = fmt.Sprintf("%v_volID[%v]_fName[%v]", t.ID, volID, fc.Name)
+		tasks = append(tasks)
 	}
 
 	return

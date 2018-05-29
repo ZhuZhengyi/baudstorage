@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
+	"metanode/proto/mp"
 	"strings"
 	"time"
 )
@@ -370,7 +371,9 @@ func (mp *MetaPartition) generateCreateMetaPartitionTasks(specifyAddrs []string,
 	}
 
 	for _, addr := range hosts {
-		tasks = append(tasks, proto.NewAdminTask(proto.OpCreateMetaPartition, addr, req))
+		t := proto.NewAdminTask(proto.OpCreateMetaPartition, addr, req)
+		t.ID = fmt.Sprintf("%v_pid[%v]", t.ID, mp.PartitionID)
+		tasks = append(tasks, t)
 	}
 	return
 }
@@ -386,6 +389,7 @@ func (mp *MetaPartition) generateOfflineTask(nsName string, removePeer proto.Pee
 	}
 	req := &proto.MetaPartitionOfflineRequest{PartitionID: mp.PartitionID, NsName: nsName, RemovePeer: removePeer, AddPeer: addPeer}
 	t = proto.NewAdminTask(proto.OpOfflineMetaPartition, mr.Addr, req)
+	t.ID = fmt.Sprintf("%v_pid[%v]", t.ID, mp.PartitionID)
 	return
 }
 
@@ -393,6 +397,7 @@ func (mp *MetaPartition) generateLoadMetaPartitionTasks() (tasks []*proto.AdminT
 	req := &proto.LoadMetaPartitionMetricRequest{PartitionID: mp.PartitionID}
 	for _, mr := range mp.Replicas {
 		t := proto.NewAdminTask(proto.OpLoadMetaPartition, mr.Addr, req)
+		t.ID = fmt.Sprintf("%v_pid[%v]", t.ID, mp.PartitionID)
 		tasks = append(tasks, t)
 	}
 
@@ -407,12 +412,14 @@ func (mp *MetaPartition) generateUpdateMetaReplicaTask(partitionID uint64, end u
 	}
 	req := &proto.UpdateMetaPartitionRequest{PartitionID: partitionID, End: end, NsName: mp.nsName}
 	t = proto.NewAdminTask(proto.OpUpdateMetaPartition, mr.Addr, req)
+	t.ID = fmt.Sprintf("%v_pid[%v]", t.ID, mp.PartitionID)
 	return
 }
 
 func (mr *MetaReplica) generateDeleteReplicaTask(partitionID uint64) (t *proto.AdminTask) {
 	req := &proto.DeleteMetaPartitionRequest{PartitionID: partitionID}
 	t = proto.NewAdminTask(proto.OpDeleteMetaPartition, mr.Addr, req)
+	t.ID = fmt.Sprintf("%v_pid[%v]", t.ID, partitionID)
 	return
 }
 

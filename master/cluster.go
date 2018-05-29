@@ -345,6 +345,7 @@ func (c *Cluster) volOffline(offlineAddr, nsName string, vg *VolGroup, errMsg st
 	vg.volOffLineInMem(offlineAddr)
 	vg.checkAndRemoveMissVol(offlineAddr)
 	task = proto.NewAdminTask(proto.OpCreateVol, offlineAddr, newCreateVolRequest(vg.volType, vg.VolID))
+	task.ID = fmt.Sprintf("%v_volID[%v]", task.ID, vg.VolID)
 	tasks = make([]*proto.AdminTask, 0)
 	tasks = append(tasks, task)
 	c.putDataNodeTasks(tasks)
