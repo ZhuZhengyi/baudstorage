@@ -394,7 +394,7 @@ func (m *Master) metaPartitionOffline(w http.ResponseWriter, r *http.Request) {
 		msg              string
 		err              error
 	)
-	if nodeAddr, nsName, partitionID, err = parseMetaPartitionOffline(r); err != nil {
+	if nsName,nodeAddr, partitionID, err = parseMetaPartitionOffline(r); err != nil {
 		goto errDeal
 	}
 

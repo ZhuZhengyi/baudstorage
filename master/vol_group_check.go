@@ -11,8 +11,6 @@ func (vg *VolGroup) checkStatus(needLog bool, volTimeOutSec int64) {
 	defer vg.Unlock()
 	liveVolLocs := vg.getLiveVolsByPersistenceHosts(volTimeOutSec)
 	switch len(liveVolLocs) {
-	case 0:
-		vg.status = VolUnavailable
 	case (int)(vg.replicaNum):
 		vg.status = VolReadOnly
 		if vg.checkVolLocStatusOnLiveNode(liveVolLocs) == true {
