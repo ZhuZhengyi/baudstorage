@@ -133,11 +133,6 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 		s.rackName = DefaultRackName
 	}
 
-	log.LogDebugf("action[DataNode.LoadVol] load port[%v].", s.port)
-	log.LogDebugf("action[DataNode.LoadVol] load clusterId[%v].", s.clusterId)
-	log.LogDebugf("action[DataNode.LoadVol] load rackName[%v].", s.rackName)
-	log.LogDebugf("action[DataNode.LoadVol] load profPort[%v].", s.profPort)
-
 	for _, d := range cfg.GetArray(ConfigKeyDisks) {
 		log.LogDebugf("action[DataNode.LoadVol] load disk raw config[%v].", d)
 		// Format "PATH:RESET_SIZE:MAX_ERR
