@@ -13,7 +13,7 @@ import (
 )
 
 func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, err error) {
-	msg := &MetaPartitionSnapshot{}
+	msg := &MetaItem{}
 	err = msg.Decode(command)
 	if err != nil {
 		goto end

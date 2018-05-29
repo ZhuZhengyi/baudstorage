@@ -39,7 +39,6 @@ type MetaNode struct {
 	nodeId      uint64
 	listen      int
 	metaDir     string //metaNode store root dir
-	logDir      string
 	raftDir     string //raftStore log store base dir
 	masterAddrs string
 	metaManager MetaManager
@@ -83,10 +82,7 @@ func (m *MetaNode) onStart(cfg *config.Config) (err error) {
 	if err = m.parseConfig(cfg); err != nil {
 		return
 	}
-	if _, err = log.NewLog(m.logDir, moduleName, log.DebugLevel); err != nil {
-		return
-	}
-	if err = m.validNodeID(); err != nil {
+	if err = m.register(); err != nil {
 		return
 	}
 	if err = m.startRaftServer(); err != nil {
@@ -119,7 +115,6 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 		return
 	}
 	m.listen = int(cfg.GetFloat(cfgListen))
-	m.logDir = cfg.GetString(cfgLogDir)
 	m.metaDir = cfg.GetString(cfgMetaDir)
 	m.raftDir = cfg.GetString(cfgRaftDir)
 	m.masterAddrs = cfg.GetString(cfgMasterAddrs)
@@ -131,9 +126,6 @@ func (m *MetaNode) validConfig() (err error) {
 	if m.listen <= 0 || m.listen >= 65535 {
 		err = errors.Errorf("listen port: %d", m.listen)
 		return
-	}
-	if m.logDir == "" {
-		m.logDir = defaultLogDir
 	}
 	if m.metaDir == "" {
 		m.metaDir = defaultMetaDir
@@ -172,7 +164,7 @@ func (m *MetaNode) stopMetaManager() {
 	}
 }
 
-func (m *MetaNode) validNodeID() (err error) {
+func (m *MetaNode) register() (err error) {
 	rand.Seed(time.Now().Unix())
 	for {
 		// Register and Get NodeID

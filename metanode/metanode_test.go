@@ -37,7 +37,7 @@ func TestValidNodeID(t *testing.T) {
 	defer httpServe.Close()
 	masterAddr := httpServe.Listener.Addr().String()
 	m := NewServer()
-	err = m.validNodeID()
+	err = m.register()
 	if err == nil {
 		t.Fatalf("master addrs is empty, ")
 	}
@@ -46,8 +46,8 @@ func TestValidNodeID(t *testing.T) {
 	}
 	t.Logf("master Addr: %s", masterAddr)
 	m.masterAddrs = "127.0.0.1:10234;127.0.0.1:22666;" + masterAddr
-	if err = m.validNodeID(); err != nil {
-		t.Fatalf("validNodeID: %s failed!", err.Error())
+	if err = m.register(); err != nil {
+		t.Fatalf("register: %s failed!", err.Error())
 	}
 	if m.nodeId != 55555 {
 		t.Fatalf("valideNodeID: want nodeID=5555, have nodeID=%d failed!",
