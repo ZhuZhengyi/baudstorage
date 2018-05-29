@@ -23,7 +23,7 @@ const (
 )
 
 type VolGroup struct {
-	VolId      uint32
+	VolID      uint32
 	Status     uint8
 	ReplicaNum uint8
 	Hosts      []string
@@ -46,12 +46,11 @@ func (vg *VolGroup) GetAllAddrs() (m string) {
 
 type VolGroupWrapper struct {
 	sync.RWMutex
-	namespace     string
-	master        []string
-	volGroups     map[uint32]*VolGroup
-	readWriteVols []*VolGroup
-	conns         *pool.ConnPool
-	execludeVolCh chan uint32
+	namespace   string
+	master      []string
+	conns       *pool.ConnPool
+	volGroups   map[uint32]*VolGroup
+	rwVolGroups []*VolGroup
 }
 
 func NewVolGroupWraper(namespace, masterHosts string) (vw *VolGroupWrapper, err error) {
@@ -60,9 +59,8 @@ func NewVolGroupWraper(namespace, masterHosts string) (vw *VolGroupWrapper, err 
 	vw.master = master
 	vw.namespace = namespace
 	vw.conns = pool.NewConnPool()
-	vw.readWriteVols = make([]*VolGroup, 0)
+	vw.rwVolGroups = make([]*VolGroup, 0)
 	vw.volGroups = make(map[uint32]*VolGroup)
-	vw.execludeVolCh = make(chan uint32, 10000)
 	if err = vw.getVolsFromMaster(); err != nil {
 		return
 	}
@@ -78,15 +76,6 @@ func (vw *VolGroupWrapper) update() {
 		case <-ticker.C:
 			vw.getVolsFromMaster()
 		}
-	}
-}
-
-func (vw *VolGroupWrapper) PutExcludeVol(volId uint32) {
-	select {
-	case vw.execludeVolCh <- volId:
-		return
-	default:
-		return
 	}
 }
 
@@ -118,90 +107,72 @@ func (vw *VolGroupWrapper) getVolsFromMaster() (err error) {
 	return
 }
 
-func (vw *VolGroupWrapper) insertVol(vg VolGroup) {
-	vw.RLock()
-	volGroup := vw.volGroups[vg.VolId]
-	vw.RUnlock()
-	vw.Lock()
-	if volGroup == nil {
-		vw.volGroups[vg.VolId] = &VolGroup{VolId: vg.VolId, Status: vg.Status, Hosts: vg.Hosts, ReplicaNum: vg.ReplicaNum}
-	} else {
-		volGroup.Status = vg.Status
-		volGroup.Hosts = vg.Hosts
-		volGroup.ReplicaNum = vg.ReplicaNum
+// Note: this method is not protected by lock
+func (vw *VolGroupWrapper) replaceOrInsertVol(vg *VolGroup) {
+	if _, ok := vw.volGroups[vg.VolID]; ok {
+		delete(vw.volGroups, vg.VolID)
 	}
-	vw.Unlock()
+	vw.volGroups[vg.VolID] = vg
 }
 
-func (vw *VolGroupWrapper) updateVolGroup(views []*VolGroup) {
-	vw.RLock()
-	if len(views) < len(vw.volGroups) {
-		vw.RUnlock()
-		return
-	}
-	vw.RUnlock()
-	for _, vg := range views {
-		vw.insertVol(*vg)
-	}
+func (vw *VolGroupWrapper) updateVolGroup(vols []*VolGroup) {
+	rwVolGroups := make([]*VolGroup, 0)
 	vw.Lock()
-	readWriteVols := make([]*VolGroup, 0)
-	for _, vg := range vw.volGroups {
+	defer vw.Unlock()
+
+	for _, vg := range vols {
+		vw.replaceOrInsertVol(vg)
 		if vg.Status == storage.ReadWriteStore {
-			readWriteVols = append(readWriteVols, vg)
+			rwVolGroups = append(rwVolGroups, vg)
 		}
 	}
-	if len(readWriteVols) > 20 {
-		vw.readWriteVols = readWriteVols
-	}
-	vw.Unlock()
-
-	return
+	vw.rwVolGroups = rwVolGroups
 }
 
 func isExcluded(volID uint32, excludes []uint32) bool {
-	for _, eid := range excludes {
-		if eid == volID {
+	for _, id := range excludes {
+		if id == volID {
 			return true
 		}
 	}
 	return false
 }
 
-func (vw *VolGroupWrapper) GetWriteVol(exclude []uint32) (v *VolGroup, err error) {
-	vw.RLock()
-	if len(vw.readWriteVols) == 0 {
-		vw.RUnlock()
-		return nil, fmt.Errorf("no volGroup for write")
-	}
-	rand.Seed(time.Now().UnixNano())
-	randomIndex := rand.Intn(len(vw.readWriteVols))
-	v = vw.readWriteVols[randomIndex]
-	vw.RUnlock()
-	if !isExcluded(v.VolId, exclude) {
-		return
-	}
+func (vw *VolGroupWrapper) GetWriteVol(exclude []uint32) (*VolGroup, error) {
 	vw.RLock()
 	defer vw.RUnlock()
-	for _, v = range vw.readWriteVols {
-		if !isExcluded(v.VolId, exclude) {
-			return
+
+	if len(vw.rwVolGroups) == 0 {
+		return nil, fmt.Errorf("No writable VolGroup")
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	choose := rand.Intn(len(vw.rwVolGroups))
+	vg := vw.rwVolGroups[choose]
+	if !isExcluded(vg.VolID, exclude) {
+		return vg, nil
+	}
+
+	for _, vg = range vw.rwVolGroups {
+		if !isExcluded(vg.VolID, exclude) {
+			return vg, nil
 		}
 	}
 
-	return nil, fmt.Errorf("no volGroup for write")
+	return nil, fmt.Errorf("No writable VolGroup")
 }
 
-func (vw *VolGroupWrapper) GetVol(volId uint32) (v *VolGroup, err error) {
+func (vw *VolGroupWrapper) GetVol(volID uint32) (*VolGroup, error) {
 	vw.RLock()
 	defer vw.RUnlock()
-	v = vw.volGroups[volId]
-	if v == nil {
-		return v, fmt.Errorf("volGroup[%v] not exsit", volId)
+	vg, ok := vw.volGroups[volID]
+	if !ok {
+		return nil, fmt.Errorf("volGroup[%v] not exsit", volID)
 	}
-	return
+	return vg, nil
 }
 
-func (vw *VolGroupWrapper) GetConnect(addr string) (conn net.Conn, err error) {
+func (vw *VolGroupWrapper) GetConnect(addr string) (net.Conn, error) {
 	return vw.conns.Get(addr)
 }
 

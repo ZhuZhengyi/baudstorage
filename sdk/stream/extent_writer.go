@@ -36,7 +36,7 @@ type ExtentWriter struct {
 	requestQueue     *list.List //sendPacketList
 	requestQueueLock sync.Mutex
 	volGroup         *sdk.VolGroup
-	volId            uint32
+	volID            uint32
 	wrapper          *sdk.VolGroupWrapper
 	extentId         uint64 //current FileIdId
 	currentPacket    *Packet
@@ -58,7 +58,7 @@ func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wrapper *sdk.VolGroupWrapp
 	writer.handleCh = make(chan bool, DefaultWriteBufferSize/(64*util.KB))
 	writer.extentId = extentId
 	writer.volGroup = vol
-	writer.volId = vol.VolId
+	writer.volID = vol.VolID
 	writer.inode = inode
 	writer.wrapper = wrapper
 	writer.connect, err = wrapper.GetConnect(vol.Hosts[0])
@@ -226,7 +226,7 @@ func (writer *ExtentWriter) toString() string {
 		currPkgMesg = writer.currentPacket.GetUniqLogId()
 	}
 	return fmt.Sprintf("extent{inode=%v volGroup=%v extentId=%v retryCnt=%v handleCh[%v] requestQueueLen[%v] currentPkg=%v}",
-		writer.inode, writer.volGroup.VolId, writer.extentId, writer.recoverCnt,
+		writer.inode, writer.volGroup.VolID, writer.extentId, writer.recoverCnt,
 		len(writer.handleCh), writer.getQueueListLen(), currPkgMesg)
 }
 
@@ -306,7 +306,7 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 
 func (writer *ExtentWriter) toKey() (k proto.ExtentKey) {
 	k = proto.ExtentKey{}
-	k.VolId = writer.volGroup.VolId
+	k.VolId = writer.volGroup.VolID
 	k.Size = uint32(writer.getByteAck())
 	k.ExtentId = writer.extentId
 
