@@ -35,7 +35,9 @@ func (m *metaManager) opMasterHeartbeat(conn net.Conn, p *Packet) (err error) {
 	}
 	// For ack to master
 	m.responseAckOKToMaster(conn, p)
-	m.masterAddr = req.MasterAddr
+	if curMasterAddr != req.MasterAddr {
+		curMasterAddr = req.MasterAddr
+	}
 	// collect used info
 	resp := &proto.MetaNodeHeartbeatResponse{}
 	// machine mem total and used
@@ -66,7 +68,7 @@ func (m *metaManager) opMasterHeartbeat(conn net.Conn, p *Packet) (err error) {
 	adminTask.Request = nil
 	adminTask.Response = resp
 end:
-	m.respondToMaster(m.masterAddr, adminTask)
+	m.respondToMaster(adminTask)
 	return
 }
 
@@ -117,7 +119,7 @@ func (m *metaManager) opCreateMetaPartition(conn net.Conn, p *Packet) (err error
 			err.Error(), adminTask.Request)
 	}
 	adminTask.Response = resp
-	m.respondToMaster(m.masterAddr, adminTask)
+	m.respondToMaster(adminTask)
 	return
 }
 
@@ -394,7 +396,7 @@ func (m *metaManager) opDeleteMetaPartition(conn net.Conn, p *Packet) (err error
 end:
 	adminTask.Response = resp
 	adminTask.Request = nil
-	err = m.respondToMaster(m.masterAddr, adminTask)
+	err = m.respondToMaster(adminTask)
 	return
 }
 
@@ -439,7 +441,7 @@ func (m *metaManager) opUpdateMetaPartition(conn net.Conn, p *Packet) (err error
 	err = mp.UpdatePartition(req, resp)
 	adminTask.Response = resp
 	adminTask.Request = nil
-	m.respondToMaster(m.masterAddr, adminTask)
+	m.respondToMaster(adminTask)
 	return
 }
 
@@ -472,7 +474,7 @@ func (m *metaManager) opLoadMetaPartition(conn net.Conn, p *Packet) (err error) 
 		resp.Result = err.Error()
 		adminTask.Response = resp
 		adminTask.Request = nil
-		m.respondToMaster(m.masterAddr, adminTask)
+		m.respondToMaster(adminTask)
 		return
 	}
 	mConf := mp.GetBaseConfig()
@@ -482,7 +484,7 @@ func (m *metaManager) opLoadMetaPartition(conn net.Conn, p *Packet) (err error) 
 	resp.Status = proto.OpOk
 	adminTask.Response = resp
 	adminTask.Request = nil
-	m.respondToMaster(m.masterAddr, adminTask)
+	m.respondToMaster(adminTask)
 	return
 }
 
@@ -534,6 +536,6 @@ func (m *metaManager) opOfflineMetaPartition(conn net.Conn, p *Packet) (err erro
 end:
 	adminTask.Request = nil
 	adminTask.Response = resp
-	m.respondToMaster(m.masterAddr, adminTask)
+	m.respondToMaster(adminTask)
 	return
 }

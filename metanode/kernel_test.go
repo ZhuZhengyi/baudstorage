@@ -2,6 +2,7 @@ package metanode
 
 import (
 	"bytes"
+	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
 	"reflect"
 	"testing"
@@ -116,4 +117,25 @@ func Test_Inode(t *testing.T) {
 		//expStr := fmt.Sprintf("%d*%d*")
 	}
 
+}
+
+func TestDentryBtree(t *testing.T) {
+	dTree := btree.New(32)
+	dentry := &Dentry{
+		ParentId: 1,
+		Name:     "star",
+		Inode:    10,
+		Type:     proto.ModeDir,
+	}
+	dTree.ReplaceOrInsert(dentry)
+	newDen := &Dentry{
+		ParentId: 1,
+		Name:     "star",
+	}
+	item := dTree.Get(newDen)
+	if item == nil {
+		t.Fatalf("get dentry empty failed")
+	}
+	newDen = item.(*Dentry)
+	t.Logf("%v", newDen)
 }

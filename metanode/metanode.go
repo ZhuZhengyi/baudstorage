@@ -173,7 +173,7 @@ func (m *MetaNode) register() (err error) {
 		}
 		err = m.postNodeID()
 		if err != nil {
-			log.LogErrorf("[register]connect master: %s", err.Error())
+			log.LogErrorf("[register]->%s", err.Error())
 			time.Sleep(3 * time.Second)
 			continue
 		}
@@ -211,21 +211,25 @@ func postToMaster(reqPath string, body []byte) (msg []byte, err error) {
 		reqBody := bytes.NewBuffer(body)
 		req, err = http.NewRequest("POST", reqURL, reqBody)
 		if err != nil {
-			log.LogErrorf("[postToMaster] construction NewRequest: %s", err.Error())
+			log.LogErrorf("[postToMaster] construction NewRequest url=%s: %s",
+				reqURL, err.Error())
 			curMasterAddr = ""
 			continue
 		}
+		log.LogDebugf("request url: %v", reqURL)
 		req.Header.Set("Connection", "close")
 		resp, err = client.Do(req)
 		if err != nil {
-			log.LogErrorf("[postToMaster] connect master: %s", err.Error())
+			log.LogErrorf("[postToMaster] connect master url=%s: %s",
+				reqURL, err.Error())
 			curMasterAddr = ""
 			continue
 		}
 		msg, err = ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
-			log.LogErrorf("[postToMaster] read body: %s", err.Error())
+			log.LogErrorf("[postToMaster] read body url=%s: %s",
+				reqURL, err.Error())
 			curMasterAddr = ""
 			continue
 		}
@@ -234,13 +238,13 @@ func postToMaster(reqPath string, body []byte) (msg []byte, err error) {
 		}
 		if resp.StatusCode == http.StatusForbidden {
 			curMasterAddr = strings.TrimSpace(string(msg))
+			err = errors.Errorf("[postToMaster] master response ")
 			continue
 		}
 		curMasterAddr = ""
-		err = errors.Errorf("[postToMaster] master response status_code=%d",
-			resp.StatusCode)
-		log.LogErrorf("[postToMaster] master response status_code=%d, "+
-			"msg: %v", resp.StatusCode, string(msg))
+		err = errors.Errorf("[postToMaster] master response url=%s,"+
+			" status_code=%d, msg: %v", reqURL, resp.StatusCode, string(msg))
+		log.LogErrorf(err.Error())
 	}
 	return
 }

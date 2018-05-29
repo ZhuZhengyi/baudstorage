@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 // GetDentry query dentry from DentryTree with specified dentry info;
@@ -13,12 +14,18 @@ import (
 // if not exist, not change
 func (mp *metaPartition) getDentry(dentry *Dentry) (status uint8) {
 	status = proto.OpOk
+	log.LogDebugf("[getDentry1]: %v", dentry)
 	item := mp.dentryTree.Get(dentry)
 	if item == nil {
 		status = proto.OpNotExistErr
+		mp.dentryTree.Ascend(func(i btree.Item) bool {
+			log.LogDebugf("current dentry tree: %v", i)
+			return true
+		})
 		return
 	}
 	dentry = item.(*Dentry)
+	log.LogDebugf("[getDentry2]: %v", dentry)
 	return
 }
 
