@@ -108,10 +108,12 @@ func (s *DataNode) createVol(pkg *Packet) {
 		json.Unmarshal(bytes,request)
 		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
 		if err != nil {
+			response.VolId = uint64(request.VolId)
 			response.Status = proto.TaskFail
 			response.Result = err.Error()
 		} else {
 			response.Status = proto.TaskSuccess
+			response.VolId=request.VolId
 		}
 	} else {
 		response.VolId = uint64(request.VolId)
