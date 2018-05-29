@@ -93,8 +93,9 @@ func (vg *VolGroup) needWarnMissVol(addr string, volWarnInterval int64) (isWarn 
 }
 
 func (vg *VolGroup) missVol(addr string) (isMiss bool) {
-	v, addrIsInLocs := vg.IsInVolLocs(addr)
-	if v.dataNode != nil && addrIsInLocs == false {
+	_, addrIsInLocs := vg.IsInVolLocs(addr)
+
+	if addrIsInLocs == false {
 		isMiss = true
 	}
 
