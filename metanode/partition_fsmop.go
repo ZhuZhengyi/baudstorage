@@ -141,6 +141,7 @@ func (mp *metaPartition) appendExtents(ino *Inode) (status uint8) {
 		return true
 	})
 	ino.ModifyTime = time.Now().Unix()
+	ino.Generation++
 	return
 }
 

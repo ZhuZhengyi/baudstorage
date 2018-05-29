@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type SpaceManager struct {
@@ -70,7 +71,7 @@ func (space *SpaceManager) updateMetrics() {
 		createdVolWeights += d.CreatedVolWeights
 		remainWeightsForCreateVol += d.RemainWeightsForCreateVol
 		volcnt += d.VolCnt
-		if maxWeightsForCreateVol > d.RemainWeightsForCreateVol {
+		if maxWeightsForCreateVol < d.RemainWeightsForCreateVol {
 			maxWeightsForCreateVol = d.RemainWeightsForCreateVol
 		}
 	}

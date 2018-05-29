@@ -267,7 +267,6 @@ func (m *metaManager) opMetaInodeGet(conn net.Conn, p *Packet) (err error) {
 		err = errors.Errorf("[opMetaInodeGet]: %s", err.Error())
 		return
 	}
-	log.LogDebugf("[opMetaInodeGet] Get request: %v", req)
 	mp, err := m.getPartition(req.PartitionID)
 	if err != nil {
 		p.PackErrorWithBody(proto.OpNotExistErr, nil)

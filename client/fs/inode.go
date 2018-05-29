@@ -10,6 +10,7 @@ import (
 	"bazil.org/fuse/fs"
 
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type InodeCommon struct {
@@ -32,6 +33,7 @@ type Inode struct {
 func (s *Super) InodeGet(ino uint64, inode *Inode) error {
 	info, err := s.mw.InodeGet_ll(ino)
 	if err != nil {
+		log.LogErrorf("InodeGet: ino(%v) err(%v)", ino, err.Error())
 		return ParseError(err)
 	}
 	fillInode(inode, info)
