@@ -128,7 +128,7 @@ func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error)
 		resp.Body.Close()
 		if scode == http.StatusForbidden {
 			masterAddr = string(msg)
-			masterAddr = strings.Replace(masterAddr, "\n", "", -1)
+			masterAddr = strings.Replace(masterAddr, "\n", "", 100)
 			log.LogWarn(fmt.Sprintf("action[DataNode.postToMaster] master Addr change to %v, retry post to master", string(msg)))
 			continue
 		}
