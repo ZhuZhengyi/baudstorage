@@ -407,9 +407,10 @@ errDeal:
 
 func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTask) {
 	if task == nil {
+		log.LogDebugf("action[dealDataNodeTaskResponse] receive addr[%v] task response,but task is nil",nodeAddr)
 		return
 	}
-	log.LogDebugf("receive addr[%v] task response:%v",task.ToString())
+	log.LogDebugf("action[dealDataNodeTaskResponse] receive addr[%v] task response:%v",nodeAddr,task.ToString())
 	var (
 		err      error
 		dataNode *DataNode
