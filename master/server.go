@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/config"
-	"github.com/tiglabs/baudstorage/util/log"
 	"strconv"
 	"sync"
 )
