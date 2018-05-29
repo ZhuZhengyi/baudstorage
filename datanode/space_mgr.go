@@ -76,6 +76,8 @@ func (space *SpaceManager) updateMetrics() {
 		}
 	}
 	space.diskLock.RUnlock()
+	log.LogInfof("macheile total[%v] used[%v] free[%v]createdVolWeights[%v]  remainWeightsForCreateVol[%v]" +
+		"volcnt[%v]maxWeightsForCreateVol[%v] ",total,used,free,createdVolWeights,remainWeightsForCreateVol,volcnt,maxWeightsForCreateVol)
 	space.stats.updateMetrics(total, used, free, createdVolWeights,
 		remainWeightsForCreateVol, maxWeightsForCreateVol, volcnt)
 }
