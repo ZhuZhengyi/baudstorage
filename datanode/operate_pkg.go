@@ -132,6 +132,7 @@ func (s *DataNode) heartBeats(pkg *Packet) {
 	request := &proto.HeartBeatRequest{}
 	response := &proto.DataNodeHeartBeatResponse{}
 	if task.OpCode == proto.OpDataNodeHeartbeat {
+		request = task.Request.(*proto.HeartBeatRequest)
 		response.Status = proto.OpOk
 		masterAddr = request.MasterAddr
 	} else {
