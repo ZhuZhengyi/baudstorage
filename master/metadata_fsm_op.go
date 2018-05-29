@@ -418,7 +418,7 @@ func (c *Cluster) loadVolGroups() (err error) {
 		}
 		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum)
 		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
-		ns.volGroups.volGroups = append(ns.volGroups.volGroups, vg)
+		ns.volGroups.putVol(vg)
 		encodedKey.Free()
 		encodedValue.Free()
 	}
