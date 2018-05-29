@@ -111,6 +111,7 @@ func (c *Cluster) checkDataNodeHeartbeat() {
 		tasks = append(tasks, task)
 		return true
 	})
+	log.LogDebugf("dataNode heartbeat len:%v",len(tasks))
 	c.putDataNodeTasks(tasks)
 }
 
@@ -122,6 +123,7 @@ func (c *Cluster) checkMetaNodeHeartbeat() {
 		tasks = append(tasks, task)
 		return true
 	})
+	log.LogDebugf("meatNode heartbeat len:%v",len(tasks))
 	c.putMetaNodeTasks(tasks)
 }
 
