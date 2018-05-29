@@ -269,7 +269,7 @@ func (m *MetaNode) startUMP() (err error) {
 		err = errors.Errorf("[startUMP]: %s", err.Error())
 		return
 	}
-	ump.InitUmp(req.Cluster)
+	ump.InitUmp(req.Cluster + "_metaNode")
 	return
 }
 
