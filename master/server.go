@@ -15,12 +15,10 @@ const (
 	ID          = "id"
 	IP          = "ip"
 	Port        = "port"
-	LogDir      = "logDir"
 	LogLevel    = "logLevel"
 	WalDir      = "walDir"
 	StoreDir    = "storeDir"
 	GroupId     = 1
-	LogModule   = "master"
 )
 
 type Master struct {
@@ -28,8 +26,6 @@ type Master struct {
 	clusterName string
 	ip          string
 	port        string
-	logDir      string
-	logLevel    int
 	walDir      string
 	storeDir    string
 	leaderInfo  *LeaderInfo
@@ -51,9 +47,6 @@ func (m *Master) Start(cfg *config.Config) (err error) {
 	if err = m.checkConfig(cfg); err != nil {
 		return
 	}
-	//if _, err = log.NewLog(m.logDir, LogModule, m.logLevel); err != nil {
-	//	return
-	//}
 	if err = m.createRaftServer(); err != nil {
 		return
 	}
@@ -76,13 +69,11 @@ func (m *Master) checkConfig(cfg *config.Config) (err error) {
 	m.clusterName = cfg.GetString(ClusterName)
 	m.ip = cfg.GetString(IP)
 	m.port = cfg.GetString(Port)
-	m.logDir = cfg.GetString(LogDir)
 	vfDelayCheckCrcSec := cfg.GetString(FileDelayCheckCrc)
 	volMissSec := cfg.GetString(VolMissSec)
 	volTimeOutSec := cfg.GetString(VolTimeOutSec)
 	everyLoadVolCount := cfg.GetString(EveryLoadVolCount)
 	replicaNum := cfg.GetString(ReplicaNum)
-	logLevel := cfg.GetString(LogLevel)
 	m.walDir = cfg.GetString(WalDir)
 	m.storeDir = cfg.GetString(StoreDir)
 	peerAddrs := cfg.GetString(CfgPeers)
@@ -94,8 +85,8 @@ func (m *Master) checkConfig(cfg *config.Config) (err error) {
 		return fmt.Errorf("%v,err:%v", ErrBadConfFile, err.Error())
 	}
 
-	if m.ip == "" || m.port == "" || m.logDir == "" || m.walDir == "" || m.storeDir == "" || m.clusterName == "" {
-		return fmt.Errorf("%v,err:%v", ErrBadConfFile, "one of (ip,port,logDir,walDir,storeDir,clusterName) is null")
+	if m.ip == "" || m.port == "" ||  m.walDir == "" || m.storeDir == "" || m.clusterName == "" {
+		return fmt.Errorf("%v,err:%v", ErrBadConfFile, "one of (ip,port,walDir,storeDir,clusterName) is null")
 	}
 
 	if replicaNum != "" {
@@ -105,15 +96,6 @@ func (m *Master) checkConfig(cfg *config.Config) (err error) {
 
 		if m.config.replicaNum > 10 {
 			return fmt.Errorf("%v,replicaNum(%v) can't too large", ErrBadConfFile, m.config.replicaNum)
-		}
-	}
-
-	if logLevel != "" {
-		if m.logLevel, err = strconv.Atoi(logLevel); err != nil {
-			return fmt.Errorf("%v,err:%v", ErrBadConfFile, err.Error())
-		}
-		if m.logLevel < 0 || m.logLevel > 4 {
-			return fmt.Errorf("%v,logLevel(%v) must be between 0 and 4", ErrBadConfFile, m.logLevel)
 		}
 	}
 

@@ -108,13 +108,14 @@ func (s *DataNode) createVol(pkg *Packet) {
 		json.Unmarshal(bytes,request)
 		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
 		if err != nil {
-			response.Status = proto.OpErr
+			response.Status = proto.TaskFail
 			response.Result = err.Error()
+		} else {
+			response.Status = proto.TaskSuccess
 		}
-		response.Status = proto.OpOk
 	} else {
 		response.VolId = uint64(request.VolId)
-		response.Status = proto.OpErr
+		response.Status = proto.TaskFail
 		response.Result = "unavali opcode "
 	}
 	task.Response = response
@@ -127,23 +128,28 @@ func (s *DataNode) createVol(pkg *Packet) {
 }
 
 func (s *DataNode) heartBeats(pkg *Packet) {
+	var err error
 	task := &proto.AdminTask{}
 	json.Unmarshal(pkg.Data, task)
 	pkg.PackOkReply()
+
 	request := &proto.HeartBeatRequest{}
 	response := &proto.DataNodeHeartBeatResponse{}
+
+	s.fillHeartBeatResponse(response)
+
 	if task.OpCode == proto.OpDataNodeHeartbeat {
 		bytes, _ := json.Marshal(task.Request)
 		json.Unmarshal(bytes,request)
-		response.Status = proto.OpOk
+		response.Status = proto.TaskSuccess
 		masterAddr = request.MasterAddr
 	} else {
-		response.Status = proto.OpErr
+		response.Status = proto.TaskFail
 		response.Result = "illegal opcode "
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
-	_, err := s.postToMaster(data, master.DataNodeResponse)
+	_, err = s.postToMaster(data, master.DataNodeResponse)
 	if err != nil {
 		err = errors.Annotatef(err, "heartbeat to master[%v] failed", request.MasterAddr)
 		log.LogError(errors.ErrorStack(err))
@@ -161,13 +167,14 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 		json.Unmarshal(bytes,request)
 		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
 		if err != nil {
-			response.Status = proto.OpErr
+			response.Status = proto.TaskFail
 			response.Result = err.Error()
+		} else {
+			response.VolId = uint64(request.VolId)
+			response.Status = proto.TaskSuccess
 		}
-		response.VolId = uint64(request.VolId)
-		response.Status = proto.OpOk
 	} else {
-		response.Status = proto.OpErr
+		response.Status = proto.TaskFail
 		response.Result = "unavali opcode "
 	}
 	task.Response = response
@@ -190,12 +197,13 @@ func (s *DataNode) loadVol(pkg *Packet) {
 		json.Unmarshal(bytes,request)
 		v := s.space.getVol(uint32(request.VolId))
 		if v == nil {
-			response.Status = proto.OpErr
+			response.Status = proto.TaskFail
 			response.Result = fmt.Sprintf("vol[%v] not found", request.VolId)
+		} else {
+			response = v.LoadVol()
 		}
-		response = v.LoadVol()
 	} else {
-		response.Status = proto.OpErr
+		response.Status = proto.TaskFail
 		response.Result = "unavali opcode "
 	}
 	task.Response = response
