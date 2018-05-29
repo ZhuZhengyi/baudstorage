@@ -89,7 +89,7 @@ func (s *Stats) updateMetrics(total, used, free, createdVolWeights, remainWeight
 func post(data []byte, url string) (*http.Response, error) {
 	client := &http.Client{}
 	buff := bytes.NewBuffer(data)
-	client.Timeout = time.Second
+	client.Timeout = time.Second*3
 	req, err := http.NewRequest("POST", url, buff)
 	if err != nil {
 		return nil, err

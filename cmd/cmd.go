@@ -15,6 +15,7 @@ import (
 	"syscall"
 
 	"github.com/tiglabs/baudstorage/util/config"
+	"net/http"
 )
 
 const (
@@ -109,6 +110,10 @@ func main() {
 	default:
 		level = log.ErrorLevel
 	}
+
+	go func() {
+		log.Println(http.ListenAndServe(":10080", nil))
+	}()
 	if _, err := log.NewLog(logDir, module, level); err != nil {
 		os.Exit(1)
 		return

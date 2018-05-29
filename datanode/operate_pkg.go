@@ -118,7 +118,7 @@ func (s *DataNode) createVol(pkg *Packet) {
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
-	_, err := s.postToMaster(data, "/node/Repost")
+	_, err := s.postToMaster(data, master.DataNodeResponse)
 	if err != nil {
 		err = errors.Annotatef(err, "create vol failed,volId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))
@@ -168,7 +168,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
-	_, err := s.postToMaster(data, "/node/Repost")
+	_, err := s.postToMaster(data, master.DataNodeResponse)
 	if err != nil {
 		err = errors.Annotatef(err, "delete vol failed,volId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))
@@ -195,7 +195,7 @@ func (s *DataNode) loadVol(pkg *Packet) {
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
-	_, err := s.postToMaster(data, "/node/Repost")
+	_, err := s.postToMaster(data, master.DataNodeResponse)
 	if err != nil {
 		err = errors.Annotatef(err, "load vol failed,volId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))
