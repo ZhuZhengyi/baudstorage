@@ -71,7 +71,7 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 	case proto.OpDeleteVol:
 		s.deleteVol(pkg)
 	case proto.OpDataNodeHeartbeat:
-		s.heartBeats(pkg, c)
+		s.heartBeats(pkg)
 	default:
 		pkg.PackErrorBody(ErrorUnknowOp.Error(), ErrorUnknowOp.Error()+strconv.Itoa(int(pkg.Opcode)))
 	}
@@ -127,12 +127,11 @@ func (s *DataNode) createVol(pkg *Packet) {
 	}
 }
 
-func (s *DataNode) heartBeats(pkg *Packet, conn *net.TCPConn) {
+func (s *DataNode) heartBeats(pkg *Packet) {
 	var err error
 	task := &proto.AdminTask{}
 	json.Unmarshal(pkg.Data, task)
 	pkg.PackOkReply()
-	//response ack to master
 
 	request := &proto.HeartBeatRequest{}
 	response := &proto.DataNodeHeartBeatResponse{}
