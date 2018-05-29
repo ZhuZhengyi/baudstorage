@@ -135,7 +135,6 @@ func (s *DataNode) heartBeats(pkg *Packet) {
 	if task.OpCode == proto.OpDataNodeHeartbeat {
 		bytes, _ := json.Marshal(task.Request)
 		json.Unmarshal(bytes,request)
-		request = task.Request.(*proto.HeartBeatRequest)
 		response.Status = proto.OpOk
 		masterAddr = request.MasterAddr
 	} else {
