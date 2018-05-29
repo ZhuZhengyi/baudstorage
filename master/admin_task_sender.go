@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	MinTaskLen = 30
+	MinTaskLen              = 30
 	TaskWaitResponseTimeOut = time.Second * time.Duration(3)
 )
 
@@ -62,7 +62,7 @@ func (sender *AdminTaskSender) process() {
 				time.Sleep(time.Second)
 				continue
 			}
-			log.LogDebugf("begin send tasks:%v",len(tasks))
+			log.LogDebugf("begin send tasks:%v", len(tasks))
 			sender.sendTasks(tasks)
 		}
 	}
@@ -147,7 +147,7 @@ func (sender *AdminTaskSender) getNeedDealTask() (tasks []*proto.AdminTask) {
 	delTasks := make([]*proto.AdminTask, 0)
 	sender.Lock()
 	for _, task := range sender.TaskMap {
-		if !task.CheckTaskTimeOut() || task.CheckTaskNeedRetrySend()  {
+		if !task.CheckTaskTimeOut() || task.CheckTaskNeedRetrySend() {
 			tasks = append(tasks, task)
 			continue
 		}

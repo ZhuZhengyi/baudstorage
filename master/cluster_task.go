@@ -407,26 +407,27 @@ errDeal:
 
 func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTask) {
 	if task == nil {
-		log.LogDebugf("action[dealDataNodeTaskResponse] receive addr[%v] task response,but task is nil",nodeAddr)
+		log.LogDebugf("action[dealDataNodeTaskResponse] receive addr[%v] task response,but task is nil", nodeAddr)
 		return
 	}
-	log.LogDebugf("action[dealDataNodeTaskResponse] receive addr[%v] task response:%v",nodeAddr,task.ToString())
+	log.LogDebugf("action[dealDataNodeTaskResponse] receive addr[%v] task response:%v", nodeAddr, task.ToString())
 	var (
-		err      error
-		dataNode *DataNode
+		err        error
+		dataNode   *DataNode
+		taskStatus uint8
 	)
 	dataNode, err = c.getDataNode(nodeAddr)
 	if err != nil {
-		return
+		goto errDeal
 	}
 	if _, ok := dataNode.sender.TaskMap[task.ID]; !ok {
 		err = taskNotFound(task.ID)
-		return
+		goto errDeal
 	}
 	if err := UnmarshalTaskResponse(task); err != nil {
-		return
+		goto errDeal
 	}
-	var taskStatus uint8
+
 	switch task.OpCode {
 	case proto.OpCreateVol:
 		response := task.Response.(*proto.CreateVolResponse)
@@ -449,15 +450,18 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 		taskStatus = response.Status
 		err = c.dealDataNodeHeartbeat(task.OperatorAddr, response)
 	default:
-		log.LogError(fmt.Sprintf("unknown operate code %v", task.OpCode))
+		err = fmt.Errorf(fmt.Sprintf("unknown operate code %v", task.OpCode))
+		goto errDeal
 	}
 
 	if err != nil {
-		log.LogError(fmt.Sprintf("process task[%v] failed", task.ToString()))
-	} else {
-		task.SetStatus(int8(taskStatus))
+		goto errDeal
 	}
+	task.SetStatus(int8(taskStatus))
+	return
 
+errDeal:
+	log.LogErrorf("process task[%v] failed,err:%v", task.ToString(), err)
 	return
 }
 
