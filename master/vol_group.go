@@ -31,6 +31,7 @@ func newVolGroup(volID uint64, replicaNum uint8) (vg *VolGroup) {
 	vg.PersistenceHosts = make([]string, 0)
 	vg.locations = make([]*Vol, 0)
 	vg.FileInCoreMap = make(map[string]*FileInCore, 0)
+	vg.MissNodes = make(map[string]int64)
 	return
 }
 

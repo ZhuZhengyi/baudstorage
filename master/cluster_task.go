@@ -126,6 +126,7 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 		peers      []proto.Peer
 		removePeer proto.Peer
 	)
+	log.LogDebugf("action[metaPartitionOffline],nsName[%v],nodeAddr[%v],partitionID[%v]",nsName,nodeAddr,partitionID)
 	if ns, err = c.getNamespace(nsName); err != nil {
 		goto errDeal
 	}

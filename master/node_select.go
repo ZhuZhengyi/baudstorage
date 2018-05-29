@@ -101,13 +101,15 @@ func (c *Cluster) GetAvailCarryDataNodeTab(maxTotal uint64, excludeRack string, 
 	nodeTabs = make(NodeTabArrSorterByCarry, 0)
 	c.dataNodes.Range(func(key, value interface{}) bool {
 		dataNode := value.(*DataNode)
-		if dataNode.RackName == excludeRack {
-			return true
-		}
+		//if dataNode.RackName == excludeRack {
+		//	return true
+		//}
 		if contains(excludeHosts, dataNode.HttpAddr) == true {
+			log.LogDebugf("contains return")
 			return true
 		}
 		if dataNode.IsWriteAble() == false {
+			log.LogDebugf("isWritable return")
 			return true
 		}
 		if dataNode.IsAvailCarryNode() == true {

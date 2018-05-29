@@ -97,10 +97,10 @@ func (d *Dir) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
 }
 
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	log.LogDebugf("Dir Lookup: ino(%v) name(%v)", d.inode.ino, req.Name)
 	ino, mode, err := d.super.mw.Lookup_ll(d.inode.ino, req.Name)
+	log.LogDebugf("Dir Lookup: parent(%v) name(%v) child(%v)", d.inode.ino, req.Name, ino)
 	if err != nil {
-		log.LogErrorf("Dir Lookup: ino(%v) name(%v) err(%v)", d.inode.ino, req.Name, err.Error())
+		log.LogErrorf("Dir Lookup: err(%v)", err.Error())
 		return nil, ParseError(err)
 	}
 
