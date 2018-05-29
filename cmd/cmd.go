@@ -35,9 +35,9 @@ const (
 )
 
 const (
-	ModuleMaster = "Master"
-	ModuleMeta   = "MetaNode"
-	ModuleData   = "DataNode"
+	ModuleMaster = "master"
+	ModuleMeta   = "metaNode"
+	ModuleData   = "dataNode"
 )
 
 var (
