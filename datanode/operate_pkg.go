@@ -164,7 +164,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	pkg.PackOkReply()
 	request := &proto.DeleteVolRequest{}
 	response := &proto.DeleteVolResponse{}
-	if task.OpCode == proto.OpCreateVol {
+	if task.OpCode == proto.OpDeleteVol {
 		bytes, _ := json.Marshal(task.Request)
 		json.Unmarshal(bytes,request)
 		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
@@ -196,7 +196,7 @@ func (s *DataNode) loadVol(pkg *Packet) {
 	pkg.PackOkReply()
 	request := &proto.LoadVolRequest{}
 	response := &proto.LoadVolResponse{}
-	if task.OpCode == proto.OpCreateVol {
+	if task.OpCode == proto.OpLoadVol {
 		bytes, _ := json.Marshal(task.Request)
 		json.Unmarshal(bytes,request)
 		v := s.space.getVol(uint32(request.VolId))

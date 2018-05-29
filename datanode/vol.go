@@ -136,10 +136,10 @@ func (v *Vol) LoadVol() (response *proto.LoadVolResponse) {
 		response.VolSnapshot, err = store.SnapShot()
 		response.Used = uint64(store.GetStoreUsedSize())
 		if err != nil {
-			response.Status = proto.OpErr
+			response.Status = proto.TaskFail
 			response.Result = err.Error()
 		} else {
-			response.Status = proto.OpOk
+			response.Status = proto.TaskSuccess
 		}
 	case TinyVol:
 
