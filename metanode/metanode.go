@@ -3,7 +3,6 @@ package metanode
 import (
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"bytes"
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util"
@@ -21,15 +21,13 @@ import (
 // Configuration keys
 const (
 	cfgListen      = "listen"
-	cfgLogDir      = "logDir"
 	cfgMetaDir     = "metaDir"
 	cfgRaftDir     = "raftDir"
 	cfgMasterAddrs = "masterAddrs"
 )
 
 const (
-	moduleName  = "MetaNode"
-	metaNodeURL = "metaNode/add"
+	metaNodeURL = "/metaNode/add"
 )
 
 // The MetaNode manage Dentry and Inode information in multiple metaPartition, and
@@ -40,7 +38,6 @@ type MetaNode struct {
 	listen      int
 	metaDir     string //metaNode store root dir
 	raftDir     string //raftStore log store base dir
-	masterAddrs string
 	metaManager MetaManager
 	localAddr   string
 	retryCount  int
@@ -117,7 +114,10 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 	m.listen = int(cfg.GetFloat(cfgListen))
 	m.metaDir = cfg.GetString(cfgMetaDir)
 	m.raftDir = cfg.GetString(cfgRaftDir)
-	m.masterAddrs = cfg.GetString(cfgMasterAddrs)
+	addrs := cfg.GetArray(cfgMasterAddrs)
+	for _, addr := range addrs {
+		masterAddrs = append(masterAddrs, addr.(string))
+	}
 	err = m.validConfig()
 	return
 }
@@ -133,7 +133,7 @@ func (m *MetaNode) validConfig() (err error) {
 	if m.raftDir == "" {
 		m.raftDir = defaultRaftDir
 	}
-	if m.masterAddrs == "" {
+	if len(masterAddrs) == 0 {
 		err = errors.New("master Addrs is empty!")
 		return
 	}
@@ -165,25 +165,15 @@ func (m *MetaNode) stopMetaManager() {
 }
 
 func (m *MetaNode) register() (err error) {
-	rand.Seed(time.Now().Unix())
 	for {
-		// Register and Get NodeID
-		if m.masterAddrs == "" {
-			err = errors.New("masterAddrs is empty")
-			return
-		}
-		mAddrSlice := strings.Split(m.masterAddrs, ";")
-		i := rand.Intn(len(mAddrSlice))
 		m.localAddr, err = util.GetLocalIP()
 		if err != nil {
-			return
+			log.LogErrorf("[register]:%s", err.Error())
+			continue
 		}
-		reqParam := fmt.Sprintf("addr=%s:%d", m.localAddr, m.listen)
-		masterURL := fmt.Sprintf("http://%s/%s?%s", mAddrSlice[i],
-			metaNodeURL, reqParam)
-		err = m.postNodeID(masterURL)
+		err = m.postNodeID()
 		if err != nil {
-			log.LogErrorf("connect master: %s", err.Error())
+			log.LogErrorf("[register]connect master: %s", err.Error())
 			time.Sleep(3 * time.Second)
 			continue
 		}
@@ -191,51 +181,66 @@ func (m *MetaNode) register() (err error) {
 	}
 }
 
-func (m *MetaNode) postNodeID(reqURL string) (err error) {
-	log.LogDebugf("action[postNodeID] post connect master get nodeID: url:%s", reqURL)
-	client := &http.Client{Timeout: 2 * time.Second}
-	req, err := http.NewRequest("POST", reqURL, nil)
+func (m *MetaNode) postNodeID() (err error) {
+	reqPath := fmt.Sprintf("%s?addr=%s:%d", metaNodeURL, m.localAddr, m.listen)
+	msg, err := postToMaster(reqPath, nil)
 	if err != nil {
+		err = errors.Errorf("[postNodeID]->%s", err.Error())
 		return
 	}
-	req.Header.Set("Connection", "close")
-	resp, err := client.Do(req)
-	if err != nil {
+	nodeIDStr := strings.TrimSpace(string(msg))
+	if nodeIDStr == "" {
+		err = errors.Errorf("[postNodeID]: master response empty body")
 		return
 	}
-	defer resp.Body.Close()
-	msg, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return
-	}
-	if resp.StatusCode == http.StatusOK {
-		m.nodeId, err = strconv.ParseUint(string(msg), 10, 64)
-		return
-	}
-	if resp.StatusCode == http.StatusForbidden {
-		m.retryCount++
-		if m.retryCount > 2 {
-			m.retryCount = 0
-			err = errors.New("retry too many")
-			return
-		}
-		masterAddr := strings.TrimSpace(string(msg))
-		if masterAddr == "" {
-			m.retryCount = 0
-			err = errors.New("master response emtpy addr")
-			return
-		}
-		reqParam := fmt.Sprintf("addr=%s:%d", m.localAddr, m.listen)
-		reqURL = fmt.Sprintf("http://%s/%s?%s", masterAddr, metaNodeURL,
-			reqParam)
-		log.LogDebugf("action[postNodeID] retry connect master url: %s", reqURL)
-		return m.postNodeID(reqURL)
+	m.nodeId, err = strconv.ParseUint(nodeIDStr, 10, 64)
+	return
+}
 
-	}
-	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("action[PostToNode] Data send failed,url:%v, "+
-			"status code:%v , response body: %v", reqURL,
-			strconv.Itoa(resp.StatusCode), string(msg))
+func postToMaster(reqPath string, body []byte) (msg []byte, err error) {
+	var (
+		req  *http.Request
+		resp *http.Response
+	)
+	client := &http.Client{Timeout: 2 * time.Second}
+	for _, maddr := range masterAddrs {
+		if curMasterAddr == "" {
+			curMasterAddr = maddr
+		}
+		reqURL := fmt.Sprintf("http://%s%s", curMasterAddr, reqPath)
+		reqBody := bytes.NewBuffer(body)
+		req, err = http.NewRequest("POST", reqURL, reqBody)
+		if err != nil {
+			log.LogErrorf("[postToMaster] construction NewRequest: %s", err.Error())
+			curMasterAddr = ""
+			continue
+		}
+		req.Header.Set("Connection", "close")
+		resp, err = client.Do(req)
+		if err != nil {
+			log.LogErrorf("[postToMaster] connect master: %s", err.Error())
+			curMasterAddr = ""
+			continue
+		}
+		msg, err = ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			log.LogErrorf("[postToMaster] read body: %s", err.Error())
+			curMasterAddr = ""
+			continue
+		}
+		if resp.StatusCode == http.StatusOK {
+			return
+		}
+		if resp.StatusCode == http.StatusForbidden {
+			curMasterAddr = strings.TrimSpace(string(msg))
+			continue
+		}
+		curMasterAddr = ""
+		err = errors.Errorf("[postToMaster] master response status_code=%d",
+			resp.StatusCode)
+		log.LogErrorf("[postToMaster] master response status_code=%d, "+
+			"msg: %v", resp.StatusCode, string(msg))
 	}
 	return
 }
