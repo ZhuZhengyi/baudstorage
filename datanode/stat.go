@@ -3,7 +3,6 @@ package datanode
 import (
 	"bytes"
 	"fmt"
-	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/util/log"
 	"io/ioutil"
 	"net/http"
