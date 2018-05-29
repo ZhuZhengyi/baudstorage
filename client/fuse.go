@@ -10,7 +10,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path"
 
@@ -19,6 +18,7 @@ import (
 
 	bdfs "github.com/tiglabs/baudstorage/client/fs"
 	"github.com/tiglabs/baudstorage/util/config"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 const (
@@ -26,8 +26,8 @@ const (
 )
 
 const (
-	LoggerName     = "fuse.log"
-	LoggerPrefix   = "FUSE:"
+	LoggerDir      = "client"
+	LoggerPrefix   = "client"
 	LoggerFileFlag = os.O_WRONLY | os.O_CREATE | os.O_APPEND
 	LoggerFlag     = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile
 )
@@ -35,10 +35,6 @@ const (
 var (
 	configFile = flag.String("c", "", "FUSE client config file")
 )
-
-func init() {
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
-}
 
 func main() {
 	flag.Parse()
@@ -69,14 +65,12 @@ func Mount(cfg *config.Config) error {
 	}
 	defer c.Close()
 
-	logfile, err := os.OpenFile(path.Join(logpath, LoggerName), LoggerFileFlag, 0644)
+	_, err = log.NewLog(path.Join(logpath, LoggerDir), LoggerPrefix, log.DebugLevel)
 	if err != nil {
 		return err
 	}
-	defer logfile.Close()
 
-	logger := log.New(logfile, LoggerPrefix, LoggerFlag)
-	super, err := bdfs.NewSuper(namespace, master, logpath, logger)
+	super, err := bdfs.NewSuper(namespace, master)
 	if err != nil {
 		return err
 	}

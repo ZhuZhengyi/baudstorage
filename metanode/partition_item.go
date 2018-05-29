@@ -7,29 +7,29 @@ import (
 	"github.com/google/btree"
 )
 
-type MetaPartitionSnapshot struct {
+type MetaItem struct {
 	Op uint32 `json:"op"`
 	K  []byte `json:"k"`
 	V  []byte `json:"v"`
 }
 
-func (s *MetaPartitionSnapshot) Encode() ([]byte, error) {
+func (s *MetaItem) Encode() ([]byte, error) {
 	return json.Marshal(s)
 }
 
-func (s *MetaPartitionSnapshot) Decode(data []byte) error {
+func (s *MetaItem) Decode(data []byte) error {
 	return json.Unmarshal(data, s)
 }
 
-func NewMetaPartitionSnapshot(op uint32, key, value []byte) *MetaPartitionSnapshot {
-	return &MetaPartitionSnapshot{
+func NewMetaPartitionSnapshot(op uint32, key, value []byte) *MetaItem {
+	return &MetaItem{
 		Op: op,
 		K:  key,
 		V:  value,
 	}
 }
 
-type SnapshotIterator struct {
+type ItemIterator struct {
 	applyID    uint64
 	cur        int
 	curItem    btree.Item
@@ -40,8 +40,8 @@ type SnapshotIterator struct {
 	total      int
 }
 
-func NewSnapshotIterator(applyID uint64, ino, den *btree.BTree) *SnapshotIterator {
-	si := new(SnapshotIterator)
+func NewSnapshotIterator(applyID uint64, ino, den *btree.BTree) *ItemIterator {
+	si := new(ItemIterator)
 	si.applyID = applyID
 	si.inodeTree = ino
 	si.dentryTree = den
@@ -52,15 +52,15 @@ func NewSnapshotIterator(applyID uint64, ino, den *btree.BTree) *SnapshotIterato
 	return si
 }
 
-func (si *SnapshotIterator) ApplyIndex() uint64 {
+func (si *ItemIterator) ApplyIndex() uint64 {
 	return si.applyID
 }
 
-func (si *SnapshotIterator) Close() {
+func (si *ItemIterator) Close() {
 	return
 }
 
-func (si *SnapshotIterator) Next() (data []byte, err error) {
+func (si *ItemIterator) Next() (data []byte, err error) {
 	if si.cur > si.total {
 		err = io.EOF
 		return

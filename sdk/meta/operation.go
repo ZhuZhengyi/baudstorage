@@ -1,9 +1,8 @@
 package meta
 
 import (
-	"log"
-
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 // API implementations
@@ -20,13 +19,13 @@ func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *pro
 	packet.Opcode = proto.OpMetaCreateInode
 	err = packet.MarshalData(req)
 	if err != nil {
-		log.Println(err)
+		log.LogError(err)
 		return
 	}
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		log.Println(err)
+		log.LogError(err)
 		return
 	}
 
@@ -38,8 +37,8 @@ func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *pro
 	resp := new(proto.CreateInodeResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
-		log.Println(err)
-		log.Printf("data = [%v]\n", string(packet.Data))
+		log.LogError(err)
+		log.LogErrorf("data = [%v]\n", string(packet.Data))
 		return
 	}
 	return statusOK, resp.Info, nil
@@ -166,13 +165,13 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 	packet.Opcode = proto.OpMetaInodeGet
 	err = packet.MarshalData(req)
 	if err != nil {
-		log.Println(err)
+		log.LogError(err)
 		return
 	}
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		log.Println(err)
+		log.LogError(err)
 		return
 	}
 
@@ -184,7 +183,7 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 	resp := new(proto.InodeGetResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
-		log.Println(err)
+		log.LogError(err)
 		return
 	}
 	return statusOK, resp.Info, nil
@@ -235,17 +234,17 @@ func (mw *MetaWrapper) appendExtentKey(mc *MetaConn, inode uint64, extent proto.
 	packet.Opcode = proto.OpMetaExtentsAdd
 	err = packet.MarshalData(req)
 	if err != nil {
-		log.Println(err)
+		log.LogError(err)
 		return
 	}
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		log.Println(err)
+		log.LogError(err)
 		return
 	}
 	if packet.ResultCode != proto.OpOk {
-		log.Printf("ResultCode(%v)\n", packet.ResultCode)
+		log.LogErrorf("ResultCode(%v)\n", packet.ResultCode)
 	}
 	return parseStatus(packet.ResultCode), nil
 }
@@ -261,13 +260,13 @@ func (mw *MetaWrapper) getExtents(mc *MetaConn, inode uint64) (status int, exten
 	packet.Opcode = proto.OpMetaExtentsList
 	err = packet.MarshalData(req)
 	if err != nil {
-		log.Println(err)
+		log.LogError(err)
 		return
 	}
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		log.Println(err)
+		log.LogError(err)
 		return
 	}
 

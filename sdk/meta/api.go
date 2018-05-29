@@ -1,11 +1,11 @@
 package meta
 
 import (
-	"log"
 	"sync/atomic"
 	"syscall"
 
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 // TODO: High-level API, i.e. work with absolute path
@@ -181,7 +181,7 @@ func (mw *MetaWrapper) AppendExtentKey(inode uint64, ek proto.ExtentKey) error {
 
 	status, err := mw.appendExtentKey(mc, inode, ek)
 	if err != nil || status != statusOK {
-		log.Printf("err(%v) status(%v)", err, status)
+		log.LogErrorf("err(%v) status(%v)", err, status)
 		return syscall.EPERM
 	}
 	return nil

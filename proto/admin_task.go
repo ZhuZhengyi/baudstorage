@@ -48,7 +48,7 @@ func (t *AdminTask) CheckTaskTimeOut() (notResponse bool) {
 		timeOut int64
 	)
 	timeOut = ResponseTimeOut
-	if (int)(t.SendCount) >= MaxSendCount || (time.Now().Unix()-t.SendTime > timeOut ) {
+	if (int)(t.SendCount) >= MaxSendCount || (time.Now().Unix()-t.SendTime > timeOut) {
 		notResponse = true
 	}
 

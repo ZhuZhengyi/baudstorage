@@ -52,7 +52,6 @@ type DataNode struct {
 	masterAddrIndex  uint32
 	port             int
 	profPort         int
-	logDir           string
 	rackName         string
 	clusterId        string
 	localIp          string
@@ -101,17 +100,13 @@ func (s *DataNode) onStart(cfg *config.Config) (err error) {
 	if err = s.startTcpService(); err != nil {
 		return
 	}
-	log.LogDebugf("action[DataNode.onStart] tcp service start.")
 	s.startRestService()
-	log.LogDebugf("action[DataNode.onStart] rest service start.")
 	return
 }
 
 func (s *DataNode) onShutdown() {
 	s.stopTcpService()
-	log.LogDebugf("action[DataNode.onShutdown] tcp service stooped.")
 	s.stopRestService()
-	log.LogDebugf("action[DataNode.onShutdown] rest service stooped.")
 	return
 }
 
@@ -129,7 +124,7 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	s.profPort = int(cfg.GetFloat(ConfigKeyProfPort))
 	s.space = NewSpaceManager(s.rackName)
 
-	if err != nil || s.port == 0 || s.logDir == "" ||
+	if err != nil || s.port == 0 ||
 		masterAddr == "" {
 		err = ErrBadConfFile
 		return
@@ -139,6 +134,7 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	}
 
 	for _, d := range cfg.GetArray(ConfigKeyDisks) {
+		log.LogDebugf("action[DataNode.LoadVol] load disk raw config[%v].", d)
 		// Format "PATH:RESET_SIZE:MAX_ERR
 		arr := strings.Split(d.(string), ":")
 		if len(arr) != 3 {
@@ -192,44 +188,51 @@ func (s *DataNode) startRestService() {
 	http.HandleFunc("/vols", s.HandleVol)
 	http.HandleFunc("/stats", s.HandleStat)
 
+	address := fmt.Sprintf("%s:%d", s.localIp, s.profPort)
+
 	server := &http.Server{
-		Addr: fmt.Sprintf("%s:%d", s.localIp, s.profPort),
+		Addr: address,
 	}
 	go server.ListenAndServe()
+	log.LogDebugf("action[DataNode.startRestService] listen and serve address[%v].", address)
 	s.httpServerCloser = server
 }
 
 func (s *DataNode) stopRestService() {
 	if s.httpServerCloser != nil {
 		s.httpServerCloser.Close()
+		log.LogDebugf("action[DataNode.stopRestService] stop reset service.")
 	}
 }
 
 func (s *DataNode) startTcpService() (err error) {
 	log.LogInfo("Start: startTcpService")
-	l, err := net.Listen(NetType, fmt.Sprintf(":%d", s.port))
+	addr := fmt.Sprintf(":%d", s.port)
+	l, err := net.Listen(NetType, addr)
+	log.LogDebugf("action[DataNode.startTcpService] listen %v address[%v].", NetType, addr)
 	if err != nil {
 		log.LogError("failed to listen, err:", err)
 		return
 	}
 	s.tcpListener = l
-	for {
-		conn, err := l.Accept()
-		if err != nil {
-			log.LogError("failed to accept, err:", err)
-			break
+	go func(ln net.Listener) {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				log.LogErrorf("action[DataNode.startTcpService] failed to accept, err:%s", err.Error())
+				break
+			}
+			log.LogDebugf("action[DataNode.startTcpService] accept connection from %s.", conn.RemoteAddr().String())
+			go s.serveConn(conn)
 		}
-		log.LogDebugf("action[DataNode.startTcpService] accept connection from %s.", conn.RemoteAddr().String())
-		go s.serveConn(conn)
-	}
-
-	log.LogError(LogShutdown + " return startTcpService, listen is closing")
-	return l.Close()
+	}(l)
+	return
 }
 
 func (s *DataNode) stopTcpService() (err error) {
 	if s.tcpListener != nil {
 		s.tcpListener.Close()
+		log.LogDebugf("action[DataNode.stopTcpService] stop tcp service.")
 	}
 	return
 }
@@ -242,13 +245,13 @@ func (s *DataNode) serveConn(conn net.Conn) {
 	c.SetNoDelay(true)
 
 	msgH := NewMsgHandler(c)
-	go s.handleReqs(msgH)
+	go s.handleRequest(msgH)
 	go s.writeToCli(msgH)
 
 	for {
 		select {
 		case <-msgH.exitCh:
-			log.LogDebugf("action[DataNode.serveConn] received data from exitCh.")
+			log.LogDebugf("action[DataNode.serveConn] event loop for %v exit.", conn.RemoteAddr())
 			goto exitDeal
 		default:
 			if err := s.readFromCliAndDeal(msgH); err != nil {
@@ -291,8 +294,8 @@ func (s *DataNode) checkChunkInfo(pkg *Packet) (err error) {
 	localObjId := chunkInfo.Size
 	if (leaderObjId - 1) != chunkInfo.Size {
 		err = ErrChunkOffsetMismatch
-		mesg := fmt.Sprintf("Err[%v] leaderObjId[%v] localObjId[%v]", err, leaderObjId, localObjId)
-		log.LogWarn(pkg.ActionMesg(ActionCheckChunkInfo, LocalProcessAddr, pkg.StartT, fmt.Errorf(mesg)))
+		msg := fmt.Sprintf("Err[%v] leaderObjId[%v] localObjId[%v]", err, leaderObjId, localObjId)
+		log.LogWarn(pkg.ActionMesg(ActionCheckChunkInfo, LocalProcessAddr, pkg.StartT, fmt.Errorf(msg)))
 	}
 
 	return

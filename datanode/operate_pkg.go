@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/master"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util"
@@ -135,13 +136,13 @@ func (s *DataNode) heartBeats(pkg *Packet) {
 		masterAddr = request.MasterAddr
 	} else {
 		response.Status = proto.OpErr
-		response.Result = "unavali opcode "
+		response.Result = "illegal opcode "
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
-	_, err := s.postToMaster(data, "/node/Repost")
+	_, err := s.postToMaster(data, master.DataNodeResponse)
 	if err != nil {
-		err = errors.Annotatef(err, "heaerbeat to master[%v] failed", request.MasterAddr)
+		err = errors.Annotatef(err, "heartbeat to master[%v] failed", request.MasterAddr)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
@@ -311,20 +312,20 @@ func (s *DataNode) streamRead(pkg *Packet, c net.Conn) {
 func (s *DataNode) getWatermark(pkg *Packet) {
 	var buf []byte
 	var (
-		finfo *storage.FileInfo
+		fInfo *storage.FileInfo
 		err   error
 	)
 	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
-		finfo, err = pkg.vol.store.(*storage.TinyStore).GetWatermark(pkg.FileID)
+		fInfo, err = pkg.vol.store.(*storage.TinyStore).GetWatermark(pkg.FileID)
 	case proto.ExtentStoreMode:
-		finfo, err = pkg.vol.store.(*storage.ExtentStore).GetWatermark(pkg.FileID)
+		fInfo, err = pkg.vol.store.(*storage.ExtentStore).GetWatermark(pkg.FileID)
 	}
 	if err != nil {
 		err = errors.Annotatef(err, "Request[%v] getWatermark Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogGetWm, err.Error())
 	} else {
-		buf, err = json.Marshal(finfo)
+		buf, err = json.Marshal(fInfo)
 		pkg.PackOkWithBody(buf)
 	}
 
@@ -334,20 +335,20 @@ func (s *DataNode) getWatermark(pkg *Packet) {
 func (s *DataNode) getAllWatermark(pkg *Packet) {
 	var buf []byte
 	var (
-		finfos []*storage.FileInfo
-		err    error
+		fInfoList []*storage.FileInfo
+		err       error
 	)
 	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
-		finfos, err = pkg.vol.store.(*storage.TinyStore).GetAllWatermark()
+		fInfoList, err = pkg.vol.store.(*storage.TinyStore).GetAllWatermark()
 	case proto.ExtentStoreMode:
-		finfos, err = pkg.vol.store.(*storage.ExtentStore).GetAllWatermark()
+		fInfoList, err = pkg.vol.store.(*storage.ExtentStore).GetAllWatermark()
 	}
 	if err != nil {
 		err = errors.Annotatef(err, "Request[%v] getAllWatermark Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogGetAllWm, err.Error())
 	} else {
-		buf, err = json.Marshal(finfos)
+		buf, err = json.Marshal(fInfoList)
 		pkg.PackOkWithBody(buf)
 	}
 	return
