@@ -12,6 +12,7 @@ type LeaderInfo struct {
 
 func (m *Master) handleLeaderChange(leader uint64) {
 	m.leaderInfo.addr = AddrDatabase[leader]
+	log.LogDebugf("leader is changed:%v",m.leaderInfo.addr)
 	m.cluster.checkDataNodeHeartbeat()
 	m.cluster.checkDataNodeHeartbeat()
 }

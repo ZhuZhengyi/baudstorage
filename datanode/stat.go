@@ -3,7 +3,6 @@ package datanode
 import (
 	"bytes"
 	"fmt"
-	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/util/log"
 	"io/ioutil"
 	"net/http"
@@ -89,7 +88,7 @@ func (s *Stats) updateMetrics(total, used, free, createdVolWeights, remainWeight
 func post(data []byte, url string) (*http.Response, error) {
 	client := &http.Client{}
 	buff := bytes.NewBuffer(data)
-	client.Timeout = time.Second
+	client.Timeout = time.Second*3
 	req, err := http.NewRequest("POST", url, buff)
 	if err != nil {
 		return nil, err
@@ -120,15 +119,14 @@ func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error)
 				index = 0
 			}
 			masterAddr = s.masterAddrs[index]
-			err = errors.Annotatef(err, ActionPostToMaster+" url[%v] Index[%v]", url, i)
-			continue
+			resp, err = post(data, "http://"+masterAddr+url)
 		}
 		scode := resp.StatusCode
 		msg, _ = ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
 		if scode == http.StatusForbidden {
 			masterAddr = string(msg)
-			masterAddr = strings.Replace(masterAddr, "\n", "", -1)
+			masterAddr = strings.Replace(masterAddr, "\n", "", 100)
 			log.LogWarn(fmt.Sprintf("action[DataNode.postToMaster] master Addr change to %v, retry post to master", string(msg)))
 			continue
 		}
@@ -136,6 +134,7 @@ func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error)
 			return nil, fmt.Errorf("postTo %v scode %v msg %v", url, scode, string(msg))
 		}
 		success = true
+		log.LogInfo(fmt.Sprintf("url[%v] to master[%v] response[%v] code[%v]",url,masterAddr,string(msg),scode))
 		break
 	}
 	if !success {

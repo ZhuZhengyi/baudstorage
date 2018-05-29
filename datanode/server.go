@@ -97,10 +97,11 @@ func (s *DataNode) onStart(cfg *config.Config) (err error) {
 	if err = s.LoadVol(cfg); err != nil {
 		return
 	}
+	s.startRestService()
 	if err = s.startTcpService(); err != nil {
 		return
 	}
-	s.startRestService()
+
 	return
 }
 
@@ -132,11 +133,6 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	if s.rackName == "" {
 		s.rackName = DefaultRackName
 	}
-
-	log.LogDebugf("action[DataNode.LoadVol] load port[%v].", s.port)
-	log.LogDebugf("action[DataNode.LoadVol] load clusterId[%v].", s.clusterId)
-	log.LogDebugf("action[DataNode.LoadVol] load rackName[%v].", s.rackName)
-	log.LogDebugf("action[DataNode.LoadVol] load profPort[%v].", s.profPort)
 
 	for _, d := range cfg.GetArray(ConfigKeyDisks) {
 		log.LogDebugf("action[DataNode.LoadVol] load disk raw config[%v].", d)
@@ -219,18 +215,15 @@ func (s *DataNode) startTcpService() (err error) {
 		log.LogError("failed to listen, err:", err)
 		return
 	}
-	s.tcpListener = l
-	go func(ln net.Listener) {
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				log.LogErrorf("action[DataNode.startTcpService] failed to accept, err:%s", err.Error())
-				break
-			}
-			log.LogDebugf("action[DataNode.startTcpService] accept connection from %s.", conn.RemoteAddr().String())
-			go s.serveConn(conn)
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			log.LogErrorf("action[DataNode.startTcpService] failed to accept, err:%s", err.Error())
+			break
 		}
-	}(l)
+		log.LogDebugf("action[DataNode.startTcpService] accept connection from %s.", conn.RemoteAddr().String())
+		go s.serveConn(conn)
+	}
 	return
 }
 

@@ -227,10 +227,10 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	if metaNode, err = c.getMetaNode(nodeAddr); err != nil {
 		goto errDeal
 	}
-	if _, ok := metaNode.Sender.TaskMap[task.ID]; !ok {
-		err = taskNotFound(task.ID)
-		goto errDeal
-	}
+	//if _, ok := metaNode.Sender.TaskMap[task.ID]; !ok {
+	//	err = taskNotFound(task.ID)
+	//	goto errDeal
+	//}
 	if err = UnmarshalTaskResponse(task); err != nil {
 		goto errDeal
 	}
@@ -407,8 +407,10 @@ errDeal:
 
 func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTask) {
 	if task == nil {
+		log.LogDebugf("action[dealDataNodeTaskResponse] receive addr[%v] task response,but task is nil",nodeAddr)
 		return
 	}
+	log.LogDebugf("action[dealDataNodeTaskResponse] receive addr[%v] task response:%v",nodeAddr,task.ToString())
 	var (
 		err      error
 		dataNode *DataNode
@@ -418,32 +420,33 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 		return
 	}
 	if _, ok := dataNode.sender.TaskMap[task.ID]; !ok {
+		err = taskNotFound(task.ID)
 		return
 	}
 	if err := UnmarshalTaskResponse(task); err != nil {
 		return
 	}
-	var taskStauts uint8
+	var taskStatus uint8
 	switch task.OpCode {
 	case proto.OpCreateVol:
 		response := task.Response.(*proto.CreateVolResponse)
-		taskStauts = response.Status
+		taskStatus = response.Status
 		err = c.dealCreateVolResponse(task, response)
 	case proto.OpDeleteVol:
 		response := task.Response.(*proto.DeleteVolResponse)
-		taskStauts = response.Status
+		taskStatus = response.Status
 		err = c.dealDeleteVolResponse(task.OperatorAddr, response)
 	case proto.OpLoadVol:
 		response := task.Response.(*proto.LoadVolResponse)
-		taskStauts = response.Status
+		taskStatus = response.Status
 		err = c.dealLoadVolResponse(task.OperatorAddr, response)
 	case proto.OpDeleteFile:
 		response := task.Response.(*proto.DeleteFileResponse)
-		taskStauts = response.Status
+		taskStatus = response.Status
 		err = c.dealDeleteFileResponse(task.OperatorAddr, response)
 	case proto.OpDataNodeHeartbeat:
 		response := task.Response.(*proto.DataNodeHeartBeatResponse)
-		taskStauts = response.Status
+		taskStatus = response.Status
 		err = c.dealDataNodeHeartbeat(task.OperatorAddr, response)
 	default:
 		log.LogError(fmt.Sprintf("unknown operate code %v", task.OpCode))
@@ -452,7 +455,7 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	if err != nil {
 		log.LogError(fmt.Sprintf("process task[%v] failed", task.ToString()))
 	} else {
-		task.SetStatus(int8(taskStauts))
+		task.SetStatus(int8(taskStatus))
 	}
 
 	return
