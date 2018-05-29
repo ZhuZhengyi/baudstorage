@@ -1,6 +1,7 @@
 package metanode
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"bytes"
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util"
@@ -216,7 +216,6 @@ func postToMaster(reqPath string, body []byte) (msg []byte, err error) {
 			curMasterAddr = ""
 			continue
 		}
-		log.LogDebugf("request url: %v", reqURL)
 		req.Header.Set("Connection", "close")
 		resp, err = client.Do(req)
 		if err != nil {

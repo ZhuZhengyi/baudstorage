@@ -109,6 +109,7 @@ func NewInode(ino uint64, t uint32) *Inode {
 	return &Inode{
 		Inode:      ino,
 		Type:       t,
+		Generation: 1,
 		CreateTime: ts,
 		AccessTime: ts,
 		ModifyTime: ts,
