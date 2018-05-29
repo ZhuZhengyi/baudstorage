@@ -1,12 +1,6 @@
 package metanode
 
-import (
-	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/raftstore"
-	"os"
-	"testing"
-)
-
+/*
 var mp *metaPartition
 
 func TeststartRaftServer() {
@@ -30,3 +24,5 @@ func Test_StartRaft(t *testing.T) {
 	}
 	mp.startRaft()
 }
+
+*/

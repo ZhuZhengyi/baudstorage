@@ -36,7 +36,6 @@ type MetaManagerConfig struct {
 type metaManager struct {
 	nodeId     uint64
 	rootDir    string
-	masterAddr string
 	raftStore  raftstore.RaftStore
 	connPool   *pool.ConnPool
 	state      ServiceState

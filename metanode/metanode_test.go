@@ -37,15 +37,7 @@ func TestValidNodeID(t *testing.T) {
 	defer httpServe.Close()
 	masterAddr := httpServe.Listener.Addr().String()
 	m := NewServer()
-	err = m.register()
-	if err == nil {
-		t.Fatalf("master addrs is empty, ")
-	}
-	if err.Error() == "masterAddrs is empty" {
-		t.Logf("empty master addrs test success!")
-	}
-	t.Logf("master Addr: %s", masterAddr)
-	m.masterAddrs = "127.0.0.1:10234;127.0.0.1:22666;" + masterAddr
+	masterAddrs = []string{"127.0.0.1:10234", "127.0.0.1:22666", masterAddr}
 	if err = m.register(); err != nil {
 		t.Fatalf("register: %s failed!", err.Error())
 	}
@@ -71,12 +63,13 @@ func Test_parseConfig(t *testing.T) {
 	mConfig = config.LoadConfigString(confStr)
 	err = m.parseConfig(mConfig)
 	if err == nil {
-		t.Fatalf("parseConfig failed!")
+		t.Fatalf("parseConfig listen failed!")
 	}
 	if !strings.Contains(err.Error(), "listen port: ") {
-		t.Logf("parseConfig failed!")
+		t.Logf("parseConfig listen failed!")
 	}
 	confStr = `{"listen":10}`
+	masterAddrs = nil
 	mConfig = config.LoadConfigString(confStr)
 	err = m.parseConfig(mConfig)
 	if err == nil {
@@ -87,10 +80,10 @@ func Test_parseConfig(t *testing.T) {
 			t.Fatalf("parseConfig failed!")
 		}
 	}
-	confStr = `{"listen": 11111, "master_addrs":"1.1.1.1:11111"}`
+	confStr = `{"listen": 11111, "masterAddrs":["1.1.1.1:11111"]}`
 	mConfig = config.LoadConfigString(confStr)
 	if err = m.parseConfig(mConfig); err != nil {
-		t.Fatalf("parseConfig failed!")
+		t.Fatalf("parseConfig masterAddrs failed!")
 	}
 
 }

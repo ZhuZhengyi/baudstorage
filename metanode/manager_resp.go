@@ -2,20 +2,19 @@ package metanode
 
 import (
 	"encoding/json"
-	"fmt"
 	"net"
 
 	"github.com/juju/errors"
-	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
 const (
-	masterResponsePath = "metaNode/response" // Method: 'POST', ContentType: 'application/json'
+	masterResponsePath = "/metaNode/response" // Method: 'POST',
+	// ContentType: 'application/json'
 )
 
 // ReplyToMaster reply operation result to master by sending http request.
-func (m *metaManager) respondToMaster(ip string, data interface{}) (err error) {
+func (m *metaManager) respondToMaster(data interface{}) (err error) {
 	// Handle panic
 	defer func() {
 		if r := recover(); r != nil {
@@ -32,8 +31,7 @@ func (m *metaManager) respondToMaster(ip string, data interface{}) (err error) {
 	if err != nil {
 		return
 	}
-	url := fmt.Sprintf("http://%s/%s", ip, masterResponsePath)
-	_, err = util.PostToNode(jsonBytes, url)
+	postToMaster(masterResponsePath, jsonBytes)
 	return
 }
 
