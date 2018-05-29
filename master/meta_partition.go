@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
-	"metanode/proto/mp"
 	"strings"
 	"time"
 )
