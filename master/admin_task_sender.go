@@ -62,6 +62,7 @@ func (sender *AdminTaskSender) process() {
 				time.Sleep(time.Second)
 				continue
 			}
+			log.LogDebugf("begin send tasks:%v",len(tasks))
 			sender.sendTasks(tasks)
 		}
 	}
@@ -147,9 +148,9 @@ func (sender *AdminTaskSender) getNeedDealTask() (tasks []*proto.AdminTask) {
 	sender.Lock()
 	defer sender.Unlock()
 	for _, task := range sender.TaskMap {
-		if task.CheckTaskTimeOut() {
-			delTasks = append(delTasks, task)
-		}
+		//if task.CheckTaskTimeOut() {
+		//	delTasks = append(delTasks, task)
+		//}
 		//if !task.CheckTaskNeedRetrySend() {
 		//	continue
 		//}
@@ -160,7 +161,7 @@ func (sender *AdminTaskSender) getNeedDealTask() (tasks []*proto.AdminTask) {
 	}
 
 	for _, t := range delTasks {
-		sender.DelTask(t)
+		delete(sender.TaskMap,t.ID)
 	}
 
 	return
