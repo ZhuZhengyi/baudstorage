@@ -24,6 +24,7 @@ func NewWritePacket(vol *vol.VolGroup, extentId, seqNo uint64, offset int) (p *P
 	p.Offset = int64(offset)
 	p.Arg = ([]byte)(vol.GetAllAddrs())
 	p.Arglen = uint32(len(p.Arg))
+	p.Nodes=uint8(len(vol.Hosts)-1)
 	p.ReqID = proto.GetReqID()
 	p.Opcode = proto.OpWrite
 
@@ -53,6 +54,8 @@ func NewCreateExtentPacket(vol *vol.VolGroup) (p *Packet) {
 	p.ReqID = proto.GetReqID()
 	p.Arg = ([]byte)(vol.GetAllAddrs())
 	p.Arglen = uint32(len(p.Arg))
+	p.Nodes=uint8(len(vol.Hosts)-1)
+
 	return p
 }
 
@@ -64,6 +67,7 @@ func NewDeleteExtentPacket(vol *vol.VolGroup, extentId uint64) (p *Packet) {
 	p.VolID = vol.VolID
 	p.FileID = extentId
 	p.ReqID=proto.GetReqID()
+	p.Nodes=uint8(len(vol.Hosts)-1)
 	p.Arg = ([]byte)(vol.GetAllAddrs())
 	p.Arglen = uint32(len(p.Arg))
 	return p
