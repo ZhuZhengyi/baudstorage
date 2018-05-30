@@ -76,29 +76,35 @@ errDeal:
 
 func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 	var (
-		rstMsg string
-		nsName string
-		ns     *NameSpace
-		count  int
-		err    error
+		rstMsg         string
+		nsName         string
+		volType        string
+		ns             *NameSpace
+		reqCreateCount int
+		capacity       int
+		lastMaxVolID   int
+		err            error
 	)
 
-	if count, nsName, err = parseCreateVolPara(r); err != nil {
+	if reqCreateCount, nsName, volType, err = parseCreateVolPara(r); err != nil {
 		goto errDeal
 	}
 
 	if ns, err = m.cluster.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
-	for i := 0; i < count; i++ {
-		if count < len(ns.volGroups.volGroups) {
+	capacity = m.cluster.getVolCapacity(ns)
+	lastMaxVolID = int(m.cluster.idAlloc.volID)
+	for i := 0; i < reqCreateCount; i++ {
+		if reqCreateCount < lastMaxVolID {
 			break
 		}
-		if _, err = m.cluster.createVolGroup(nsName); err != nil {
+		if _, err = m.cluster.createVolGroup(nsName, volType); err != nil {
 			goto errDeal
 		}
 	}
-	rstMsg = fmt.Sprintf(" createVol success")
+	rstMsg = fmt.Sprintf(" createVol success.reqeustCount:%v,cluster volume capacity:%v ,last MaxVolID:%v",
+		reqCreateCount, capacity, lastMaxVolID)
 	io.WriteString(w, rstMsg)
 
 	return
@@ -394,7 +400,7 @@ func (m *Master) metaPartitionOffline(w http.ResponseWriter, r *http.Request) {
 		msg              string
 		err              error
 	)
-	if nodeAddr, nsName, partitionID, err = parseMetaPartitionOffline(r); err != nil {
+	if nsName, nodeAddr, partitionID, err = parseMetaPartitionOffline(r); err != nil {
 		goto errDeal
 	}
 
@@ -601,7 +607,7 @@ func parseCreateNamespacePara(r *http.Request) (name string, replicaNum int, err
 	return
 }
 
-func parseCreateVolPara(r *http.Request) (count int, name string, err error) {
+func parseCreateVolPara(r *http.Request) (count int, name, volType string, err error) {
 	r.ParseForm()
 	if countStr := r.FormValue(ParaCount); countStr == "" {
 		err = paraNotFound(ParaCount)
@@ -611,6 +617,16 @@ func parseCreateVolPara(r *http.Request) (count int, name string, err error) {
 		return
 	}
 	if name, err = checkNamespace(r); err != nil {
+		return
+	}
+
+	if volType = r.FormValue(ParaVolType); volType == "" {
+		err = paraNotFound(ParaVolType)
+		return
+	}
+
+	if !(strings.TrimSpace(volType) == proto.ExtentVol || strings.TrimSpace(volType) == proto.TinyVol) {
+		err = InvalidVolType
 		return
 	}
 	return

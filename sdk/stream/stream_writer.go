@@ -214,7 +214,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 func (stream *StreamWriter) recoverExtent() (err error) {
 	for i := 0; i < MaxSelectVolForWrite; i++ {
 		sendList := stream.getWriter().getNeedRetrySendPackets()
-		stream.execludeVols = append(stream.execludeVols, stream.getWriter().volId)
+		stream.execludeVols = append(stream.execludeVols, stream.getWriter().volID)
 		if err = stream.allocateNewExtentWriter(); err != nil {
 			err = errors.Annotatef(err, "RecoverExtent Failed")
 			continue
@@ -252,7 +252,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	)
 	err = fmt.Errorf("cannot alloct new extent after maxrery")
 	for i := 0; i < MaxSelectVolForWrite; i++ {
-		if vol, err = stream.wrapper.GetWriteVol(&stream.execludeVols); err != nil {
+		if vol, err = stream.wrapper.GetWriteVol(stream.execludeVols); err != nil {
 			continue
 		}
 		if extentId, err = stream.createExtent(vol); err != nil {
@@ -266,7 +266,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	if err != nil {
 		return
 	}
-	stream.currentVolId = vol.VolId
+	stream.currentVolId = vol.VolID
 	stream.currentExtentId = extentId
 	stream.setWriter(writer)
 	err = nil

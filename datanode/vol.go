@@ -12,8 +12,6 @@ import (
 
 const (
 	VolPrefix    = "vol_"
-	ExtentVol    = "extent"
-	TinyVol      = "tiny"
 	EmptyVolName = ""
 )
 
@@ -53,14 +51,15 @@ func NewVol(volId uint32, volMode, name, diskPath string, storeMode bool, storeS
 	v.volMode = volMode
 	v.diskPath = diskPath
 	v.path = name
+	v.volSize = storeSize
 	v.exitCh = make(chan bool, 10)
 	if name == EmptyVolName {
 		v.path = path.Join(v.diskPath, v.toName())
 	}
 	switch volMode {
-	case ExtentVol:
+	case proto.ExtentVol:
 		v.store, err = storage.NewExtentStore(v.path, storeSize, storeMode)
-	case TinyVol:
+	case proto.TinyVol:
 		v.store, err = storage.NewTinyStore(v.path, storeSize, storeMode)
 	default:
 		return nil, fmt.Errorf("NewVol[%v] WrongVolMode[%v]", volId, volMode)
@@ -130,18 +129,18 @@ func (v *Vol) LoadVol() (response *proto.LoadVolResponse) {
 	response.VolType = v.volMode
 	response.VolSnapshot = make([]*proto.File, 0)
 	switch v.volMode {
-	case ExtentVol:
+	case proto.ExtentVol:
 		var err error
 		store := v.store.(*storage.ExtentStore)
 		response.VolSnapshot, err = store.SnapShot()
 		response.Used = uint64(store.GetStoreUsedSize())
 		if err != nil {
-			response.Status = proto.OpErr
+			response.Status = proto.TaskFail
 			response.Result = err.Error()
 		} else {
-			response.Status = proto.OpOk
+			response.Status = proto.TaskSuccess
 		}
-	case TinyVol:
+	case proto.TinyVol:
 
 	}
 	return

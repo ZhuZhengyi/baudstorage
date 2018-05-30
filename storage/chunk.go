@@ -62,7 +62,7 @@ func (c *Chunk) loadTree(name string) (maxOid uint64, err error) {
 		return
 	}
 
-	var idxFile *FileSimulator
+	idxFile:=&FileSimulator{}
 	idxName := name + ".idx"
 	if err = idxFile.OpenFile(idxName, ChunkOpenOpt, 0666); err != nil {
 		c.file.Close()

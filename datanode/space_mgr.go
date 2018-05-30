@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
+	"github.com/tiglabs/baudstorage/util/log"
 	"math"
 	"sync"
 	"sync/atomic"
 	"time"
-	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type SpaceManager struct {
@@ -76,14 +76,14 @@ func (space *SpaceManager) updateMetrics() {
 		}
 	}
 	space.diskLock.RUnlock()
-	log.LogInfof("macheile total[%v] used[%v] free[%v]createdVolWeights[%v]  remainWeightsForCreateVol[%v]" +
-		"volcnt[%v]maxWeightsForCreateVol[%v] ",total,used,free,createdVolWeights,remainWeightsForCreateVol,volcnt,maxWeightsForCreateVol)
+	log.LogInfof("macheile total[%v] used[%v] free[%v]createdVolWeights[%v]  remainWeightsForCreateVol[%v]"+
+		"volcnt[%v]maxWeightsForCreateVol[%v] ", total, used, free, createdVolWeights, remainWeightsForCreateVol, volcnt, maxWeightsForCreateVol)
 	space.stats.updateMetrics(total, used, free, createdVolWeights,
 		remainWeightsForCreateVol, maxWeightsForCreateVol, volcnt)
 }
 
 func (space *SpaceManager) getMinVolCntDisk() (d *Disk) {
-	space.diskLock.RLocker()
+	space.diskLock.RLock()
 	defer space.diskLock.RUnlock()
 	var minVolCnt uint64
 	minVolCnt = math.MaxUint64
@@ -143,11 +143,11 @@ func (space *SpaceManager) deleteVol(vodId uint32) {
 	space.volLock.Unlock()
 	v.exitCh <- true
 	switch v.volMode {
-	case ExtentVol:
+	case proto.ExtentVol:
 		store := v.store.(*storage.ExtentStore)
 		store.ClostAll()
 
-	case TinyVol:
+	case proto.TinyVol:
 		store := v.store.(*storage.TinyStore)
 		store.CloseAll()
 	}
@@ -191,11 +191,11 @@ func (space *SpaceManager) modifyVolsStatus() {
 			}
 
 			switch v.volMode {
-			case ExtentVol:
+			case proto.ExtentVol:
 				store := v.store.(*storage.ExtentStore)
 				v.status = store.GetStoreStatus()
 				v.used = int(store.GetStoreUsedSize())
-			case TinyVol:
+			case proto.TinyVol:
 				store := v.store.(*storage.TinyStore)
 				v.status = store.GetStoreStatus()
 				if v.isLeader {

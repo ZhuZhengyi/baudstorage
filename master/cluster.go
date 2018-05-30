@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
+	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 	"sync"
 	"time"
@@ -209,7 +210,7 @@ func (c *Cluster) getNamespace(nsName string) (ns *NameSpace, err error) {
 	return
 }
 
-func (c *Cluster) createVolGroup(nsName string) (vg *VolGroup, err error) {
+func (c *Cluster) createVolGroup(nsName, volType string) (vg *VolGroup, err error) {
 	var (
 		ns          *NameSpace
 		volID       uint64
@@ -221,15 +222,14 @@ func (c *Cluster) createVolGroup(nsName string) (vg *VolGroup, err error) {
 	if ns, err = c.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
-
-	if volID, err = c.idAlloc.allocatorVolID(); err != nil {
-		goto errDeal
-	}
-	//volID++
-	vg = newVolGroup(volID, ns.volReplicaNum)
 	if targetHosts, err = c.ChooseTargetDataHosts(int(ns.volReplicaNum)); err != nil {
 		goto errDeal
 	}
+	//volID++
+	if volID, err = c.idAlloc.allocatorVolID(); err != nil {
+		goto errDeal
+	}
+	vg = newVolGroup(volID, ns.volReplicaNum, volType)
 	vg.PersistenceHosts = targetHosts
 	if err = c.syncAddVolGroup(nsName, vg); err != nil {
 		goto errDeal
@@ -345,6 +345,7 @@ func (c *Cluster) volOffline(offlineAddr, nsName string, vg *VolGroup, errMsg st
 	vg.volOffLineInMem(offlineAddr)
 	vg.checkAndRemoveMissVol(offlineAddr)
 	task = proto.NewAdminTask(proto.OpCreateVol, offlineAddr, newCreateVolRequest(vg.volType, vg.VolID))
+	task.ID = fmt.Sprintf("%v_volID[%v]", task.ID, vg.VolID)
 	tasks = make([]*proto.AdminTask, 0)
 	tasks = append(tasks, task)
 	c.putDataNodeTasks(tasks)
@@ -406,15 +407,15 @@ func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err err
 		err = elementNotFound(nsName)
 		return
 	}
+
+	if hosts, peers, err = c.ChooseTargetMetaHosts(int(ns.mpReplicaNum)); err != nil {
+		return
+	}
+	log.LogDebugf("target meta hosts:%v,peers:%v", hosts, peers)
 	if partitionID, err = c.idAlloc.allocatorPartitionID(); err != nil {
 		return
 	}
 	mp = NewMetaPartition(partitionID, start, end, nsName)
-	if hosts, peers, err = c.ChooseTargetMetaHosts(int(ns.mpReplicaNum)); err != nil {
-		return
-	}
-
-	log.LogDebugf("target meta hosts:%v,peers:%v", hosts, peers)
 	mp.setPersistenceHosts(hosts)
 	mp.setPeers(peers)
 	if err = c.syncAddMetaPartition(nsName, mp); err != nil {
@@ -491,5 +492,21 @@ func (c *Cluster) getAllNamespaces() (namespaces []string) {
 	for name, _ := range c.namespaces {
 		namespaces = append(namespaces, name)
 	}
+	return
+}
+
+func (c *Cluster) getVolCapacity(ns *NameSpace) (count int) {
+	var (
+		totalCount uint64
+		mutex      sync.Mutex
+	)
+	mutex.Lock()
+	defer mutex.Unlock()
+	c.dataNodes.Range(func(addr, value interface{}) bool {
+		dataNode := value.(*DataNode)
+		totalCount = totalCount + dataNode.RemainWeightsForCreateVol/util.DefaultVolSize
+		return true
+	})
+	count = int(totalCount / uint64(ns.volReplicaNum))
 	return
 }

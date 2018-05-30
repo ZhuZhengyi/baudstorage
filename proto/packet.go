@@ -27,6 +27,9 @@ const (
 	HeaderSize      = 45
 	PkgArgMaxSize   = 100
 	ConnBufferSize  = 4096
+
+	ExtentVol    = "extent"
+	TinyVol      = "tiny"
 )
 
 //operations

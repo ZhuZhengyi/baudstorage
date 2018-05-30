@@ -187,7 +187,9 @@ func (c *Cluster) handleApply(cmd *Metadata) (err error) {
 	if cmd == nil {
 		return fmt.Errorf("metadata can't be null")
 	}
-
+	if c.partition.IsLeader() {
+		return
+	}
 	switch cmd.Op {
 	case OpSyncAddDataNode:
 		c.applyAddDataNode(cmd)
@@ -253,11 +255,10 @@ func (c *Cluster) applyAddVolGroup(cmd *Metadata) {
 	if keys[1] == VolGroupAcronym {
 		vgv := &VolGroupValue{}
 		json.Unmarshal(cmd.V, vgv)
-		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum)
+		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum, vgv.VolType)
 		ns, _ := c.getNamespace(keys[2])
 		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
-		ns.volGroups.volGroups = append(ns.volGroups.volGroups, vg)
-
+		ns.volGroups.putVol(vg)
 	}
 }
 
@@ -416,9 +417,9 @@ func (c *Cluster) loadVolGroups() (err error) {
 			err = fmt.Errorf("action[decodeVolValue],value:%v,err:%v", encodedValue.Data(), err)
 			return err
 		}
-		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum)
+		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum, vgv.VolType)
 		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
-		ns.volGroups.volGroups = append(ns.volGroups.volGroups, vg)
+		ns.volGroups.putVol(vg)
 		encodedKey.Free()
 		encodedValue.Free()
 	}

@@ -105,24 +105,23 @@ func (s *DataNode) doReplyCh(reply *Packet, msgH *MessageHandler) {
 	if reply.IsErrPack() {
 		err = fmt.Errorf(reply.ActionMesg(ActionWriteToCli, msgH.inConn.RemoteAddr().String(),
 			reply.StartT, fmt.Errorf(string(reply.Data[:reply.Size]))))
-		log.LogError(err)
+		log.LogErrorf("action[DataNode.doReplyCh] %v", err)
 	}
 
 	if reply.Opcode != proto.OpStreamRead {
 		if err = reply.WriteToConn(msgH.inConn); err != nil {
 			err = fmt.Errorf(reply.ActionMesg(ActionWriteToCli, msgH.inConn.RemoteAddr().String(),
 				reply.StartT, err))
-			log.LogError(err)
+			log.LogErrorf("action[DataNode.doReplyCh] %v", err)
 			msgH.ExitSign()
 		}
 	}
 	if !reply.IsMasterCommand() {
 		reply.afterTp()
+		log.LogDebugf("action[DataNode.doReplyCh] %v", reply.ActionMesg(ActionWriteToCli,
+			msgH.inConn.RemoteAddr().String(), reply.StartT, err))
+		s.statsFlow(reply, OutFlow)
 	}
-
-	log.LogDebug(reply.ActionMesg(ActionWriteToCli,
-		msgH.inConn.RemoteAddr().String(), reply.StartT, err))
-	s.statsFlow(reply, OutFlow)
 }
 
 func (s *DataNode) writeToCli(msgH *MessageHandler) {
@@ -161,7 +160,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 		return
 	}
 
-	//if local excute failed,then
+	//if local execute failed,then
 	if request.IsErrPack() {
 		err = errors.Annotatef(fmt.Errorf(request.getErr()), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
@@ -172,7 +171,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 	reply = NewPacket()
 	if err = reply.ReadFromConn(request.nextConn, proto.ReadDeadlineTime); err == nil {
 		if reply.ReqID == request.ReqID && reply.VolID == request.VolID {
-			goto sucess
+			goto success
 		}
 		if err = msgH.checkReplyAvail(reply); err != nil {
 			log.LogError(err.Error())
@@ -187,7 +186,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 
 	return
 
-sucess:
+success:
 	if reply.IsErrPack() {
 		err = fmt.Errorf(ActionReciveFromNext+"remote [%v] do failed[%v]",
 			request.nextAddr, string(reply.Data[:reply.Size]))

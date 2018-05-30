@@ -41,9 +41,9 @@ func (vm *VolGroupMap) getVol(volID uint64) (*VolGroup, error) {
 
 func (vm *VolGroupMap) putVol(v *VolGroup) {
 	vm.Lock()
+	defer vm.Unlock()
 	vm.volGroupMap[v.VolID] = v
 	vm.volGroups = append(vm.volGroups, v)
-	vm.Unlock()
 }
 
 func (vm *VolGroupMap) updateVolResponseCache(needUpdate bool, minVolID uint64) (body []byte, err error) {
@@ -75,11 +75,9 @@ func (vm *VolGroupMap) updateVolResponseCache(needUpdate bool, minVolID uint64) 
 
 func (vm *VolGroupMap) GetVolsView(minVolID uint64) (vrs []*VolResponse) {
 	vrs = make([]*VolResponse, 0)
+	log.LogDebugf("volGroupMapLen[%v],volGroupsLen[%v],minVolID[%v],volGroupMap[%v],volGroups[%v]", len(vm.volGroupMap), len(vm.volGroups), minVolID, vm.volGroupMap, vm.volGroups)
 	for _, vol := range vm.volGroupMap {
 		if vol.VolID <= minVolID {
-			continue
-		}
-		if vol.status == VolUnavailable {
 			continue
 		}
 		vr := vol.convertToVolResponse()

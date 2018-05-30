@@ -30,6 +30,8 @@ var (
 	NoHaveMajorityReplica               = errors.New("no have majority replica error")
 	NoLeader                            = errors.New("no leader")
 	ErrBadConfFile                      = errors.New("BadConfFile")
+
+	InvalidVolType = errors.New("invalid vol type. extent or tiny")
 )
 
 func paraNotFound(name string) (err error) {

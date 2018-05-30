@@ -67,10 +67,10 @@ func (v *Vol) getAllMemberFileMetas() (allMembers []*MembersFileMetas, err error
 	allMembers = make([]*MembersFileMetas, v.members.VolGoal)
 	var files []*storage.FileInfo
 	switch v.volMode {
-	case ExtentVol:
+	case proto.ExtentVol:
 		store := v.store.(*storage.ExtentStore)
 		files, err = store.GetAllWatermark()
-	case TinyVol:
+	case proto.TinyVol:
 		store := v.store.(*storage.TinyStore)
 		files, err = store.GetAllWatermark()
 	}
@@ -207,7 +207,7 @@ func (v *Vol) generatorDeleteExtentsTasks(allMembers []*MembersFileMetas) {
 /*notify follower to repair vol store*/
 func (v *Vol) NotifyRepair(members []*MembersFileMetas) (err error) {
 	storeMode := proto.ExtentStoreMode
-	if v.volMode == TinyVol {
+	if v.volMode == proto.TinyVol {
 		storeMode = proto.TinyStoreMode
 	}
 	p := NewNotifyRepair(v.volId, storeMode)
