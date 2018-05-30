@@ -105,7 +105,7 @@ func (msgH *MessageHandler) ClearReplys() {
 	}
 }
 
-func (msgH *MessageHandler) DelListElement(reply *Packet, e *list.Element, s *DataNode) (exit bool) {
+func (msgH *MessageHandler) DelListElement(reply *Packet, e *list.Element, s *DataNode) {
 	msgH.listMux.Lock()
 	defer msgH.listMux.Unlock()
 	for e := msgH.sentList.Front(); e != nil; e = e.Next() {

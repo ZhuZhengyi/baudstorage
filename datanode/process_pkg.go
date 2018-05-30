@@ -157,17 +157,17 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 	if request.nextConn == nil {
 		err = errors.Annotatef(fmt.Errorf(ConnIsNullErr), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
-		exit = msgH.DelListElement(request, e, s)
-		return
+		msgH.DelListElement(request, e, s)
+		return nil, true
 	}
 
 	//if local execute failed,then
 	if request.IsErrPack() {
 		err = errors.Annotatef(fmt.Errorf(request.getErr()), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
-		exit = msgH.DelListElement(request, e, s)
+		msgH.DelListElement(request, e, s)
 		log.LogError(request.ActionMesg(ActionReciveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
-		return
+		return nil, true
 	}
 
 	reply = NewPacket()
@@ -177,7 +177,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 		}
 		if err = msgH.checkReplyAvail(reply); err != nil {
 			request.PackErrorBody(ActionReciveFromNext, err.Error())
-			exit = msgH.DelListElement(request, e, s)
+			msgH.DelListElement(request, e, s)
 			log.LogErrorf("action[DataNode.receiveFromNext] %v.", err.Error())
 			return request, true
 		}
@@ -185,8 +185,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 		log.LogError(request.ActionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 		err = errors.Annotatef(err, "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
-		exit = msgH.DelListElement(request, e, s)
-
+		msgH.DelListElement(request, e, s)
 		return request, true
 	}
 
@@ -200,7 +199,7 @@ success:
 		request.CopyFrom(reply)
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 	}
-	exit = msgH.DelListElement(request, e, s)
+	msgH.DelListElement(request, e, s)
 	log.LogDebug(reply.ActionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 
 	return
