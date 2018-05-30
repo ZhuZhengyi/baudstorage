@@ -321,12 +321,19 @@ func (s *DataNode) streamRead(request *Packet, connect net.Conn) {
 		request.Crc, err = store.Read(request.FileID, offset, int64(currReadSize), request.Data)
 		if err != nil {
 			request.PackErrorBody(ActionStreamRead, err.Error())
-			request.WriteToConn(connect)
+			if err=request.WriteToConn(connect);err!=nil {
+				err = fmt.Errorf(request.ActionMesg(ActionWriteToCli,connect.RemoteAddr().String(),
+					request.StartT, err))
+				log.LogErrorf(err.Error())
+			}
 			return
 		}
 		request.Size = currReadSize
 		request.ResultCode = proto.OpOk
 		if err = request.WriteToConn(connect); err != nil {
+			err = fmt.Errorf(request.ActionMesg(ActionWriteToCli,connect.RemoteAddr().String(),
+				request.StartT, err))
+			log.LogErrorf(err.Error())
 			return
 		}
 		needReplySize -= currReadSize
