@@ -11,7 +11,7 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk"
+	"github.com/tiglabs/baudstorage/sdk/vol"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
@@ -43,15 +43,15 @@ func NewMockServer(datadir string) (m *MockServer, err error) {
 	return
 }
 
-func (m *MockServer) volGroupView() (views []*sdk.VolGroup) {
-	views = make([]*sdk.VolGroup, 0)
+func (m *MockServer) volGroupView() (views []*vol.VolGroup) {
+	views = make([]*vol.VolGroup, 0)
 	for i := 1; i <= 1000; i++ {
 		rand.Seed(time.Now().UnixNano())
 		hosts := make([]string, 3)
 		for j := 0; j < 3; j++ {
 			hosts[j] = "127.0.0.1:9000"
 		}
-		v := &sdk.VolGroup{
+		v := &vol.VolGroup{
 			VolID:      uint32(i),
 			ReplicaNum: 3,
 			Status:     uint8((rand.Int()%2 + 1)),
@@ -178,7 +178,7 @@ func (s *MockServer) serveConn(conn net.Conn) {
 
 func (s *MockServer) clientview(w http.ResponseWriter, r *http.Request) {
 	groups := s.volGroupView()
-	views := &sdk.VolsView{Vols: groups}
+	views := &vol.VolsView{Vols: groups}
 	body, _ := json.Marshal(views)
 	w.Write(body)
 }

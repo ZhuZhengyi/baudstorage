@@ -1,4 +1,4 @@
-package sdk
+package vol
 
 import (
 	"encoding/json"
@@ -69,7 +69,6 @@ func NewVolGroupWraper(namespace, masterHosts string) (vw *VolGroupWrapper, err 
 }
 
 func (vw *VolGroupWrapper) update() {
-	vw.getVolsFromMaster()
 	ticker := time.NewTicker(time.Minute * 5)
 	for {
 		select {
@@ -100,6 +99,7 @@ func (vw *VolGroupWrapper) getVolsFromMaster() (err error) {
 			log.LogError(fmt.Sprintf(ActionGetVolGroupView+"get VolView from master[%v] err[%v]", m, err.Error()))
 			continue
 		}
+		log.LogInfof("Get VolView from master: %v", string(body))
 		vw.updateVolGroup(views.Vols)
 		break
 	}

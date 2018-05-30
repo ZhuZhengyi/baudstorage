@@ -58,6 +58,7 @@ func (s *DataNode) checkAndAddInfo(pkg *Packet) error {
 	case proto.ExtentStoreMode:
 		if pkg.isHeadNode() && pkg.Opcode == proto.OpCreateFile {
 			pkg.FileID = pkg.vol.store.(*storage.ExtentStore).GetExtentId()
+			log.LogInfof("pkg[%v] alloc fileId[%v]",pkg.GetUniqLogId(),pkg.FileID)
 		}
 	}
 	return err

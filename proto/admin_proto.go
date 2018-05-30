@@ -49,6 +49,7 @@ type LoadVolResponse struct {
 	Used        uint64
 	VolSnapshot []*File
 	Status      uint8
+	VolStatus   uint8
 	Result      string
 }
 

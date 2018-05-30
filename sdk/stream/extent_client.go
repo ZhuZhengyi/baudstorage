@@ -6,7 +6,7 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk"
+	"github.com/tiglabs/baudstorage/sdk/vol"
 	"github.com/tiglabs/baudstorage/util/log"
 	"runtime"
 )
@@ -15,7 +15,7 @@ type AppendExtentKeyFunc func(inode uint64, key proto.ExtentKey) error
 type GetExtentsFunc func(inode uint64) ([]proto.ExtentKey, error)
 
 type ExtentClient struct {
-	wrapper         *sdk.VolGroupWrapper
+	wrapper         *vol.VolGroupWrapper
 	writers         map[uint64]*StreamWriter
 	writerLock      sync.RWMutex
 	readers         map[uint64]*StreamReader
@@ -29,7 +29,7 @@ type ExtentClient struct {
 func NewExtentClient(namespace, master string, appendExtentKey AppendExtentKeyFunc, getExtents GetExtentsFunc) (client *ExtentClient, err error) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	client = new(ExtentClient)
-	client.wrapper, err = sdk.NewVolGroupWraper(namespace, master)
+	client.wrapper, err = vol.NewVolGroupWraper(namespace, master)
 	if err != nil {
 		return nil, fmt.Errorf("init volGroup Wrapper failed [%v]", err.Error())
 	}
@@ -205,7 +205,7 @@ func (client *ExtentClient) Delete(keys []proto.ExtentKey) (err error) {
 	return nil
 }
 
-func (client *ExtentClient) delete(vol *sdk.VolGroup, extentId uint64) (err error) {
+func (client *ExtentClient) delete(vol *vol.VolGroup, extentId uint64) (err error) {
 	connect, err := client.wrapper.GetConnect(vol.Hosts[0])
 	if err != nil {
 		return

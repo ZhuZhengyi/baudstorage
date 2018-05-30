@@ -91,7 +91,7 @@ func (f *File) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadR
 }
 
 func (f *File) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
-	log.LogDebugf("Write: ino(%v) HandleID(%v) offset(%v) data(%v)\n", f.inode.ino, req.Handle, req.Offset, req.Data)
+	log.LogDebugf("Write: ino(%v) HandleID(%v) offset(%v) len(%v)\n", f.inode.ino, req.Handle, req.Offset, len(req.Data))
 	size, err := f.super.ec.Write(f.inode.ino, req.Data)
 	if err != nil {
 		log.LogErrorf("Write returns error (%v)", err.Error())

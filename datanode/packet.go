@@ -192,35 +192,35 @@ func (p *Packet) getErr() (m string) {
 func (p *Packet) ClassifyErrorOp(errLog string, errMsg string) {
 	if strings.Contains(errLog, ActionReciveFromNext) || strings.Contains(errLog, ActionSendToNext) ||
 		strings.Contains(errLog, ConnIsNullErr) || strings.Contains(errLog, ActioncheckAndAddInfos) {
-		p.Opcode = proto.OpIntraGroupNetErr
+		p.ResultCode = proto.OpIntraGroupNetErr
 		return
 	}
 
 	if strings.Contains(errMsg, storage.ErrorUnmatchPara.Error()) ||
 		strings.Contains(errMsg, ErrorUnknowOp.Error()) {
-		p.Opcode = proto.OpArgUnmatchErr
+		p.ResultCode = proto.OpArgUnmatchErr
 	} else if strings.Contains(errMsg, storage.ErrorObjNotFound.Error()) ||
 		strings.Contains(errMsg, storage.ErrorHasDelete.Error()) {
-		p.Opcode = proto.OpNotExistErr
+		p.ResultCode = proto.OpNotExistErr
 	} else if strings.Contains(errMsg, storage.ErrSyscallNoSpace.Error()) {
-		p.Opcode = proto.OpDiskNoSpaceErr
+		p.ResultCode = proto.OpDiskNoSpaceErr
 	} else if strings.Contains(errMsg, storage.ErrorAgain.Error()) {
-		p.Opcode = proto.OpIntraGroupNetErr
+		p.ResultCode = proto.OpIntraGroupNetErr
 	} else if strings.Contains(errMsg, storage.ErrorChunkNotFound.Error()) {
 		if p.Opcode != proto.OpWrite {
-			p.Opcode = proto.OpNotExistErr
+			p.ResultCode = proto.OpNotExistErr
 		} else {
-			p.Opcode = proto.OpIntraGroupNetErr
+			p.ResultCode = proto.OpIntraGroupNetErr
 		}
 	} else {
-		p.Opcode = proto.OpIntraGroupNetErr
+		p.ResultCode = proto.OpIntraGroupNetErr
 	}
 }
 
 func (p *Packet) PackErrorBody(action, msg string) {
 	p.ClassifyErrorOp(action, msg)
-	if p.Opcode == proto.OpDiskNoSpaceErr || p.Opcode == proto.OpDiskErr {
-		p.Opcode = proto.OpIntraGroupNetErr
+	if p.ResultCode == proto.OpDiskNoSpaceErr || p.ResultCode == proto.OpDiskErr {
+		p.ResultCode = proto.OpIntraGroupNetErr
 	}
 	p.Size = uint32(len([]byte(action + "_" + msg)))
 	p.Data = make([]byte, p.Size)
