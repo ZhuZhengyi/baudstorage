@@ -118,7 +118,7 @@ func (msgH *MessageHandler) DelListElement(reply *Packet, e *list.Element, s *Da
 			msgH.replyCh <- pkg
 			break
 		} else {
-			break
+			s.CleanConn(request.nextConn, ForceClostConnect)
 		}
 	}
 
