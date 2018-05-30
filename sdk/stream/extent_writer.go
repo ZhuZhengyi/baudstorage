@@ -53,8 +53,8 @@ type ExtentWriter struct {
 }
 
 func NewExtentWriter(inode uint64, vol *vol.VolGroup, wrapper *vol.VolGroupWrapper, extentId uint64) (writer *ExtentWriter, err error) {
-	if extentId<=0{
-		return nil,fmt.Errorf("inode[%v],vol[%v],unavalid extentId[%v]",inode,vol.VolID,extentId)
+	if extentId <= 0 {
+		return nil, fmt.Errorf("inode[%v],vol[%v],unavalid extentId[%v]", inode, vol.VolID, extentId)
 	}
 	writer = new(ExtentWriter)
 	writer.requestQueue = list.New()
@@ -331,9 +331,9 @@ func (writer *ExtentWriter) recive() {
 			}
 			request := e.Value.(*Packet)
 			reply := NewReply(request.ReqID, request.VolID, request.FileID)
-			reply.Opcode=request.Opcode
-			reply.Offset=request.Offset
-			reply.Size=request.Size
+			reply.Opcode = request.Opcode
+			reply.Offset = request.Offset
+			reply.Size = request.Size
 			err := reply.ReadFromConn(writer.getConnect(), proto.ReadDeadlineTime)
 			if err != nil {
 				writer.getConnect().Close()
@@ -420,9 +420,9 @@ func (writer *ExtentWriter) getNeedRetrySendPackets() (requests []*Packet) {
 		requests = append(requests, e.Value.(*Packet))
 	}
 	lastPacket := writer.currentPacket
-	backPkg=requests[len(requests)-1]
+	backPkg = requests[len(requests)-1]
 	if lastPacket != nil && lastPacket.ReqID > backPkg.ReqID {
-		requests=append(requests,lastPacket)
+		requests = append(requests, lastPacket)
 	}
 
 	return

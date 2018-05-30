@@ -105,7 +105,7 @@ func (stream *StreamWriter) init() (err error) {
 	}
 	err = stream.allocateNewExtentWriter()
 	if err != nil {
-		err=errors.Annotatef(err, "WriteInit AllocNewExtentFailed")
+		err = errors.Annotatef(err, "WriteInit AllocNewExtentFailed")
 		return err
 	}
 
@@ -213,7 +213,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 }
 
 func (stream *StreamWriter) recoverExtent() (err error) {
-	retryPackets:=stream.getWriter().getNeedRetrySendPackets()
+	retryPackets := stream.getWriter().getNeedRetrySendPackets()
 	for i := 0; i < MaxSelectVolForWrite; i++ {
 		stream.execludeVols = append(stream.execludeVols, stream.getWriter().volID)
 		if err = stream.allocateNewExtentWriter(); err != nil {
@@ -228,7 +228,7 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 			err = errors.Annotatef(err, "update filesize[%v] to metanode Failed", ek.Size)
 			continue
 		}
-		for _,p:=range retryPackets {
+		for _, p := range retryPackets {
 			_, err = stream.getWriter().write(p.Data, int(p.Size))
 			if err != nil {
 				err = errors.Annotatef(err, "RecoverExtent write failed")
@@ -236,7 +236,7 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 			}
 		}
 		if err == nil {
-			stream.execludeVols=make([]uint32,0)
+			stream.execludeVols = make([]uint32, 0)
 			break
 		}
 	}
@@ -254,31 +254,31 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	err = fmt.Errorf("cannot alloct new extent after maxrery")
 	for i := 0; i < MaxSelectVolForWrite; i++ {
 		if vol, err = stream.wrapper.GetWriteVol(stream.execludeVols); err != nil {
-			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter " +
-				"failed on getWriteVol,error[%v] execludeVols[%v]", err.Error(),stream.execludeVols))
+			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter "+
+				"failed on getWriteVol,error[%v] execludeVols[%v]", err.Error(), stream.execludeVols))
 			continue
 		}
 		if extentId, err = stream.createExtent(vol); err != nil {
-			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter " +
-				"create Extent,error[%v] execludeVols[%v]", err.Error(),stream.execludeVols))
+			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter "+
+				"create Extent,error[%v] execludeVols[%v]", err.Error(), stream.execludeVols))
 			continue
 		}
 		if writer, err = NewExtentWriter(stream.currentInode, vol, stream.wrapper, extentId); err != nil {
-			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter " +
-				"NewExtentWriter[%v],error[%v] execludeVols[%v]", extentId,err.Error(),stream.execludeVols))
+			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter "+
+				"NewExtentWriter[%v],error[%v] execludeVols[%v]", extentId, err.Error(), stream.execludeVols))
 			continue
 		}
 		break
 	}
-	if extentId<=0 {
-		log.LogErrorf(errors.Annotatef(err,"allocateNewExtentWriter").Error())
-		return errors.Annotatef(err,"allocateNewExtentWriter")
+	if extentId <= 0 {
+		log.LogErrorf(errors.Annotatef(err, "allocateNewExtentWriter").Error())
+		return errors.Annotatef(err, "allocateNewExtentWriter")
 	}
 	stream.currentVolId = vol.VolID
 	stream.currentExtentId = extentId
 	stream.setWriter(writer)
 	err = nil
-	log.LogInfo(fmt.Sprintf("StreamWriter[%v] ActionAllocNewExtentWriter extentId[%v] success", stream.toString(),extentId))
+	log.LogInfo(fmt.Sprintf("StreamWriter[%v] ActionAllocNewExtentWriter extentId[%v] success", stream.toString(), extentId))
 
 	return nil
 }
@@ -304,8 +304,8 @@ func (stream *StreamWriter) createExtent(vol *vol.VolGroup) (extentId uint64, er
 		return
 	}
 	extentId = p.FileID
-	if p.FileID<=0 {
-		err=errors.Annotatef(err, "unavali extentId[%v] from [%v] response",
+	if p.FileID <= 0 {
+		err = errors.Annotatef(err, "unavali extentId[%v] from [%v] response",
 			extentId, vol.Hosts[0])
 		connect.Close()
 		return
@@ -313,7 +313,7 @@ func (stream *StreamWriter) createExtent(vol *vol.VolGroup) (extentId uint64, er
 	}
 	stream.wrapper.PutConnect(connect)
 
-	return extentId,nil
+	return extentId, nil
 }
 
 func (stream *StreamWriter) autoFlushThread() {
