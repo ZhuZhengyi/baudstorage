@@ -16,7 +16,7 @@ func (vg *VolGroup) checkFile(isRecoverVolFlag bool) (tasks []*proto.AdminTask) 
 		return
 	}
 
-	switch vg.volType {
+	switch vg.VolType {
 	case ExtentVol:
 		vg.checkExtentFile(liveVols, isRecoverVolFlag)
 	case ChunkVol:
@@ -86,18 +86,18 @@ func (fc *FileInCore) generatorLackFileLog(volID uint64, lackLoc *Vol, liveLocs 
 		allNodeInfoAddrs = append(allNodeInfoAddrs, fm.getLocationAddr())
 	}
 	for _, volLoc := range liveLocs {
-		allLiveLocsAddrs = append(allLiveLocsAddrs, volLoc.addr)
+		allLiveLocsAddrs = append(allLiveLocsAddrs, volLoc.Addr)
 	}
 
 	log = fmt.Sprintf(GetLackFileNodeTaskErr+"check volID:%v  File:%v  "+
 		"on Node:%v  currPtr[%p] AllLiveLocsPtr:%v  AllLiveLocsAddr:%v  "+
 		"allNodeInfosPtr:%v  AllNodeInfoAddrs:%v  Not Exsit,So Must Repair it  ",
-		volID, fc.Name, lackLoc.addr, lackLoc, liveLocs, allLiveLocsAddrs, fc.Metas,
+		volID, fc.Name, lackLoc.Addr, lackLoc, liveLocs, allLiveLocsAddrs, fc.Metas,
 		allNodeInfoAddrs)
 
 	return
 }
 
 func (fc *FileInCore) generatorReplicateFileTask(volID uint64, badLoc *Vol, liveLocs []*Vol) (t *proto.AdminTask) {
-	return proto.NewAdminTask(proto.OpReplicateFile, badLoc.addr, nil)
+	return proto.NewAdminTask(proto.OpReplicateFile, badLoc.Addr, nil)
 }

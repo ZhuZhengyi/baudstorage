@@ -120,7 +120,6 @@ func (m *Master) getVol(w http.ResponseWriter, r *http.Request) {
 		ns     *NameSpace
 		body   []byte
 		vol    *VolGroup
-		vr     *VolResponse
 		volID  uint64
 		err    error
 	)
@@ -134,8 +133,7 @@ func (m *Master) getVol(w http.ResponseWriter, r *http.Request) {
 	if vol, err = ns.getVolGroupByVolID(volID); err != nil {
 		goto errDeal
 	}
-	vr = vol.convertToVolResponse()
-	if body, err = json.Marshal(vr); err != nil {
+	if body, err = json.Marshal(vol); err != nil {
 		goto errDeal
 	}
 	io.WriteString(w, string(body))

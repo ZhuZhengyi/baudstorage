@@ -12,11 +12,11 @@ import (
 type VolGroup struct {
 	VolID            uint64
 	LastLoadTime     int64
-	replicaNum       uint8
-	status           uint8
+	ReplicaNum       uint8
+	Status           uint8
 	isRecover        bool
-	locations        []*Vol
-	volType          string
+	Locations        []*Vol
+	VolType          string
 	PersistenceHosts []string
 	sync.Mutex
 
@@ -26,11 +26,11 @@ type VolGroup struct {
 
 func newVolGroup(volID uint64, replicaNum uint8, volType string) (vg *VolGroup) {
 	vg = new(VolGroup)
-	vg.replicaNum = replicaNum
+	vg.ReplicaNum = replicaNum
 	vg.VolID = volID
-	vg.volType = volType
+	vg.VolType = volType
 	vg.PersistenceHosts = make([]string, 0)
-	vg.locations = make([]*Vol, 0)
+	vg.Locations = make([]*Vol, 0)
 	vg.FileInCoreMap = make(map[string]*FileInCore, 0)
 	vg.MissNodes = make(map[string]int64)
 	return
@@ -39,12 +39,12 @@ func newVolGroup(volID uint64, replicaNum uint8, volType string) (vg *VolGroup) 
 func (vg *VolGroup) addMember(vl *Vol) {
 	vg.Lock()
 	defer vg.Unlock()
-	for _, vol := range vg.locations {
-		if vl.addr == vol.addr {
+	for _, vol := range vg.Locations {
+		if vl.Addr == vol.Addr {
 			return
 		}
 	}
-	vg.locations = append(vg.locations, vl)
+	vg.Locations = append(vg.Locations, vl)
 }
 
 func (vg *VolGroup) checkBadStatus() {
@@ -54,7 +54,7 @@ func (vg *VolGroup) checkBadStatus() {
 func (vg *VolGroup) generateCreateVolGroupTasks() (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	for _, addr := range vg.PersistenceHosts {
-		t := proto.NewAdminTask(proto.OpCreateVol, addr, newCreateVolRequest(vg.volType, vg.VolID))
+		t := proto.NewAdminTask(proto.OpCreateVol, addr, newCreateVolRequest(vg.VolType, vg.VolID))
 		t.ID = fmt.Sprintf("%v_volID[%v]", t.ID, vg.VolID)
 		tasks = append(tasks, t)
 	}
@@ -63,7 +63,7 @@ func (vg *VolGroup) generateCreateVolGroupTasks() (tasks []*proto.AdminTask) {
 
 func (vg *VolGroup) hasMissOne() (err error) {
 	availPersistenceHostLen := len(vg.PersistenceHosts)
-	if availPersistenceHostLen <= (int)(vg.replicaNum)-1 {
+	if availPersistenceHostLen <= (int)(vg.ReplicaNum)-1 {
 		log.LogError(fmt.Sprintf("action[%v],volID:%v,err:%v",
 			"hasMissOne", vg.VolID, VolReplicationHasMissOneError))
 		err = VolReplicationHasMissOneError
@@ -90,7 +90,7 @@ func (vg *VolGroup) generatorVolOffLineLog(offlineAddr string) (msg string) {
 	vols := vg.GetAvailableVols()
 	for i := 0; i < len(vols); i++ {
 		vol := vols[i]
-		msg += fmt.Sprintf(" addr:%v  volStatus:%v  FileCount :%v ", vol.addr,
+		msg += fmt.Sprintf(" addr:%v  volStatus:%v  FileCount :%v ", vol.Addr,
 			vol.status, vol.FileCount)
 	}
 	log.LogWarn(msg)
@@ -101,9 +101,9 @@ func (vg *VolGroup) generatorVolOffLineLog(offlineAddr string) (msg string) {
 /*获取该副本目前有效的node,即Node在汇报心跳正常，并且该Node不是unavailable*/
 func (vg *VolGroup) GetAvailableVols() (vols []*Vol) {
 	vols = make([]*Vol, 0)
-	for i := 0; i < len(vg.locations); i++ {
-		vol := vg.locations[i]
-		if vol.CheckLocIsAvailContainsDiskError() == true && vg.isInPersistenceHosts(vol.addr) == true {
+	for i := 0; i < len(vg.Locations); i++ {
+		vol := vg.Locations[i]
+		if vol.CheckLocIsAvailContainsDiskError() == true && vg.isInPersistenceHosts(vol.Addr) == true {
 			vols = append(vols, vol)
 		}
 	}
@@ -114,9 +114,9 @@ func (vg *VolGroup) GetAvailableVols() (vols []*Vol) {
 func (vg *VolGroup) volOffLineInMem(addr string) {
 	delIndex := -1
 	var loc *Vol
-	for i := 0; i < len(vg.locations); i++ {
-		vol := vg.locations[i]
-		if vol.addr == addr {
+	for i := 0; i < len(vg.Locations); i++ {
+		vol := vg.Locations[i]
+		if vol.Addr == addr {
 			loc = vol
 			delIndex = i
 			break
@@ -138,14 +138,14 @@ func (vg *VolGroup) volOffLineInMem(addr string) {
 
 func (vg *VolGroup) DeleteVolByIndex(index int) {
 	var locArr []string
-	for _, loc := range vg.locations {
-		locArr = append(locArr, loc.addr)
+	for _, loc := range vg.Locations {
+		locArr = append(locArr, loc.Addr)
 	}
 	msg := fmt.Sprintf("DeleteVolByIndex vol:%v  index:%v  locations :%v ", vg.VolID, index, locArr)
 	log.LogInfo(msg)
-	volLocsAfter := vg.locations[index+1:]
-	vg.locations = vg.locations[:index]
-	vg.locations = append(vg.locations, volLocsAfter...)
+	volLocsAfter := vg.Locations[index+1:]
+	vg.Locations = vg.Locations[:index]
+	vg.Locations = append(vg.Locations, volLocsAfter...)
 }
 
 func (vg *VolGroup) generateLoadVolTasks() (tasks []*proto.AdminTask) {
@@ -158,7 +158,7 @@ func (vg *VolGroup) generateLoadVolTasks() (tasks []*proto.AdminTask) {
 			continue
 		}
 		vol.LoadVolIsResponse = false
-		t := proto.NewAdminTask(proto.OpLoadVol, vol.addr, newLoadVolMetricRequest(vg.volType, vg.VolID))
+		t := proto.NewAdminTask(proto.OpLoadVol, vol.Addr, newLoadVolMetricRequest(vg.VolType, vg.VolID))
 		t.ID = fmt.Sprintf("%v_volID[%v]", t.ID, vg.VolID)
 		tasks = append(tasks, t)
 	}
@@ -167,9 +167,9 @@ func (vg *VolGroup) generateLoadVolTasks() (tasks []*proto.AdminTask) {
 }
 
 func (vg *VolGroup) getVolLocation(addr string) (vol *Vol, err error) {
-	for index := 0; index < len(vg.locations); index++ {
-		vol = vg.locations[index]
-		if vol.addr == addr {
+	for index := 0; index < len(vg.Locations); index++ {
+		vol = vg.Locations[index]
+		if vol.Addr == addr {
 			return
 		}
 	}
@@ -183,8 +183,8 @@ func (vg *VolGroup) convertToVolResponse() (vr *VolResponse) {
 	vg.Lock()
 	defer vg.Unlock()
 	vr.VolID = vg.VolID
-	vr.Status = vg.status
-	vr.ReplicaNum = vg.replicaNum
+	vr.Status = vg.Status
+	vr.ReplicaNum = vg.ReplicaNum
 	vr.Hosts = make([]string, len(vg.PersistenceHosts))
 	copy(vr.Hosts, vg.PersistenceHosts)
 	return
@@ -214,7 +214,7 @@ func (vg *VolGroup) checkLoadVolResponse(volTimeOutSec int64) (isResponse bool) 
 }
 
 func (vg *VolGroup) getVolLocationByIndex(index uint8) (volLoc *Vol) {
-	return vg.locations[int(index)]
+	return vg.Locations[int(index)]
 }
 
 func (vg *VolGroup) getFileCount() {
@@ -222,7 +222,7 @@ func (vg *VolGroup) getFileCount() {
 	needDelFiles := make([]string, 0)
 	vg.Lock()
 	defer vg.Unlock()
-	for _, volLoc := range vg.locations {
+	for _, volLoc := range vg.Locations {
 		volLoc.FileCount = 0
 	}
 	for _, fc := range vg.FileInCoreMap {
@@ -243,9 +243,9 @@ func (vg *VolGroup) getFileCount() {
 		delete(vg.FileInCoreMap, vfName)
 	}
 
-	for _, volLoc := range vg.locations {
+	for _, volLoc := range vg.Locations {
 		msg = fmt.Sprintf(GetVolLocationFileCountInfo+"vol:%v  volLocation:%v  FileCount:%v  "+
-			"NodeIsActive:%v  VlocIsActive:%v  .VolStatusOnNode:%v ", vg.VolID, volLoc.addr, volLoc.FileCount,
+			"NodeIsActive:%v  VlocIsActive:%v  .VolStatusOnNode:%v ", vg.VolID, volLoc.Addr, volLoc.FileCount,
 			volLoc.GetVolLocationNode().isActive, volLoc.IsActive(DefaultVolTimeOutSec), volLoc.status)
 		log.LogInfo(msg)
 	}
@@ -268,8 +268,8 @@ func (vg *VolGroup) ReleaseVol() {
 }
 
 func (vg *VolGroup) IsInVolLocs(host string) (volLoc *Vol, ok bool) {
-	for _, volLoc = range vg.locations {
-		if volLoc.addr == host {
+	for _, volLoc = range vg.Locations {
+		if volLoc.Addr == host {
 			ok = true
 			break
 		}
@@ -280,9 +280,9 @@ func (vg *VolGroup) IsInVolLocs(host string) (volLoc *Vol, ok bool) {
 func (vg *VolGroup) checkReplicaNum(c *Cluster, nsName string) {
 	vg.Lock()
 	defer vg.Unlock()
-	if int(vg.replicaNum) != len(vg.PersistenceHosts) {
-		orgGoal := vg.replicaNum
-		vg.replicaNum = (uint8)(len(vg.PersistenceHosts))
+	if int(vg.ReplicaNum) != len(vg.PersistenceHosts) {
+		orgGoal := vg.ReplicaNum
+		vg.ReplicaNum = (uint8)(len(vg.PersistenceHosts))
 		vg.UpdateVolHosts(c, nsName)
 		msg := fmt.Sprintf("FIX VOL GOAL,vol:%v orgGoal:%v volHOST:%v",
 			vg.VolID, orgGoal, vg.VolHostsToString())
@@ -324,7 +324,7 @@ func (vg *VolGroup) checkVolReplicationTask() (tasks []*proto.AdminTask) {
 			DeleteExcessReplicationErr, vg.VolID, excessAddr, excessErr.Error(), vg.PersistenceHosts)
 		log.LogWarn(msg)
 	}
-	if vg.status == VolReadWrite {
+	if vg.Status == VolReadWrite {
 		return
 	}
 	if lackTask, lackAddr, lackErr := vg.addLackReplication(); lackErr != nil {
@@ -345,10 +345,10 @@ if volLocation not in volRocksDBHosts then generator task to delete volume*/
 func (vg *VolGroup) deleteExcessReplication() (excessAddr string, err error) {
 	vg.Lock()
 	defer vg.Unlock()
-	for i := 0; i < len(vg.locations); i++ {
-		volLoc := vg.locations[i]
-		if ok := vg.isInPersistenceHosts(volLoc.addr); !ok {
-			excessAddr = volLoc.addr
+	for i := 0; i < len(vg.Locations); i++ {
+		volLoc := vg.Locations[i]
+		if ok := vg.isInPersistenceHosts(volLoc.Addr); !ok {
+			excessAddr = volLoc.Addr
 			log.LogError(fmt.Sprintf("action[deleteExcessReplication],volID:%v,has excess replication:%v",
 				vg.VolID, excessAddr))
 			err = VolReplicationExcessError
@@ -370,7 +370,7 @@ func (vg *VolGroup) addLackReplication() (t *proto.AdminTask, lackAddr string, e
 			err = VolReplicationLackError
 			lackAddr = addr
 
-			t = proto.NewAdminTask(proto.OpCreateVol, addr, newCreateVolRequest(vg.volType, vg.VolID))
+			t = proto.NewAdminTask(proto.OpCreateVol, addr, newCreateVolRequest(vg.VolType, vg.VolID))
 			t.ID = fmt.Sprintf("%v_volID[%v]", t.ID, vg.VolID)
 			vg.isRecover = true
 			break
@@ -383,9 +383,9 @@ func (vg *VolGroup) addLackReplication() (t *proto.AdminTask, lackAddr string, e
 
 func (vg *VolGroup) getLiveVols(volTimeOutSec int64) (vols []*Vol) {
 	vols = make([]*Vol, 0)
-	for i := 0; i < len(vg.locations); i++ {
-		vol := vg.locations[i]
-		if vol.IsLive(volTimeOutSec) == true && vg.isInPersistenceHosts(vol.addr) == true {
+	for i := 0; i < len(vg.Locations); i++ {
+		vol := vg.Locations[i]
+		if vol.IsLive(volTimeOutSec) == true && vg.isInPersistenceHosts(vol.Addr) == true {
 			vols = append(vols, vol)
 		}
 	}
@@ -424,7 +424,7 @@ func (vg *VolGroup) LoadFile(dataNode *DataNode, resp *proto.LoadVolResponse) {
 		log.LogWarn(msg)
 		return
 	}
-	volLoc := vg.locations[index]
+	volLoc := vg.Locations[index]
 	volLoc.LoadVolIsResponse = true
 	for _, vf := range resp.VolSnapshot {
 		if vf == nil {
@@ -440,9 +440,9 @@ func (vg *VolGroup) LoadFile(dataNode *DataNode, resp *proto.LoadVolResponse) {
 }
 
 func (vg *VolGroup) getVolLocationIndex(addr string) (volLocIndex int, err error) {
-	for volLocIndex = 0; volLocIndex < len(vg.locations); volLocIndex++ {
-		volLoc := vg.locations[volLocIndex]
-		if volLoc.addr == addr {
+	for volLocIndex = 0; volLocIndex < len(vg.Locations); volLocIndex++ {
+		volLoc := vg.Locations[volLocIndex]
+		if volLoc.Addr == addr {
 			return
 		}
 	}
@@ -485,9 +485,9 @@ func (vg *VolGroup) removeVolHosts(removeAddr string, c *Cluster, nsName string)
 	if ok := vg.removeVolHostOnUnderStore(removeAddr); !ok {
 		return
 	}
-	vg.replicaNum = (uint8)(len(vg.PersistenceHosts))
+	vg.ReplicaNum = (uint8)(len(vg.PersistenceHosts))
 	if err = vg.UpdateVolHosts(c, nsName); err != nil {
-		vg.replicaNum = (uint8)(orgGoal)
+		vg.ReplicaNum = (uint8)(orgGoal)
 		vg.PersistenceHosts = orgVolHosts
 	}
 
@@ -522,10 +522,10 @@ func (vg *VolGroup) addVolHosts(addAddr string, c *Cluster, nsName string) (err 
 		}
 	}
 	vg.PersistenceHosts = append(vg.PersistenceHosts, addAddr)
-	vg.replicaNum = uint8(len(vg.PersistenceHosts))
+	vg.ReplicaNum = uint8(len(vg.PersistenceHosts))
 	if err = vg.UpdateVolHosts(c, nsName); err != nil {
 		vg.PersistenceHosts = orgVolHosts
-		vg.replicaNum = uint8(orgGoal)
+		vg.ReplicaNum = uint8(orgGoal)
 		return
 	}
 	msg := fmt.Sprintf(" AddVolHostsInfo vol:%v  Add host:%v  PersistenceHosts:%v ",
