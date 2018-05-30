@@ -310,7 +310,7 @@ func (s *DataNode) streamRead(request *Packet, connect net.Conn) {
 	)
 	needReplySize := request.Size
 	offset := request.Offset
-	store:=request.vol.store.(*storage.ExtentStore)
+	store := request.vol.store.(*storage.ExtentStore)
 	for {
 		if needReplySize <= 0 {
 			break

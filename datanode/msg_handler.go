@@ -111,7 +111,7 @@ func (msgH *MessageHandler) DelListElement(reply *Packet, e *list.Element, s *Da
 	for e := msgH.sentList.Front(); e != nil; e = e.Next() {
 		request := e.Value.(*Packet)
 		if reply.ReqID == request.ReqID && reply.VolID == request.VolID &&
-			reply.FileID==request.FileID && reply.Offset==request.Offset {
+			reply.FileID == request.FileID && reply.Offset == request.Offset {
 			msgH.sentList.Remove(e)
 			s.CleanConn(request.nextConn, NOClostConnect)
 			pkg := e.Value.(*Packet)
