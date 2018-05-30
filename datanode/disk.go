@@ -245,6 +245,9 @@ func (d *Disk) loadVol(space *SpaceManager) {
 }
 
 func (s *DataNode) AddDiskErrs(volId uint32, err error, flag uint8) {
+	if err==nil {
+		return
+	}
 	v := s.space.getVol(volId)
 	if v == nil {
 		return
