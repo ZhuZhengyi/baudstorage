@@ -16,7 +16,7 @@ func (c *Cluster) putDataNodeTasks(tasks []*proto.AdminTask) {
 			continue
 		}
 		if node, err := c.getDataNode(t.OperatorAddr); err != nil {
-			log.LogWarn(fmt.Sprintf("action[putTasks],nodeAddr:%v,taskID:%v,err:%v", node.HttpAddr, t.ID, err.Error()))
+			log.LogWarn(fmt.Sprintf("action[putTasks],nodeAddr:%v,taskID:%v,err:%v", node.Addr, t.ID, err.Error()))
 		} else {
 			node.sender.PutTask(t)
 		}
@@ -121,7 +121,6 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 		t          *proto.AdminTask
 		tasks      []*proto.AdminTask
 		racks      []string
-		hosts      []string
 		newHosts   []string
 		peers      []proto.Peer
 		removePeer proto.Peer
@@ -143,9 +142,7 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 	}
 
 	racks = mp.getRacks(nodeAddr)
-	hosts = make([]string, 0)
-	hosts = append(hosts, nodeAddr)
-	if newHosts, peers, err = c.getAvailMetaNodeHosts(racks[0], hosts, 1); err != nil {
+	if newHosts, peers, err = c.getAvailMetaNodeHosts(racks[0], mp.PersistenceHosts, 1); err != nil {
 		goto errDeal
 	}
 
@@ -573,7 +570,7 @@ func (c *Cluster) dealDataNodeHeartbeat(nodeAddr string, resp *proto.DataNodeHea
 	dataNode.setNodeAlive()
 	c.UpdateDataNode(dataNode)
 	dataNode.VolInfo = nil
-	logMsg = fmt.Sprintf("action[dealDataNodeHeartbeat],dataNode:%v ReportTime:%v  success", dataNode.HttpAddr, time.Now().Unix())
+	logMsg = fmt.Sprintf("action[dealDataNodeHeartbeat],dataNode:%v ReportTime:%v  success", dataNode.Addr, time.Now().Unix())
 	log.LogDebug(logMsg)
 
 	return

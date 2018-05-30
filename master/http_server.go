@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/juju/errors"
 )
 
 const (
@@ -127,11 +128,10 @@ func (m *Master) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func getReturnMessage(requestType, remoteAddr, message string, code int) (logMsg string) {
 	logMsg = fmt.Sprintf("type[%s] From [%s] Deal [%d] Because [%s] ", requestType, remoteAddr, code, message)
-
 	return
 }
 
-func HandleError(message string, code int, w http.ResponseWriter) {
-	log.LogError(message)
+func HandleError(message string,err error, code int, w http.ResponseWriter) {
+	log.LogErrorf("errMsg:%v errStack:%v",message,errors.ErrorStack(err))
 	http.Error(w, message, code)
 }

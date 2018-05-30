@@ -56,7 +56,7 @@ func (vg *VolGroup) checkVolGroupMiss(volMissSec, volWarnInterval int64) {
 			)
 			isActive := true
 			if dataNode != nil {
-				lastReportTime = dataNode.reportTime
+				lastReportTime = dataNode.ReportTime
 				isActive = dataNode.isActive
 			}
 			msg := fmt.Sprintf("action[checkVolMissErr], vol:%v  on Node:%v  "+

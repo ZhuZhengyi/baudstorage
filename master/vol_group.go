@@ -419,9 +419,9 @@ func (vg *VolGroup) LoadFile(dataNode *DataNode, resp *proto.LoadVolResponse) {
 	vg.Lock()
 	defer vg.Unlock()
 
-	index, err := vg.getVolLocationIndex(dataNode.HttpAddr)
+	index, err := vg.getVolLocationIndex(dataNode.Addr)
 	if err != nil {
-		msg := fmt.Sprintf("LoadFile volID:%v  on Node:%v  don't report :%v ", vg.VolID, dataNode.HttpAddr, err)
+		msg := fmt.Sprintf("LoadFile volID:%v  on Node:%v  don't report :%v ", vg.VolID, dataNode.Addr, err)
 		log.LogWarn(msg)
 		return
 	}
@@ -537,13 +537,13 @@ func (vg *VolGroup) addVolHosts(addAddr string, c *Cluster, nsName string) (err 
 
 func (vg *VolGroup) UpdateVol(vr *proto.VolReport, dataNode *DataNode) {
 	vg.Lock()
-	volLoc, err := vg.getVolLocation(dataNode.HttpAddr)
+	volLoc, err := vg.getVolLocation(dataNode.Addr)
 	vg.Unlock()
 
-	if err != nil && !vg.isInPersistenceHosts(dataNode.HttpAddr) {
+	if err != nil && !vg.isInPersistenceHosts(dataNode.Addr) {
 		return
 	}
-	if err != nil && vg.isInPersistenceHosts(dataNode.HttpAddr) {
+	if err != nil && vg.isInPersistenceHosts(dataNode.Addr) {
 		volLoc = NewVol(dataNode)
 		vg.addMember(volLoc)
 	}
@@ -552,6 +552,6 @@ func (vg *VolGroup) UpdateVol(vr *proto.VolReport, dataNode *DataNode) {
 	volLoc.Used = vr.Used
 	volLoc.SetVolAlive()
 	vg.Lock()
-	vg.checkAndRemoveMissVol(dataNode.HttpAddr)
+	vg.checkAndRemoveMissVol(dataNode.Addr)
 	vg.Unlock()
 }
