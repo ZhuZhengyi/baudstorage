@@ -56,7 +56,7 @@ func (m *Master) getCluster(w http.ResponseWriter, r *http.Request) {
 
 errDeal:
 	logMsg := getReturnMessage("getCluster", r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg,err, http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -70,7 +70,7 @@ func (m *Master) getIpAndClusterName(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	rstMsg := getReturnMessage("getIpAndClusterName", r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(rstMsg,err, http.StatusBadRequest, w)
+	HandleError(rstMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -82,7 +82,7 @@ func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 		ns             *NameSpace
 		reqCreateCount int
 		capacity       int
-		lastMaxVolID   int
+		lastTotalVols  int
 		err            error
 	)
 
@@ -94,23 +94,23 @@ func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 		goto errDeal
 	}
 	capacity = m.cluster.getVolCapacity(ns)
-	lastMaxVolID = int(m.cluster.idAlloc.volID)
+	lastTotalVols = len(ns.volGroups.volGroups)
 	for i := 0; i < reqCreateCount; i++ {
-		if reqCreateCount < lastMaxVolID || int(m.cluster.idAlloc.volID) >= capacity {
+		if (reqCreateCount + lastTotalVols) < len(ns.volGroups.volGroups) || int(m.cluster.idAlloc.volID) >= capacity {
 			break
 		}
 		if _, err = m.cluster.createVolGroup(nsName, volType); err != nil {
 			goto errDeal
 		}
 	}
-	rstMsg = fmt.Sprintf(" createVol success.reqeustCount:%v,cluster volume capacity:%v ,last MaxVolID:%v",
-		reqCreateCount, capacity, lastMaxVolID)
+	rstMsg = fmt.Sprintf(" createVol success. cluster volume capacity:%v,namespce has %v vols last,%v vols now",
+		capacity,lastTotalVols, reqCreateCount)
 	io.WriteString(w, rstMsg)
 
 	return
 errDeal:
 	rstMsg = getReturnMessage("createVol", r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(rstMsg,err, http.StatusBadRequest, w)
+	HandleError(rstMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -141,7 +141,7 @@ func (m *Master) getVol(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage("getVol", r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg,err, http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -174,7 +174,7 @@ func (m *Master) loadVol(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage(AdminLoadVol, r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg,err, http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -205,7 +205,7 @@ func (m *Master) volOffline(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage(AdminVolOffline, r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg,err, http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -230,7 +230,7 @@ func (m *Master) createNamespace(w http.ResponseWriter, r *http.Request) {
 
 errDeal:
 	logMsg := getReturnMessage("createNamespace", r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg, err,http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -250,7 +250,7 @@ func (m *Master) addDataNode(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage("addDataNode", r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg,err, http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -276,7 +276,7 @@ func (m *Master) getDataNode(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage("getDataNode", r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg,err, http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -302,7 +302,7 @@ func (m *Master) dataNodeOffline(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage("dataNodeOffline", r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg,err, http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -331,7 +331,7 @@ func (m *Master) dataNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
 errDeal:
 	logMsg := getReturnMessage("dataNodeTaskResponse", r.RemoteAddr, err.Error(),
 		http.StatusBadRequest)
-	HandleError(logMsg,err, code, w)
+	HandleError(logMsg, err, code, w)
 	return
 }
 
@@ -352,7 +352,7 @@ func (m *Master) addMetaNode(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage("addMetaNode", r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg,err, http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -387,7 +387,7 @@ func (m *Master) getMetaNode(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage("getDataNode", r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg,err, http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -410,7 +410,7 @@ func (m *Master) metaPartitionOffline(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage(AdminMetaPartitionOffline, r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg,err, http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -443,7 +443,7 @@ func (m *Master) loadMetaPartition(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage(AdminLoadMetaPartition, r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg,err, http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -469,7 +469,7 @@ func (m *Master) metaNodeOffline(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage("metaNodeOffline", r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg,err, http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -499,7 +499,7 @@ func (m *Master) metaNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
 errDeal:
 	logMsg := getReturnMessage("dataNodeTaskResponse", r.RemoteAddr, err.Error(),
 		http.StatusBadRequest)
-	HandleError(logMsg,err, code, w)
+	HandleError(logMsg, err, code, w)
 	return
 }
 
@@ -518,7 +518,7 @@ func (m *Master) handleAddRaftNode(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage("add raft node", r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg,err, http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
@@ -537,7 +537,7 @@ func (m *Master) handleRemoveRaftNode(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage("remove raft node", r.RemoteAddr, err.Error(), http.StatusBadRequest)
-	HandleError(logMsg,err, http.StatusBadRequest, w)
+	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
