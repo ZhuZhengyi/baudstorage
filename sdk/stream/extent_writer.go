@@ -53,6 +53,9 @@ type ExtentWriter struct {
 }
 
 func NewExtentWriter(inode uint64, vol *vol.VolGroup, wrapper *vol.VolGroupWrapper, extentId uint64) (writer *ExtentWriter, err error) {
+	if extentId<=0{
+		return nil,fmt.Errorf("inode[%v],vol[%v],unavalid extentId[%v]",inode,vol.VolID,extentId)
+	}
 	writer = new(ExtentWriter)
 	writer.requestQueue = list.New()
 	writer.handleCh = make(chan bool, DefaultWriteBufferSize/(64*util.KB))
