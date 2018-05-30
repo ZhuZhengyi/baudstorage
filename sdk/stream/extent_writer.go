@@ -410,12 +410,20 @@ func (writer *ExtentWriter) getQueueListLen() (length int) {
 }
 
 func (writer *ExtentWriter) getNeedRetrySendPackets() (retryList []*Packet) {
+	var (
+		backPkg *Packet
+	)
 	retryList=make([]*Packet,0)
 	writer.requestQueueLock.Lock()
 	for e:=writer.requestQueue.Front();e!=nil;e=e.Next(){
 		retryList=append(retryList,e.Value.(*Packet))
 	}
-	backPkg:=writer.requestQueue.Back().Value.(*Packet)
+	backElement:=writer.requestQueue.Back()
+	if backElement!=nil {
+		backPkg=backElement.Value.(*Packet)
+	}else {
+		backPkg=retryList[len(retryList)-1]
+	}
 	lastPacket := writer.currentPacket
 	if lastPacket != nil && lastPacket.ReqID > backPkg.ReqID {
 		retryList=append(retryList,lastPacket)
