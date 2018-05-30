@@ -58,7 +58,7 @@ func (s *DataNode) checkAndAddInfo(pkg *Packet) error {
 	case proto.ExtentStoreMode:
 		if pkg.isHeadNode() && pkg.Opcode == proto.OpCreateFile {
 			pkg.FileID = pkg.vol.store.(*storage.ExtentStore).GetExtentId()
-			log.LogInfof("pkg[%v] alloc fileId[%v]",pkg.GetUniqLogId(),pkg.FileID)
+			log.LogDebugf("action[DataNode.checkAndAddInfo] pkg[%v] alloc fileId[%v]", pkg.GetUniqLogId(), pkg.FileID)
 		}
 	}
 	return err
@@ -175,7 +175,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 			goto success
 		}
 		if err = msgH.checkReplyAvail(reply); err != nil {
-			log.LogError(err.Error())
+			log.LogErrorf("action[DataNode.receiveFromNext] %v.", err.Error())
 			return request, true
 		}
 	} else {

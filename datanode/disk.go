@@ -79,7 +79,7 @@ func (d *Disk) DiskUsage() (err error) {
 	d.All = fs.Blocks * uint64(fs.Bsize)
 	d.Free = fs.Bfree*uint64(fs.Bsize) - d.RestSize
 	d.Used = d.All - d.Free
-	log.LogInfof("action[Disk.DiskUsage] disk[%v] all[%v] free[%v] used[%v]", d.Path, d.All, d.Free, d.Used)
+	log.LogDebugf("action[Disk.DiskUsage] disk[%v] all[%v] free[%v] used[%v]", d.Path, d.All, d.Free, d.Used)
 
 	return
 }
@@ -227,7 +227,7 @@ func (d *Disk) loadVol(space *SpaceManager) {
 	for _, fileInfo := range fileInfoList {
 		var v *Vol
 		volId, volSize, volMode, err := UnmarshVolName(fileInfo.Name())
-		log.LogDebugf("acton[Disk.loadVol] disk info [%v %v %v %v %v].", d.Path, fileInfo.Name(), volId, volSize, volMode, err)
+		log.LogDebugf("acton[Disk.loadVol] disk info path[%v] name[%v] volId[%v] volSize[%v] volMode[%v] err[%v].", d.Path, fileInfo.Name(), volId, volSize, volMode, err)
 		if err != nil {
 			log.LogError(fmt.Sprintf("LoadVol[%v] from Disk[%v] Err[%v] ", volId, d.Path, err.Error()))
 			continue
@@ -245,7 +245,7 @@ func (d *Disk) loadVol(space *SpaceManager) {
 }
 
 func (s *DataNode) AddDiskErrs(volId uint32, err error, flag uint8) {
-	if err==nil {
+	if err == nil {
 		return
 	}
 	v := s.space.getVol(volId)

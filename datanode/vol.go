@@ -131,7 +131,7 @@ func (v *Vol) LoadVol() (response *proto.LoadVolResponse) {
 	switch v.volMode {
 	case proto.ExtentVol:
 		var err error
-		store := v.store. (*storage.ExtentStore)
+		store := v.store.(*storage.ExtentStore)
 		response.VolSnapshot, err = store.SnapShot()
 		response.Used = uint64(store.GetStoreUsedSize())
 		if err != nil {
