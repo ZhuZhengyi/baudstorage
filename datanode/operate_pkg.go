@@ -338,6 +338,8 @@ func (s *DataNode) streamRead(request *Packet, connect net.Conn) {
 		}
 		needReplySize -= currReadSize
 		offset += int64(currReadSize)
+		log.LogDebug(request.ActionMesg(ActionWriteToCli,connect.RemoteAddr().String(),
+			request.StartT, err))
 	}
 	return
 }
