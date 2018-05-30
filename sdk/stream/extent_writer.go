@@ -415,26 +415,24 @@ func (writer *ExtentWriter) getNeedRetrySendPackets() (requests []*Packet) {
 	)
 	writer.requestQueueLock.Lock()
 	defer writer.requestQueueLock.Unlock()
+	writer.Lock()
+	defer writer.Unlock()
 	requests = make([]*Packet, 0)
 	for e := writer.requestQueue.Front(); e != nil; e = e.Next() {
 		requests = append(requests, e.Value.(*Packet))
 	}
-	writer.Lock()
-	defer writer.Unlock()
 	currentPkg := writer.currentPacket
-	if len(requests)==0 {
-		if currentPkg!=nil {
-			requests = append(requests, currentPkg)
-		}
-	}else {
-		if currentPkg!=nil {
-			backPkg = requests[len(requests)-1]
-			if currentPkg.ReqID>backPkg.ReqID{
-				requests = append(requests, currentPkg)
-			}
-		}
+	if currentPkg==nil {
+		return
 	}
-
+	if len(requests)==0{
+		requests = append(requests, currentPkg)
+		return
+	}
+	backPkg = requests[len(requests)-1]
+	if currentPkg.ReqID>backPkg.ReqID{
+		requests = append(requests, currentPkg)
+	}
 
 	return
 }
