@@ -78,13 +78,15 @@ func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 	var (
 		rstMsg         string
 		nsName         string
+		volType string
 		ns             *NameSpace
 		reqCreateCount int
 		capacity       int
+		lastMaxVolID   int
 		err            error
 	)
 
-	if reqCreateCount, nsName, err = parseCreateVolPara(r); err != nil {
+	if reqCreateCount, nsName,volType, err = parseCreateVolPara(r); err != nil {
 		goto errDeal
 	}
 
@@ -92,16 +94,17 @@ func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 		goto errDeal
 	}
 	capacity = m.cluster.getVolCapacity(ns)
+	lastMaxVolID = int(m.cluster.idAlloc.volID)
 	for i := 0; i < reqCreateCount; i++ {
-		if reqCreateCount < int(m.cluster.idAlloc.volID) {
+		if reqCreateCount < lastMaxVolID {
 			break
 		}
-		if _, err = m.cluster.createVolGroup(nsName); err != nil {
+		if _, err = m.cluster.createVolGroup(nsName,volType); err != nil {
 			goto errDeal
 		}
 	}
 	rstMsg = fmt.Sprintf(" createVol success.reqeustCount:%v,cluster volume capacity:%v ,last MaxVolID:%v",
-		reqCreateCount, capacity, m.cluster.idAlloc.volID)
+		reqCreateCount, capacity, lastMaxVolID)
 	io.WriteString(w, rstMsg)
 
 	return
@@ -604,7 +607,7 @@ func parseCreateNamespacePara(r *http.Request) (name string, replicaNum int, err
 	return
 }
 
-func parseCreateVolPara(r *http.Request) (count int, name string, err error) {
+func parseCreateVolPara(r *http.Request) (count int, name,volType string, err error) {
 	r.ParseForm()
 	if countStr := r.FormValue(ParaCount); countStr == "" {
 		err = paraNotFound(ParaCount)
@@ -614,6 +617,11 @@ func parseCreateVolPara(r *http.Request) (count int, name string, err error) {
 		return
 	}
 	if name, err = checkNamespace(r); err != nil {
+		return
+	}
+
+	if volType = r.FormValue(ParaVolType); volType == "" {
+		err = paraNotFound(ParaVolType)
 		return
 	}
 	return

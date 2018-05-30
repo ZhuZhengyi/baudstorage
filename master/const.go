@@ -9,6 +9,7 @@ const (
 	ParaCount    = "count"
 	ParaReplicas = "replicas"
 	ParaVolGroup = "vg"
+	ParaVolType = "type"
 )
 
 const (

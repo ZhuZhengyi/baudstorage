@@ -210,7 +210,7 @@ func (c *Cluster) getNamespace(nsName string) (ns *NameSpace, err error) {
 	return
 }
 
-func (c *Cluster) createVolGroup(nsName string) (vg *VolGroup, err error) {
+func (c *Cluster) createVolGroup(nsName,volType string) (vg *VolGroup, err error) {
 	var (
 		ns          *NameSpace
 		volID       uint64
@@ -229,7 +229,7 @@ func (c *Cluster) createVolGroup(nsName string) (vg *VolGroup, err error) {
 	if volID, err = c.idAlloc.allocatorVolID(); err != nil {
 		goto errDeal
 	}
-	vg = newVolGroup(volID, ns.volReplicaNum)
+	vg = newVolGroup(volID, ns.volReplicaNum,volType)
 	vg.PersistenceHosts = targetHosts
 	if err = c.syncAddVolGroup(nsName, vg); err != nil {
 		goto errDeal
