@@ -21,7 +21,7 @@ type AdminTask struct {
 	OperatorAddr string
 	Status       int8
 	SendTime     int64
-	CreateTime int64
+	CreateTime   int64
 	SendCount    uint8
 	Request      interface{}
 	Response     interface{}
@@ -29,7 +29,7 @@ type AdminTask struct {
 
 func (t *AdminTask) ToString() (msg string) {
 	msg = fmt.Sprintf("Id[%v] Status[%d] LastSendTime[%v]  SendCount[%v] Request[%v] Response[%v]",
-		t.ID, t.Status, t.SendTime, t.SendCount, t.Request,t.Response)
+		t.ID, t.Status, t.SendTime, t.SendCount, t.Request, t.Response)
 
 	return
 }
@@ -49,7 +49,7 @@ func (t *AdminTask) CheckTaskTimeOut() (notResponse bool) {
 		timeOut int64
 	)
 	timeOut = ResponseTimeOut
-	if (int)(t.SendCount) >= MaxSendCount || (time.Now().Unix()-t.SendTime > timeOut) {
+	if (int)(t.SendCount) >= MaxSendCount || (t.SendTime > 0 && (time.Now().Unix()-t.SendTime > timeOut)) {
 		notResponse = true
 	}
 
