@@ -255,7 +255,7 @@ func (c *Cluster) applyAddVolGroup(cmd *Metadata) {
 	if keys[1] == VolGroupAcronym {
 		vgv := &VolGroupValue{}
 		json.Unmarshal(cmd.V, vgv)
-		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum,vgv.VolType)
+		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum, vgv.VolType)
 		ns, _ := c.getNamespace(keys[2])
 		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
 		ns.volGroups.putVol(vg)
@@ -417,7 +417,7 @@ func (c *Cluster) loadVolGroups() (err error) {
 			err = fmt.Errorf("action[decodeVolValue],value:%v,err:%v", encodedValue.Data(), err)
 			return err
 		}
-		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum,vgv.VolType)
+		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum, vgv.VolType)
 		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
 		ns.volGroups.putVol(vg)
 		encodedKey.Free()

@@ -78,7 +78,7 @@ func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 	var (
 		rstMsg         string
 		nsName         string
-		volType string
+		volType        string
 		ns             *NameSpace
 		reqCreateCount int
 		capacity       int
@@ -86,7 +86,7 @@ func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 		err            error
 	)
 
-	if reqCreateCount, nsName,volType, err = parseCreateVolPara(r); err != nil {
+	if reqCreateCount, nsName, volType, err = parseCreateVolPara(r); err != nil {
 		goto errDeal
 	}
 
@@ -99,7 +99,7 @@ func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 		if reqCreateCount < lastMaxVolID {
 			break
 		}
-		if _, err = m.cluster.createVolGroup(nsName,volType); err != nil {
+		if _, err = m.cluster.createVolGroup(nsName, volType); err != nil {
 			goto errDeal
 		}
 	}
@@ -607,7 +607,7 @@ func parseCreateNamespacePara(r *http.Request) (name string, replicaNum int, err
 	return
 }
 
-func parseCreateVolPara(r *http.Request) (count int, name,volType string, err error) {
+func parseCreateVolPara(r *http.Request) (count int, name, volType string, err error) {
 	r.ParseForm()
 	if countStr := r.FormValue(ParaCount); countStr == "" {
 		err = paraNotFound(ParaCount)
@@ -622,6 +622,11 @@ func parseCreateVolPara(r *http.Request) (count int, name,volType string, err er
 
 	if volType = r.FormValue(ParaVolType); volType == "" {
 		err = paraNotFound(ParaVolType)
+		return
+	}
+
+	if !(strings.TrimSpace(volType) == proto.ExtentVol || strings.TrimSpace(volType) == proto.TinyVol) {
+		err = InvalidVolType
 		return
 	}
 	return

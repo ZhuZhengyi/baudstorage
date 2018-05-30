@@ -24,7 +24,7 @@ type VolGroup struct {
 	MissNodes     map[string]int64
 }
 
-func newVolGroup(volID uint64, replicaNum uint8,volType string) (vg *VolGroup) {
+func newVolGroup(volID uint64, replicaNum uint8, volType string) (vg *VolGroup) {
 	vg = new(VolGroup)
 	vg.replicaNum = replicaNum
 	vg.VolID = volID

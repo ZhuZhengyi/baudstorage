@@ -507,7 +507,6 @@ func (c *Cluster) createVolFailTriggerOperator(t *proto.AdminTask, resp *proto.C
 	msg := fmt.Sprintf("action[createVolFailTriggerOperator],taskID:%v, vol:%v on :%v  "+
 		"Fail And TrigerChangeOpAddr Fail:%v ", t.ID, resp.VolId, t.OperatorAddr, err)
 	log.LogWarn(msg)
-
 	return
 }
 
