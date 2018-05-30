@@ -299,12 +299,12 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 	}
 	if reply.ResultCode != proto.OpOk {
 		writer.connect.Close()
-		return errors.Annotatef(fmt.Errorf("processReply recive [%v] error [%v]", request.GetUniqLogId(),
+		return errors.Annotatef(fmt.Errorf("processReply recive [%v] error [%v]", reply.GetUniqLogId(),
 			string(reply.Data[:reply.Size])), "writer[%v]", writer.toString())
 	}
 	writer.addByteAck(uint64(request.Size))
 	writer.removeRquest(e)
-	log.LogDebug(fmt.Sprintf("ActionProcessReply[%v] is recived", request.GetUniqLogId()))
+	log.LogDebug(fmt.Sprintf("ActionProcessReply[%v] is recived", reply.GetUniqLogId()))
 
 	return nil
 }
@@ -331,6 +331,9 @@ func (writer *ExtentWriter) recive() {
 			}
 			request := e.Value.(*Packet)
 			reply := NewReply(request.ReqID, request.VolID, request.FileID)
+			reply.Opcode=request.Opcode
+			reply.Offset=request.Offset
+			reply.Size=request.Size
 			err := reply.ReadFromConn(writer.getConnect(), proto.ReadDeadlineTime)
 			if err != nil {
 				writer.getConnect().Close()
