@@ -21,7 +21,7 @@ import (
 const (
 	CLIENTREADSIZE  = 4 * util.KB
 	CLIENTWRITESIZE = 4 * util.KB
-	CLIENTWRITENUM  = 1000
+	CLIENTWRITENUM  = 1000*1000
 	CRCBYTELEN      = 4
 	TOTALSIZE       = (CLIENTWRITESIZE + CRCBYTELEN) * CLIENTWRITENUM
 )
@@ -140,7 +140,7 @@ func TestExtentClient_Write(t *testing.T) {
 	client.Open(inode)
 	client.Open(inode)
 	client.Open(inode)
-	for seqNo := 0; seqNo < 10000; seqNo++ {
+	for seqNo := 0; seqNo < 1000000000; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
 		ndata := data[:rand.Intn(CFSBLOCKSIZE*5)]
 

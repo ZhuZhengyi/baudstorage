@@ -7,6 +7,7 @@ import (
 	"github.com/tiglabs/baudstorage/util/config"
 	"strconv"
 	"sync"
+	"github.com/tiglabs/baudstorage/util/ump"
 )
 
 //config keys
@@ -19,6 +20,7 @@ const (
 	WalDir      = "walDir"
 	StoreDir    = "storeDir"
 	GroupId     = 1
+	UmpModuleName = "master"
 )
 
 type Master struct {
@@ -44,6 +46,7 @@ func NewServer() *Master {
 func (m *Master) Start(cfg *config.Config) (err error) {
 	m.config = NewClusterConfig()
 	m.leaderInfo = &LeaderInfo{}
+	ump.InitUmp(UmpModuleName)
 	if err = m.checkConfig(cfg); err != nil {
 		return
 	}

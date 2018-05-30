@@ -48,14 +48,15 @@ func NewReadPacket(key proto.ExtentKey, offset, size int) (p *Packet) {
 
 func NewCreateExtentPacket(vol *vol.VolGroup) (p *Packet) {
 	p = new(Packet)
-	p.Magic = proto.ProtoMagic
-	p.Opcode = proto.OpCreateFile
 	p.VolID = vol.VolID
+	p.Magic = proto.ProtoMagic
+	p.Data = make([]byte, 0)
 	p.StoreMode = proto.ExtentStoreMode
-	p.ReqID = proto.GetReqID()
 	p.Arg = ([]byte)(vol.GetAllAddrs())
 	p.Arglen = uint32(len(p.Arg))
 	p.Nodes=uint8(len(vol.Hosts)-1)
+	p.ReqID = proto.GetReqID()
+	p.Opcode = proto.OpCreateFile
 
 	return p
 }

@@ -151,13 +151,13 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 
 	request = e.Value.(*Packet)
 	defer func() {
-		exit = msgH.DelListElement(request.ReqID, request.VolID, e, s)
 		s.statsFlow(request, OutFlow)
 		s.statsFlow(reply, InFlow)
 	}()
 	if request.nextConn == nil {
 		err = errors.Annotatef(fmt.Errorf(ConnIsNullErr), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
+		exit = msgH.DelListElement(request, e, s)
 		return
 	}
 
@@ -165,16 +165,19 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 	if request.IsErrPack() {
 		err = errors.Annotatef(fmt.Errorf(request.getErr()), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
+		exit = msgH.DelListElement(request, e, s)
 		log.LogError(request.ActionMesg(ActionReciveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
 		return
 	}
 
 	reply = NewPacket()
 	if err = reply.ReadFromConn(request.nextConn, proto.ReadDeadlineTime); err == nil {
-		if reply.ReqID == request.ReqID && reply.VolID == request.VolID {
+		if reply.ReqID == request.ReqID && reply.VolID == request.VolID && request.Offset == reply.Offset {
 			goto success
 		}
 		if err = msgH.checkReplyAvail(reply); err != nil {
+			request.PackErrorBody(ActionReciveFromNext, err.Error())
+			exit = msgH.DelListElement(request, e, s)
 			log.LogErrorf("action[DataNode.receiveFromNext] %v.", err.Error())
 			return request, true
 		}
@@ -182,7 +185,9 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 		log.LogError(request.ActionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 		err = errors.Annotatef(err, "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
-		return
+		exit = msgH.DelListElement(request, e, s)
+
+		return request, true
 	}
 
 	return
@@ -195,6 +200,7 @@ success:
 		request.CopyFrom(reply)
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 	}
+	exit = msgH.DelListElement(request, e, s)
 	log.LogDebug(reply.ActionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 
 	return
