@@ -154,7 +154,7 @@ func (space *SpaceManager) deleteVol(vodId uint32) {
 }
 
 func (s *DataNode) fillHeartBeatResponse(response *proto.DataNodeHeartBeatResponse) {
-	response.Status = proto.OpOk
+	response.Status = proto.TaskSuccess
 	stat := s.space.stats
 	stat.Lock()
 	response.Used = stat.Used

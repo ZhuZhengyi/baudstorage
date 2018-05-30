@@ -253,7 +253,7 @@ func (s *DataNode) append(pkg *Packet) {
 		err = pkg.vol.store.(*storage.TinyStore).Write(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
 		s.AddDiskErrs(pkg.VolID, err, WriteFlag)
 	case proto.ExtentStoreMode:
-		err = pkg.vol.store.(*storage.TinyStore).Write(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
+		err = pkg.vol.store.(*storage.ExtentStore).Write(pkg.FileID, pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
 		s.AddDiskErrs(pkg.VolID, err, WriteFlag)
 	}
 	if err != nil {

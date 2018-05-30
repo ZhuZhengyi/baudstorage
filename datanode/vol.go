@@ -125,13 +125,13 @@ func (v *Vol) getMembers() (bool, *VolMembers, error) {
 func (v *Vol) LoadVol() (response *proto.LoadVolResponse) {
 	response = new(proto.LoadVolResponse)
 	response.VolId = uint64(v.volId)
-	response.Status = uint8(v.status)
+	response.VolStatus = uint8(v.status)
 	response.VolType = v.volMode
 	response.VolSnapshot = make([]*proto.File, 0)
 	switch v.volMode {
 	case proto.ExtentVol:
 		var err error
-		store := v.store.(*storage.ExtentStore)
+		store := v.store. (*storage.ExtentStore)
 		response.VolSnapshot, err = store.SnapShot()
 		response.Used = uint64(store.GetStoreUsedSize())
 		if err != nil {
