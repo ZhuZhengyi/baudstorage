@@ -3,6 +3,7 @@ package metanode
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
@@ -79,11 +80,11 @@ func (mp *metaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, ind
 	// Change memory state
 	switch confChange.Type {
 	case raftproto.ConfAddNode:
-		// TODO:
+		err = mp.confAddNode(req, index)
 	case raftproto.ConfRemoveNode:
-		// TODO:
+		err = mp.confRemoveNode(req, index)
 	case raftproto.ConfUpdateNode:
-		err = mp.applyUpdateNode(req, index)
+		//TODO
 	}
 	if err != nil {
 		err = errors.Errorf("[ApplyMemberChange]->%s", err.Error())

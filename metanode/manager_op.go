@@ -555,16 +555,19 @@ func (m *metaManager) opOfflineMetaPartition(conn net.Conn, p *Packet) (err erro
 		NsName:      req.NsName,
 		Status:      proto.TaskFail,
 	}
-	if req.AddPeer.ID == req.RemovePeer.ID || req.AddPeer.Addr == req.
-		RemovePeer.Addr {
-		err = errors.Errorf("[opOfflineMetaPartition]: AddPeer[%v] "+
-			"same withRemovePeer[%v]", req.AddPeer, req.RemovePeer)
+	if req.AddPeer.ID == req.RemovePeer.ID {
+		err = errors.Errorf("[opOfflineMetaPartition]: AddPeer[%v] same withRemovePeer[%v]", req.AddPeer, req.RemovePeer)
 		resp.Result = err.Error()
 		goto end
 	}
-	m.raftStore.AddNode(req.AddPeer.ID, req.AddPeer.Addr)
-	_, err = mp.ChangeMember(raftproto.ConfUpdateNode,
+	_, err = mp.ChangeMember(raftproto.ConfAddNode,
 		raftproto.Peer{ID: req.AddPeer.ID}, reqData)
+	if err != nil {
+		resp.Result = err.Error()
+		goto end
+	}
+	_, err = mp.ChangeMember(raftproto.ConfRemoveNode,
+		raftproto.Peer{ID: req.RemovePeer.ID}, reqData)
 	if err != nil {
 		resp.Result = err.Error()
 		goto end

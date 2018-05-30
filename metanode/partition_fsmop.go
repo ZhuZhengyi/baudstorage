@@ -171,47 +171,55 @@ func (mp *metaPartition) deletePartition() (status uint8) {
 	return
 }
 
-func (mp *metaPartition) applyUpdateNode(req *proto.
+func (mp *metaPartition) confAddNode(req *proto.
 	MetaPartitionOfflineRequest, index uint64) (err error) {
-	var newPeer []proto.Peer
 	findAddPeer := false
-	findRemovePeer := false
 	for _, peer := range mp.config.Peers {
-		if peer.ID == req.RemovePeer.ID {
-			findRemovePeer = true
-			continue
-		}
-		newPeer = append(newPeer, peer)
 		if peer.ID == req.AddPeer.ID {
 			findAddPeer = true
+			break
 		}
 	}
 	if findAddPeer {
-		err = errors.Errorf("[applyUpdateNode]: the addPeer[%v] is existed!",
-			req.AddPeer)
-		return
-	}
-	if !findRemovePeer {
-		err = errors.Errorf("[applyUpdateNode]: the removePeer[%v] not"+
-			" existed!", req.RemovePeer)
-		return
-	}
-	if mp.config.NodeId == req.RemovePeer.ID {
 		mp.applyID = index
+		return
+	}
+	mp.config.Peers = append(mp.config.Peers, req.AddPeer)
+	// Write Disk
+	if err = mp.storeMeta(); err != nil {
+		err = errors.Errorf("[applyAddNode]->%s", err.Error())
+		mp.config.Peers = mp.config.Peers[:len(mp.config.Peers)-1]
+		return
+	}
+	mp.raftPartition.AddNode(req.AddPeer.ID, req.AddPeer.Addr)
+	mp.applyID = index
+	return
+}
+
+func (mp *metaPartition) confRemoveNode(req *proto.
+	MetaPartitionOfflineRequest, index uint64) (err error) {
+	fondRemovePeer := false
+	peerIndex := -1
+	for i, peer := range mp.config.Peers {
+		if peer.ID == req.RemovePeer.ID {
+			fondRemovePeer = true
+			peerIndex = i
+			break
+		}
+	}
+	if !fondRemovePeer {
+		mp.applyID = index
+		return
+	}
+	if req.RemovePeer.ID == mp.config.NodeId {
 		mp.Stop()
 		os.RemoveAll(mp.config.RootDir)
 		return
 	}
-	oldPeer := mp.config.Peers
-	mp.config.Peers = append(newPeer, req.AddPeer)
-	defer func() {
-		if err != nil {
-			mp.config.Peers = oldPeer
-		}
-	}()
-	// Write Disk
+	mp.config.Peers = append(mp.config.Peers[:peerIndex], mp.config.Peers[peerIndex+1:]...)
 	if err = mp.storeMeta(); err != nil {
-		err = errors.Errorf("[applyUpdateNode]->%s", err.Error())
+		err = errors.Errorf("[confRemoveNode] storeMeta: %s", err.Error())
+		mp.config.Peers = append(mp.config.Peers, req.RemovePeer)
 		return
 	}
 	mp.applyID = index
