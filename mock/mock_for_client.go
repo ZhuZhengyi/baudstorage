@@ -51,8 +51,11 @@ func (m *MockServer) volGroupView() (views []*sdk.VolGroup) {
 		for j := 0; j < 3; j++ {
 			hosts[j] = "127.0.0.1:9000"
 		}
-		v := &sdk.VolGroup{VolId: uint32(i), ReplicaNum: 3,
-			Status: uint8((rand.Int()%2 + 1)), Hosts: hosts}
+		v := &sdk.VolGroup{
+			VolID:      uint32(i),
+			ReplicaNum: 3,
+			Status:     uint8((rand.Int()%2 + 1)),
+			Hosts:      hosts}
 		views = append(views, v)
 	}
 

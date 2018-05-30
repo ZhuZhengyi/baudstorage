@@ -31,7 +31,7 @@ func newWritePacket(data []byte, vol *sdk.VolGroup) (pkg *proto.Packet) {
 	argstr := vol.Hosts[1] + proto.AddrSplit + vol.Hosts[2]
 	pkg.Arg = []byte(argstr)
 	pkg.Arglen = uint32(len(pkg.Arg))
-	pkg.VolID = vol.VolId
+	pkg.VolID = vol.VolID
 	pkg.ReqID = allocReqId()
 	return
 }
@@ -59,7 +59,7 @@ func newDelPacket(fid uint64, size uint32, ofs int64, vol *sdk.VolGroup) (pkg *p
 	argstr := vol.Hosts[1] + proto.AddrSplit + vol.Hosts[2]
 	pkg.Arg = []byte(argstr)
 	pkg.Arglen = uint32(len(pkg.Arg))
-	pkg.VolID = vol.VolId
+	pkg.VolID = vol.VolID
 	pkg.Offset = ofs
 	pkg.FileID = fid
 	pkg.ReqID = allocReqId()

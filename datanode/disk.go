@@ -79,7 +79,7 @@ func (d *Disk) DiskUsage() (err error) {
 	d.All = fs.Blocks * uint64(fs.Bsize)
 	d.Free = fs.Bfree*uint64(fs.Bsize) - d.RestSize
 	d.Used = d.All - d.Free
-	log.LogInfof("disk[%v] all[%v] free[%v] used[%v]",d.Path,d.All,d.Free,d.Used)
+	log.LogInfof("disk[%v] all[%v] free[%v] used[%v]", d.Path, d.All, d.Free, d.Used)
 
 	return
 }

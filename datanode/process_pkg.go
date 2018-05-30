@@ -118,11 +118,10 @@ func (s *DataNode) doReplyCh(reply *Packet, msgH *MessageHandler) {
 	}
 	if !reply.IsMasterCommand() {
 		reply.afterTp()
+		log.LogDebug(reply.ActionMesg(ActionWriteToCli,
+			msgH.inConn.RemoteAddr().String(), reply.StartT, err))
+		s.statsFlow(reply, OutFlow)
 	}
-
-	log.LogDebug(reply.ActionMesg(ActionWriteToCli,
-		msgH.inConn.RemoteAddr().String(), reply.StartT, err))
-	s.statsFlow(reply, OutFlow)
 }
 
 func (s *DataNode) writeToCli(msgH *MessageHandler) {
