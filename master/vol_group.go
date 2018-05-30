@@ -91,7 +91,7 @@ func (vg *VolGroup) generatorVolOffLineLog(offlineAddr string) (msg string) {
 	for i := 0; i < len(vols); i++ {
 		vol := vols[i]
 		msg += fmt.Sprintf(" addr:%v  volStatus:%v  FileCount :%v ", vol.Addr,
-			vol.status, vol.FileCount)
+			vol.Status, vol.FileCount)
 	}
 	log.LogWarn(msg)
 
@@ -246,7 +246,7 @@ func (vg *VolGroup) getFileCount() {
 	for _, volLoc := range vg.Locations {
 		msg = fmt.Sprintf(GetVolLocationFileCountInfo+"vol:%v  volLocation:%v  FileCount:%v  "+
 			"NodeIsActive:%v  VlocIsActive:%v  .VolStatusOnNode:%v ", vg.VolID, volLoc.Addr, volLoc.FileCount,
-			volLoc.GetVolLocationNode().isActive, volLoc.IsActive(DefaultVolTimeOutSec), volLoc.status)
+			volLoc.GetVolLocationNode().isActive, volLoc.IsActive(DefaultVolTimeOutSec), volLoc.Status)
 		log.LogInfo(msg)
 	}
 
@@ -546,7 +546,7 @@ func (vg *VolGroup) UpdateVol(vr *proto.VolReport, dataNode *DataNode) {
 		volLoc = NewVol(dataNode)
 		vg.addMember(volLoc)
 	}
-	volLoc.status = (uint8)(vr.VolStatus)
+	volLoc.Status = (uint8)(vr.VolStatus)
 	volLoc.Total = vr.Total
 	volLoc.Used = vr.Used
 	volLoc.SetVolAlive()

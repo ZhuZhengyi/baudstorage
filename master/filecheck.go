@@ -60,9 +60,9 @@ func (fc *FileInCore) generatorLackFileTask(volID uint64, liveVols []*Vol) (task
 			continue
 		}
 		msg := fc.generatorLackFileLog(volID, lackLoc, liveVols)
-		if lackLoc.status == VolUnavailable {
+		if lackLoc.Status == VolUnavailable {
 			msg = msg + fmt.Sprintf(" ,But volLocationStatus :%v  So Can't do Replicat Task",
-				lackLoc.status)
+				lackLoc.Status)
 			log.LogWarn(msg)
 			continue
 		}

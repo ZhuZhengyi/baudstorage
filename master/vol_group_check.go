@@ -28,7 +28,7 @@ func (vg *VolGroup) checkStatus(needLog bool, volTimeOutSec int64) {
 
 func (vg *VolGroup) checkVolLocStatusOnLiveNode(liveLocs []*Vol) (volEqual bool) {
 	for _, volLoc := range liveLocs {
-		if volLoc.status != VolReadWrite {
+		if volLoc.Status != VolReadWrite {
 			return
 		}
 	}
@@ -108,7 +108,7 @@ func (vg *VolGroup) checkVolDiskError() (volDiskErrorAddrs []string) {
 		if !ok {
 			continue
 		}
-		if volLoc.status == VolUnavailable {
+		if volLoc.Status == VolUnavailable {
 			volDiskErrorAddrs = append(volDiskErrorAddrs, addr)
 		}
 	}
