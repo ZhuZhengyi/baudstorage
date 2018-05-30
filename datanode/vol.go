@@ -128,7 +128,7 @@ func (v *Vol) LoadVol() (response *proto.LoadVolResponse) {
 	response.VolType = v.volMode
 	response.VolSnapshot = make([]*proto.File, 0)
 	switch v.volMode {
-	case ExtentVol:
+	case proto.ExtentVol:
 		var err error
 		store := v.store.(*storage.ExtentStore)
 		response.VolSnapshot, err = store.SnapShot()
@@ -139,7 +139,7 @@ func (v *Vol) LoadVol() (response *proto.LoadVolResponse) {
 		} else {
 			response.Status = proto.TaskSuccess
 		}
-	case TinyVol:
+	case proto.TinyVol:
 
 	}
 	return
