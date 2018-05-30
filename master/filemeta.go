@@ -63,7 +63,7 @@ func (fc *FileInCore) updateFileInCore(volID uint64, vf *proto.File, volLoc *Vol
 
 	isFind := false
 	for i := 0; i < len(fc.Metas); i++ {
-		if fc.Metas[i].getLocationAddr() == volLoc.addr {
+		if fc.Metas[i].getLocationAddr() == volLoc.Addr {
 			fc.Metas[i].Crc = vf.Crc
 			isFind = true
 			break
@@ -71,7 +71,7 @@ func (fc *FileInCore) updateFileInCore(volID uint64, vf *proto.File, volLoc *Vol
 	}
 
 	if isFind == false {
-		fm := NewFileMetaOnNode(vf.Crc, volLoc.addr, volLocIndex, vf.LastObjID, vf.NeedleCnt)
+		fm := NewFileMetaOnNode(vf.Crc, volLoc.Addr, volLocIndex, vf.LastObjID, vf.NeedleCnt)
 		fc.Metas = append(fc.Metas, fm)
 	}
 
@@ -96,7 +96,7 @@ func (fc *FileInCore) generatorDeleteFileTask(volID uint64) (tasks []*proto.Admi
 func (fc *FileInCore) deleteFileInNode(volID uint64, loc *Vol) {
 	for i := 0; i < len(fc.Metas); i++ {
 		fm := fc.Metas[i]
-		if fm.LocAddr == loc.addr {
+		if fm.LocAddr == loc.Addr {
 			afterNodes := fc.Metas[i+1:]
 			fc.Metas = fc.Metas[0:i]
 			fc.Metas = append(fc.Metas, afterNodes...)
@@ -121,7 +121,7 @@ func (fc *FileInCore) getLiveLocExcludeBadLoc(volLocs []*Vol, badLoc *Vol) (loc 
 func (fc *FileInCore) randSelectReplicateSource(volLocs []*Vol, badLoc *Vol) (loc *Vol, err error) {
 	index := rand.Intn(len(volLocs))
 	loc = volLocs[index]
-	if loc.addr != badLoc.addr && fc.locIsInNodeInfos(loc) == true {
+	if loc.Addr != badLoc.Addr && fc.locIsInNodeInfos(loc) == true {
 		return
 	}
 
@@ -131,7 +131,7 @@ func (fc *FileInCore) randSelectReplicateSource(volLocs []*Vol, badLoc *Vol) (lo
 func (fc *FileInCore) orderSelectReplicateSource(volLocs []*Vol, badLoc *Vol) (loc *Vol, err error) {
 	for i := 0; i < len(volLocs); i++ {
 		loc = volLocs[i]
-		if loc.addr != badLoc.addr && fc.locIsInNodeInfos(loc) == true {
+		if loc.Addr != badLoc.Addr && fc.locIsInNodeInfos(loc) == true {
 			return
 		}
 	}
@@ -141,7 +141,7 @@ func (fc *FileInCore) orderSelectReplicateSource(volLocs []*Vol, badLoc *Vol) (l
 
 func (fc *FileInCore) locIsInNodeInfos(loc *Vol) (ok bool) {
 	for i := 0; i < len(fc.Metas); i++ {
-		if fc.Metas[i].LocAddr == loc.addr {
+		if fc.Metas[i].LocAddr == loc.Addr {
 			return true
 		}
 	}
@@ -152,7 +152,7 @@ func (fc *FileInCore) locIsInNodeInfos(loc *Vol) (ok bool) {
 func (fc *FileInCore) getFileMetaByVolAddr(vol *Vol) (fm *FileMetaOnNode, ok bool) {
 	for i := 0; i < len(fc.Metas); i++ {
 		fm = fc.Metas[i]
-		if fm.LocAddr == vol.addr {
+		if fm.LocAddr == vol.Addr {
 			ok = true
 			return
 		}

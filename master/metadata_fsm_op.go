@@ -66,9 +66,9 @@ type VolGroupValue struct {
 func newVolGroupValue(vg *VolGroup) (vgv *VolGroupValue) {
 	vgv = &VolGroupValue{
 		VolID:      vg.VolID,
-		ReplicaNum: vg.replicaNum,
+		ReplicaNum: vg.ReplicaNum,
 		Hosts:      vg.VolHostsToString(),
-		VolType:    vg.volType,
+		VolType:    vg.VolType,
 	}
 	return
 }
