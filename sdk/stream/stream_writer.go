@@ -305,8 +305,8 @@ func (stream *StreamWriter) createExtent(vol *vol.VolGroup) (extentId uint64, er
 	}
 	extentId = p.FileID
 	if p.FileID<=0 {
-		err=errors.Annotatef(err, "recive CreateExtent[%v] failed unavali extentId[%v]",
-			p.GetUniqLogId(), vol.Hosts[0],extentId)
+		err=errors.Annotatef(err, "unavali extentId[%v] from [%v] response",
+			extentId, vol.Hosts[0])
 		connect.Close()
 		return
 
