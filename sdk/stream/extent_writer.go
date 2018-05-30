@@ -409,26 +409,22 @@ func (writer *ExtentWriter) getQueueListLen() (length int) {
 	return writer.requestQueue.Len()
 }
 
-func (writer *ExtentWriter) getNeedRetrySendPackets() (retryList []*Packet) {
+func (writer *ExtentWriter) getNeedRetrySendPackets() (requests []*Packet) {
 	var (
 		backPkg *Packet
 	)
-	retryList=make([]*Packet,0)
 	writer.requestQueueLock.Lock()
-	for e:=writer.requestQueue.Front();e!=nil;e=e.Next(){
-		retryList=append(retryList,e.Value.(*Packet))
-	}
-	backElement:=writer.requestQueue.Back()
-	if backElement!=nil {
-		backPkg=backElement.Value.(*Packet)
-	}else {
-		backPkg=retryList[len(retryList)-1]
+	defer writer.requestQueueLock.Unlock()
+	requests = make([]*Packet, 0)
+	for e := writer.requestQueue.Front(); e != nil; e = e.Next() {
+		requests = append(requests, e.Value.(*Packet))
 	}
 	lastPacket := writer.currentPacket
+	backPkg=requests[len(requests)-1]
 	if lastPacket != nil && lastPacket.ReqID > backPkg.ReqID {
-		retryList=append(retryList,lastPacket)
+		requests=append(requests,lastPacket)
 	}
-	writer.requestQueueLock.Unlock()
+
 	return
 }
 
