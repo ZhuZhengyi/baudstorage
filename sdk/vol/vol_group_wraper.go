@@ -34,14 +34,7 @@ type VolsView struct {
 }
 
 func (vg *VolGroup) GetAllAddrs() (m string) {
-	for i, host := range vg.Hosts {
-		if i == len(vg.Hosts)-1 {
-			m = m + host
-		} else {
-			m = m + host + proto.AddrSplit
-		}
-	}
-	return
+	return strings.Join(vg.Hosts[1:],proto.AddrSplit)+proto.AddrSplit
 }
 
 type VolGroupWrapper struct {

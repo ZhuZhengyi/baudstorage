@@ -254,18 +254,18 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	err = fmt.Errorf("cannot alloct new extent after maxrery")
 	for i := 0; i < MaxSelectVolForWrite; i++ {
 		if vol, err = stream.wrapper.GetWriteVol(stream.execludeVols); err != nil {
-			log.LogErrorf(fmt.Sprintf("StreamWriter[%v] ActionAllocNewExtentWriter " +
-				"failed on getWriteVol,error[%v] execludeVols[%v]", stream.toString(),err.Error(),stream.execludeVols))
+			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter " +
+				"failed on getWriteVol,error[%v] execludeVols[%v]", err.Error(),stream.execludeVols))
 			continue
 		}
 		if extentId, err = stream.createExtent(vol); err != nil {
-			log.LogErrorf(fmt.Sprintf("StreamWriter[%v] ActionAllocNewExtentWriter " +
-				"create Extent,error[%v] execludeVols[%v]", stream.toString(),err.Error(),stream.execludeVols))
+			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter " +
+				"create Extent,error[%v] execludeVols[%v]", err.Error(),stream.execludeVols))
 			continue
 		}
 		if writer, err = NewExtentWriter(stream.currentInode, vol, stream.wrapper, extentId); err != nil {
-			log.LogErrorf(fmt.Sprintf("StreamWriter[%v] ActionAllocNewExtentWriter " +
-				"NewExtentWriter[%v],error[%v] execludeVols[%v]", stream.toString(),extentId,err.Error(),stream.execludeVols))
+			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter " +
+				"NewExtentWriter[%v],error[%v] execludeVols[%v]", extentId,err.Error(),stream.execludeVols))
 			continue
 		}
 		break
@@ -305,8 +305,8 @@ func (stream *StreamWriter) createExtent(vol *vol.VolGroup) (extentId uint64, er
 	}
 	extentId = p.FileID
 	if p.FileID<=0 {
-		err=errors.Annotatef(err, "recive CreateExtent[%v] failed unavali extentId[%v]",
-			p.GetUniqLogId(), vol.Hosts[0],extentId)
+		err=errors.Annotatef(err, "unavali extentId[%v] from [%v] response",
+			extentId, vol.Hosts[0])
 		connect.Close()
 		return
 
