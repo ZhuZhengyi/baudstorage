@@ -236,6 +236,7 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 			}
 		}
 		if err == nil {
+			stream.execludeVols=make([]uint32,0)
 			break
 		}
 	}
