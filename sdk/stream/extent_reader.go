@@ -110,6 +110,9 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 		if err != nil {
 			log.LogError(err.Error())
 		}
+		if acatualReadSize>=expectReadSize{
+			err=nil
+		}
 	}()
 	if err = p.WriteToConn(conn); err != nil {
 		err = errors.Annotatef(err, reader.toString()+"readDataFromHost host[%v] error request[%v]",
