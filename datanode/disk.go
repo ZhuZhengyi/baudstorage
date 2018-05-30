@@ -222,6 +222,7 @@ func (d *Disk) loadVol(space *SpaceManager) {
 	for _, name := range d.VolsName {
 		var v *Vol
 		volId, volSize, volMode, err := UnmarshVolName(name)
+		log.LogDebugf("acton[Disk.loadVol] disk info [%v %v %v %v %v].", d.Path, name, volId, volSize, volMode, err)
 		if err != nil {
 			log.LogError(fmt.Sprintf("LoadVol[%v] from Disk[%v] Err[%v] ", volId, d.Path, err.Error()))
 			continue
