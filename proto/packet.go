@@ -406,9 +406,9 @@ func (p *Packet) IsTransitPkg() bool {
 func (p *Packet) ActionMesg(action, remote string, start int64, err error) (m string) {
 	if err == nil {
 		m = fmt.Sprintf("id[%v] act[%v] remote[%v] "+
-			" cost[%v] isTransite[%v] ",
+			" cost[%v] isTransite[%v] Nodes[%v]",
 			p.GetUniqLogId(), action, remote,
-			(time.Now().UnixNano()-start)/1e6, p.IsTransitPkg())
+			(time.Now().UnixNano()-start)/1e6, p.IsTransitPkg(), p.Nodes)
 
 	} else {
 		m = fmt.Sprintf("id[%v] act[%v] remote[%v]"+
