@@ -14,7 +14,6 @@ const (
 )
 
 type DataNode struct {
-	TcpAddr                   string `json:"TcpAddr"`
 	MaxDiskAvailWeight        uint64 `json:"MaxDiskAvailWeight"`
 	CreatedVolWeights         uint64
 	RemainWeightsForCreateVol uint64
@@ -22,10 +21,10 @@ type DataNode struct {
 	Used                      uint64 `json:"UsedWeight"`
 	Free                      uint64
 	RackName                  string `json:"Rack"`
-	HttpAddr                  string
+	Addr                      string
 
-	reportTime time.Time
-	isActive   bool
+	ReportTime   time.Time
+	isActive     bool
 	sync.Mutex
 	ratio        float64
 	selectCount  uint64
@@ -39,8 +38,8 @@ func NewDataNode(addr string) (dataNode *DataNode) {
 	dataNode = new(DataNode)
 	dataNode.carry = rand.Float64()
 	dataNode.Total = 1
-	dataNode.HttpAddr = addr
-	dataNode.sender = NewAdminTaskSender(dataNode.HttpAddr)
+	dataNode.Addr = addr
+	dataNode.sender = NewAdminTaskSender(dataNode.Addr)
 	return
 }
 
@@ -59,7 +58,7 @@ func (dataNode *DataNode) checkHeartBeat() {
 func (dataNode *DataNode) setNodeAlive() {
 	dataNode.Lock()
 	defer dataNode.Unlock()
-	dataNode.reportTime = time.Now()
+	dataNode.ReportTime = time.Now()
 	dataNode.isActive = true
 }
 
@@ -84,6 +83,7 @@ func (dataNode *DataNode) UpdateNodeMetric(resp *proto.DataNodeHeartBeatResponse
 	dataNode.VolInfoCount = resp.CreatedVolCnt
 	dataNode.VolInfo = resp.VolInfo
 	dataNode.ratio = (float64)(dataNode.Used) / (float64)(dataNode.Total)
+	dataNode.ReportTime = time.Now()
 }
 
 func (dataNode *DataNode) IsWriteAble() (ok bool) {
@@ -129,6 +129,6 @@ func (dataNode *DataNode) generateHeartbeatTask(masterAddr string) (task *proto.
 		CurrTime:   time.Now().Unix(),
 		MasterAddr: masterAddr,
 	}
-	task = proto.NewAdminTask(proto.OpDataNodeHeartbeat, dataNode.HttpAddr, request)
+	task = proto.NewAdminTask(proto.OpDataNodeHeartbeat, dataNode.Addr, request)
 	return
 }
