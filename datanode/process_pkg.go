@@ -83,7 +83,10 @@ func (s *DataNode) doRequestCh(req *Packet, msgH *MessageHandler) {
 	var err error
 	if !req.IsTransitPkg() {
 		s.operatePacket(req, msgH.inConn)
-		msgH.replyCh <- req
+		if !(req.Opcode==proto.OpStreamRead){
+			msgH.replyCh <- req
+		}
+
 		return
 	}
 
@@ -117,12 +120,10 @@ func (s *DataNode) doReplyCh(reply *Packet, msgH *MessageHandler) {
 			msgH.ExitSign()
 		}
 	}
-	if !reply.IsMasterCommand() {
-		reply.afterTp()
-		log.LogDebugf("action[DataNode.doReplyCh] %v", reply.ActionMesg(ActionWriteToCli,
-			msgH.inConn.RemoteAddr().String(), reply.StartT, err))
-		s.statsFlow(reply, OutFlow)
-	}
+	reply.afterTp()
+	log.LogDebugf("action[DataNode.doReplyCh] %v", reply.ActionMesg(ActionWriteToCli,
+		msgH.inConn.RemoteAddr().String(), reply.StartT, err))
+	s.statsFlow(reply, OutFlow)
 }
 
 func (s *DataNode) writeToCli(msgH *MessageHandler) {
