@@ -292,10 +292,10 @@ func (s *ExtentStore) Read(extentId uint64, offset, size int64, nbuf []byte) (cr
 	defer e.readUnlock()
 	if _, err = e.file.ReadAt(nbuf[:size], offset+BlockCrcHeaderSize); err != nil {
 		e.readUnlock()
-		finfo,_:=s.GetWatermark(extentId)
+		fInfo, _ := s.GetWatermark(extentId)
 		e.readlock()
-		err=fmt.Errorf("extent[%v] size[%v] but readOffset[%v] readSize[%v] " +
-			"err[%v]",extentId,finfo.Size,offset,size)
+		err = fmt.Errorf("extent[%v] size[%v] but readOffset[%v] readSize[%v] "+
+			"err[%v]", extentId, fInfo.Size, offset, size, err)
 		return
 	}
 	blockNo := offset / BlockSize

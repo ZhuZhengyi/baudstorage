@@ -90,7 +90,7 @@ func (s *DataNode) doRequestCh(req *Packet, msgH *MessageHandler) {
 	if err = s.sendToNext(req, msgH); err == nil {
 		s.operatePacket(req, msgH.inConn)
 	} else {
-		log.LogError(req.ActionMesg(ActionSendToNext, req.nextAddr,
+		log.LogErrorf("action[DataNode.doRequestCh] %v.", req.ActionMesg(ActionSendToNext, req.nextAddr,
 			req.StartT, fmt.Errorf("failed to send to : %v", req.nextAddr)))
 		if req.IsMarkDeleteReq() {
 			s.operatePacket(req, msgH.inConn)
