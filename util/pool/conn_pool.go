@@ -20,7 +20,7 @@ func (connP *ConnPool) Get(targetAddr string) (c net.Conn, err error) {
 	connP.Lock()
 	pool, ok := connP.pools[targetAddr]
 	connP.Unlock()
-	factory := func(addr interface{}) (interface{}, error) {
+	factoryFunc := func(addr interface{}) (interface{}, error) {
 		var connect *net.TCPConn
 		conn, err := net.DialTimeout("tcp", addr.(string), time.Second)
 		if err == nil {
@@ -31,19 +31,19 @@ func (connP *ConnPool) Get(targetAddr string) (c net.Conn, err error) {
 
 		return connect, err
 	}
-	close := func(v interface{}) error { return v.(net.Conn).Close() }
+	closeFunc := func(v interface{}) error { return v.(net.Conn).Close() }
 	if !ok {
 		poolConfig := &PoolConfig{
 			InitialCap:  5,
 			MaxCap:      300,
-			Factory:     factory,
-			Close:       close,
+			Factory:     factoryFunc,
+			Close:       closeFunc,
 			IdleTimeout: time.Minute * 30,
 			Para:        targetAddr,
 		}
 		pool, err = NewChannelPool(poolConfig)
 		if err != nil {
-			conn, err := factory(targetAddr)
+			conn, err := factoryFunc(targetAddr)
 			return conn.(net.Conn), err
 		}
 		connP.Lock()
@@ -52,7 +52,7 @@ func (connP *ConnPool) Get(targetAddr string) (c net.Conn, err error) {
 	}
 
 	if obj, err = pool.Get(); err != nil {
-		conn, err := factory(targetAddr)
+		conn, err := factoryFunc(targetAddr)
 		return conn.(net.Conn), err
 	}
 	c = obj.(net.Conn)
