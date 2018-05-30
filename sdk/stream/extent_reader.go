@@ -74,8 +74,8 @@ func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
 
 func (reader *ExtentReader) readDataFromVol(data []byte,offset,size int) (err error) {
 	rand.Seed(time.Now().UnixNano())
-	index := rand.Intn(int(reader.vol.ReplicaNum))
-	host := reader.vol.Hosts[index]
+	//index := rand.Intn(int(reader.vol.ReplicaNum))
+	host := reader.vol.Hosts[0]
 	if _, err = reader.readDataFromHost(host, data,offset,size); err != nil {
 		log.LogError(err.Error())
 		goto FORLOOP
