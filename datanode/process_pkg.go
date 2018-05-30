@@ -158,7 +158,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 		err = errors.Annotatef(fmt.Errorf(ConnIsNullErr), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 		msgH.DelListElement(request, e, s,ForceClostConnect)
-		return nil, true
+		return request, true
 	}
 
 	//if local execute failed,then
@@ -167,7 +167,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 		msgH.DelListElement(request, e, s,ForceClostConnect)
 		log.LogError(request.ActionMesg(ActionReciveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
-		return nil, true
+		return request, true
 	}
 
 	reply = NewPacket()
