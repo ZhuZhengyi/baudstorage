@@ -219,15 +219,20 @@ func UnmarshVolName(name string) (volId uint32, volSize int, volMode string, err
 func (d *Disk) loadVol(space *SpaceManager) {
 	d.Lock()
 	defer d.Unlock()
-	for _, name := range d.VolsName {
+	fileInfoList, err := ioutil.ReadDir(d.Path)
+	if err != nil {
+		log.LogErrorf("action[Disk.loadVol] %v.", err)
+		return
+	}
+	for _, fileInfo := range fileInfoList {
 		var v *Vol
-		volId, volSize, volMode, err := UnmarshVolName(name)
-		log.LogDebugf("acton[Disk.loadVol] disk info [%v %v %v %v %v].", d.Path, name, volId, volSize, volMode, err)
+		volId, volSize, volMode, err := UnmarshVolName(fileInfo.Name())
+		log.LogDebugf("acton[Disk.loadVol] disk info [%v %v %v %v %v].", d.Path, fileInfo.Name(), volId, volSize, volMode, err)
 		if err != nil {
 			log.LogError(fmt.Sprintf("LoadVol[%v] from Disk[%v] Err[%v] ", volId, d.Path, err.Error()))
 			continue
 		}
-		v, err = NewVol(volId, volMode, path.Join(d.Path, name), d.Path, storage.ReBootStoreMode, volSize)
+		v, err = NewVol(volId, volMode, path.Join(d.Path, fileInfo.Name()), d.Path, storage.ReBootStoreMode, volSize)
 		if err != nil {
 			log.LogError(fmt.Sprintf("LoadVol[%v] from Disk[%v] Err[%v] ", volId, d.Path, err.Error()))
 			continue
