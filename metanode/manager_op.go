@@ -112,7 +112,7 @@ func (m *metaManager) opCreateMetaPartition(conn net.Conn, p *Packet) (err error
 		Status:      proto.TaskSuccess,
 	}
 	// Create new  metaPartition.
-	if err = m.createPartition(req.PartitionID, req.Start, req.End,
+	if err = m.createPartition(req.PartitionID, req.NsName, req.Start, req.End,
 		req.Members); err != nil {
 		resp.Status = proto.TaskFail
 		resp.Result = err.Error()

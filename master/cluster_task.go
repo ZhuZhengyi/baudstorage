@@ -491,7 +491,7 @@ func (c *Cluster) createVolSuccessTriggerOperator(nodeAddr string, resp *proto.C
 		goto errDeal
 	}
 	vol = NewVol(dataNode)
-	vol.status = VolReadWrite
+	vol.Status = VolReadWrite
 	vg.addMember(vol)
 
 	vg.Lock()

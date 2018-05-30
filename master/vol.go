@@ -8,7 +8,7 @@ type Vol struct {
 	ReportTime        int64
 	FileCount         uint32
 	loc               uint8
-	status            uint8
+	Status            uint8
 	LoadVolIsResponse bool
 	Total             uint64 `json:"TotalSize"`
 	Used              uint64 `json:"UsedSize"`
@@ -34,7 +34,7 @@ func (v *Vol) CheckVolMiss(volMissSec int64) (isMiss bool) {
 }
 
 func (v *Vol) IsLive(volTimeOutSec int64) (avail bool) {
-	if v.dataNode.isActive == true && v.status != VolUnavailable &&
+	if v.dataNode.isActive == true && v.Status != VolUnavailable &&
 		v.IsActive(volTimeOutSec) == true {
 		avail = true
 	}

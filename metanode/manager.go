@@ -210,7 +210,8 @@ func (m *metaManager) detachPartition(id uint64) (err error) {
 	return
 }
 
-func (m *metaManager) createPartition(id uint64, start, end uint64,
+func (m *metaManager) createPartition(id uint64, nsName string, start,
+	end uint64,
 	peers []proto.Peer) (err error) {
 	/* Check Partition */
 	if _, err = m.getPartition(id); err == nil {
@@ -222,6 +223,7 @@ func (m *metaManager) createPartition(id uint64, start, end uint64,
 	partId := fmt.Sprintf("%d", id)
 	mpc := &MetaPartitionConfig{
 		PartitionId: id,
+		NameSapce:   nsName,
 		Start:       start,
 		End:         end,
 		Cursor:      start,
