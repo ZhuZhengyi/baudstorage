@@ -69,7 +69,6 @@ func NewVolGroupWraper(namespace, masterHosts string) (vw *VolGroupWrapper, err 
 }
 
 func (vw *VolGroupWrapper) update() {
-	vw.getVolsFromMaster()
 	ticker := time.NewTicker(time.Minute * 5)
 	for {
 		select {
@@ -100,6 +99,7 @@ func (vw *VolGroupWrapper) getVolsFromMaster() (err error) {
 			log.LogError(fmt.Sprintf(ActionGetVolGroupView+"get VolView from master[%v] err[%v]", m, err.Error()))
 			continue
 		}
+		log.LogInfof("Get VolView from master: %v", string(body))
 		vw.updateVolGroup(views.Vols)
 		break
 	}
@@ -122,6 +122,7 @@ func (vw *VolGroupWrapper) updateVolGroup(vols []*VolGroup) {
 
 	for _, vg := range vols {
 		vw.replaceOrInsertVol(vg)
+		log.LogInfof("Update Vol: %v", *vg)
 		if vg.Status == storage.ReadWriteStore {
 			rwVolGroups = append(rwVolGroups, vg)
 		}
