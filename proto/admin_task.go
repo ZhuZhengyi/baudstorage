@@ -21,6 +21,7 @@ type AdminTask struct {
 	OperatorAddr string
 	Status       int8
 	SendTime     int64
+	CreateTime int64
 	SendCount    uint8
 	Request      interface{}
 	Response     interface{}
@@ -75,12 +76,12 @@ func (t *AdminTask) CheckTaskIsFail() (isFail bool) {
 	return
 }
 
-func NewAdminTask(opcode uint8, opAddr string, request interface{}) (t *AdminTask) {
+func NewAdminTask(opCode uint8, opAddr string, request interface{}) (t *AdminTask) {
 	t = new(AdminTask)
-	t.OpCode = opcode
+	t.OpCode = opCode
 	t.Request = request
 	t.OperatorAddr = opAddr
 	t.ID = fmt.Sprintf("addr[%v]_op[%v]", t.OperatorAddr, t.OpCode)
-
+	t.CreateTime = time.Now().Unix()
 	return
 }
