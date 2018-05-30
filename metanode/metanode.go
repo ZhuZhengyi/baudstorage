@@ -39,9 +39,9 @@ type MetaNode struct {
 }
 
 // Start this MeteNode with specified configuration.
-//  1. Start and load each meta range from snapshot.
+//  1. Start and load each meta partition from snapshot.
 //  2. Restore raftStore fsm of each meta range.
-//  3. Start tcp server and accept connection from master and clients.
+//  3. Start server and accept connection from master and clients.
 func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	// Parallel safe.
 	if TrySwitchState(&m.state, stateReady, stateRunning) {

@@ -3,9 +3,7 @@ package metanode
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-
-	"github.com/juju/errors"
+	"github.com/henrylee2cn/goutil/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/raft"
@@ -73,9 +71,11 @@ func (mp *metaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, ind
 	var err error
 	req := &proto.MetaPartitionOfflineRequest{}
 	if err = json.Unmarshal(confChange.Context, req); err != nil {
+		err = errors.Errorf(
+			"[ApplyMemberChange]: Unmarshal MetaPartitionOfflineRequest: %s",
+			err.Error())
 		return nil, err
 	}
-
 	// Change memory state
 	switch confChange.Type {
 	case raftproto.ConfAddNode:
@@ -83,45 +83,11 @@ func (mp *metaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, ind
 	case raftproto.ConfRemoveNode:
 		// TODO:
 	case raftproto.ConfUpdateNode:
-		var (
-			fondRemove, fondAdd = -1, -1
-			newPeer             []proto.Peer
-		)
-		for i, peer := range mp.config.Peers {
-			if peer.ID == req.RemovePeer.ID {
-				fondRemove = i
-				continue
-			}
-			newPeer = append(newPeer, peer)
-			if peer.ID == req.AddPeer.ID {
-				fondAdd = i
-			}
-		}
-		if fondAdd != -1 {
-			return nil, errors.New("repeat peer")
-		}
-		if fondRemove == -1 {
-			return nil, errors.New("remove peer not existed")
-		}
-		if mp.config.NodeId == req.RemovePeer.ID {
-			mp.Stop()
-			os.RemoveAll(mp.config.RootDir)
-			mp.applyID = index
-			return nil, nil
-		}
-		oldPeer := mp.config.Peers
-		mp.config.Peers = append(newPeer, req.AddPeer)
-		defer func() {
-			if err != nil {
-				mp.config.Peers = oldPeer
-			}
-		}()
+		err = mp.applyUpdateNode(req, index)
 	}
-	// Write Disk
-	if err = mp.storeMeta(); err != nil {
-		return nil, err
+	if err != nil {
+		err = errors.Errorf("[ApplyMemberChange]->%s", err.Error())
 	}
-	mp.applyID = index
 	return nil, err
 }
 

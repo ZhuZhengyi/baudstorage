@@ -96,7 +96,7 @@ func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 	capacity = m.cluster.getVolCapacity(ns)
 	lastMaxVolID = int(m.cluster.idAlloc.volID)
 	for i := 0; i < reqCreateCount; i++ {
-		if reqCreateCount < lastMaxVolID {
+		if reqCreateCount < lastMaxVolID || int(m.cluster.idAlloc.volID) >= capacity {
 			break
 		}
 		if _, err = m.cluster.createVolGroup(nsName, volType); err != nil {
@@ -645,7 +645,7 @@ func parseVolIDAndNamespace(r *http.Request) (volID uint64, name string, err err
 
 func checkVolGroupID(r *http.Request) (volID uint64, err error) {
 	var value string
-	if value := r.FormValue(ParaVolGroup); value == "" {
+	if value = r.FormValue(ParaVolGroup); value == "" {
 		err = paraNotFound(ParaVolGroup)
 		return
 	}
