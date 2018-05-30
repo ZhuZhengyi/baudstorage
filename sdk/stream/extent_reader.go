@@ -109,24 +109,23 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 	defer func() {
 		if err != nil {
 			log.LogError(err.Error())
-			conn.Close()
-		} else {
-			reader.wrapper.PutConnect(conn)
 		}
 	}()
 	if err = p.WriteToConn(conn); err != nil {
 		err = errors.Annotatef(err, reader.toString()+"readDataFromHost host[%v] error request[%v]",
 			host, p.GetUniqLogId())
+		conn.Close()
 		return 0, err
 	}
 	for {
 		if acatualReadSize >= expectReadSize {
-			return acatualReadSize, err
+			break
 		}
 		err = p.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
 			err = errors.Annotatef(err, reader.toString()+"readDataFromHost host[%v]  error reqeust[%v]",
 				host, p.GetUniqLogId())
+			conn.Close()
 			return acatualReadSize, err
 
 		}
@@ -134,14 +133,17 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 			err = errors.Annotatef(fmt.Errorf(string(p.Data[:p.Size])),
 				reader.toString()+"readDataFromHost host [%v] request[%v] reply[%v]",
 				host, p.GetUniqLogId(), p.GetUniqLogId())
+			conn.Close()
 			return acatualReadSize, err
 		}
 		copy(data[acatualReadSize:acatualReadSize+int(p.Size)], p.Data[:p.Size])
 		acatualReadSize += int(p.Size)
 		if acatualReadSize >= expectReadSize {
+			conn.Close()
 			return acatualReadSize, err
 		}
 	}
+	reader.wrapper.PutConnect(conn)
 	return acatualReadSize, nil
 }
 

@@ -93,7 +93,7 @@ const (
 
 const (
 	WriteDeadlineTime  = 5
-	ReadDeadlineTime   = 3
+	ReadDeadlineTime   = 5
 	NoReadDeadlineTime = -1
 )
 
