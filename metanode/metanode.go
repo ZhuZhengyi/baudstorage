@@ -85,6 +85,7 @@ func (m *MetaNode) onStart(cfg *config.Config) (err error) {
 	if err = m.startServer(); err != nil {
 		return
 	}
+
 	return
 }
 

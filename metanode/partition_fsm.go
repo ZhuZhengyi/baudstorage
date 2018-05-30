@@ -3,7 +3,7 @@ package metanode
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/henrylee2cn/goutil/errors"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/raft"

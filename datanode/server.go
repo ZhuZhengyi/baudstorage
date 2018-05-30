@@ -261,6 +261,7 @@ func (s *DataNode) serveConn(conn net.Conn) {
 			goto exitDeal
 		default:
 			if err := s.readFromCliAndDeal(msgH); err != nil {
+				log.LogErrorf("action[DataNode.serveConn] %v", err)
 				goto exitDeal
 			}
 		}
