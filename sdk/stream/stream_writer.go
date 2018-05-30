@@ -213,8 +213,8 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 }
 
 func (stream *StreamWriter) recoverExtent() (err error) {
+	retryPackets:=stream.getWriter().getNeedRetrySendPackets()
 	for i := 0; i < MaxSelectVolForWrite; i++ {
-		sendList := stream.getWriter().getNeedRetrySendPackets()
 		stream.execludeVols = append(stream.execludeVols, stream.getWriter().volID)
 		if err = stream.allocateNewExtentWriter(); err != nil {
 			err = errors.Annotatef(err, "RecoverExtent Failed")
@@ -228,8 +228,7 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 			err = errors.Annotatef(err, "update filesize[%v] to metanode Failed", ek.Size)
 			continue
 		}
-		for e := sendList.Front(); e != nil; e = e.Next() {
-			p := e.Value.(*Packet)
+		for _,p:=range retryPackets {
 			_, err = stream.getWriter().write(p.Data, int(p.Size))
 			if err != nil {
 				err = errors.Annotatef(err, "RecoverExtent write failed")
