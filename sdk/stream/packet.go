@@ -41,6 +41,7 @@ func NewReadPacket(key proto.ExtentKey, offset, size int) (p *Packet) {
 	p.Opcode = proto.OpStreamRead
 	p.StoreMode = proto.ExtentStoreMode
 	p.ReqID = proto.GetReqID()
+	p.Nodes=0
 
 	return
 }
