@@ -13,8 +13,8 @@ import (
 
 var (
 	ErrBadNodes          = errors.New("BadNodesErr")
-	ErrArgLenUnmatch     = errors.New("ArgLenUnmatchErr")
-	ErrAddrsNodesUnmatch = errors.New("AddrsNodesUnmatchErr")
+	ErrArgLenUnmatch     = errors.New("ArgLenMismatchErr")
+	ErrAddrsNodesUnmatch = errors.New("AddrsNodesMismatchErr")
 )
 
 type Packet struct {

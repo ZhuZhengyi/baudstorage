@@ -51,7 +51,7 @@ func NewVol(volId uint32, volMode, name, diskPath string, storeMode bool, storeS
 	v.volMode = volMode
 	v.diskPath = diskPath
 	v.path = name
-	v.volSize=storeSize
+	v.volSize = storeSize
 	v.exitCh = make(chan bool, 10)
 	if name == EmptyVolName {
 		v.path = path.Join(v.diskPath, v.toName())
