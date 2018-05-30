@@ -304,6 +304,11 @@ func (stream *StreamWriter) createExtent(vol *sdk.VolGroup) (extentId uint64, er
 		return
 	}
 	extentId = p.FileID
+	if p.FileID<=0 {
+		return 0,errors.Annotatef(err, "recive CreateExtent[%v] failed unavali extentId[%v]",
+			p.GetUniqLogId(), vol.Hosts[0],extentId)
+
+	}
 
 	return
 }
