@@ -31,7 +31,7 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 		pkg.Size = orgSize
 		if pkg.IsErrPack() {
 			err = fmt.Errorf("operation[%v] error[%v]", pkg.GetOpMesg(pkg.Opcode), string(pkg.Data[:resultSize]))
-		} else {
+		} else if !pkg.IsMasterCommand() {
 			if pkg.IsReadReq() {
 				log.LogRead(pkg.ActionMesg(pkg.GetOpMesg(pkg.Opcode), LocalProcessAddr, start, nil))
 			} else {
