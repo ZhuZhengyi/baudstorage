@@ -120,10 +120,12 @@ func (s *DataNode) doReplyCh(reply *Packet, msgH *MessageHandler) {
 			msgH.ExitSign()
 		}
 	}
-	reply.afterTp()
-	log.LogDebugf("action[DataNode.doReplyCh] %v", reply.ActionMesg(ActionWriteToCli,
-		msgH.inConn.RemoteAddr().String(), reply.StartT, err))
-	s.statsFlow(reply, OutFlow)
+	if !reply.IsMasterCommand(){
+		reply.afterTp()
+		log.LogDebugf("action[DataNode.doReplyCh] %v", reply.ActionMesg(ActionWriteToCli,
+			msgH.inConn.RemoteAddr().String(), reply.StartT, err))
+		s.statsFlow(reply, OutFlow)
+	}
 }
 
 func (s *DataNode) writeToCli(msgH *MessageHandler) {
