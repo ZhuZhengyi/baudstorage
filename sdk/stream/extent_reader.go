@@ -170,34 +170,34 @@ func (reader *ExtentReader) toString() (m string) {
 	return fmt.Sprintf("inode[%v] extentKey[%v] start[%v] end[%v]", reader.inode,
 		reader.key.Marshal(), reader.startInodeOffset, reader.endInodeOffset)
 }
-
-func (reader *ExtentReader) fillCache() error {
-	reader.Lock()
-	if reader.cache.getBufferEndOffset() == int(reader.key.Size) {
-		reader.Unlock()
-		return nil
-	}
-	reader.setCacheToUnavali()
-	bufferSize := int(util.Min((int(reader.key.Size) - reader.lastReadOffset),
-		DefaultReadBufferSize))
-	bufferOffset := reader.lastReadOffset
-	p := NewReadPacket(reader.key, bufferOffset, bufferSize)
-	reader.Unlock()
-	data := make([]byte, bufferSize)
-	err := reader.readDataFromVol(p, data)
-	if err != nil {
-		return err
-	}
-	reader.cache.UpdateCache(data, bufferOffset, bufferSize)
-
-	return nil
-}
+//
+//func (reader *ExtentReader) fillCache() error {
+//	reader.Lock()
+//	if reader.cache.getBufferEndOffset() == int(reader.key.Size) {
+//		reader.Unlock()
+//		return nil
+//	}
+//	reader.setCacheToUnavali()
+//	bufferSize := int(util.Min((int(reader.key.Size) - reader.lastReadOffset),
+//		DefaultReadBufferSize))
+//	bufferOffset := reader.lastReadOffset
+//	p := NewReadPacket(reader.key, bufferOffset, bufferSize)
+//	reader.Unlock()
+//	data := make([]byte, bufferSize)
+//	err := reader.readDataFromVol(p, data)
+//	if err != nil {
+//		return err
+//	}
+//	reader.cache.UpdateCache(data, bufferOffset, bufferSize)
+//
+//	return nil
+//}
 
 func (reader *ExtentReader) asyncFillCache() {
 	for {
 		select {
 		case <-reader.cacheReferCh:
-			reader.fillCache()
+			//reader.fillCache()
 		case <-reader.exitCh:
 			return
 		}
