@@ -120,7 +120,6 @@ func (m *Master) getVol(w http.ResponseWriter, r *http.Request) {
 		ns     *NameSpace
 		body   []byte
 		vol    *VolGroup
-		vr     *VolResponse
 		volID  uint64
 		err    error
 	)
