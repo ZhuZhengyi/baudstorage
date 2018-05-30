@@ -32,8 +32,8 @@ func NewSuper(namespace, master string) (s *Super, err error) {
 	s.name = namespace
 
 	//FIXME:
-	//s.ec, err = stream.NewExtentClient(namespace, master, s.mw.AppendExtentKey, s.mw.GetExtents)
-	s.ec, err = stream.NewExtentClient(namespace, "localhost:7778", s.mw.AppendExtentKey, s.mw.GetExtents)
+	s.ec, err = stream.NewExtentClient(namespace, master, s.mw.AppendExtentKey, s.mw.GetExtents)
+	//s.ec, err = stream.NewExtentClient(namespace, "localhost:7778", s.mw.AppendExtentKey, s.mw.GetExtents)
 	if err != nil {
 		log.LogErrorf("NewExtentClient failed! %v", err.Error())
 		return nil, err

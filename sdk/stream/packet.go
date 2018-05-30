@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk"
+	"github.com/tiglabs/baudstorage/sdk/vol"
 	"github.com/tiglabs/baudstorage/util"
 )
 
@@ -14,7 +14,7 @@ type Packet struct {
 	fillBytes uint32
 }
 
-func NewWritePacket(vol *sdk.VolGroup, extentId, seqNo uint64, offset int) (p *Packet) {
+func NewWritePacket(vol *vol.VolGroup, extentId, seqNo uint64, offset int) (p *Packet) {
 	p = new(Packet)
 	p.VolID = vol.VolID
 	p.Magic = proto.ProtoMagic
@@ -44,7 +44,7 @@ func NewReadPacket(key proto.ExtentKey, offset, size int) (p *Packet) {
 	return
 }
 
-func NewCreateExtentPacket(vol *sdk.VolGroup) (p *Packet) {
+func NewCreateExtentPacket(vol *vol.VolGroup) (p *Packet) {
 	p = new(Packet)
 	p.Magic = proto.ProtoMagic
 	p.Opcode = proto.OpCreateFile
@@ -56,7 +56,7 @@ func NewCreateExtentPacket(vol *sdk.VolGroup) (p *Packet) {
 	return p
 }
 
-func NewDeleteExtentPacket(vol *sdk.VolGroup, extentId uint64) (p *Packet) {
+func NewDeleteExtentPacket(vol *vol.VolGroup, extentId uint64) (p *Packet) {
 	p = new(Packet)
 	p.Magic = proto.ProtoMagic
 	p.Opcode = proto.OpMarkDelete

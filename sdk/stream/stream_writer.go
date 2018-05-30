@@ -7,7 +7,7 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk"
+	"github.com/tiglabs/baudstorage/sdk/vol"
 	"github.com/tiglabs/baudstorage/util/log"
 )
 
@@ -29,7 +29,7 @@ type WriteRequest struct {
 
 type StreamWriter struct {
 	sync.Mutex
-	wrapper         *sdk.VolGroupWrapper
+	wrapper         *vol.VolGroupWrapper
 	currentWriter   *ExtentWriter //current ExtentWriter
 	errCount        int           //error count
 	currentVolId    uint32        //current VolId
@@ -44,7 +44,7 @@ type StreamWriter struct {
 	exitCh          chan bool
 }
 
-func NewStreamWriter(wrapper *sdk.VolGroupWrapper, inode uint64, appendExtentKey AppendExtentKeyFunc) (stream *StreamWriter) {
+func NewStreamWriter(wrapper *vol.VolGroupWrapper, inode uint64, appendExtentKey AppendExtentKeyFunc) (stream *StreamWriter) {
 	stream = new(StreamWriter)
 	stream.wrapper = wrapper
 	stream.appendExtentKey = appendExtentKey
@@ -246,7 +246,7 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 
 func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	var (
-		vol      *sdk.VolGroup
+		vol      *vol.VolGroup
 		extentId uint64
 		writer   *ExtentWriter
 	)
@@ -281,7 +281,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	return
 }
 
-func (stream *StreamWriter) createExtent(vol *sdk.VolGroup) (extentId uint64, err error) {
+func (stream *StreamWriter) createExtent(vol *vol.VolGroup) (extentId uint64, err error) {
 	connect, err := stream.wrapper.GetConnect(vol.Hosts[0])
 	if err != nil {
 		err = errors.Annotatef(err, " get connect from volhosts[%v]", vol.Hosts[0])
