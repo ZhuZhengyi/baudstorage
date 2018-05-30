@@ -122,7 +122,6 @@ func (vw *VolGroupWrapper) updateVolGroup(vols []*VolGroup) {
 
 	for _, vg := range vols {
 		vw.replaceOrInsertVol(vg)
-		log.LogInfof("Update Vol: %v", *vg)
 		if vg.Status == storage.ReadWriteStore {
 			rwVolGroups = append(rwVolGroups, vg)
 		}

@@ -181,6 +181,7 @@ func (writer *ExtentWriter) recover() (sucess bool) {
 	}()
 	//get connect from volGroupWraper
 	if connect, err = writer.wrapper.GetConnect(writer.volGroup.Hosts[0]); err != nil {
+		log.LogError(err)
 		return
 	}
 	writer.setConnect(connect)
@@ -188,6 +189,7 @@ func (writer *ExtentWriter) recover() (sucess bool) {
 	for _, request := range requests {
 		err = request.WriteToConn(writer.getConnect())
 		if err != nil {
+			log.LogError(err)
 			return
 		}
 		writer.recoverCnt = 0
@@ -329,7 +331,6 @@ func (writer *ExtentWriter) recive() {
 			err := reply.ReadFromConn(writer.getConnect(), proto.ReadDeadlineTime)
 			if err != nil {
 				writer.getConnect().Close()
-				log.LogError(err)
 				continue
 			}
 			if err = writer.processReply(e, request, reply); err != nil {
