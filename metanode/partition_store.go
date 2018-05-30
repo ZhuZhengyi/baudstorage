@@ -164,8 +164,7 @@ func (mp *metaPartition) storeMeta() (err error) {
 	}
 	os.MkdirAll(mp.config.RootDir, 0755)
 	filename := path.Join(mp.config.RootDir, metaFileTmp)
-	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE,
-		0755)
+	fp, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_APPEND|os.O_CREATE, 0755)
 	if err != nil {
 		return
 	}

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/btree"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 )
 
@@ -167,5 +168,52 @@ func (mp *metaPartition) deletePartition() (status uint8) {
 	mp.Stop()
 	os.RemoveAll(mp.config.RootDir)
 	status = proto.OpOk
+	return
+}
+
+func (mp *metaPartition) applyUpdateNode(req *proto.
+	MetaPartitionOfflineRequest, index uint64) (err error) {
+	var newPeer []proto.Peer
+	findAddPeer := false
+	findRemovePeer := false
+	for _, peer := range mp.config.Peers {
+		if peer.ID == req.RemovePeer.ID {
+			findRemovePeer = true
+			continue
+		}
+		newPeer = append(newPeer, peer)
+		if peer.ID == req.AddPeer.ID {
+			findAddPeer = true
+		}
+	}
+	if findAddPeer {
+		err = errors.Errorf("[applyUpdateNode]: the addPeer[%v] is existed!",
+			req.AddPeer)
+		return
+	}
+	if !findRemovePeer {
+		err = errors.Errorf("[applyUpdateNode]: the removePeer[%v] not"+
+			" existed!", req.RemovePeer)
+		return
+	}
+	if mp.config.NodeId == req.RemovePeer.ID {
+		mp.applyID = index
+		mp.Stop()
+		os.RemoveAll(mp.config.RootDir)
+		return
+	}
+	oldPeer := mp.config.Peers
+	mp.config.Peers = append(newPeer, req.AddPeer)
+	defer func() {
+		if err != nil {
+			mp.config.Peers = oldPeer
+		}
+	}()
+	// Write Disk
+	if err = mp.storeMeta(); err != nil {
+		err = errors.Errorf("[applyUpdateNode]->%s", err.Error())
+		return
+	}
+	mp.applyID = index
 	return
 }
