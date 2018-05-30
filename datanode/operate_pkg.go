@@ -304,29 +304,29 @@ func (s *DataNode) applyDelObjects(pkg *Packet) {
 	return
 }
 
-func (s *DataNode) streamRead(pkg *Packet, c net.Conn) {
+func (s *DataNode) streamRead(request *Packet, connect net.Conn) {
 	var (
 		err error
 	)
-	needReplySize := pkg.Size
-	offset := pkg.Offset
+	needReplySize := request.Size
+	offset := request.Offset
+	store:=request.vol.store.(*storage.ExtentStore)
 	for {
 		if needReplySize <= 0 {
 			break
 		}
 		err = nil
 		currReadSize := uint32(util.Min(int(needReplySize), storage.BlockSize))
-		pkg.Data = make([]byte, currReadSize)
-		pkg.Crc, err = pkg.vol.store.(*storage.ExtentStore).Read(pkg.FileID, offset, int64(currReadSize), pkg.Data)
+		request.Data = make([]byte, currReadSize)
+		request.Crc, err = store.Read(request.FileID, offset, int64(currReadSize), request.Data)
 		if err != nil {
-			err = errors.Annotatef(err, "Request[%v] streamRead Error", pkg.GetUniqLogId())
-			pkg.PackErrorBody(ActionStreamRead, err.Error())
-			s.AddDiskErrs(pkg.VolID, err, ReadFlag)
+			request.PackErrorBody(ActionStreamRead, err.Error())
+			request.WriteToConn(connect)
 			return
 		}
-		pkg.Size = currReadSize
-		pkg.ResultCode = proto.OpOk
-		if err = pkg.WriteToConn(c); err != nil {
+		request.Size = currReadSize
+		request.ResultCode = proto.OpOk
+		if err = request.WriteToConn(connect); err != nil {
 			return
 		}
 		needReplySize -= currReadSize

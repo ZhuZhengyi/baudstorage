@@ -17,7 +17,7 @@ type Vol struct {
 func NewVol(dataNode *DataNode) (v *Vol) {
 	v = new(Vol)
 	v.dataNode = dataNode
-	v.Addr = dataNode.HttpAddr
+	v.Addr = dataNode.Addr
 	v.ReportTime = time.Now().Unix()
 	return
 }

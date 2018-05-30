@@ -87,7 +87,7 @@ func (c *Cluster) getAvailDataNodeHosts(excludeRack string, excludeHosts []strin
 	for i := 0; i < replicaNum; i++ {
 		node := nodeTabs[i].Ptr.(*DataNode)
 		node.SelectNodeForWrite()
-		orderHosts = append(orderHosts, node.HttpAddr)
+		orderHosts = append(orderHosts, node.Addr)
 	}
 
 	if newHosts, err = c.DisOrderArray(orderHosts); err != nil {
@@ -104,7 +104,7 @@ func (c *Cluster) GetAvailCarryDataNodeTab(maxTotal uint64, excludeRack string, 
 		//if dataNode.RackName == excludeRack {
 		//	return true
 		//}
-		if contains(excludeHosts, dataNode.HttpAddr) == true {
+		if contains(excludeHosts, dataNode.Addr) == true {
 			log.LogDebugf("contains return")
 			return true
 		}

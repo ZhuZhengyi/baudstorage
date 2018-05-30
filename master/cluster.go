@@ -294,14 +294,14 @@ func (c *Cluster) getMetaNode(addr string) (metaNode *MetaNode, err error) {
 }
 
 func (c *Cluster) dataNodeOffLine(dataNode *DataNode) {
-	msg := fmt.Sprintf("action[dataNodeOffLine], Node[%v] OffLine", dataNode.HttpAddr)
+	msg := fmt.Sprintf("action[dataNodeOffLine], Node[%v] OffLine", dataNode.Addr)
 	log.LogWarn(msg)
 	for _, ns := range c.namespaces {
 		for _, vg := range ns.volGroups.volGroups {
-			c.volOffline(dataNode.HttpAddr, ns.Name, vg, DataNodeOfflineInfo)
+			c.volOffline(dataNode.Addr, ns.Name, vg, DataNodeOfflineInfo)
 		}
 	}
-	c.dataNodes.Delete(dataNode.HttpAddr)
+	c.dataNodes.Delete(dataNode.Addr)
 
 }
 
@@ -471,7 +471,7 @@ func (c *Cluster) getAllDataNodes() (dataNodes []NodeView) {
 	dataNodes = make([]NodeView, 0)
 	c.dataNodes.Range(func(addr, node interface{}) bool {
 		dataNode := node.(*DataNode)
-		dataNodes = append(dataNodes, NodeView{Addr: dataNode.HttpAddr, Status: dataNode.isActive})
+		dataNodes = append(dataNodes, NodeView{Addr: dataNode.Addr, Status: dataNode.isActive})
 		return true
 	})
 	return
