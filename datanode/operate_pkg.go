@@ -174,6 +174,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 			response.VolId = uint64(request.VolId)
 			response.Status = proto.TaskFail
 			response.Result = err.Error()
+			log.LogErrorf("from master Task[%v] failed,error[%v]",task.ToString(),err.Error())
 		} else {
 			response.VolId = uint64(request.VolId)
 			response.Status = proto.TaskSuccess
@@ -182,6 +183,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 		response.VolId = uint64(request.VolId)
 		response.Status = proto.TaskFail
 		response.Result = "unavali opcode "
+		log.LogErrorf("from master Task[%v] failed,error[%v]",task.ToString(),response.Result)
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
@@ -206,6 +208,7 @@ func (s *DataNode) loadVol(pkg *Packet) {
 			response.Status = proto.TaskFail
 			response.VolId = uint64(request.VolId)
 			response.Result = fmt.Sprintf("vol[%v] not found", request.VolId)
+			log.LogErrorf("from master Task[%v] failed,error[%v]",task.ToString(),response.Result)
 		} else {
 			response = v.LoadVol()
 			response.VolId = uint64(request.VolId)
@@ -214,6 +217,7 @@ func (s *DataNode) loadVol(pkg *Packet) {
 		response.VolId = uint64(request.VolId)
 		response.Status = proto.TaskFail
 		response.Result = "unavali opcode "
+		log.LogErrorf("from master Task[%v] failed,error[%v]",task.ToString(),response.Result)
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
