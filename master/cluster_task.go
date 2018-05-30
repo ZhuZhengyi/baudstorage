@@ -46,7 +46,7 @@ func (c *Cluster) checkVolGroups(ns *NameSpace) {
 		vg.checkStatus(true, c.cfg.VolTimeOutSec)
 		vg.checkVolGroupMiss(c.cfg.VolMissSec, c.cfg.VolWarnInterval)
 		vg.checkReplicaNum(c, ns.Name)
-		if vg.status == VolReadWrite {
+		if vg.Status == VolReadWrite {
 			newReadWriteVolGroups++
 		}
 		volDiskErrorAddrs := vg.checkVolDiskError()
@@ -495,7 +495,7 @@ func (c *Cluster) createVolSuccessTriggerOperator(nodeAddr string, resp *proto.C
 	vg.addMember(vol)
 
 	vg.Lock()
-	vg.checkAndRemoveMissVol(vol.addr)
+	vg.checkAndRemoveMissVol(vol.Addr)
 	vg.Unlock()
 	return
 errDeal:

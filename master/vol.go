@@ -3,7 +3,7 @@ package master
 import "time"
 
 type Vol struct {
-	addr              string
+	Addr              string
 	dataNode          *DataNode
 	ReportTime        int64
 	FileCount         uint32
@@ -17,7 +17,7 @@ type Vol struct {
 func NewVol(dataNode *DataNode) (v *Vol) {
 	v = new(Vol)
 	v.dataNode = dataNode
-	v.addr = dataNode.HttpAddr
+	v.Addr = dataNode.HttpAddr
 	v.ReportTime = time.Now().Unix()
 	return
 }

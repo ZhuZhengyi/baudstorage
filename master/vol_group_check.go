@@ -11,17 +11,17 @@ func (vg *VolGroup) checkStatus(needLog bool, volTimeOutSec int64) {
 	defer vg.Unlock()
 	liveVolLocs := vg.getLiveVolsByPersistenceHosts(volTimeOutSec)
 	switch len(liveVolLocs) {
-	case (int)(vg.replicaNum):
-		vg.status = VolReadOnly
+	case (int)(vg.ReplicaNum):
+		vg.Status = VolReadOnly
 		if vg.checkVolLocStatusOnLiveNode(liveVolLocs) == true {
-			vg.status = VolReadWrite
+			vg.Status = VolReadWrite
 		}
 	default:
-		vg.status = VolReadOnly
+		vg.Status = VolReadOnly
 	}
 	if needLog == true {
 		msg := fmt.Sprintf("action[checkStatus],volID:%v  goal:%v  liveLocation:%v   VolStatus:%v  RocksDBHost:%v ",
-			vg.VolID, vg.replicaNum, len(liveVolLocs), vg.status, vg.PersistenceHosts)
+			vg.VolID, vg.ReplicaNum, len(liveVolLocs), vg.Status, vg.PersistenceHosts)
 		log.LogInfo(msg)
 	}
 }
@@ -39,7 +39,7 @@ func (vg *VolGroup) checkVolLocStatusOnLiveNode(liveLocs []*Vol) (volEqual bool)
 func (vg *VolGroup) checkLocationStatus(volTimeOutSec int64) {
 	vg.Lock()
 	defer vg.Unlock()
-	for _, volLoc := range vg.locations {
+	for _, volLoc := range vg.Locations {
 		volLoc.IsLive(volTimeOutSec)
 	}
 
@@ -48,8 +48,8 @@ func (vg *VolGroup) checkLocationStatus(volTimeOutSec int64) {
 func (vg *VolGroup) checkVolGroupMiss(volMissSec, volWarnInterval int64) {
 	vg.Lock()
 	defer vg.Unlock()
-	for _, volLoc := range vg.locations {
-		if _, ok := vg.IsInVolLocs(volLoc.addr); ok && volLoc.CheckVolMiss(volMissSec) == true && vg.needWarnMissVol(volLoc.addr, volWarnInterval) {
+	for _, volLoc := range vg.Locations {
+		if _, ok := vg.IsInVolLocs(volLoc.Addr); ok && volLoc.CheckVolMiss(volMissSec) == true && vg.needWarnMissVol(volLoc.Addr, volWarnInterval) {
 			dataNode := volLoc.GetVolLocationNode()
 			var (
 				lastReportTime time.Time
@@ -61,7 +61,7 @@ func (vg *VolGroup) checkVolGroupMiss(volMissSec, volWarnInterval int64) {
 			}
 			msg := fmt.Sprintf("action[checkVolMissErr], vol:%v  on Node:%v  "+
 				"miss time > :%v  vlocLastRepostTime:%v   dnodeLastReportTime:%v  nodeisActive:%v So Migrate", vg.VolID,
-				volLoc.addr, volMissSec, volLoc.ReportTime, lastReportTime, isActive)
+				volLoc.Addr, volMissSec, volLoc.ReportTime, lastReportTime, isActive)
 			log.LogError(msg)
 		}
 	}
@@ -113,8 +113,8 @@ func (vg *VolGroup) checkVolDiskError() (volDiskErrorAddrs []string) {
 		}
 	}
 
-	if len(volDiskErrorAddrs) != (int)(vg.replicaNum) && len(volDiskErrorAddrs) > 0 {
-		vg.status = VolReadOnly
+	if len(volDiskErrorAddrs) != (int)(vg.ReplicaNum) && len(volDiskErrorAddrs) > 0 {
+		vg.Status = VolReadOnly
 	}
 	vg.Unlock()
 
