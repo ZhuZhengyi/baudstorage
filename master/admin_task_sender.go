@@ -82,6 +82,7 @@ func (sender *AdminTaskSender) sendTasks(tasks []*proto.AdminTask) {
 			log.LogError(fmt.Sprintf("send task %v to %v,err,%v", task.ToString(), sender.targetAddr, err.Error()))
 			continue
 		}
+		sender.connPool.Put(conn)
 	}
 
 }
@@ -89,6 +90,7 @@ func (sender *AdminTaskSender) sendTasks(tasks []*proto.AdminTask) {
 func (sender *AdminTaskSender) buildPacket(task *proto.AdminTask) (packet *proto.Packet) {
 	packet = proto.NewPacket()
 	packet.Opcode = task.OpCode
+	packet.ReqID = proto.GetReqID()
 	body, err := json.Marshal(task)
 	if err != nil {
 		return
