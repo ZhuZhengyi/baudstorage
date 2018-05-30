@@ -67,10 +67,10 @@ func (v *Vol) getAllMemberFileMetas() (allMembers []*MembersFileMetas, err error
 	allMembers = make([]*MembersFileMetas, v.members.VolGoal)
 	var files []*storage.FileInfo
 	switch v.volMode {
-	case ExtentVol:
+	case proto.ExtentVol:
 		store := v.store.(*storage.ExtentStore)
 		files, err = store.GetAllWatermark()
-	case TinyVol:
+	case proto.TinyVol:
 		store := v.store.(*storage.TinyStore)
 		files, err = store.GetAllWatermark()
 	}

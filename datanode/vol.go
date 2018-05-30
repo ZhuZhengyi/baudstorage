@@ -12,8 +12,6 @@ import (
 
 const (
 	VolPrefix    = "vol_"
-	ExtentVol    = "extent"
-	TinyVol      = "tiny"
 	EmptyVolName = ""
 )
 
@@ -58,9 +56,9 @@ func NewVol(volId uint32, volMode, name, diskPath string, storeMode bool, storeS
 		v.path = path.Join(v.diskPath, v.toName())
 	}
 	switch volMode {
-	case ExtentVol:
+	case proto.ExtentVol:
 		v.store, err = storage.NewExtentStore(v.path, storeSize, storeMode)
-	case TinyVol:
+	case proto.TinyVol:
 		v.store, err = storage.NewTinyStore(v.path, storeSize, storeMode)
 	default:
 		return nil, fmt.Errorf("NewVol[%v] WrongVolMode[%v]", volId, volMode)

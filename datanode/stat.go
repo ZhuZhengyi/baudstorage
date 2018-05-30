@@ -88,7 +88,7 @@ func (s *Stats) updateMetrics(total, used, free, createdVolWeights, remainWeight
 func post(data []byte, url string) (*http.Response, error) {
 	client := &http.Client{}
 	buff := bytes.NewBuffer(data)
-	client.Timeout = time.Second*3
+	client.Timeout = time.Second * 3
 	req, err := http.NewRequest("POST", url, buff)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error)
 			return nil, fmt.Errorf("postTo %v scode %v msg %v", url, scode, string(msg))
 		}
 		success = true
-		log.LogInfo(fmt.Sprintf("url[%v] to master[%v] response[%v] code[%v]",url,masterAddr,string(msg),scode))
+		log.LogInfo(fmt.Sprintf("url[%v] to master[%v] response[%v] code[%v]", url, masterAddr, string(msg), scode))
 		break
 	}
 	if !success {
