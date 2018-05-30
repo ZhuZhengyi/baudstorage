@@ -9,7 +9,7 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk"
+	"github.com/tiglabs/baudstorage/sdk/vol"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 	"time"
@@ -35,9 +35,9 @@ type ExtentWriter struct {
 	inode            uint64     //Current write Inode
 	requestQueue     *list.List //sendPacketList
 	requestQueueLock sync.Mutex
-	volGroup         *sdk.VolGroup
+	volGroup         *vol.VolGroup
 	volID            uint32
-	wrapper          *sdk.VolGroupWrapper
+	wrapper          *vol.VolGroupWrapper
 	extentId         uint64 //current FileIdId
 	currentPacket    *Packet
 	seqNo            uint64 //Current Send Packet Seq
@@ -52,7 +52,7 @@ type ExtentWriter struct {
 	flushLock sync.Mutex
 }
 
-func NewExtentWriter(inode uint64, vol *sdk.VolGroup, wrapper *sdk.VolGroupWrapper, extentId uint64) (writer *ExtentWriter, err error) {
+func NewExtentWriter(inode uint64, vol *vol.VolGroup, wrapper *vol.VolGroupWrapper, extentId uint64) (writer *ExtentWriter, err error) {
 	writer = new(ExtentWriter)
 	writer.requestQueue = list.New()
 	writer.handleCh = make(chan bool, DefaultWriteBufferSize/(64*util.KB))

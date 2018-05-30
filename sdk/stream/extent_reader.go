@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk"
+	"github.com/tiglabs/baudstorage/sdk/vol"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 	"math/rand"
@@ -17,9 +17,9 @@ type ExtentReader struct {
 	startInodeOffset int
 	endInodeOffset   int
 	cache            *CacheBuffer
-	vol              *sdk.VolGroup
+	vol              *vol.VolGroup
 	key              proto.ExtentKey
-	wrapper          *sdk.VolGroupWrapper
+	wrapper          *vol.VolGroupWrapper
 	exitCh           chan bool
 	cacheReferCh     chan bool
 	lastReadOffset   int
@@ -31,7 +31,7 @@ const (
 )
 
 func NewExtentReader(inode uint64, inInodeOffset int, key proto.ExtentKey,
-	wrapper *sdk.VolGroupWrapper) (reader *ExtentReader, err error) {
+	wrapper *vol.VolGroupWrapper) (reader *ExtentReader, err error) {
 	reader = new(ExtentReader)
 	reader.vol, err = wrapper.GetVol(key.VolId)
 	if err != nil {

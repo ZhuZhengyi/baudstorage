@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk"
+	"github.com/tiglabs/baudstorage/sdk/vol"
 	"github.com/tiglabs/baudstorage/util/log"
 	"io"
 	"sync"
@@ -20,7 +20,7 @@ type ReadRequest struct {
 
 type StreamReader struct {
 	inode      uint64
-	wrapper    *sdk.VolGroupWrapper
+	wrapper    *vol.VolGroupWrapper
 	readers    []*ExtentReader
 	getExtents GetExtentsFunc
 	extents    *proto.StreamKey
@@ -31,7 +31,7 @@ type StreamReader struct {
 	sync.Mutex
 }
 
-func NewStreamReader(inode uint64, wrapper *sdk.VolGroupWrapper, getExtents GetExtentsFunc) (stream *StreamReader, err error) {
+func NewStreamReader(inode uint64, wrapper *vol.VolGroupWrapper, getExtents GetExtentsFunc) (stream *StreamReader, err error) {
 	stream = new(StreamReader)
 	stream.inode = inode
 	stream.wrapper = wrapper
