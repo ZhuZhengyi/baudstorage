@@ -120,6 +120,9 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 		return 0, err
 	}
 	for {
+		if acatualReadSize >= expectReadSize {
+			return acatualReadSize, err
+		}
 		err = p.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
 			err = errors.Annotatef(err, reader.toString()+"readDataFromHost host[%v]  error reqeust[%v]",
@@ -138,7 +141,6 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 		if acatualReadSize >= expectReadSize {
 			return acatualReadSize, err
 		}
-
 	}
 	return acatualReadSize, nil
 }
