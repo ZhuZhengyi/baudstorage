@@ -12,6 +12,7 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/baudstorage/util/ump"
 	raftproto "github.com/tiglabs/raft/proto"
 )
 
@@ -208,7 +209,11 @@ func (mp *metaPartition) startSchedule() {
 				return
 			case <-timer.C:
 				if err := mp.store(); err != nil {
-					log.LogErrorf("dump meta partition %d fail cause %s", mp.config.PartitionId, err)
+					err = errors.Errorf(
+						"[startSchedule]: dump partition id=%d: %v",
+						mp.config.PartitionId, err.Error())
+					log.LogErrorf(err.Error())
+					ump.Alarm(UMPKey, err.Error())
 				}
 			}
 		}
