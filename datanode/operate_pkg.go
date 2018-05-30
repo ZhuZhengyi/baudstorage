@@ -111,6 +111,7 @@ func (s *DataNode) createVol(pkg *Packet) {
 			response.VolId = uint64(request.VolId)
 			response.Status = proto.TaskFail
 			response.Result = err.Error()
+			log.LogErrorf("from master Task[%v] failed,error[%v]",task.ToString(),err.Error())
 		} else {
 			response.Status = proto.TaskSuccess
 			response.VolId=request.VolId
@@ -119,6 +120,7 @@ func (s *DataNode) createVol(pkg *Packet) {
 		response.VolId = uint64(request.VolId)
 		response.Status = proto.TaskFail
 		response.Result = "unavali opcode "
+		log.LogErrorf("from master Task[%v] failed,error[%v]",task.ToString(),response.Result)
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
