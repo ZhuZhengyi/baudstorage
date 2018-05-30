@@ -76,10 +76,7 @@ func (reader *ExtentReader) readDataFromVol(data []byte,offset,size int) (err er
 	rand.Seed(time.Now().UnixNano())
 	index := rand.Intn(int(reader.vol.ReplicaNum))
 	host := reader.vol.Hosts[index]
-	reader.Lock()
-	p:=NewReadPacket(reader.key,offset,size)
-	reader.Unlock()
-	if _, err = reader.readDataFromHost(p, host, data); err != nil {
+	if _, err = reader.readDataFromHost(host, data,offset,size); err != nil {
 		log.LogError(err.Error())
 		goto FORLOOP
 	}
@@ -87,10 +84,7 @@ func (reader *ExtentReader) readDataFromVol(data []byte,offset,size int) (err er
 
 FORLOOP:
 	for _, host := range reader.vol.Hosts {
-		reader.Lock()
-		p=NewReadPacket(reader.key,offset,size)
-		reader.Unlock()
-		_, err = reader.readDataFromHost(p, host, data)
+		_, err = reader.readDataFromHost(host, data,offset,size)
 		if err == nil {
 			return
 		} else {
@@ -101,7 +95,10 @@ FORLOOP:
 	return
 }
 
-func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte) (acatualReadSize int, err error) {
+func (reader *ExtentReader) readDataFromHost( host string, data []byte,offset,size int) (acatualReadSize int, err error) {
+	reader.Lock()
+	p:=NewReadPacket(reader.key,offset,size)
+	reader.Unlock()
 	expectReadSize := int(p.Size)
 	conn, err := reader.wrapper.GetConnect(host)
 	if err != nil {
