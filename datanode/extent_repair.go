@@ -207,7 +207,7 @@ func (v *Vol) generatorDeleteExtentsTasks(allMembers []*MembersFileMetas) {
 /*notify follower to repair vol store*/
 func (v *Vol) NotifyRepair(members []*MembersFileMetas) (err error) {
 	storeMode := proto.ExtentStoreMode
-	if v.volMode == TinyVol {
+	if v.volMode == proto.TinyVol {
 		storeMode = proto.TinyStoreMode
 	}
 	p := NewNotifyRepair(v.volId, storeMode)
