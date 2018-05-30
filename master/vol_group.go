@@ -185,6 +185,7 @@ func (vg *VolGroup) convertToVolResponse() (vr *VolResponse) {
 	vr.VolID = vg.VolID
 	vr.Status = vg.Status
 	vr.ReplicaNum = vg.ReplicaNum
+	vr.VolType = vg.VolType
 	vr.Hosts = make([]string, len(vg.PersistenceHosts))
 	copy(vr.Hosts, vg.PersistenceHosts)
 	return

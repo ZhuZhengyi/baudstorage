@@ -10,6 +10,7 @@ type VolResponse struct {
 	VolID      uint64
 	Status     uint8
 	ReplicaNum uint8
+	VolType    string
 	Hosts      []string
 }
 
