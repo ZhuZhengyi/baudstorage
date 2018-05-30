@@ -87,7 +87,7 @@ func initClient(t *testing.T) (client *ExtentClient) {
 		fmt.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 	var err error
-	client, err = NewExtentClient("stream_write_test", "127.0.0.1:7778", saveExtentKey, updateKey)
+	client, err = NewExtentClient("it3", "10.196.31.173:80", saveExtentKey, updateKey)
 	if err != nil {
 		OccoursErr(fmt.Errorf("init client err[%v]", err.Error()), t)
 	}
