@@ -79,7 +79,7 @@ func (d *Disk) DiskUsage() (err error) {
 	d.All = fs.Blocks * uint64(fs.Bsize)
 	d.Free = fs.Bfree*uint64(fs.Bsize) - d.RestSize
 	d.Used = d.All - d.Free
-	log.LogInfof("disk[%v] all[%v] free[%v] used[%v]", d.Path, d.All, d.Free, d.Used)
+	log.LogInfof("action[Disk.DiskUsage] disk[%v] all[%v] free[%v] used[%v]", d.Path, d.All, d.Free, d.Used)
 
 	return
 }
@@ -107,9 +107,9 @@ func (d *Disk) compact() {
 			}
 			err, release := v.store.(*storage.TinyStore).DoCompactWork(t.chunkId)
 			if err != nil {
-				log.LogError("Task[%v] compact error[%v]", t.toString(), err.Error())
+				log.LogError("action[Disk.compact] task[%v] compact error[%v]", t.toString(), err.Error())
 			} else {
-				log.LogInfo("Task[%v] compact success Release [%v]", t.toString(), release)
+				log.LogInfo("action[Disk.compact] task[%v] compact success Release [%v]", t.toString(), release)
 			}
 		}
 	}

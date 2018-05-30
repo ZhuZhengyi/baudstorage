@@ -37,6 +37,7 @@ Peers: Peers information for raftStore.
 */
 type MetaPartitionConfig struct {
 	PartitionId uint64              `json:"partition_id"`
+	NameSapce   string              `json:"namespace"`
 	Start       uint64              `json:"start"`
 	End         uint64              `json:"end"`
 	Peers       []proto.Peer        `json:"peers"`

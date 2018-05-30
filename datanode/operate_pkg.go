@@ -119,7 +119,7 @@ func (s *DataNode) createVol(pkg *Packet) {
 	} else {
 		response.VolId = uint64(request.VolId)
 		response.Status = proto.TaskFail
-		response.Result = "unavali opcode "
+		response.Result = "illegal opcode "
 		log.LogErrorf("from master Task[%v] failed,error[%v]", task.ToString(), response.Result)
 	}
 	task.Response = response
@@ -182,7 +182,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	} else {
 		response.VolId = uint64(request.VolId)
 		response.Status = proto.TaskFail
-		response.Result = "unavali opcode "
+		response.Result = "illegal opcode "
 		log.LogErrorf("from master Task[%v] failed,error[%v]", task.ToString(), response.Result)
 	}
 	task.Response = response
@@ -216,7 +216,7 @@ func (s *DataNode) loadVol(pkg *Packet) {
 	} else {
 		response.VolId = uint64(request.VolId)
 		response.Status = proto.TaskFail
-		response.Result = "unavali opcode "
+		response.Result = "illegal opcode "
 		log.LogErrorf("from master Task[%v] failed,error[%v]", task.ToString(), response.Result)
 	}
 	task.Response = response
