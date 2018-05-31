@@ -323,21 +323,4 @@ func (stream *StreamWriter) createExtent(vol *vol.VolGroup) (extentId uint64, er
 	return extentId, nil
 }
 
-func (stream *StreamWriter) autoFlushThread() {
-	ticker := time.Tick(time.Second * 2)
-	for {
-		select {
-		case <-ticker:
-			if stream.getWriter() == nil {
-				continue
-			}
-			if stream.isFlushIng == IsFlushIng {
-				continue
-			}
-			//stream.flushCurrExtentWriter()
-		case <-stream.exitCh:
-			return
-		}
-	}
 
-}
