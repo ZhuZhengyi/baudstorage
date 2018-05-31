@@ -83,7 +83,7 @@ func (s *DataNode) doRequestCh(req *Packet, msgH *MessageHandler) {
 	var err error
 	if !req.IsTransitPkg() {
 		s.operatePacket(req, msgH.inConn)
-		if !(req.Opcode==proto.OpStreamRead){
+		if !(req.Opcode == proto.OpStreamRead) {
 			msgH.replyCh <- req
 		}
 
@@ -120,7 +120,7 @@ func (s *DataNode) doReplyCh(reply *Packet, msgH *MessageHandler) {
 			msgH.ExitSign()
 		}
 	}
-	if !reply.IsMasterCommand(){
+	if !reply.IsMasterCommand() {
 		reply.afterTp()
 		log.LogDebugf("action[DataNode.doReplyCh] %v", reply.ActionMesg(ActionWriteToCli,
 			msgH.inConn.RemoteAddr().String(), reply.StartT, err))
@@ -203,7 +203,7 @@ success:
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 	}
 	msgH.DelListElement(request, e, s, NOCloseConnect)
-	log.LogDebug(reply.ActionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
+	log.LogDebugf("action[DataNode.receiveFromNext] %v.", reply.ActionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 
 	return
 }

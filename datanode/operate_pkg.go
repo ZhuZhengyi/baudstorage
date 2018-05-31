@@ -321,8 +321,8 @@ func (s *DataNode) streamRead(request *Packet, connect net.Conn) {
 		request.Crc, err = store.Read(request.FileID, offset, int64(currReadSize), request.Data)
 		if err != nil {
 			request.PackErrorBody(ActionStreamRead, err.Error())
-			if err=request.WriteToConn(connect);err!=nil {
-				err = fmt.Errorf(request.ActionMesg(ActionWriteToCli,connect.RemoteAddr().String(),
+			if err = request.WriteToConn(connect); err != nil {
+				err = fmt.Errorf(request.ActionMesg(ActionWriteToCli, connect.RemoteAddr().String(),
 					request.StartT, err))
 				log.LogErrorf(err.Error())
 			}
@@ -331,14 +331,14 @@ func (s *DataNode) streamRead(request *Packet, connect net.Conn) {
 		request.Size = currReadSize
 		request.ResultCode = proto.OpOk
 		if err = request.WriteToConn(connect); err != nil {
-			err = fmt.Errorf(request.ActionMesg(ActionWriteToCli,connect.RemoteAddr().String(),
+			err = fmt.Errorf(request.ActionMesg(ActionWriteToCli, connect.RemoteAddr().String(),
 				request.StartT, err))
 			log.LogErrorf(err.Error())
 			return
 		}
 		needReplySize -= currReadSize
 		offset += int64(currReadSize)
-		log.LogDebug(request.ActionMesg(ActionWriteToCli,connect.RemoteAddr().String(),
+		log.LogDebugf("action[DataNode.streamRead] %v.", request.ActionMesg(ActionWriteToCli, connect.RemoteAddr().String(),
 			request.StartT, err))
 	}
 	return
