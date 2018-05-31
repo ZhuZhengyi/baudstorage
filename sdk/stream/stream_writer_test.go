@@ -162,6 +162,8 @@ func TestExtentClient_Write(t *testing.T) {
 		rdata := make([]byte, len(ndata))
 		read, err = client.Read(inode, rdata, writebytes, len(ndata))
 		if err != nil || read != len(ndata) {
+			fmt.Printf("stream filesize[%v] offset[%v] size[%v] skstream[%v]\n",
+				sk.Size(), writebytes, len(ndata), sk.ToString())
 			OccoursErr(fmt.Errorf("read inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, read, err), t)
 		}
 		if !bytes.Equal(rdata, ndata) {
