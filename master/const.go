@@ -27,7 +27,7 @@ const (
 	DeleteFileInCoreInfo        = "DeleteFileInCoreInfo "
 	GetVolLocationFileCountInfo = "GetVolLocationFileCountInfo "
 	DataNodeOfflineInfo         = "dataNodeOfflineInfo"
-	HandleVolOfflineErr = "HandleVolOffLineErr "
+	HandleVolOfflineErr         = "HandleVolOffLineErr "
 )
 
 const (
@@ -46,7 +46,6 @@ const (
 	MetaPartitionReadOnly    uint8 = 0x10
 	MetaPartitionReadWrite   uint8 = 0x11
 )
-
 
 const (
 	DefaultMaxMetaPartitionRange = 1<<63 - 1
