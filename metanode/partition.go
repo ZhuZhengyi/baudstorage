@@ -208,7 +208,7 @@ func (mp *metaPartition) startSchedule() {
 				timer.Stop()
 				return
 			case <-timer.C:
-				//applyID := mp.applyID
+				applyID := mp.applyID
 				if err := mp.store(); err != nil {
 					err = errors.Errorf(
 						"[startSchedule]: dump partition id=%d: %v",
@@ -217,7 +217,7 @@ func (mp *metaPartition) startSchedule() {
 					ump.Alarm(UMPKey, err.Error())
 				}
 				// Truncate raft log
-				//mp.raftPartition.Truncate(applyID)
+				mp.raftPartition.Truncate(applyID)
 			}
 		}
 	}(mp.stopC)

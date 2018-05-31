@@ -58,7 +58,7 @@ func (s *DataNode) repairObjectRead(pkg *Packet, conn *net.TCPConn) {
 	chunkID = uint32(pkg.FileID)
 	requireOid = uint64(pkg.Offset + 1)
 	localOid, err = pkg.vol.store.(*storage.TinyStore).GetLastOid(chunkID)
-	log.LogWrite(pkg.ActionMesg(ActionLeaderToFollowerOpCRepairReadPackResponse,
+	log.LogWrite(pkg.ActionMsg(ActionLeaderToFollowerOpCRepairReadPackResponse,
 		fmt.Sprintf("follower require Oid[%v] localOid[%v]", requireOid, localOid), pkg.StartT, err))
 	if localOid < requireOid {
 		err = fmt.Errorf(" requireOid[%v] but localOid[%v]", requireOid, localOid)
@@ -96,7 +96,7 @@ func postRepairData(pkg *Packet, lastOid uint64, data []byte, size int, conn *ne
 	pkg.Data = data
 	pkg.Crc = crc32.ChecksumIEEE(pkg.Data)
 	err = pkg.WriteToNoDeadLineConn(conn)
-	log.LogWrite(pkg.ActionMesg(ActionLeaderToFollowerOpRepairReadSendPackBuffer, conn.RemoteAddr().String(), pkg.StartT, err))
+	log.LogWrite(pkg.ActionMsg(ActionLeaderToFollowerOpRepairReadSendPackBuffer, conn.RemoteAddr().String(), pkg.StartT, err))
 
 	return
 }
@@ -122,7 +122,7 @@ func syncData(chunkID uint32, startOid, endOid uint64, pkg *Packet, conn *net.TC
 	)
 	vol := pkg.vol
 	objects = getObjects(vol, chunkID, startOid, endOid)
-	log.LogWrite(pkg.ActionMesg(ActionLeaderToFollowerOpRepairReadPackBuffer, string(len(objects)), pkg.StartT, err))
+	log.LogWrite(pkg.ActionMsg(ActionLeaderToFollowerOpRepairReadPackBuffer, string(len(objects)), pkg.StartT, err))
 	databuf := make([]byte, PkgRepairCReadRespMaxSize)
 	pos := 0
 	for i := 0; i < len(objects); i++ {

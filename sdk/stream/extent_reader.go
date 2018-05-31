@@ -5,7 +5,6 @@ import (
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk/vol"
-	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 	"math/rand"
 	"sync"
@@ -16,19 +15,11 @@ type ExtentReader struct {
 	inode            uint64
 	startInodeOffset int
 	endInodeOffset   int
-	cache            *CacheBuffer
 	vol              *vol.VolGroup
 	key              proto.ExtentKey
 	wrapper          *vol.VolGroupWrapper
-	exitCh           chan bool
-	cacheReferCh     chan bool
-	lastReadOffset   int
 	sync.Mutex
 }
-
-const (
-	DefaultReadBufferSize = 10 * util.MB
-)
 
 func NewExtentReader(inode uint64, inInodeOffset int, key proto.ExtentKey,
 	wrapper *vol.VolGroupWrapper) (reader *ExtentReader, err error) {
@@ -39,40 +30,21 @@ func NewExtentReader(inode uint64, inInodeOffset int, key proto.ExtentKey,
 	}
 	reader.inode = inode
 	reader.key = key
-	reader.cache = NewCacheBuffer()
 	reader.startInodeOffset = inInodeOffset
 	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
 	reader.wrapper = wrapper
-	reader.exitCh = make(chan bool, 2)
-	//reader.cacheReferCh = make(chan bool, 10)
-	//reader.cacheReferCh <- true
-	//go reader.asyncFillCache()
 
 	return
 }
 
 func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
-	//if reader.getCacheStatus() == AvaliBuffer && Offset+Size <= reader.cache.getBufferEndOffset() {
-	//	reader.cache.copyData(data, Offset, Size)
-	//	return
-	//}
-	if size<=0 {
+	if size <= 0 {
 		return
 	}
 	reader.Lock()
 	p := NewReadPacket(reader.key, offset, size)
 	reader.Unlock()
 	err = reader.readDataFromVol(p, data)
-	//reader.setCacheToUnavali()
-	//if err == nil {
-	//	select {
-	//	case reader.cacheReferCh <- true:
-	//		reader.lastReadOffset = Offset
-	//	default:
-	//		return
-	//	}
-	//
-	//}
 
 	return
 }
@@ -167,98 +139,4 @@ func (reader *ExtentReader) updateKey(key proto.ExtentKey) (update bool) {
 func (reader *ExtentReader) toString() (m string) {
 	return fmt.Sprintf("inode[%v] extentKey[%v] start[%v] end[%v]", reader.inode,
 		reader.key.Marshal(), reader.startInodeOffset, reader.endInodeOffset)
-}
-
-func (reader *ExtentReader) fillCache() error {
-	reader.Lock()
-	if reader.cache.getBufferEndOffset() == int(reader.key.Size) {
-		reader.Unlock()
-		return nil
-	}
-	reader.setCacheToUnavali()
-	bufferSize := int(util.Min((int(reader.key.Size) - reader.lastReadOffset),
-		DefaultReadBufferSize))
-	bufferOffset := reader.lastReadOffset
-	p := NewReadPacket(reader.key, bufferOffset, bufferSize)
-	reader.Unlock()
-	data := make([]byte, bufferSize)
-	err := reader.readDataFromVol(p, data)
-	if err != nil {
-		return err
-	}
-	reader.cache.UpdateCache(data, bufferOffset, bufferSize)
-
-	return nil
-}
-
-func (reader *ExtentReader) asyncFillCache() {
-	for {
-		select {
-		case <-reader.cacheReferCh:
-			reader.fillCache()
-		case <-reader.exitCh:
-			return
-		}
-	}
-}
-
-const (
-	UnavaliBuffer = 1
-	AvaliBuffer   = 2
-)
-
-type CacheBuffer struct {
-	cache       []byte
-	startOffset int
-	endOffset   int
-	sync.Mutex
-	isFull bool
-	status int
-}
-
-func NewCacheBuffer() (buffer *CacheBuffer) {
-	buffer = new(CacheBuffer)
-	buffer.cache = make([]byte, 0)
-	return buffer
-}
-
-func (buffer *CacheBuffer) UpdateCache(data []byte, offset, size int) {
-	buffer.Lock()
-	defer buffer.Unlock()
-	buffer.cache = data
-	buffer.startOffset = offset
-	buffer.endOffset = offset + size
-	buffer.status = AvaliBuffer
-
-	return
-}
-
-func (buffer *CacheBuffer) copyData(dst []byte, offset, size int) {
-	buffer.Lock()
-	defer buffer.Unlock()
-	copy(dst, buffer.cache[offset:offset+size])
-}
-
-func (buffer *CacheBuffer) getBufferEndOffset() int {
-	buffer.Lock()
-	defer buffer.Unlock()
-	return buffer.endOffset
-}
-
-func (reader *ExtentReader) setCacheToUnavali() {
-	reader.cache.Lock()
-	defer reader.cache.Unlock()
-	reader.cache.status = UnavaliBuffer
-}
-
-func (reader *ExtentReader) setCacheToAvali() {
-	reader.cache.Lock()
-	defer reader.cache.Unlock()
-	reader.cache.status = AvaliBuffer
-}
-
-func (reader *ExtentReader) getCacheStatus() int {
-	reader.cache.Lock()
-	defer reader.cache.Unlock()
-	return reader.cache.status
 }

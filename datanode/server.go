@@ -11,6 +11,7 @@ import (
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/baudstorage/util/pool"
+	"github.com/tiglabs/baudstorage/util/ump"
 	"io"
 	"net"
 	"net/http"
@@ -35,6 +36,10 @@ var (
 const (
 	GetIpFromMaster = "/admin/getIp"
 	DefaultRackName = "huitian_rack1"
+)
+
+const (
+	UmpModuleName = "dataNode"
 )
 
 const (
@@ -101,7 +106,7 @@ func (s *DataNode) onStart(cfg *config.Config) (err error) {
 	if err = s.startTcpService(); err != nil {
 		return
 	}
-
+	ump.InitUmp(UmpModuleName)
 	return
 }
 
@@ -261,7 +266,6 @@ func (s *DataNode) serveConn(conn net.Conn) {
 			goto exitDeal
 		default:
 			if err := s.readFromCliAndDeal(msgH); err != nil {
-				log.LogErrorf("action[DataNode.serveConn] %v", err)
 				goto exitDeal
 			}
 		}
@@ -302,7 +306,7 @@ func (s *DataNode) checkChunkInfo(pkg *Packet) (err error) {
 	if (leaderObjId - 1) != chunkInfo.Size {
 		err = ErrChunkOffsetMismatch
 		msg := fmt.Sprintf("Err[%v] leaderObjId[%v] localObjId[%v]", err, leaderObjId, localObjId)
-		log.LogWarn(pkg.ActionMesg(ActionCheckChunkInfo, LocalProcessAddr, pkg.StartT, fmt.Errorf(msg)))
+		log.LogWarn(pkg.ActionMsg(ActionCheckChunkInfo, LocalProcessAddr, pkg.StartT, fmt.Errorf(msg)))
 	}
 
 	return

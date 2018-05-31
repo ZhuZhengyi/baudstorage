@@ -167,9 +167,6 @@ func (client *ExtentClient) Close(inode uint64) (err error) {
 	streamReader := client.readers[inode]
 	client.readerLock.RUnlock()
 	if streamReader != nil {
-		for _, reader := range streamReader.readers {
-			reader.exitCh <- true
-		}
 		client.readerLock.Lock()
 		delete(client.readers, inode)
 		client.readerLock.Unlock()
@@ -184,6 +181,10 @@ func (client *ExtentClient) Read(inode uint64, data []byte, offset int, size int
 	if stream, err = client.getStreamReader(inode); err != nil {
 		return
 	}
+	if size==0{
+		return
+	}
+
 	request := &ReadRequest{data: data, size: size, offset: offset}
 	stream.requestCh <- request
 	request = <-stream.replyCh

@@ -48,6 +48,9 @@ type Partition interface {
 	// AppliedIndex returns current index value of applied raft log in this raft store partition.
 	AppliedIndex() uint64
 
+	// Truncate raft log
+	Truncate(index uint64)
+
 	// NodeManager define necessary methods for node address management.
 	NodeManager
 }
@@ -120,6 +123,12 @@ func (p *partition) Submit(cmd []byte) (resp interface{}, err error) {
 	future := p.raft.Submit(p.id, cmd)
 	resp, err = future.Response()
 	return
+}
+
+func (p *partition) Truncate(index uint64) {
+	if p.raft != nil {
+		p.raft.Truncate(p.id, index)
+	}
 }
 
 func newPartition(cfg *PartitionConfig, raft *raft.RaftServer, resolver NodeResolver) Partition {

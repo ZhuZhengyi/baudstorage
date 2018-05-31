@@ -10,8 +10,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
+	"net/http"
 	"path"
+	_ "runtime/pprof"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
@@ -26,10 +27,8 @@ const (
 )
 
 const (
-	LoggerDir      = "client"
-	LoggerPrefix   = "client"
-	LoggerFileFlag = os.O_WRONLY | os.O_CREATE | os.O_APPEND
-	LoggerFlag     = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile
+	LoggerDir    = "client"
+	LoggerPrefix = "client"
 )
 
 var (
@@ -39,6 +38,10 @@ var (
 func main() {
 	flag.Parse()
 	cfg := config.LoadConfigFile(*configFile)
+
+	go func() {
+		log.Println(http.ListenAndServe(":10084", nil))
+	}()
 
 	if err := Mount(cfg); err != nil {
 		fmt.Println("Mount failed: ", err)

@@ -403,7 +403,7 @@ func (p *Packet) IsTransitPkg() bool {
 	return p.Nodes > 0
 }
 
-func (p *Packet) ActionMesg(action, remote string, start int64, err error) (m string) {
+func (p *Packet) ActionMsg(action, remote string, start int64, err error) (m string) {
 	if err == nil {
 		m = fmt.Sprintf("id[%v] act[%v] remote[%v] "+
 			" cost[%v] isTransite[%v] Nodes[%v]",
@@ -412,8 +412,8 @@ func (p *Packet) ActionMesg(action, remote string, start int64, err error) (m st
 
 	} else {
 		m = fmt.Sprintf("id[%v] act[%v] remote[%v]"+
-			", err[%v] isTransite[%v]", p.GetUniqLogId(), action,
-			remote, err.Error(), p.IsTransitPkg())
+			", err[%v] isTransite[%v] Nodes[%v]", p.GetUniqLogId(), action,
+			remote, err.Error(), p.IsTransitPkg(), p.Nodes)
 	}
 
 	return
