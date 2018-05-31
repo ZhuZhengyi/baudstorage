@@ -23,13 +23,8 @@ func GetReqID() int64 {
 }
 
 const (
-	ExtentNameSplit = "_"
-	VolNameSplit    = "_"
 	AddrSplit       = "/"
 	HeaderSize      = 45
-	PkgArgMaxSize   = 100
-	ConnBufferSize  = 4096
-
 	ExtentVol    = "extent"
 	TinyVol      = "tiny"
 )
