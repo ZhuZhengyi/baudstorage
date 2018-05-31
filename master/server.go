@@ -1,25 +1,26 @@
 package master
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/config"
+	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/baudstorage/util/ump"
 	"strconv"
 	"sync"
-	"github.com/tiglabs/baudstorage/util/ump"
 )
 
 //config keys
 const (
-	ClusterName = "clusterName"
-	ID          = "id"
-	IP          = "ip"
-	Port        = "port"
-	LogLevel    = "logLevel"
-	WalDir      = "walDir"
-	StoreDir    = "storeDir"
-	GroupId     = 1
+	ClusterName   = "clusterName"
+	ID            = "id"
+	IP            = "ip"
+	Port          = "port"
+	LogLevel      = "logLevel"
+	WalDir        = "walDir"
+	StoreDir      = "storeDir"
+	GroupId       = 1
 	UmpModuleName = "master"
 )
 
@@ -48,9 +49,11 @@ func (m *Master) Start(cfg *config.Config) (err error) {
 	m.leaderInfo = &LeaderInfo{}
 	ump.InitUmp(UmpModuleName)
 	if err = m.checkConfig(cfg); err != nil {
+		log.LogError(errors.ErrorStack(err))
 		return
 	}
 	if err = m.createRaftServer(); err != nil {
+		log.LogError(errors.ErrorStack(err))
 		return
 	}
 	m.cluster = newCluster(m.clusterName, m.leaderInfo, m.fsm, m.partition)
@@ -133,7 +136,7 @@ func (m *Master) checkConfig(cfg *config.Config) (err error) {
 func (m *Master) createRaftServer() (err error) {
 	raftCfg := &raftstore.Config{NodeID: m.id, WalPath: m.walDir}
 	if m.raftStore, err = raftstore.NewRaftStore(raftCfg); err != nil {
-		return
+		return errors.Annotatef(err, "NewRaftStore failed! id[%v] walPath[%v]", m.id, m.walDir)
 	}
 	fsm := newMetadataFsm(m.storeDir)
 	fsm.RegisterLeaderChangeHandler(m.handleLeaderChange)
@@ -141,16 +144,15 @@ func (m *Master) createRaftServer() (err error) {
 	fsm.RegisterApplyHandler(m.handleApply)
 	fsm.restore()
 	m.fsm = fsm
-	bytes, _ := json.Marshal(m.config.Peers())
-	fmt.Println(string(bytes))
+	fmt.Println(m.config.peers)
 	partitionCfg := &raftstore.PartitionConfig{
 		ID:      GroupId,
-		Peers:   m.config.Peers(),
+		Peers:   m.config.peers,
 		Applied: fsm.applied,
 		SM:      fsm,
 	}
 	if m.partition, err = m.raftStore.CreatePartition(partitionCfg); err != nil {
-		return
+		return errors.Annotate(err, "CreatePartition failed")
 	}
 	return
 }

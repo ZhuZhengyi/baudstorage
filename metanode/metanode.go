@@ -111,10 +111,10 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 		err = errors.New("invalid configuration")
 		return
 	}
-	m.listen = int(cfg.GetInt(cfgListen))
+	m.listen = int(cfg.GetFloat(cfgListen))
 	m.metaDir = cfg.GetString(cfgMetaDir)
 	m.raftDir = cfg.GetString(cfgRaftDir)
-	m.pprofListen = int(cfg.GetInt(cfgPProfPort))
+	m.pprofListen = int(cfg.GetFloat(cfgPProfPort))
 	addrs := cfg.GetArray(cfgMasterAddrs)
 	for _, addr := range addrs {
 		masterAddrs = append(masterAddrs, addr.(string))

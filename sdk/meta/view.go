@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/juju/errors"
+
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 var (
@@ -18,6 +20,10 @@ var (
 type NamespaceView struct {
 	Name           string
 	MetaPartitions []*MetaPartition
+}
+
+type ClusterInfo struct {
+	Cluster string
 }
 
 // Namespace view managements
@@ -77,7 +83,40 @@ func (mw *MetaWrapper) PullNamespaceView() (*NamespaceView, error) {
 	return view, nil
 }
 
-func (mw *MetaWrapper) Update() error {
+func (mw *MetaWrapper) UpdateClusterInfo() error {
+	body, err := mw.PostGetRequest("http://" + mw.leader + GetClusterInfoURL)
+	if err != nil {
+		log.LogErrorf("ClusterInfo error: %v", err)
+		if err == NotLeader {
+			// MetaWrapper's leader addr is already updated
+			body, err = mw.PostGetRequest("http://" + mw.leader + GetClusterInfoURL)
+		} else {
+			for _, addr := range mw.master {
+				body, err = mw.PostGetRequest("http://" + addr + GetClusterInfoURL)
+				if err == nil {
+					mw.leader = addr
+					break
+				}
+			}
+		}
+	}
+
+	if err != nil {
+		log.LogErrorf("ClusterInfo error: %v", err)
+		return err
+	}
+
+	info := new(ClusterInfo)
+	if err = json.Unmarshal(body, info); err != nil {
+		log.LogErrorf("ClusterInfo error: %v", err)
+		return err
+	}
+	log.LogInfof("ClusterInfo: %v", *info)
+	mw.cluster = info.Cluster
+	return nil
+}
+
+func (mw *MetaWrapper) UpdateMetaPartitions() error {
 	nv, err := mw.PullNamespaceView()
 	if err != nil {
 		return err
@@ -94,7 +133,7 @@ func (mw *MetaWrapper) refresh() {
 	for {
 		select {
 		case <-t.C:
-			if err := mw.Update(); err != nil {
+			if err := mw.UpdateMetaPartitions(); err != nil {
 				//TODO: log error
 			}
 		}

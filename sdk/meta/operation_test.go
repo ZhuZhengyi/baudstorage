@@ -178,7 +178,7 @@ func TestMetaPartitionUpdate(t *testing.T) {
 	}
 
 	globalNV.update(extraMP)
-	err = mw.Update()
+	err = mw.UpdateMetaPartitions()
 	if err != nil {
 		t.Fatal(err)
 	}

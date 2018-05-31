@@ -209,7 +209,7 @@ func (c *Cluster) applyAddDataNode(cmd *Metadata) {
 	keys := strings.Split(cmd.K, KeySeparator)
 
 	if keys[1] == DataNodeAcronym {
-		dataNode := NewDataNode(keys[2])
+		dataNode := NewDataNode(keys[2], c.Name)
 		c.dataNodes.Store(dataNode.Addr, dataNode)
 	}
 }
@@ -220,7 +220,7 @@ func (c *Cluster) applyAddMetaNode(cmd *Metadata) {
 	if keys[1] == MetaNodeAcronym {
 		addr := keys[3]
 		if _, err := c.getMetaNode(addr); err != nil {
-			metaNode := NewMetaNode(addr)
+			metaNode := NewMetaNode(addr, c.Name)
 			c.metaNodes.Store(metaNode.Addr, metaNode)
 		}
 	}
@@ -299,7 +299,7 @@ func (c *Cluster) loadDataNodes() (err error) {
 	for ; it.ValidForPrefix(prefixKey); it.Next() {
 		encodedKey := it.Key()
 		keys := strings.Split(string(encodedKey.Data()), KeySeparator)
-		dataNode := NewDataNode(keys[2])
+		dataNode := NewDataNode(keys[2], c.Name)
 		c.dataNodes.Store(dataNode.Addr, dataNode)
 		encodedKey.Free()
 	}
@@ -330,7 +330,7 @@ func (c *Cluster) loadMetaNodes() (err error) {
 			err = fmt.Errorf("action[loadMetaNodes] err:%v", err.Error())
 			return err
 		}
-		metaNode := NewMetaNode(addr)
+		metaNode := NewMetaNode(addr, c.Name)
 		metaNode.ID = nodeID
 		c.metaNodes.Store(addr, metaNode)
 		encodedKey.Free()
