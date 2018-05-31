@@ -120,7 +120,7 @@ func (c *Cluster) GetAvailCarryDataNodeTab(maxTotal uint64, excludeRack string, 
 		if dataNode.Used < 0 {
 			nt.Weight = 1.0
 		} else {
-			nt.Weight = (float64)(maxTotal-dataNode.Used) / (float64)(maxTotal)
+			nt.Weight = float64(dataNode.RemainWeightsForCreateVol) / float64(maxTotal)
 		}
 		nt.Ptr = dataNode
 		nodeTabs = append(nodeTabs, nt)

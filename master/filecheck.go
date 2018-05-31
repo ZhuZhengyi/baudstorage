@@ -7,7 +7,7 @@ import (
 )
 
 /*check File: recover File,if File lack or timeOut report or crc bad*/
-func (vg *VolGroup) checkFile(isRecoverVolFlag bool) (tasks []*proto.AdminTask) {
+func (vg *VolGroup) checkFile(isRecoverVolFlag bool, clusterID string) (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	vg.Lock()
 	defer vg.Unlock()
@@ -18,22 +18,22 @@ func (vg *VolGroup) checkFile(isRecoverVolFlag bool) (tasks []*proto.AdminTask) 
 
 	switch vg.VolType {
 	case ExtentVol:
-		vg.checkExtentFile(liveVols, isRecoverVolFlag)
+		vg.checkExtentFile(liveVols, isRecoverVolFlag, clusterID)
 	case ChunkVol:
-		vg.checkChunkFile(liveVols)
+		vg.checkChunkFile(liveVols, clusterID)
 	}
 
 	return
 }
 
-func (vg *VolGroup) checkChunkFile(liveVols []*Vol) (tasks []*proto.AdminTask) {
+func (vg *VolGroup) checkChunkFile(liveVols []*Vol, clusterID string) (tasks []*proto.AdminTask) {
 	for _, fc := range vg.FileInCoreMap {
-		tasks = append(tasks, fc.generateFileCrcTask(vg.VolID, liveVols, ChunkVol)...)
+		tasks = append(tasks, fc.generateFileCrcTask(vg.VolID, liveVols, ChunkVol, clusterID)...)
 	}
 	return
 }
 
-func (vg *VolGroup) checkExtentFile(liveVols []*Vol, isRecoverVolFlag bool) (tasks []*proto.AdminTask) {
+func (vg *VolGroup) checkExtentFile(liveVols []*Vol, isRecoverVolFlag bool, clusterID string) (tasks []*proto.AdminTask) {
 	for _, fc := range vg.FileInCoreMap {
 		if fc.MarkDel == true {
 			tasks = append(tasks, fc.generatorDeleteFileTask(vg.VolID)...)
@@ -45,7 +45,7 @@ func (vg *VolGroup) checkExtentFile(liveVols []*Vol, isRecoverVolFlag bool) (tas
 			if fc.isDelayCheck() {
 				tasks = append(tasks, fc.generatorLackFileTask(vg.VolID, liveVols)...)
 			}
-			tasks = append(tasks, fc.generateFileCrcTask(vg.VolID, liveVols, ExtentVol)...)
+			tasks = append(tasks, fc.generateFileCrcTask(vg.VolID, liveVols, ExtentVol, clusterID)...)
 		}
 	}
 	return

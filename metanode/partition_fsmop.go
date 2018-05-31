@@ -2,17 +2,43 @@ package metanode
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/btree"
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/util/log"
 )
+
+type ResponseDentry struct {
+	Status uint8
+	Msg    *Dentry
+}
+
+func NewResponseDentry() *ResponseDentry {
+	return &ResponseDentry{
+		Msg: &Dentry{},
+	}
+}
+
+type ResponseInode struct {
+	Status uint8
+	Msg    *Inode
+}
+
+func NewResponseInode() *ResponseInode {
+	return &ResponseInode{
+		Msg: NewInode(0, 0),
+	}
+}
 
 // GetDentry query dentry from DentryTree with specified dentry info;
 func (mp *metaPartition) getDentry(dentry *Dentry) (*Dentry, uint8) {
 	status := proto.OpOk
+	mp.dentryMu.RLock()
 	item := mp.dentryTree.Get(dentry)
+	mp.dentryMu.RUnlock()
 	if item == nil {
 		status = proto.OpNotExistErr
 		return nil, status
@@ -22,15 +48,18 @@ func (mp *metaPartition) getDentry(dentry *Dentry) (*Dentry, uint8) {
 }
 
 // GetInode query inode from InodeTree with specified inode info;
-func (mp *metaPartition) getInode(ino *Inode) (*Inode, uint8) {
-	status := proto.OpOk
+func (mp *metaPartition) getInode(ino *Inode) (resp *ResponseInode) {
+	resp = NewResponseInode()
+	resp.Status = proto.OpOk
+	mp.inodeMu.RLock()
 	item := mp.inodeTree.Get(ino)
+	mp.inodeMu.RUnlock()
 	if item == nil {
-		status = proto.OpNotExistErr
-		return nil, status
+		resp.Status = proto.OpNotExistErr
+		return
 	}
-	ino = item.(*Inode)
-	return ino, status
+	resp.Msg = item.(*Inode)
+	return
 }
 
 func (mp *metaPartition) getInodeTree() *btree.BTree {
@@ -53,18 +82,19 @@ func (mp *metaPartition) createDentry(dentry *Dentry) (status uint8) {
 }
 
 // DeleteDentry delete dentry from dentry tree.
-func (mp *metaPartition) deleteDentry(dentry *Dentry) (*Dentry, uint8) {
+func (mp *metaPartition) deleteDentry(dentry *Dentry) (resp *ResponseDentry) {
 	// TODO: Implement it.
-	status := proto.OpOk
+	resp = NewResponseDentry()
+	resp.Status = proto.OpOk
 	mp.dentryMu.Lock()
 	item := mp.dentryTree.Delete(dentry)
 	mp.dentryMu.Unlock()
 	if item == nil {
-		status = proto.OpNotExistErr
-		return nil, status
+		resp.Status = proto.OpNotExistErr
+		return
 	}
-	dentry = item.(*Dentry)
-	return dentry, status
+	resp.Msg = item.(*Dentry)
+	return
 }
 
 // CreateInode create inode to inode tree.
@@ -83,18 +113,19 @@ func (mp *metaPartition) createInode(ino *Inode) (status uint8) {
 }
 
 // DeleteInode delete specified inode item from inode tree.
-func (mp *metaPartition) deleteInode(ino *Inode) (*Inode, uint8) {
+func (mp *metaPartition) deleteInode(ino *Inode) (resp *ResponseInode) {
 	// TODO: Implement it.
-	status := proto.OpOk
+	resp = NewResponseInode()
+	resp.Status = proto.OpOk
 	mp.inodeMu.Lock()
 	item := mp.inodeTree.Delete(ino)
 	mp.inodeMu.Unlock()
 	if item == nil {
-		status = proto.OpNotExistErr
-		return nil, status
+		resp.Status = proto.OpNotExistErr
+		return
 	}
-	ino = item.(*Inode)
-	return ino, status
+	resp.Msg = item.(*Inode)
+	return
 }
 
 func (mp *metaPartition) openFile(ino *Inode) (status uint8) {
@@ -173,6 +204,7 @@ func (mp *metaPartition) deletePartition() (status uint8) {
 
 func (mp *metaPartition) confAddNode(req *proto.
 	MetaPartitionOfflineRequest, index uint64) (err error) {
+	log.LogDebugf("[confAddNode] recv: %v", req)
 	findAddPeer := false
 	for _, peer := range mp.config.Peers {
 		if peer.ID == req.AddPeer.ID {
@@ -191,13 +223,16 @@ func (mp *metaPartition) confAddNode(req *proto.
 		mp.config.Peers = mp.config.Peers[:len(mp.config.Peers)-1]
 		return
 	}
-	mp.raftPartition.AddNode(req.AddPeer.ID, req.AddPeer.Addr)
+	addr := strings.Split(req.AddPeer.Addr, ":")[0]
+	mp.raftPartition.AddNode(req.AddPeer.ID, addr)
 	mp.applyID = index
+	log.LogDebugf("[confAddNode] end: %v", req)
 	return
 }
 
 func (mp *metaPartition) confRemoveNode(req *proto.
 	MetaPartitionOfflineRequest, index uint64) (err error) {
+	log.LogDebugf("[confRemoveNode] recv: %v", req)
 	fondRemovePeer := false
 	peerIndex := -1
 	for i, peer := range mp.config.Peers {
@@ -212,8 +247,7 @@ func (mp *metaPartition) confRemoveNode(req *proto.
 		return
 	}
 	if req.RemovePeer.ID == mp.config.NodeId {
-		mp.Stop()
-		os.RemoveAll(mp.config.RootDir)
+		mp.applyID = index
 		return
 	}
 	mp.config.Peers = append(mp.config.Peers[:peerIndex], mp.config.Peers[peerIndex+1:]...)
@@ -223,5 +257,6 @@ func (mp *metaPartition) confRemoveNode(req *proto.
 		return
 	}
 	mp.applyID = index
+	log.LogDebugf("[confRemoveNode] end: %v", req)
 	return
 }

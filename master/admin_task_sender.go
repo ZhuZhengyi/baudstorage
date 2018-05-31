@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"fmt"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/baudstorage/util/pool"
 	"net"
-	"github.com/juju/errors"
 )
 
 const (
@@ -27,17 +27,19 @@ to master
 */
 
 type AdminTaskSender struct {
+	clusterID  string
 	targetAddr string
 	TaskMap    map[string]*proto.AdminTask
 	sync.Mutex
-	exitCh     chan struct{}
-	connPool   *pool.ConnPool
+	exitCh   chan struct{}
+	connPool *pool.ConnPool
 }
 
-func NewAdminTaskSender(targetAddr string) (sender *AdminTaskSender) {
+func NewAdminTaskSender(targetAddr, clusterID string) (sender *AdminTaskSender) {
 
 	sender = &AdminTaskSender{
 		targetAddr: targetAddr,
+		clusterID:  clusterID,
 		TaskMap:    make(map[string]*proto.AdminTask),
 		exitCh:     make(chan struct{}),
 		connPool:   pool.NewConnPool(),
@@ -51,7 +53,7 @@ func (sender *AdminTaskSender) process() {
 	ticker := time.NewTicker(TaskWorkerInterval)
 	defer func() {
 		ticker.Stop()
-		log.LogWarnf("%v sender stop", sender.targetAddr)
+		Warn(sender.clusterID, fmt.Sprintf("%v sender stop", sender.targetAddr))
 	}()
 	for {
 		select {
@@ -78,6 +80,7 @@ func (sender *AdminTaskSender) getNeedDeleteTasks() (delTasks []*proto.AdminTask
 	delTasks = make([]*proto.AdminTask, 0)
 	for _, task := range sender.TaskMap {
 		if task.CheckTaskTimeOut() {
+			Warn(sender.clusterID, fmt.Sprintf("%v has no response util time out", task.ID))
 			delTasks = append(delTasks, task)
 		}
 	}
@@ -98,7 +101,9 @@ func (sender *AdminTaskSender) sendTasks(tasks []*proto.AdminTask) {
 	for _, task := range tasks {
 		conn, err := sender.connPool.Get(sender.targetAddr)
 		if err != nil {
-			log.LogError(fmt.Sprintf("get connection to %v,err,%v", sender.targetAddr, err.Error()))
+			msg := fmt.Sprintf("get connection to %v,err,%v", sender.targetAddr, err.Error())
+			log.LogError(msg)
+			Warn(sender.clusterID, msg)
 			//if get connection failed,the task is sent in the next ticker
 			break
 		}
@@ -125,12 +130,10 @@ func (sender *AdminTaskSender) buildPacket(task *proto.AdminTask) (packet *proto
 }
 
 func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) (err error) {
-	log.LogDebugf("action[singleSend] task info[%v]", task.ToString())
 	packet := sender.buildPacket(task)
 	if err = packet.WriteToConn(conn); err != nil {
 		return errors.Annotatef(err, "action[singleSend],WriteToConn failed,task:%v", task.ID)
 	}
-	log.LogDebugf("action[singleSend] send task success[%v]", task.ToString())
 	response := proto.NewPacket()
 	if err = response.ReadFromConn(conn, TaskWaitResponseTimeOut); err != nil {
 		return errors.Annotatef(err, "action[singleSend],task:%v", task.ID)
@@ -140,10 +143,10 @@ func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) 
 		task.Status = proto.TaskStart
 		task.SendCount++
 	} else {
-		log.LogError("action[singleSend] send task failed,err %v", response.Data)
+		log.LogErrorf("action[singleSend] send task failed,err %v", response.Data)
 	}
-	log.LogDebugf(fmt.Sprintf("action[singleSend] sender task:%v to %v,send time:%v,sendCount:%v,status:%v ",
-		task.ID, sender.targetAddr, task.SendTime, task.SendCount, task.Status))
+	log.LogDebugf(fmt.Sprintf("action[singleSend] sender task:%v success", task.ToString()))
+
 	return
 }
 

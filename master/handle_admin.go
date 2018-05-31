@@ -20,11 +20,17 @@ type ClusterView struct {
 	MaxMetaNodeID  uint64
 	MaxPartitionID uint64
 	Namespaces     []string
-	MetaNodes      []NodeView
-	DataNodes      []NodeView
+	MetaNodes      []MetaNodeView
+	DataNodes      []DataNodeView
 }
 
-type NodeView struct {
+type DataNodeView struct {
+	Addr   string
+	Status bool
+}
+
+type MetaNodeView struct {
+	ID     uint64
 	Addr   string
 	Status bool
 }
@@ -41,8 +47,8 @@ func (m *Master) getCluster(w http.ResponseWriter, r *http.Request) {
 		MaxMetaNodeID:  m.cluster.idAlloc.metaNodeID,
 		MaxPartitionID: m.cluster.idAlloc.partitionID,
 		Namespaces:     make([]string, 0),
-		MetaNodes:      make([]NodeView, 0),
-		DataNodes:      make([]NodeView, 0),
+		MetaNodes:      make([]MetaNodeView, 0),
+		DataNodes:      make([]DataNodeView, 0),
 	}
 
 	cv.Namespaces = m.cluster.getAllNamespaces()
@@ -96,7 +102,7 @@ func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 	capacity = m.cluster.getVolCapacity(ns)
 	lastTotalVols = len(ns.volGroups.volGroups)
 	for i := 0; i < reqCreateCount; i++ {
-		if (reqCreateCount + lastTotalVols) < len(ns.volGroups.volGroups) || int(m.cluster.idAlloc.volID) >= capacity {
+		if (reqCreateCount+lastTotalVols) < len(ns.volGroups.volGroups) || int(m.cluster.idAlloc.volID) >= capacity {
 			break
 		}
 		if _, err = m.cluster.createVolGroup(nsName, volType); err != nil {
@@ -104,7 +110,7 @@ func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	rstMsg = fmt.Sprintf(" createVol success. cluster volume capacity:%v,namespce has %v vols last,%v vols now",
-		capacity,lastTotalVols, reqCreateCount)
+		capacity, lastTotalVols, len(ns.volGroups.volGroups))
 	io.WriteString(w, rstMsg)
 
 	return
@@ -201,7 +207,7 @@ func (m *Master) volOffline(w http.ResponseWriter, r *http.Request) {
 	m.cluster.volOffline(addr, nsName, vg, HandleVolOfflineErr)
 	rstMsg = fmt.Sprintf(AdminVolOffline+"volID :%v  on node:%v  has offline success", volID, addr)
 	io.WriteString(w, rstMsg)
-	log.LogWarn(rstMsg)
+	Warn(m.clusterName, rstMsg)
 	return
 errDeal:
 	logMsg := getReturnMessage(AdminVolOffline, r.RemoteAddr, err.Error(), http.StatusBadRequest)

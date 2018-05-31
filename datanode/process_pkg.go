@@ -93,7 +93,7 @@ func (s *DataNode) doRequestCh(req *Packet, msgH *MessageHandler) {
 	if err = s.sendToNext(req, msgH); err == nil {
 		s.operatePacket(req, msgH.inConn)
 	} else {
-		log.LogErrorf("action[DataNode.doRequestCh] %v.", req.ActionMesg(ActionSendToNext, req.nextAddr,
+		log.LogErrorf("action[DataNode.doRequestCh] %v.", req.ActionMsg(ActionSendToNext, req.nextAddr,
 			req.StartT, fmt.Errorf("failed to send to : %v", req.nextAddr)))
 		if req.IsMarkDeleteReq() {
 			s.operatePacket(req, msgH.inConn)
@@ -107,14 +107,14 @@ func (s *DataNode) doRequestCh(req *Packet, msgH *MessageHandler) {
 func (s *DataNode) doReplyCh(reply *Packet, msgH *MessageHandler) {
 	var err error
 	if reply.IsErrPack() {
-		err = fmt.Errorf(reply.ActionMesg(ActionWriteToCli, msgH.inConn.RemoteAddr().String(),
+		err = fmt.Errorf(reply.ActionMsg(ActionWriteToCli, msgH.inConn.RemoteAddr().String(),
 			reply.StartT, fmt.Errorf(string(reply.Data[:reply.Size]))))
 		log.LogErrorf("action[DataNode.doReplyCh] %v", err)
 	}
 
 	if reply.Opcode != proto.OpStreamRead {
 		if err = reply.WriteToConn(msgH.inConn); err != nil {
-			err = fmt.Errorf(reply.ActionMesg(ActionWriteToCli, msgH.inConn.RemoteAddr().String(),
+			err = fmt.Errorf(reply.ActionMsg(ActionWriteToCli, msgH.inConn.RemoteAddr().String(),
 				reply.StartT, err))
 			log.LogErrorf("action[DataNode.doReplyCh] %v", err)
 			msgH.ExitSign()
@@ -122,7 +122,7 @@ func (s *DataNode) doReplyCh(reply *Packet, msgH *MessageHandler) {
 	}
 	if !reply.IsMasterCommand() {
 		reply.afterTp()
-		log.LogDebugf("action[DataNode.doReplyCh] %v", reply.ActionMesg(ActionWriteToCli,
+		log.LogDebugf("action[DataNode.doReplyCh] %v", reply.ActionMsg(ActionWriteToCli,
 			msgH.inConn.RemoteAddr().String(), reply.StartT, err))
 		s.statsFlow(reply, OutFlow)
 	}
@@ -169,7 +169,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 		err = errors.Annotatef(fmt.Errorf(request.getErr()), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 		msgH.DelListElement(request, e, s, ForceCloseConnect)
-		log.LogError(request.ActionMesg(ActionReciveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
+		log.LogErrorf("action[DataNode.receiveFromNext] %v.", request.ActionMsg(ActionReciveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
 		return
 	}
 
@@ -185,7 +185,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 			return request, true
 		}
 	} else {
-		log.LogError(request.ActionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
+		log.LogErrorf("action[DataNode.receiveFromNext] %v.", request.ActionMsg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 		err = errors.Annotatef(err, "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 		msgH.DelListElement(request, e, s, ForceCloseConnect)
@@ -203,7 +203,7 @@ success:
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 	}
 	msgH.DelListElement(request, e, s, NOCloseConnect)
-	log.LogDebugf("action[DataNode.receiveFromNext] %v.", reply.ActionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
+	log.LogDebugf("action[DataNode.receiveFromNext] %v.", reply.ActionMsg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 
 	return
 }
@@ -293,11 +293,11 @@ func (s *DataNode) GetNextConn(nextAddr string) (conn net.Conn, err error) {
 	return connPool.Get(nextAddr)
 }
 
-func (s *DataNode) CleanConn(conn net.Conn, isForceClost bool) {
+func (s *DataNode) CleanConn(conn net.Conn, isForceClose bool) {
 	if conn == nil {
 		return
 	}
-	if isForceClost {
+	if isForceClose {
 		conn.Close()
 		return
 	}

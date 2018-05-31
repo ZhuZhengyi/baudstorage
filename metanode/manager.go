@@ -15,6 +15,7 @@ import (
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/baudstorage/util/pool"
+	_ "net/http/pprof"
 )
 
 const partitionPrefix = "partition_"
@@ -196,6 +197,7 @@ func (m *metaManager) attachPartition(id uint64, partition MetaPartition) (err e
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.partitions[id] = partition
+	log.LogDebugf("[attachPartition] add: %v", m.partitions)
 	return
 }
 
@@ -218,6 +220,7 @@ func (m *metaManager) createPartition(id uint64, nsName string, start,
 		err = errors.Errorf("create partition id=%d is exsited!", id)
 		return
 	}
+	log.LogDebugf("[allpartitions]: %v", m.partitions)
 	err = nil
 	/* Create metaPartition and add metaManager */
 	partId := fmt.Sprintf("%d", id)

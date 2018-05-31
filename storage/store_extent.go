@@ -100,7 +100,15 @@ func (s *ExtentStore) SnapShot() (files []*proto.File, err error) {
 		if err != nil {
 			continue
 		}
-		file := &proto.File{Name: finfo.Name(), Size: uint32(einfo.Size), MarkDel: false, NeedleCnt: 1}
+		header := make([]byte, BlockCrcHeaderSize)
+		s.GetBlockCrcBuffer(extentId, header)
+		file := &proto.File{
+			Name:      finfo.Name(),
+			Crc:       crc32.ChecksumIEEE(header),
+			Size:      uint32(einfo.Size),
+			MarkDel:   false,
+			NeedleCnt: 1,
+		}
 		files = append(files, file)
 	}
 	err = nil

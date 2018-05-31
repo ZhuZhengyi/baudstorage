@@ -14,6 +14,7 @@ import (
 const (
 	HostsSeparator       = ","
 	MetaPartitionViewURL = "/client/namespace?name="
+	GetClusterInfoURL    = "/admin/getIp"
 
 	RefreshMetaPartitionsInterval = time.Minute * 5
 )
@@ -28,6 +29,7 @@ const (
 
 type MetaWrapper struct {
 	sync.RWMutex
+	cluster   string
 	namespace string
 	leader    string
 	master    []string
@@ -54,12 +56,17 @@ func NewMetaWrapper(namespace, masterHosts string) (*MetaWrapper, error) {
 	mw.conns = pool.NewConnPool()
 	mw.partitions = make(map[uint64]*MetaPartition)
 	mw.ranges = btree.New(32)
-	if err := mw.Update(); err != nil {
+	mw.UpdateClusterInfo()
+	if err := mw.UpdateMetaPartitions(); err != nil {
 		return nil, err
 	}
 	mw.currStart = proto.ROOT_INO
 	go mw.refresh()
 	return mw, nil
+}
+
+func (mw *MetaWrapper) Cluster() string {
+	return mw.cluster
 }
 
 // Status code conversion

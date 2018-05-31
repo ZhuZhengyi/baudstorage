@@ -80,7 +80,7 @@ func (m *Master) getVols(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage("getVols", r.RemoteAddr, err.Error(), code)
-	HandleError(logMsg,err, code, w)
+	HandleError(logMsg, err, code, w)
 	return
 }
 
@@ -108,7 +108,7 @@ func (m *Master) getNamespace(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage("getNamespace", r.RemoteAddr, err.Error(), code)
-	HandleError(logMsg,err, code, w)
+	HandleError(logMsg, err, code, w)
 	return
 }
 
@@ -162,7 +162,7 @@ func (m *Master) getMetaPartition(w http.ResponseWriter, r *http.Request) {
 	return
 errDeal:
 	logMsg := getReturnMessage("getMetaPartition", r.RemoteAddr, err.Error(), code)
-	HandleError(logMsg,err, code, w)
+	HandleError(logMsg, err, code, w)
 	return
 }
 

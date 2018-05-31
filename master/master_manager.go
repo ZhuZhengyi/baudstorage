@@ -12,7 +12,7 @@ type LeaderInfo struct {
 
 func (m *Master) handleLeaderChange(leader uint64) {
 	m.leaderInfo.addr = AddrDatabase[leader]
-	log.LogDebugf("leader is changed:%v", m.leaderInfo.addr)
+	Warn(m.clusterName, fmt.Sprintf("leader is changed to %v", m.leaderInfo.addr))
 	//Once switched to the master, the checkHeartbeat is executed
 	if m.id == leader {
 		m.cluster.checkDataNodeHeartbeat()
@@ -51,6 +51,7 @@ func (m *Master) restoreIDAlloc() {
 	m.cluster.idAlloc.restore()
 }
 
+// load stored meta data to memory
 func (m *Master) loadMetadata() {
 
 	m.restoreIDAlloc()

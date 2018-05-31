@@ -29,7 +29,7 @@ func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 		if err = json.Unmarshal(msg.V, ino); err != nil {
 			goto end
 		}
-		_, resp = mp.deleteInode(ino)
+		resp = mp.deleteInode(ino)
 	case opCreateDentry:
 		den := &Dentry{}
 		if err = json.Unmarshal(msg.V, den); err != nil {
@@ -41,7 +41,7 @@ func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 		if err = json.Unmarshal(msg.V, den); err != nil {
 			goto end
 		}
-		_, resp = mp.deleteDentry(den)
+		resp = mp.deleteDentry(den)
 	case opOpen:
 		ino := NewInode(0, 0)
 		if err = json.Unmarshal(msg.V, ino); err != nil {

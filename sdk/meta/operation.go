@@ -44,7 +44,7 @@ func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *pro
 	return statusOK, resp.Info, nil
 }
 
-func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, err error) {
+func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, extents []proto.ExtentKey, err error) {
 	req := &proto.DeleteInodeRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
@@ -62,7 +62,20 @@ func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, err erro
 	if err != nil {
 		return
 	}
-	return parseStatus(packet.ResultCode), nil
+
+	log.LogDebugf("DeleteInode: partitionID(%v) inode(%v) ResultCode(%v)", mc.id, inode, packet.ResultCode)
+	status = parseStatus(packet.ResultCode)
+	if status != statusOK {
+		return
+	}
+
+	resp := new(proto.DeleteInodeResponse)
+	err = packet.UnmarshalData(resp)
+	if err != nil {
+		return
+	}
+	log.LogDebugf("DeleteInode: response(%v)", *resp)
+	return statusOK, resp.Extents, nil
 }
 
 func (mw *MetaWrapper) dcreate(mc *MetaConn, parentID uint64, name string, inode uint64, mode uint32) (status int, err error) {
@@ -143,7 +156,7 @@ func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (statu
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
-		log.LogErrorf("lookup: ResultCode(%v)", packet.ResultCode)
+		log.LogErrorf("lookup: parentID(%v) name(%v) ResultCode(%v)", parentID, name, packet.ResultCode)
 		return
 	}
 

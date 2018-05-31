@@ -10,17 +10,14 @@ import (
 )
 
 const (
-	ColonSplit                    = ":"
-	CommaSplit                    = ","
-	CfgPeers                      = "peers"
-	VolMissSec                    = "volMissSec"
-	VolTimeOutSec                 = "volTimeOutSec"
-	EveryLoadVolCount             = "everyLoadVolCount"
-	FileDelayCheckCrc             = "fileDelayCheckCrc"
-	ReplicaNum                    = "replicaNum"
-	MetaPartitionSize             = "metaPartitionSize"
-	VolSize                       = "volSize"
-	CheckHeartBeatIntervalSeconds = "heartBeatIntervalSeconds"
+	ColonSplit        = ":"
+	CommaSplit        = ","
+	CfgPeers          = "peers"
+	VolMissSec        = "volMissSec"
+	VolTimeOutSec     = "volTimeOutSec"
+	EveryLoadVolCount = "everyLoadVolCount"
+	FileDelayCheckCrc = "fileDelayCheckCrc"
+	ReplicaNum        = "replicaNum"
 )
 
 const (
@@ -110,12 +107,4 @@ func (cfg *ClusterConfig) parsePeers(peerStr string) error {
 		AddrDatabase[id] = fmt.Sprintf("%v:%v", ip, port)
 	}
 	return nil
-}
-
-func (cfg *ClusterConfig) PeerAddrs() []string {
-	return cfg.peerAddrs
-}
-
-func (cfg *ClusterConfig) Peers() []raftstore.PeerAddress {
-	return cfg.peers
 }

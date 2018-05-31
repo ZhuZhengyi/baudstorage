@@ -10,7 +10,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
+	"net/http"
+	_ "net/http/pprof"
 	"path"
 
 	"bazil.org/fuse"
@@ -26,10 +27,8 @@ const (
 )
 
 const (
-	LoggerDir      = "client"
-	LoggerPrefix   = "client"
-	LoggerFileFlag = os.O_WRONLY | os.O_CREATE | os.O_APPEND
-	LoggerFlag     = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile
+	LoggerDir    = "client"
+	LoggerPrefix = "client"
 )
 
 var (
@@ -47,10 +46,11 @@ func main() {
 }
 
 func Mount(cfg *config.Config) error {
-	mnt := cfg.GetString("Mountpoint")
-	namespace := cfg.GetString("Namespace")
-	master := cfg.GetString("Master")
-	logpath := cfg.GetString("Logpath")
+	mnt := cfg.GetString("mountpoint")
+	namespace := cfg.GetString("namespace")
+	master := cfg.GetString("master")
+	logpath := cfg.GetString("logpath")
+	profport := cfg.GetString("profport")
 	c, err := fuse.Mount(
 		mnt,
 		fuse.AllowOther(),
@@ -74,6 +74,10 @@ func Mount(cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
+
+	go func() {
+		fmt.Println(http.ListenAndServe(":"+profport, nil))
+	}()
 
 	if err = fs.Serve(c, super); err != nil {
 		return err
