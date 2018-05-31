@@ -170,9 +170,6 @@ func (mp *metaPartition) Stop() {
 			mp.config.BeforeStop()
 		}
 		mp.onStop()
-		if mp.config.AfterStop != nil {
-			mp.config.AfterStop()
-		}
 	}
 }
 
@@ -193,9 +190,8 @@ func (mp *metaPartition) onStart() (err error) {
 }
 
 func (mp *metaPartition) onStop() {
-	mp.stopRaft()
 	mp.stopSchedule()
-	mp.store()
+	mp.stopRaft()
 }
 
 func (mp *metaPartition) startSchedule() {
