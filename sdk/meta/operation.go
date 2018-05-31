@@ -44,7 +44,7 @@ func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *pro
 	return statusOK, resp.Info, nil
 }
 
-func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, err error) {
+func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, extents []proto.ExtentKey, err error) {
 	req := &proto.DeleteInodeRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
@@ -62,7 +62,18 @@ func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, err erro
 	if err != nil {
 		return
 	}
-	return parseStatus(packet.ResultCode), nil
+
+	status = parseStatus(packet.ResultCode)
+	if status != statusOK {
+		return
+	}
+
+	resp := new(proto.DeleteInodeResponse)
+	err = packet.UnmarshalData(resp)
+	if err != nil {
+		return
+	}
+	return statusOK, resp.Extents, nil
 }
 
 func (mw *MetaWrapper) dcreate(mc *MetaConn, parentID uint64, name string, inode uint64, mode uint32) (status int, err error) {
