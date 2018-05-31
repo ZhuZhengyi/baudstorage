@@ -46,6 +46,8 @@ func NewStreamReader(inode uint64, wrapper *vol.VolGroupWrapper, getExtents GetE
 	}
 	var offset int
 	var reader *ExtentReader
+	stream.Lock()
+	defer stream.Unlock()
 	for _, key := range stream.extents.Extents {
 		if reader, err = NewExtentReader(inode, offset, key, stream.wrapper); err != nil {
 			return nil, errors.Annotatef(err, "NewStreamReader inode[%v] "+
@@ -177,8 +179,8 @@ func (stream *StreamReader) GetReader(offset, size int) (readers []*ExtentReader
 	readers = make([]*ExtentReader, 0)
 	readersOffsets = make([]int, 0)
 	readersSize = make([]int, 0)
-	orgOffset:=offset
-	orgSize:=size
+	orgOffset := offset
+	orgSize := size
 	stream.Lock()
 	defer stream.Unlock()
 	for _, r := range stream.readers {
@@ -205,11 +207,14 @@ func (stream *StreamReader) GetReader(offset, size int) (readers []*ExtentReader
 			offset = r.endInodeOffset
 			size = size - currReaderSize
 		}
+		if currReaderSize == 0 {
+			continue
+		}
 		readersSize = append(readersSize, currReaderSize)
 		readersOffsets = append(readersOffsets, currReaderOffset)
 		readers = append(readers, r)
-		log.LogDebugf("offset[%v] size[%v] reader[%v] readerOffsets[%v] " +
-			"readerSize[%v]",orgOffset,orgSize,r.toString(),readersOffsets,readersSize)
+		log.LogDebugf("offset[%v] size[%v] reader[%v] readerOffsets[%v] "+
+			"readerSize[%v]", orgOffset, orgSize, r.toString(), readersOffsets, readersSize)
 		r.Unlock()
 		if size <= 0 {
 			break

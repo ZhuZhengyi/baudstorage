@@ -167,9 +167,6 @@ func (client *ExtentClient) Close(inode uint64) (err error) {
 	streamReader := client.readers[inode]
 	client.readerLock.RUnlock()
 	if streamReader != nil {
-		for _, reader := range streamReader.readers {
-			reader.exitCh <- true
-		}
 		client.readerLock.Lock()
 		delete(client.readers, inode)
 		client.readerLock.Unlock()
