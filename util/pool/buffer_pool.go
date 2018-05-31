@@ -2,7 +2,6 @@ package pool
 
 import (
 	"fmt"
-	"github.com/tiglabs/baudstorage/storage"
 	"sync"
 	"time"
 )
