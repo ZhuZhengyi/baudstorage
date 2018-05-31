@@ -84,10 +84,14 @@ func (d *Dir) Mkdir(ctx context.Context, req *fuse.MkdirRequest) (fs.Node, error
 
 func (d *Dir) Remove(ctx context.Context, req *fuse.RemoveRequest) error {
 	log.LogDebugf("Dir Remove: ino(%v) name(%v)", d.inode.ino, req.Name)
-	err := d.super.mw.Delete_ll(d.inode.ino, req.Name)
+	extents, err := d.super.mw.Delete_ll(d.inode.ino, req.Name)
 	if err != nil {
 		log.LogErrorf("Dir Remove: ino(%v) name(%v) err(%v)", d.inode.ino, req.Name, err.Error())
 		return ParseError(err)
+	}
+
+	if extents != nil {
+		d.super.ec.Delete(extents)
 	}
 	return nil
 }

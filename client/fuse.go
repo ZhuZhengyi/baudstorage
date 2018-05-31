@@ -10,9 +10,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
-	"runtime/pprof"
+	_ "runtime/pprof"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
