@@ -398,6 +398,7 @@ func (m *metaManager) opDeleteMetaPartition(conn net.Conn, p *Packet) (err error
 		m.respondToClient(conn, p)
 		return
 	}
+	log.LogDebugf("[opDeleteMetaPartition]: recv %v", adminTask)
 	req := &proto.DeleteMetaPartitionRequest{}
 	reqData, err := json.Marshal(adminTask.Request)
 	if err != nil {

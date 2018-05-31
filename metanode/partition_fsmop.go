@@ -1,7 +1,6 @@
 package metanode
 
 import (
-	"os"
 	"strings"
 	"time"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
+	"os"
 )
 
 type ResponseDentry struct {
@@ -196,9 +196,8 @@ func (mp *metaPartition) updatePartition(end uint64) (status uint8, err error) {
 }
 
 func (mp *metaPartition) deletePartition() (status uint8) {
-	mp.Stop()
 	os.RemoveAll(mp.config.RootDir)
-	status = proto.OpOk
+	mp.Stop()
 	return
 }
 
@@ -251,6 +250,7 @@ func (mp *metaPartition) confRemoveNode(req *proto.
 		return
 	}
 	mp.config.Peers = append(mp.config.Peers[:peerIndex], mp.config.Peers[peerIndex+1:]...)
+	log.LogDebugf("[confRemoveNode] newPeers: %s", mp.config.Peers)
 	if err = mp.storeMeta(); err != nil {
 		err = errors.Errorf("[confRemoveNode] storeMeta: %s", err.Error())
 		mp.config.Peers = append(mp.config.Peers, req.RemovePeer)

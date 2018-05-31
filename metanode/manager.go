@@ -174,7 +174,7 @@ func (m *metaManager) loadPartitions() (err error) {
 					RaftStore: m.raftStore,
 					RootDir:   path.Join(m.rootDir, fileName),
 				}
-				partitionConfig.AfterStop = func() {
+				partitionConfig.BeforeStart = func() {
 					m.detachPartition(id)
 				}
 				partition := NewMetaPartition(partitionConfig)
@@ -213,8 +213,7 @@ func (m *metaManager) detachPartition(id uint64) (err error) {
 }
 
 func (m *metaManager) createPartition(id uint64, nsName string, start,
-	end uint64,
-	peers []proto.Peer) (err error) {
+	end uint64, peers []proto.Peer) (err error) {
 	/* Check Partition */
 	if _, err = m.getPartition(id); err == nil {
 		err = errors.Errorf("create partition id=%d is exsited!", id)
