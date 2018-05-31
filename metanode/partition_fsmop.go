@@ -8,7 +8,6 @@ import (
 	"github.com/google/btree"
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type ResponseDentry struct {
@@ -82,18 +81,19 @@ func (mp *metaPartition) createDentry(dentry *Dentry) (status uint8) {
 }
 
 // DeleteDentry delete dentry from dentry tree.
-func (mp *metaPartition) deleteDentry(dentry *Dentry) (*Dentry, uint8) {
+func (mp *metaPartition) deleteDentry(dentry *Dentry) (resp *ResponseDentry) {
 	// TODO: Implement it.
-	status := proto.OpOk
+	resp = NewResponseDentry()
+	resp.Status = proto.OpOk
 	mp.dentryMu.Lock()
 	item := mp.dentryTree.Delete(dentry)
 	mp.dentryMu.Unlock()
 	if item == nil {
-		status = proto.OpNotExistErr
-		return nil, status
+		resp.Status = proto.OpNotExistErr
+		return
 	}
-	dentry = item.(*Dentry)
-	return dentry, status
+	resp.Msg = item.(*Dentry)
+	return
 }
 
 // CreateInode create inode to inode tree.
@@ -116,17 +116,14 @@ func (mp *metaPartition) deleteInode(ino *Inode) (resp *ResponseInode) {
 	// TODO: Implement it.
 	resp = NewResponseInode()
 	resp.Status = proto.OpOk
-	log.LogDebugf("1: %v", ino)
 	mp.inodeMu.Lock()
 	item := mp.inodeTree.Delete(ino)
 	mp.inodeMu.Unlock()
 	if item == nil {
-		log.LogDebugf("2: %v", item)
 		resp.Status = proto.OpNotExistErr
 		return
 	}
 	resp.Msg = item.(*Inode)
-	log.LogDebugf("3: %v", resp.Msg)
 	return
 }
 
