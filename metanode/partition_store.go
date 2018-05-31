@@ -86,8 +86,8 @@ func (mp *metaPartition) loadInode() (err error) {
 			err = errors.Errorf("[loadInode] ReadLine: %s", err.Error())
 			return
 		}
+		line = append(line, buf...)
 		if isPrefix {
-			line = append(line, buf...)
 			continue
 		}
 
@@ -142,8 +142,8 @@ func (mp *metaPartition) loadDentry() (err error) {
 			err = errors.Errorf("[loadDentry] ReadLine: %s", err.Error())
 			return
 		}
+		line = append(line, buf...)
 		if isPrefix {
-			line = append(line, buf...)
 			continue
 		}
 		dentry := &Dentry{}
