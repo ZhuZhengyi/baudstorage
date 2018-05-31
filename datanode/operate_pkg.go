@@ -22,7 +22,7 @@ var (
 
 func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 	orgSize := pkg.Size
-	umpKey := fmt.Sprintf("%s_datanode_%s", s.clusterId, pkg.GetOpMesg(pkg.Opcode))
+	umpKey := fmt.Sprintf("%s_datanode_%s", s.clusterId, pkg.GetOpMsg(pkg.Opcode))
 	tpObject := ump.BeforeTP(umpKey)
 	start := time.Now().UnixNano()
 	var err error
@@ -30,15 +30,15 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 		resultSize := pkg.Size
 		pkg.Size = orgSize
 		if pkg.IsErrPack() {
-			err = fmt.Errorf("operation[%v] error[%v]", pkg.GetOpMesg(pkg.Opcode), string(pkg.Data[:resultSize]))
+			err = fmt.Errorf("operation[%v] error[%v]", pkg.GetOpMsg(pkg.Opcode), string(pkg.Data[:resultSize]))
 			log.LogErrorf("action[DataNode.operatePacket] %v", err)
 		} else if !pkg.IsMasterCommand() {
 			if pkg.IsReadReq() {
 				log.LogReadf("action[DataNode.operatePacket] %v.",
-					pkg.ActionMsg(pkg.GetOpMesg(pkg.Opcode), LocalProcessAddr, start, nil))
+					pkg.ActionMsg(pkg.GetOpMsg(pkg.Opcode), LocalProcessAddr, start, nil))
 			} else {
 				log.LogWritef("action[DataNode.operatePacket] %v.",
-					pkg.ActionMsg(pkg.GetOpMesg(pkg.Opcode), LocalProcessAddr, start, nil))
+					pkg.ActionMsg(pkg.GetOpMsg(pkg.Opcode), LocalProcessAddr, start, nil))
 			}
 		}
 		pkg.Size = resultSize
