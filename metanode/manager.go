@@ -197,6 +197,7 @@ func (m *metaManager) attachPartition(id uint64, partition MetaPartition) (err e
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.partitions[id] = partition
+	log.LogDebugf("[attachPartition] add: %v", m.partitions)
 	return
 }
 
