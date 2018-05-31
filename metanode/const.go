@@ -65,8 +65,7 @@ const (
 	defaultLogDir    = "logs"
 	defaultMetaDir   = "metaDir"
 	defaultRaftDir   = "raftDir"
-	defaultPporfPort = 0
-	defaultUMPKey    = "baudfs"
+	defaultPporfPort = 10080
 )
 
 const (
@@ -80,4 +79,5 @@ const (
 	cfgMetaDir     = "metaDir"
 	cfgRaftDir     = "raftDir"
 	cfgMasterAddrs = "masterAddrs"
+	cfgPProfPort   = "pprof"
 )
