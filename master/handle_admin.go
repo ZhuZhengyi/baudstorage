@@ -96,7 +96,7 @@ func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 	capacity = m.cluster.getVolCapacity(ns)
 	lastTotalVols = len(ns.volGroups.volGroups)
 	for i := 0; i < reqCreateCount; i++ {
-		if (reqCreateCount + lastTotalVols) < len(ns.volGroups.volGroups) || int(m.cluster.idAlloc.volID) >= capacity {
+		if (reqCreateCount+lastTotalVols) < len(ns.volGroups.volGroups) || int(m.cluster.idAlloc.volID) >= capacity {
 			break
 		}
 		if _, err = m.cluster.createVolGroup(nsName, volType); err != nil {
@@ -104,7 +104,7 @@ func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	rstMsg = fmt.Sprintf(" createVol success. cluster volume capacity:%v,namespce has %v vols last,%v vols now",
-		capacity,lastTotalVols, reqCreateCount)
+		capacity, lastTotalVols, len(ns.volGroups.volGroups))
 	io.WriteString(w, rstMsg)
 
 	return
@@ -201,7 +201,7 @@ func (m *Master) volOffline(w http.ResponseWriter, r *http.Request) {
 	m.cluster.volOffline(addr, nsName, vg, HandleVolOfflineErr)
 	rstMsg = fmt.Sprintf(AdminVolOffline+"volID :%v  on node:%v  has offline success", volID, addr)
 	io.WriteString(w, rstMsg)
-	log.LogWarn(rstMsg)
+	Warn(m.clusterName, rstMsg)
 	return
 errDeal:
 	logMsg := getReturnMessage(AdminVolOffline, r.RemoteAddr, err.Error(), http.StatusBadRequest)

@@ -65,5 +65,5 @@ func (ns *NameSpace) getMetaPartitionById(partitionID uint64) (mp *MetaPartition
 }
 
 func (ns *NameSpace) getVolsView() (body []byte, err error) {
-	return ns.volGroups.updateVolResponseCache(NoNeedUpdateVolResponse, 0)
+	return ns.volGroups.updateVolResponseCache(false, 0)
 }

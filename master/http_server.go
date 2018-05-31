@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 const (
@@ -131,7 +131,7 @@ func getReturnMessage(requestType, remoteAddr, message string, code int) (logMsg
 	return
 }
 
-func HandleError(message string,err error, code int, w http.ResponseWriter) {
-	log.LogErrorf("errMsg:%v errStack:%v",message,errors.ErrorStack(err))
+func HandleError(message string, err error, code int, w http.ResponseWriter) {
+	log.LogErrorf("errMsg:%v errStack:%v", message, errors.ErrorStack(err))
 	http.Error(w, message, code)
 }
