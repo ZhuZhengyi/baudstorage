@@ -14,7 +14,7 @@ func NewBufferPool() (bufferP *BufferPool) {
 	return &BufferPool{pools: make(map[int]*ChannelPool)}
 }
 
-func (bufferP *BufferPool) Get(size int) ([]byte,error) {
+func (bufferP *BufferPool) Get(size int) ([]byte, error) {
 	bufferP.Lock()
 	pool, ok := bufferP.pools[size]
 	var (
@@ -23,8 +23,8 @@ func (bufferP *BufferPool) Get(size int) ([]byte,error) {
 	)
 	bufferP.Unlock()
 	factoryFunc := func(size interface{}) (interface{}, error) {
-		data:=make([]byte,size.(int))
-		return data,nil
+		data := make([]byte, size.(int))
+		return data, nil
 	}
 	closeFunc := func(v interface{}) error { return nil }
 	if !ok {
@@ -52,11 +52,11 @@ func (bufferP *BufferPool) Get(size int) ([]byte,error) {
 	}
 	data := obj.([]byte)
 
-	return data,err
+	return data, err
 }
 
 func (bufferP *BufferPool) Put(data []byte) {
-	size:=len(data)
+	size := len(data)
 	bufferP.Lock()
 	pool, ok := bufferP.pools[size]
 	bufferP.Unlock()
