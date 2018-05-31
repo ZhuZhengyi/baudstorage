@@ -2,6 +2,7 @@ package master
 
 import (
 	"fmt"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util"
@@ -112,7 +113,6 @@ func (c *Cluster) checkDataNodeHeartbeat() {
 		tasks = append(tasks, task)
 		return true
 	})
-	log.LogDebugf("dataNode heartbeat len:%v", len(tasks))
 	c.putDataNodeTasks(tasks)
 }
 
@@ -124,7 +124,6 @@ func (c *Cluster) checkMetaNodeHeartbeat() {
 		tasks = append(tasks, task)
 		return true
 	})
-	log.LogDebugf("meatNode heartbeat len:%v", len(tasks))
 	c.putMetaNodeTasks(tasks)
 }
 
@@ -149,7 +148,7 @@ func (c *Cluster) addMetaNode(nodeAddr string) (id uint64, err error) {
 		metaNode = value.(*MetaNode)
 		return metaNode.ID, nil
 	}
-	metaNode = NewMetaNode(nodeAddr)
+	metaNode = NewMetaNode(nodeAddr, c.Name)
 
 	if id, err = c.idAlloc.allocatorMetaNodeID(); err != nil {
 		goto errDeal
@@ -162,7 +161,8 @@ func (c *Cluster) addMetaNode(nodeAddr string) (id uint64, err error) {
 	return
 errDeal:
 	err = fmt.Errorf("action[addMetaNode],metaNodeAddr:%v err:%v ", nodeAddr, err.Error())
-	log.LogWarn(err.Error())
+	log.LogError(errors.ErrorStack(err))
+	Warn(c.Name,err.Error())
 	return
 }
 
@@ -172,7 +172,7 @@ func (c *Cluster) addDataNode(nodeAddr string) (err error) {
 		return
 	}
 
-	dataNode = NewDataNode(nodeAddr)
+	dataNode = NewDataNode(nodeAddr, c.Name)
 	if err = c.syncAddDataNode(dataNode); err != nil {
 		goto errDeal
 	}
@@ -180,7 +180,8 @@ func (c *Cluster) addDataNode(nodeAddr string) (err error) {
 	return
 errDeal:
 	err = fmt.Errorf("action[addMetaNode],metaNodeAddr:%v err:%v ", nodeAddr, err.Error())
-	log.LogWarn(err.Error())
+	log.LogError(errors.ErrorStack(err))
+	Warn(c.Name,err.Error())
 	return err
 }
 
@@ -241,7 +242,8 @@ func (c *Cluster) createVolGroup(nsName, volType string) (vg *VolGroup, err erro
 	return
 errDeal:
 	err = fmt.Errorf("action[createVolGroup], Err:%v ", err.Error())
-	log.LogError(err.Error())
+	log.LogError(errors.ErrorStack(err))
+	Warn(c.Name,err.Error())
 	return
 }
 
@@ -252,7 +254,7 @@ func (c *Cluster) ChooseTargetDataHosts(replicaNum int) (hosts []string, err err
 	)
 	hosts = make([]string, 0)
 	if masterAddr, err = c.getAvailDataNodeHosts("", hosts, 1); err != nil {
-		return
+		return nil,errors.Trace(err)
 	}
 	hosts = append(hosts, masterAddr[0])
 	otherReplica := replicaNum - 1
@@ -261,10 +263,10 @@ func (c *Cluster) ChooseTargetDataHosts(replicaNum int) (hosts []string, err err
 	}
 	dataNode, err := c.getDataNode(masterAddr[0])
 	if err != nil {
-		return
+		return nil,errors.Trace(err)
 	}
 	if slaveAddrs, err = c.getAvailDataNodeHosts(dataNode.RackName, hosts, otherReplica); err != nil {
-		return
+		return nil,errors.Trace(err)
 	}
 	hosts = append(hosts, slaveAddrs...)
 	if len(hosts) != replicaNum {
@@ -354,6 +356,9 @@ errDeal:
 	msg = fmt.Sprintf(errMsg+" vol:%v  on Node:%v  "+
 		"DiskError  TimeOut Report Then Fix It on newHost:%v   Err:%v , PersistenceHosts:%v  ",
 		vg.VolID, offlineAddr, newAddr, err, vg.PersistenceHosts)
+	if err != nil {
+		Warn(c.Name,msg)
+	}
 	log.LogWarn(msg)
 }
 
@@ -390,7 +395,8 @@ func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {
 	return
 errDeal:
 	err = fmt.Errorf("action[createNamespace], name:%v, err:%v ", name, err.Error())
-	log.LogError(err.Error())
+	log.LogError(errors.ErrorStack(err))
+	Warn(c.Name,err.Error())
 	return
 }
 
@@ -409,17 +415,17 @@ func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err err
 	}
 
 	if hosts, peers, err = c.ChooseTargetMetaHosts(int(ns.mpReplicaNum)); err != nil {
-		return
+		return errors.Trace(err)
 	}
 	log.LogDebugf("target meta hosts:%v,peers:%v", hosts, peers)
 	if partitionID, err = c.idAlloc.allocatorPartitionID(); err != nil {
-		return
+		return errors.Trace(err)
 	}
 	mp = NewMetaPartition(partitionID, start, end, nsName)
 	mp.setPersistenceHosts(hosts)
 	mp.setPeers(peers)
 	if err = c.syncAddMetaPartition(nsName, mp); err != nil {
-		return
+		return errors.Trace(err)
 	}
 	ns.AddMetaPartition(mp)
 	c.putMetaNodeTasks(mp.generateCreateMetaPartitionTasks(nil, nsName))
@@ -435,7 +441,7 @@ func (c *Cluster) ChooseTargetMetaHosts(replicaNum int) (hosts []string, peers [
 	)
 	hosts = make([]string, 0)
 	if masterAddr, masterPeer, err = c.getAvailMetaNodeHosts("", hosts, 1); err != nil {
-		return
+		return nil,nil,errors.Trace(err)
 	}
 	peers = append(peers, masterPeer...)
 	hosts = append(hosts, masterAddr[0])
@@ -445,10 +451,10 @@ func (c *Cluster) ChooseTargetMetaHosts(replicaNum int) (hosts []string, peers [
 	}
 	metaNode, err := c.getMetaNode(masterAddr[0])
 	if err != nil {
-		return
+		return nil,nil,errors.Trace(err)
 	}
 	if slaveAddrs, slavePeers, err = c.getAvailMetaNodeHosts(metaNode.RackName, hosts, otherReplica); err != nil {
-		return
+		return nil,nil,errors.Trace(err)
 	}
 	hosts = append(hosts, slaveAddrs...)
 	peers = append(peers, slavePeers...)
@@ -489,7 +495,7 @@ func (c *Cluster) getAllMetaNodes() (metaNodes []NodeView) {
 
 func (c *Cluster) getAllNamespaces() (namespaces []string) {
 	namespaces = make([]string, 0)
-	for name, _ := range c.namespaces {
+	for name := range c.namespaces {
 		namespaces = append(namespaces, name)
 	}
 	return

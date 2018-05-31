@@ -6,6 +6,7 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/baudstorage/util/ump"
 )
 
 func newCreateVolRequest(volType string, volId uint64) (req *proto.CreateVolRequest) {
@@ -88,4 +89,10 @@ func contains(arr []string, element string) (ok bool) {
 		}
 	}
 	return
+}
+
+func Warn(clusterID, msg string) {
+	log.LogWarn(msg)
+	umpKey := fmt.Sprintf("%s_%s", clusterID, UmpModuleName)
+	ump.Alarm(umpKey, msg)
 }

@@ -23,10 +23,10 @@ type MetaNode struct {
 	sync.Mutex
 }
 
-func NewMetaNode(addr string) (node *MetaNode) {
+func NewMetaNode(addr, clusterID string) (node *MetaNode) {
 	return &MetaNode{
 		Addr:   addr,
-		Sender: NewAdminTaskSender(addr),
+		Sender: NewAdminTaskSender(addr, clusterID),
 	}
 }
 

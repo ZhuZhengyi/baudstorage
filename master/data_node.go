@@ -23,8 +23,8 @@ type DataNode struct {
 	RackName                  string `json:"Rack"`
 	Addr                      string
 
-	ReportTime   time.Time
-	isActive     bool
+	ReportTime time.Time
+	isActive   bool
 	sync.Mutex
 	ratio        float64
 	selectCount  uint64
@@ -34,12 +34,12 @@ type DataNode struct {
 	VolInfoCount uint32
 }
 
-func NewDataNode(addr string) (dataNode *DataNode) {
+func NewDataNode(addr, clusterID string) (dataNode *DataNode) {
 	dataNode = new(DataNode)
 	dataNode.carry = rand.Float64()
 	dataNode.Total = 1
 	dataNode.Addr = addr
-	dataNode.sender = NewAdminTaskSender(dataNode.Addr)
+	dataNode.sender = NewAdminTaskSender(dataNode.Addr, clusterID)
 	return
 }
 
