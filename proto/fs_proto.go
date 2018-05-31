@@ -48,6 +48,10 @@ type DeleteInodeRequest struct {
 	Inode       uint64 `json:"inode"`
 }
 
+type DeleteInodeResponse struct {
+	Extents []ExtentKey
+}
+
 type CreateDentryRequest struct {
 	Namespace   string `json:"namespace"`
 	PartitionID uint64 `json:"partitionID"`
