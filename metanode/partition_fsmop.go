@@ -247,6 +247,7 @@ func (mp *metaPartition) confRemoveNode(req *proto.
 	}
 	if req.RemovePeer.ID == mp.config.NodeId {
 		mp.applyID = index
+		mp.Stop()
 		return
 	}
 	mp.config.Peers = append(mp.config.Peers[:peerIndex], mp.config.Peers[peerIndex+1:]...)
