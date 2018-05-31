@@ -109,7 +109,6 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 	m.listen = int(cfg.GetFloat(cfgListen))
 	m.metaDir = cfg.GetString(cfgMetaDir)
 	m.raftDir = cfg.GetString(cfgRaftDir)
-	UMPKey = cfg.GetString(cfgUMPKey)
 	addrs := cfg.GetArray(cfgMasterAddrs)
 	for _, addr := range addrs {
 		masterAddrs = append(masterAddrs, addr.(string))
@@ -128,9 +127,6 @@ func (m *MetaNode) validConfig() (err error) {
 	}
 	if m.raftDir == "" {
 		m.raftDir = defaultRaftDir
-	}
-	if UMPKey == "" {
-		UMPKey = defaultUMPKey
 	}
 	if len(masterAddrs) == 0 {
 		err = errors.New("master Addrs is empty!")
@@ -270,7 +266,8 @@ func (m *MetaNode) startUMP() (err error) {
 		err = errors.Errorf("[startUMP]: %s", err.Error())
 		return
 	}
-	ump.InitUmp(req.Cluster + "_metaNode")
+	UMPKey = req.Cluster + "_metaNode"
+	ump.InitUmp(UMPKey)
 	return
 }
 

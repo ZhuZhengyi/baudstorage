@@ -56,7 +56,6 @@ func NewStreamWriter(wrapper *vol.VolGroupWrapper, inode uint64, appendExtentKey
 	stream.exitCh = make(chan bool, 2)
 	stream.execludeVols = make([]uint32, 0)
 	go stream.server()
-	go stream.autoFlushThread()
 
 	return
 }
@@ -113,6 +112,7 @@ func (stream *StreamWriter) init() (err error) {
 }
 
 func (stream *StreamWriter) server() {
+	ticker := time.Tick(time.Second * 2)
 	for {
 		select {
 		case request := <-stream.requestCh:
@@ -120,6 +120,14 @@ func (stream *StreamWriter) server() {
 			stream.replyCh <- request
 		case <-stream.exitCh:
 			return
+		case <-ticker:
+			if stream.getWriter() == nil {
+				continue
+			}
+			if stream.isFlushIng == IsFlushIng {
+				continue
+			}
+			stream.flushCurrExtentWriter()
 		}
 	}
 }
@@ -163,7 +171,6 @@ func (stream *StreamWriter) close() (err error) {
 		stream.Unlock()
 	}
 	if err == nil {
-		stream.exitCh <- true
 		stream.exitCh <- true
 	}
 
@@ -316,21 +323,4 @@ func (stream *StreamWriter) createExtent(vol *vol.VolGroup) (extentId uint64, er
 	return extentId, nil
 }
 
-func (stream *StreamWriter) autoFlushThread() {
-	ticker := time.Tick(time.Second * 2)
-	for {
-		select {
-		case <-ticker:
-			if stream.getWriter() == nil {
-				continue
-			}
-			if stream.isFlushIng == IsFlushIng {
-				continue
-			}
-			stream.flushCurrExtentWriter()
-		case <-stream.exitCh:
-			return
-		}
-	}
 
-}

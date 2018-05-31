@@ -79,6 +79,5 @@ const (
 	cfgListen      = "listen"
 	cfgMetaDir     = "metaDir"
 	cfgRaftDir     = "raftDir"
-	cfgUMPKey      = "umpKey"
 	cfgMasterAddrs = "masterAddrs"
 )

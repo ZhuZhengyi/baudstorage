@@ -30,15 +30,20 @@ func (mp *metaPartition) loadMeta() (err error) {
 	metaFile := path.Join(mp.config.RootDir, metaFile)
 	fp, err := os.OpenFile(metaFile, os.O_RDONLY, 0644)
 	if err != nil {
+		err = errors.Errorf("[loadMeta]: OpenFile %s", err.Error())
 		return
 	}
 	defer fp.Close()
 	data, err := ioutil.ReadAll(fp)
 	if err != nil || len(data) == 0 {
+		err = errors.Errorf("[loadMeta]: ReadFile %s, data: %s", err.Error(),
+			string(data))
 		return
 	}
 	mConf := &MetaPartitionConfig{}
 	if err = json.Unmarshal(data, mConf); err != nil {
+		err = errors.Errorf("[loadMeta]: Unmarshal MetaPartitionConfig %s",
+			err.Error())
 		return
 	}
 	// TODO: Valid PartitionConfig
@@ -61,34 +66,45 @@ func (mp *metaPartition) loadInode() (err error) {
 	}
 	fp, err := os.OpenFile(filename, os.O_RDONLY, 0644)
 	if err != nil {
+		err = errors.Errorf("[loadInode] OpenFile: %s", err.Error())
 		return
 	}
 	defer fp.Close()
 	reader := bufio.NewReader(fp)
+	var line []byte
 	for {
 		var (
-			line []byte
-			ino  = NewInode(0, 0)
+			buf      []byte
+			isPrefix bool
 		)
-		line, _, err = reader.ReadLine()
+		buf, isPrefix, err = reader.ReadLine()
 		if err != nil {
 			if err == io.EOF {
 				err = nil
 				return
 			}
+			err = errors.Errorf("[loadInode] ReadLine: %s", err.Error())
 			return
 		}
+		line = append(line, buf...)
+		if isPrefix {
+			continue
+		}
 
+		ino := NewInode(0, 0)
 		if err = json.Unmarshal(line, ino); err != nil {
+			err = errors.Errorf("[loadInode] Unmarshal: %s, data: %s",
+				err.Error(), string(line))
 			return
 		}
 		if mp.createInode(ino) != proto.OpOk {
-			err = errors.New("load inode info error")
+			err = errors.Errorf("[loadInode]->%s", err.Error())
 			return
 		}
 		if mp.config.Cursor < ino.Inode {
 			mp.config.Cursor = ino.Inode
 		}
+		line = nil
 	}
 	return
 }
@@ -104,31 +120,42 @@ func (mp *metaPartition) loadDentry() (err error) {
 	if err != nil {
 		if err == os.ErrNotExist {
 			err = nil
+			return
 		}
+		err = errors.Errorf("[loadDentry] OpenFile: %s", err.Error())
 		return
 	}
 	defer fp.Close()
 	reader := bufio.NewReader(fp)
+	var line []byte
 	for {
 		var (
-			line   []byte
-			dentry = &Dentry{}
+			buf      []byte
+			isPrefix bool
 		)
-		line, _, err = reader.ReadLine()
+		buf, isPrefix, err = reader.ReadLine()
 		if err != nil {
 			if err == io.EOF {
 				err = nil
 				return
 			}
+			err = errors.Errorf("[loadDentry] ReadLine: %s", err.Error())
 			return
 		}
+		line = append(line, buf...)
+		if isPrefix {
+			continue
+		}
+		dentry := &Dentry{}
 		if err = json.Unmarshal(line, dentry); err != nil {
+			err = errors.Errorf("[loadDentry] Unmarshal: %s", err.Error())
 			return
 		}
 		if mp.createDentry(dentry) != proto.OpOk {
-			err = errors.New("load dentry info error")
+			err = errors.Errorf("[loadDentry]->%s", err.Error())
 			return
 		}
+		line = nil
 	}
 	return
 }
@@ -143,14 +170,17 @@ func (mp *metaPartition) loadApplyID() (err error) {
 	if err != nil {
 		if err == os.ErrNotExist {
 			err = nil
+			return
 		}
+		err = errors.Errorf("[loadApplyID] OpenFile: %s", err.Error())
 		return
 	}
 	if len(data) == 0 {
-		err = errors.New("read applyid empty error")
+		err = errors.Errorf("[loadApplyID]: ApplyID is empty")
 		return
 	}
 	if _, err = fmt.Sscanf(string(data), "%d", &mp.applyID); err != nil {
+		err = errors.Errorf("[loadApplyID] ReadApplyID: %s", err.Error())
 		return
 	}
 	return
