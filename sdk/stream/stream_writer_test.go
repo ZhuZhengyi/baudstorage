@@ -167,6 +167,8 @@ func TestExtentClient_Write(t *testing.T) {
 		if !bytes.Equal(rdata, ndata) {
 			fmt.Printf("acatual read bytes[%v]\n", string(rdata))
 			fmt.Printf("expectr read bytes[%v]\n", writeStr)
+			fmt.Printf("stream filesize[%v] offset[%v] size[%v] skstream[%v]\n",
+							sk.Size(),writebytes,len(ndata),sk.ToString())
 			OccoursErr(fmt.Errorf("acatual read is differ to writestr"), t)
 		}
 		_, err = localWriteFp.Write(ndata)
