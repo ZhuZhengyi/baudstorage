@@ -21,7 +21,7 @@ const (
 
 	ContinueRecive         = true
 	NotRecive              = false
-	ExtentWriterRecoverCnt = 1
+	ExtentWriterRecoverCnt = 0
 
 	DefaultWriteBufferSize = 2 * util.MB
 )
@@ -53,8 +53,8 @@ type ExtentWriter struct {
 }
 
 func NewExtentWriter(inode uint64, vol *vol.VolGroup, wrapper *vol.VolGroupWrapper, extentId uint64) (writer *ExtentWriter, err error) {
-	if extentId<=0{
-		return nil,fmt.Errorf("inode[%v],vol[%v],unavalid extentId[%v]",inode,vol.VolID,extentId)
+	if extentId <= 0 {
+		return nil, fmt.Errorf("inode[%v],vol[%v],unavalid extentId[%v]", inode, vol.VolID, extentId)
 	}
 	writer = new(ExtentWriter)
 	writer.requestQueue = list.New()
@@ -161,7 +161,7 @@ func (writer *ExtentWriter) sendCurrPacket() (err error) {
 
 //if send failed,recover it
 func (writer *ExtentWriter) recover() (sucess bool) {
-	if writer.recoverCnt > ExtentWriterRecoverCnt {
+	if writer.recoverCnt >= ExtentWriterRecoverCnt {
 		return
 	}
 	var (
@@ -331,9 +331,9 @@ func (writer *ExtentWriter) recive() {
 			}
 			request := e.Value.(*Packet)
 			reply := NewReply(request.ReqID, request.VolID, request.FileID)
-			reply.Opcode=request.Opcode
-			reply.Offset=request.Offset
-			reply.Size=request.Size
+			reply.Opcode = request.Opcode
+			reply.Offset = request.Offset
+			reply.Size = request.Size
 			err := reply.ReadFromConn(writer.getConnect(), proto.ReadDeadlineTime)
 			if err != nil {
 				writer.getConnect().Close()
@@ -409,14 +409,31 @@ func (writer *ExtentWriter) getQueueListLen() (length int) {
 	return writer.requestQueue.Len()
 }
 
-func (writer *ExtentWriter) getNeedRetrySendPackets() (sendList *list.List) {
+func (writer *ExtentWriter) getNeedRetrySendPackets() (requests []*Packet) {
+	var (
+		backPkg *Packet
+	)
 	writer.requestQueueLock.Lock()
-	sendList = writer.requestQueue
-	lastPacket := writer.currentPacket
-	if lastPacket != nil && lastPacket.ReqID > sendList.Back().Value.(*Packet).ReqID {
-		sendList.PushBack(lastPacket)
+	defer writer.requestQueueLock.Unlock()
+	writer.Lock()
+	defer writer.Unlock()
+	requests = make([]*Packet, 0)
+	for e := writer.requestQueue.Front(); e != nil; e = e.Next() {
+		requests = append(requests, e.Value.(*Packet))
 	}
-	writer.requestQueueLock.Unlock()
+	currentPkg := writer.currentPacket
+	if currentPkg == nil {
+		return
+	}
+	if len(requests) == 0 {
+		requests = append(requests, currentPkg)
+		return
+	}
+	backPkg = requests[len(requests)-1]
+	if currentPkg.ReqID > backPkg.ReqID {
+		requests = append(requests, currentPkg)
+	}
+
 	return
 }
 
