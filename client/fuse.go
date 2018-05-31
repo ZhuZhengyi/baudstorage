@@ -11,8 +11,8 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"path"
-	_ "runtime/pprof"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
@@ -39,10 +39,6 @@ func main() {
 	flag.Parse()
 	cfg := config.LoadConfigFile(*configFile)
 
-	go func() {
-		log.Println(http.ListenAndServe(":10084", nil))
-	}()
-
 	if err := Mount(cfg); err != nil {
 		fmt.Println("Mount failed: ", err)
 	}
@@ -50,10 +46,11 @@ func main() {
 }
 
 func Mount(cfg *config.Config) error {
-	mnt := cfg.GetString("Mountpoint")
-	namespace := cfg.GetString("Namespace")
-	master := cfg.GetString("Master")
-	logpath := cfg.GetString("Logpath")
+	mnt := cfg.GetString("mountpoint")
+	namespace := cfg.GetString("namespace")
+	master := cfg.GetString("master")
+	logpath := cfg.GetString("logpath")
+	profport := cfg.GetString("profport")
 	c, err := fuse.Mount(
 		mnt,
 		fuse.AllowOther(),
@@ -77,6 +74,10 @@ func Mount(cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
+
+	go func() {
+		fmt.Println(http.ListenAndServe(":"+profport, nil))
+	}()
 
 	if err = fs.Serve(c, super); err != nil {
 		return err
