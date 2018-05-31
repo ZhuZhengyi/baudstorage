@@ -18,7 +18,6 @@ type ExtentReader struct {
 	vol              *vol.VolGroup
 	key              proto.ExtentKey
 	wrapper          *vol.VolGroupWrapper
-	lastReadOffset   int
 	sync.Mutex
 }
 
