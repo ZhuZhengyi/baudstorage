@@ -60,7 +60,18 @@ func (mp *metaPartition) DeleteInode(req *DeleteInoReq, p *Packet) (err error) {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
-	p.PackErrorWithBody(r.(uint8), nil)
+	msg := r.(*ResponseInode)
+	status := msg.Status
+	var reply []byte
+	if status == proto.OpOk {
+		resp := &proto.DeleteInodeResponse{}
+		resp.Extents = msg.Msg.Extents.Extents
+		reply, err = json.Marshal(resp)
+		if err != nil {
+			status = proto.OpErr
+		}
+	}
+	p.PackErrorWithBody(status, reply)
 	return
 }
 
@@ -82,8 +93,12 @@ func (mp *metaPartition) InodeGet(req *InodeGetReq, p *Packet) (err error) {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
-	ino, status := mp.getInode(ino)
-	var reply []byte
+	retMsg := mp.getInode(ino)
+	ino = retMsg.Msg
+	var (
+		reply  []byte
+		status = retMsg.Status
+	)
 	if status == proto.OpOk {
 		resp := &proto.InodeGetResponse{
 			Info: &proto.InodeInfo{},

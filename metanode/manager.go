@@ -15,6 +15,7 @@ import (
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/baudstorage/util/pool"
+	_ "net/http/pprof"
 )
 
 const partitionPrefix = "partition_"

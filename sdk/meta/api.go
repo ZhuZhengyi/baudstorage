@@ -103,27 +103,30 @@ func (mw *MetaWrapper) InodeGet_ll(inode uint64) (info *proto.InodeInfo, err err
 	return info, nil
 }
 
-func (mw *MetaWrapper) Delete_ll(parentID uint64, name string) error {
+func (mw *MetaWrapper) Delete_ll(parentID uint64, name string) ([]proto.ExtentKey, error) {
 	parentConn, err := mw.connect(parentID)
 	if err != nil {
-		return syscall.EAGAIN
+		return nil, syscall.EAGAIN
 	}
 	defer mw.putConn(parentConn, err)
 
 	status, inode, err := mw.ddelete(parentConn, parentID, name)
 	if err != nil || status != statusOK {
-		return syscall.ENOENT
+		return nil, syscall.ENOENT
 	}
 
 	//FIXME: dentry is deleted successfully but inode is not
 	inodeConn, err := mw.connect(inode)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	defer mw.putConn(inodeConn, err)
 
-	mw.idelete(inodeConn, inode)
-	return nil
+	status, extents, err := mw.idelete(inodeConn, inode)
+	if err != nil || status != statusOK {
+		return nil, nil
+	}
+	return extents, nil
 }
 
 func (mw *MetaWrapper) Rename_ll(srcParentID uint64, srcName string, dstParentID uint64, dstName string) error {
