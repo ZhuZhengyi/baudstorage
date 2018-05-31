@@ -91,6 +91,20 @@ func (mp *MetaPartition) RemoveReplica(mr *MetaReplica) {
 	return
 }
 
+func (mp *MetaPartition) RemoveReplicaByAddr(addr string) {
+	mp.Lock()
+	defer mp.Unlock()
+	var newReplicas []*MetaReplica
+	for _, m := range mp.Replicas {
+		if m.Addr == addr {
+			continue
+		}
+		newReplicas = append(newReplicas, m)
+	}
+	mp.Replicas = newReplicas
+	return
+}
+
 func (mp *MetaPartition) updateEnd() {
 	for _, mr := range mp.Replicas {
 		mr.end = mp.End

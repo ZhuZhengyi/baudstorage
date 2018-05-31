@@ -2,12 +2,12 @@ package master
 
 import (
 	"fmt"
+	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 	"runtime"
 	"sync"
 	"time"
-	"github.com/juju/errors"
 )
 
 func (c *Cluster) putDataNodeTasks(tasks []*proto.AdminTask) {
@@ -160,12 +160,12 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 	}
 	tasks = append(tasks, t)
 	c.putMetaNodeTasks(tasks)
-	Warn(c.Name,fmt.Sprintf("meta partition[%v] offline addr[%v] success",partitionID,nodeAddr))
+	Warn(c.Name, fmt.Sprintf("meta partition[%v] offline addr[%v] success", partitionID, nodeAddr))
 	return
 errDeal:
 	log.LogError(fmt.Sprintf("action[metaPartitionOffline],nsName: %v,partitionID: %v,err: %v",
 		nsName, partitionID, errors.ErrorStack(err)))
-	Warn(c.Name,fmt.Sprintf("meta partition[%v] offline addr[%v] failed,err:%v",partitionID,nodeAddr,err))
+	Warn(c.Name, fmt.Sprintf("meta partition[%v] offline addr[%v] failed,err:%v", partitionID, nodeAddr, err))
 	return
 }
 
@@ -288,13 +288,14 @@ func (c *Cluster) dealOfflineMetaPartition(nodeAddr string, resp *proto.MetaPart
 	if resp.Status == proto.TaskFail {
 		msg := fmt.Sprintf("action[dealOfflineMetaPartition],nodeAddr %v offline meta partition failed,err %v", nodeAddr, resp.Result)
 		log.LogError(msg)
-		Warn(c.Name,msg)
+		Warn(c.Name, msg)
 		return
 	}
 	mp, err := c.getMetaPartitionByID(resp.PartitionID)
 	if err != nil {
 		goto errDeal
 	}
+	mp.RemoveReplicaByAddr(nodeAddr)
 	if err = mp.removePersistenceHosts(nodeAddr, c, resp.NsName); err != nil {
 		goto errDeal
 	}
@@ -313,7 +314,7 @@ func (c *Cluster) dealUpdateMetaPartition(nodeAddr string, resp *proto.UpdateMet
 	if resp.Status == proto.TaskFail {
 		msg := fmt.Sprintf("action[dealUpdateMetaPartition],nodeAddr %v update meta range failed,err %v", nodeAddr, resp.Result)
 		log.LogError(msg)
-		Warn(c.Name,msg)
+		Warn(c.Name, msg)
 		return
 	}
 	mp, err := c.getMetaPartitionByID(resp.PartitionID)
@@ -333,7 +334,7 @@ func (c *Cluster) dealDeleteMetaPartition(nodeAddr string, resp *proto.DeleteMet
 	if resp.Status == proto.TaskFail {
 		msg := fmt.Sprintf("action[dealDeleteMetaPartition],nodeAddr %v delete meta range failed,err %v", nodeAddr, resp.Result)
 		log.LogError(msg)
-		Warn(c.Name,msg)
+		Warn(c.Name, msg)
 		return
 	}
 	var mr *MetaReplica
@@ -356,7 +357,7 @@ func (c *Cluster) dealCreateMetaPartition(nodeAddr string, resp *proto.CreateMet
 	if resp.Status == proto.TaskFail {
 		msg := fmt.Sprintf("action[dealCreateMetaPartition],nodeAddr %v create meta range failed,err %v", nodeAddr, resp.Result)
 		log.LogError(msg)
-		Warn(c.Name,msg)
+		Warn(c.Name, msg)
 		return
 	}
 
@@ -393,10 +394,10 @@ func (c *Cluster) dealMetaNodeHeartbeat(nodeAddr string, resp *proto.MetaNodeHea
 		logMsg   string
 	)
 
-	if resp.Status  == proto.TaskFail {
+	if resp.Status == proto.TaskFail {
 		msg := fmt.Sprintf("action[dealMetaNodeHeartbeat],nodeAddr %v heartbeat failed,err %v", nodeAddr, resp.Result)
 		log.LogError(msg)
-		Warn(c.Name,msg)
+		Warn(c.Name, msg)
 		return
 	}
 
@@ -533,7 +534,7 @@ func (c *Cluster) dealDeleteVolResponse(nodeAddr string, resp *proto.DeleteVolRe
 		vg.volOffLineInMem(nodeAddr)
 		vg.Unlock()
 	} else {
-		Warn(c.Name,fmt.Sprintf("delete vol[%v] failed",nodeAddr))
+		Warn(c.Name, fmt.Sprintf("delete vol[%v] failed", nodeAddr))
 	}
 
 	return
