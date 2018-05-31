@@ -217,6 +217,7 @@ func (s *DataNode) sendToNext(pkg *Packet, msgH *MessageHandler) error {
 		err = pkg.WriteToConn(pkg.nextConn)
 	}
 	pkg.Nodes++
+	s.CleanConn(pkg.nextConn, err != nil)
 	if err != nil {
 		msg := fmt.Sprintf("pkg inconnect[%v] to[%v] err[%v]", msgH.inConn.RemoteAddr().String(), pkg.nextAddr, err.Error())
 		err = errors.Annotatef(fmt.Errorf(msg), "Request[%v] sendToNext Error", pkg.GetUniqLogId())
@@ -293,11 +294,11 @@ func (s *DataNode) GetNextConn(nextAddr string) (conn net.Conn, err error) {
 	return connPool.Get(nextAddr)
 }
 
-func (s *DataNode) CleanConn(conn net.Conn, isForceClost bool) {
+func (s *DataNode) CleanConn(conn net.Conn, isForceClose bool) {
 	if conn == nil {
 		return
 	}
-	if isForceClost {
+	if isForceClose {
 		conn.Close()
 		return
 	}
