@@ -91,6 +91,7 @@ func (d *Dir) Remove(ctx context.Context, req *fuse.RemoveRequest) error {
 	}
 
 	if extents != nil {
+		log.LogDebugf("Remove extents: %v", extents)
 		d.super.ec.Delete(extents)
 	}
 	return nil
@@ -104,7 +105,7 @@ func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	ino, mode, err := d.super.mw.Lookup_ll(d.inode.ino, req.Name)
 	log.LogDebugf("Dir Lookup: parent(%v) name(%v) child(%v)", d.inode.ino, req.Name, ino)
 	if err != nil {
-		log.LogErrorf("Dir Lookup: err(%v)", err.Error())
+		log.LogErrorf("Dir Lookup: parent(%v) name(%v) err(%v)", d.inode.ino, req.Name, err.Error())
 		return nil, ParseError(err)
 	}
 

@@ -128,7 +128,7 @@ func NewPacket() *Packet {
 	return p
 }
 
-func (p *Packet) GetOpMesg(opcode uint8) (m string) {
+func (p *Packet) GetOpMsg(opcode uint8) (m string) {
 	switch opcode {
 	case OpCreateFile:
 		m = "CreateFile"
@@ -394,7 +394,7 @@ func (p *Packet) PackErrorWithBody(errCode uint8, reply []byte) {
 
 func (p *Packet) GetUniqLogId() (m string) {
 	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v_%v", p.ReqID, p.VolID, p.FileID,
-		p.Offset, p.Size, p.GetOpMesg(p.Opcode), p.GetOpMesg(p.ResultCode))
+		p.Offset, p.Size, p.GetOpMsg(p.Opcode), p.GetOpMsg(p.ResultCode))
 
 	return
 }

@@ -20,11 +20,17 @@ type ClusterView struct {
 	MaxMetaNodeID  uint64
 	MaxPartitionID uint64
 	Namespaces     []string
-	MetaNodes      []NodeView
-	DataNodes      []NodeView
+	MetaNodes      []MetaNodeView
+	DataNodes      []DataNodeView
 }
 
-type NodeView struct {
+type DataNodeView struct {
+	Addr   string
+	Status bool
+}
+
+type MetaNodeView struct {
+	ID     uint64
 	Addr   string
 	Status bool
 }
@@ -41,8 +47,8 @@ func (m *Master) getCluster(w http.ResponseWriter, r *http.Request) {
 		MaxMetaNodeID:  m.cluster.idAlloc.metaNodeID,
 		MaxPartitionID: m.cluster.idAlloc.partitionID,
 		Namespaces:     make([]string, 0),
-		MetaNodes:      make([]NodeView, 0),
-		DataNodes:      make([]NodeView, 0),
+		MetaNodes:      make([]MetaNodeView, 0),
+		DataNodes:      make([]DataNodeView, 0),
 	}
 
 	cv.Namespaces = m.cluster.getAllNamespaces()

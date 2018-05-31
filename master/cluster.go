@@ -475,21 +475,21 @@ func (c *Cluster) DataNodeCount() (len int) {
 	return
 }
 
-func (c *Cluster) getAllDataNodes() (dataNodes []NodeView) {
-	dataNodes = make([]NodeView, 0)
+func (c *Cluster) getAllDataNodes() (dataNodes []DataNodeView) {
+	dataNodes = make([]DataNodeView, 0)
 	c.dataNodes.Range(func(addr, node interface{}) bool {
 		dataNode := node.(*DataNode)
-		dataNodes = append(dataNodes, NodeView{Addr: dataNode.Addr, Status: dataNode.isActive})
+		dataNodes = append(dataNodes, DataNodeView{Addr: dataNode.Addr, Status: dataNode.isActive})
 		return true
 	})
 	return
 }
 
-func (c *Cluster) getAllMetaNodes() (metaNodes []NodeView) {
-	metaNodes = make([]NodeView, 0)
+func (c *Cluster) getAllMetaNodes() (metaNodes []MetaNodeView) {
+	metaNodes = make([]MetaNodeView, 0)
 	c.metaNodes.Range(func(addr, node interface{}) bool {
 		metaNode := node.(*MetaNode)
-		metaNodes = append(metaNodes, NodeView{Addr: metaNode.Addr, Status: metaNode.IsActive})
+		metaNodes = append(metaNodes, MetaNodeView{ID: metaNode.ID, Addr: metaNode.Addr, Status: metaNode.IsActive})
 		return true
 	})
 	return
