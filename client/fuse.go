@@ -11,7 +11,6 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"os"
 	"path"
 	_ "runtime/pprof"
 
@@ -28,10 +27,8 @@ const (
 )
 
 const (
-	LoggerDir      = "client"
-	LoggerPrefix   = "client"
-	LoggerFileFlag = os.O_WRONLY | os.O_CREATE | os.O_APPEND
-	LoggerFlag     = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile
+	LoggerDir    = "client"
+	LoggerPrefix = "client"
 )
 
 var (
@@ -43,7 +40,7 @@ func main() {
 	cfg := config.LoadConfigFile(*configFile)
 
 	go func() {
-		log.Println(http.ListenAndServe(":5800", nil))
+		log.Println(http.ListenAndServe(":10084", nil))
 	}()
 
 	if err := Mount(cfg); err != nil {
