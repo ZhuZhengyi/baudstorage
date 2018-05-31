@@ -31,6 +31,7 @@ type Inode struct {
 }
 
 func (s *Super) InodeGet(ino uint64, inode *Inode) error {
+	log.LogDebugf("InodeGet: ino(%v)", d.inode.ino)
 	info, err := s.mw.InodeGet_ll(ino)
 	if err != nil {
 		log.LogErrorf("InodeGet: ino(%v) err(%v)", ino, err.Error())
