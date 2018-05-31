@@ -30,15 +30,20 @@ func (mp *metaPartition) loadMeta() (err error) {
 	metaFile := path.Join(mp.config.RootDir, metaFile)
 	fp, err := os.OpenFile(metaFile, os.O_RDONLY, 0644)
 	if err != nil {
+		err = errors.Errorf("[loadMeta]: OpenFile %s", err.Error())
 		return
 	}
 	defer fp.Close()
 	data, err := ioutil.ReadAll(fp)
 	if err != nil || len(data) == 0 {
+		err = errors.Errorf("[loadMeta]: ReadFile %s, data: %s", err.Error(),
+			string(data))
 		return
 	}
 	mConf := &MetaPartitionConfig{}
 	if err = json.Unmarshal(data, mConf); err != nil {
+		err = errors.Errorf("[loadMeta]: Unmarshal MetaPartitionConfig %s",
+			err.Error())
 		return
 	}
 	// TODO: Valid PartitionConfig
@@ -61,6 +66,7 @@ func (mp *metaPartition) loadInode() (err error) {
 	}
 	fp, err := os.OpenFile(filename, os.O_RDONLY, 0644)
 	if err != nil {
+		err = errors.Errorf("[loadInode] OpenFile: %s", err.Error())
 		return
 	}
 	defer fp.Close()
@@ -76,14 +82,16 @@ func (mp *metaPartition) loadInode() (err error) {
 				err = nil
 				return
 			}
+			err = errors.Errorf("[loadInode] ReadLine: %s", err.Error())
 			return
 		}
 
 		if err = json.Unmarshal(line, ino); err != nil {
+			err = errors.Errorf("[loadInode] Unmarshal: %s", err.Error())
 			return
 		}
 		if mp.createInode(ino) != proto.OpOk {
-			err = errors.New("load inode info error")
+			err = errors.Errorf("[loadInode]->%s", err.Error())
 			return
 		}
 		if mp.config.Cursor < ino.Inode {
@@ -104,7 +112,9 @@ func (mp *metaPartition) loadDentry() (err error) {
 	if err != nil {
 		if err == os.ErrNotExist {
 			err = nil
+			return
 		}
+		err = errors.Errorf("[loadDentry] OpenFile: %s", err.Error())
 		return
 	}
 	defer fp.Close()
@@ -120,13 +130,15 @@ func (mp *metaPartition) loadDentry() (err error) {
 				err = nil
 				return
 			}
+			err = errors.Errorf("[loadDentry] ReadLine: %s", err.Error())
 			return
 		}
 		if err = json.Unmarshal(line, dentry); err != nil {
+			err = errors.Errorf("[loadDentry] Unmarshal: %s", err.Error())
 			return
 		}
 		if mp.createDentry(dentry) != proto.OpOk {
-			err = errors.New("load dentry info error")
+			err = errors.Errorf("[loadDentry]->%s", err.Error())
 			return
 		}
 	}
@@ -143,14 +155,17 @@ func (mp *metaPartition) loadApplyID() (err error) {
 	if err != nil {
 		if err == os.ErrNotExist {
 			err = nil
+			return
 		}
+		err = errors.Errorf("[loadApplyID] OpenFile: %s", err.Error())
 		return
 	}
 	if len(data) == 0 {
-		err = errors.New("read applyid empty error")
+		err = errors.Errorf("[loadApplyID]: ApplyID is empty")
 		return
 	}
 	if _, err = fmt.Sscanf(string(data), "%d", &mp.applyID); err != nil {
+		err = errors.Errorf("[loadApplyID] ReadApplyID: %s", err.Error())
 		return
 	}
 	return
