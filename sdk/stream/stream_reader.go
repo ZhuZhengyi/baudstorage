@@ -111,8 +111,6 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 
 func (stream *StreamReader) close() {
 	stream.exitCh <- true
-	stream.exitCh <- true
-
 }
 
 func (stream *StreamReader) updateLocalReader(newStreamKey *proto.StreamKey) (err error) {
