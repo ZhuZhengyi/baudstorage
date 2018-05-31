@@ -594,9 +594,10 @@ func (m *metaManager) opOfflineMetaPartition(conn net.Conn, p *Packet) (err erro
 		if req.RemovePeer.ID == conf.NodeId {
 			mp.Stop()
 			os.RemoveAll(conf.RootDir)
+			log.LogDebugf("[opOfflineMetaPartition]: delete self!")
 		}
 	}
-	resp.Status = proto.OpOk
+	resp.Status = proto.TaskSuccess
 end:
 	adminTask.Request = nil
 	adminTask.Response = resp
