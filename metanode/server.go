@@ -51,7 +51,7 @@ func (m *MetaNode) stopServer() {
 	}
 }
 
-// ServeTcpConn read data from specified tco connection until connection
+// ServeConn read data from specified tco connection until connection
 // closed by remote or tcp service have been shutdown.
 func (m *MetaNode) servConn(conn net.Conn, stopC chan uint8) {
 	defer conn.Close()

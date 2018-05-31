@@ -9,6 +9,28 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 )
 
+type ResponseDentry struct {
+	Status uint8
+	Msg    *Dentry
+}
+
+func NewResponseDentry() *ResponseDentry {
+	return &ResponseDentry{
+		Msg: &Dentry{},
+	}
+}
+
+type ResponseInode struct {
+	Status uint8
+	Msg    *Inode
+}
+
+func NewResponseInode() *ResponseInode {
+	return &ResponseInode{
+		Msg: NewInode(0, 0),
+	}
+}
+
 // GetDentry query dentry from DentryTree with specified dentry info;
 func (mp *metaPartition) getDentry(dentry *Dentry) (*Dentry, uint8) {
 	status := proto.OpOk
@@ -22,15 +44,16 @@ func (mp *metaPartition) getDentry(dentry *Dentry) (*Dentry, uint8) {
 }
 
 // GetInode query inode from InodeTree with specified inode info;
-func (mp *metaPartition) getInode(ino *Inode) (*Inode, uint8) {
-	status := proto.OpOk
+func (mp *metaPartition) getInode(ino *Inode) (resp *ResponseInode) {
+	resp = NewResponseInode()
+	resp.Status = proto.OpOk
 	item := mp.inodeTree.Get(ino)
 	if item == nil {
-		status = proto.OpNotExistErr
-		return nil, status
+		resp.Status = proto.OpNotExistErr
+		return
 	}
-	ino = item.(*Inode)
-	return ino, status
+	resp.Msg = item.(*Inode)
+	return
 }
 
 func (mp *metaPartition) getInodeTree() *btree.BTree {
@@ -83,18 +106,19 @@ func (mp *metaPartition) createInode(ino *Inode) (status uint8) {
 }
 
 // DeleteInode delete specified inode item from inode tree.
-func (mp *metaPartition) deleteInode(ino *Inode) (*Inode, uint8) {
+func (mp *metaPartition) deleteInode(ino *Inode) (resp *ResponseInode) {
 	// TODO: Implement it.
-	status := proto.OpOk
+	resp = NewResponseInode()
+	resp.Status = proto.OpOk
 	mp.inodeMu.Lock()
 	item := mp.inodeTree.Delete(ino)
 	mp.inodeMu.Unlock()
 	if item == nil {
-		status = proto.OpNotExistErr
-		return nil, status
+		resp.Status = proto.OpNotExistErr
+		return
 	}
-	ino = item.(*Inode)
-	return ino, status
+	resp.Msg = item.(*Inode)
+	return
 }
 
 func (mp *metaPartition) openFile(ino *Inode) (status uint8) {
