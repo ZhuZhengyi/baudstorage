@@ -6,8 +6,9 @@ import (
 
 // Constants for network port definition.
 const (
-	HeartbeatPort = 5901
-	ReplicatePort = 5902
+	DefaultHeartbeatPort = 5901
+	DefaultReplicatePort = 5902
+	DefaultRetainLogs    = 20000
 )
 
 // Config defined necessary configuration properties for raft store.
@@ -17,6 +18,7 @@ type Config struct {
 	IpAddr        string // IP address of node
 	HeartbeatPort int
 	ReplicatePort int
+	RetainLogs    uint64 // // RetainLogs controls how many logs we leave after truncate. The default value is 20000.
 }
 
 type PeerAddress struct {

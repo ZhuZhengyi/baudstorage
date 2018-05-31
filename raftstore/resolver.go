@@ -78,10 +78,10 @@ func (r *nodeResolver) AddNode(nodeId uint64, addr string) {
 
 func (r *nodeResolver) AddNodeWithPort(nodeId uint64, addr string, heartbeat int, replicate int) {
 	if heartbeat == 0 {
-		heartbeat = HeartbeatPort
+		heartbeat = DefaultHeartbeatPort
 	}
 	if replicate == 0 {
-		replicate = ReplicatePort
+		replicate = DefaultReplicatePort
 	}
 	if len(strings.TrimSpace(addr)) != 0 {
 		r.nodeMap.Store(nodeId, &nodeAddress{
