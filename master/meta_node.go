@@ -96,7 +96,7 @@ func (metaNode *MetaNode) generateHeartbeatTask(masterAddr string) (task *proto.
 func (metaNode *MetaNode) checkHeartbeat() {
 	metaNode.Lock()
 	defer metaNode.Unlock()
-	if time.Since(metaNode.ReportTime) > DefaultNodeTimeOutSec {
+	if time.Since(metaNode.ReportTime) > time.Second*time.Duration(DefaultNodeTimeOutSec) {
 		metaNode.IsActive = false
 	}
 }

@@ -46,7 +46,7 @@ func NewDataNode(addr, clusterID string) (dataNode *DataNode) {
 func (dataNode *DataNode) checkHeartBeat() {
 	dataNode.Lock()
 	defer dataNode.Unlock()
-	if time.Since(dataNode.ReportTime) > DefaultNodeTimeOutSec {
+	if time.Since(dataNode.ReportTime) > time.Second*time.Duration(DefaultNodeTimeOutSec) {
 		dataNode.isActive = false
 	}
 

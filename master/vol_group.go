@@ -394,6 +394,7 @@ func (vg *VolGroup) getLiveVols(volTimeOutSec int64) (vols []*Vol) {
 	return
 }
 
+//live vol that host is in the persistenceHosts, and vol location is alive
 func (vg *VolGroup) getLiveVolsByPersistenceHosts(volTimeOutSec int64) (vols []*Vol) {
 	vols = make([]*Vol, 0)
 	for _, host := range vg.PersistenceHosts {
