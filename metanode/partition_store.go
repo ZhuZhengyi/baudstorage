@@ -71,12 +71,13 @@ func (mp *metaPartition) loadInode() (err error) {
 	}
 	defer fp.Close()
 	reader := bufio.NewReader(fp)
+	var line []byte
 	for {
 		var (
-			line []byte
-			ino  = NewInode(0, 0)
+			buf      []byte
+			isPrefix bool
 		)
-		line, _, err = reader.ReadLine()
+		buf, isPrefix, err = reader.ReadLine()
 		if err != nil {
 			if err == io.EOF {
 				err = nil
@@ -85,9 +86,15 @@ func (mp *metaPartition) loadInode() (err error) {
 			err = errors.Errorf("[loadInode] ReadLine: %s", err.Error())
 			return
 		}
+		if isPrefix {
+			line = append(line, buf...)
+			continue
+		}
 
+		ino := NewInode(0, 0)
 		if err = json.Unmarshal(line, ino); err != nil {
-			err = errors.Errorf("[loadInode] Unmarshal: %s", err.Error())
+			err = errors.Errorf("[loadInode] Unmarshal: %s, data: %s",
+				err.Error(), string(line))
 			return
 		}
 		if mp.createInode(ino) != proto.OpOk {
@@ -97,6 +104,7 @@ func (mp *metaPartition) loadInode() (err error) {
 		if mp.config.Cursor < ino.Inode {
 			mp.config.Cursor = ino.Inode
 		}
+		line = nil
 	}
 	return
 }
@@ -119,12 +127,13 @@ func (mp *metaPartition) loadDentry() (err error) {
 	}
 	defer fp.Close()
 	reader := bufio.NewReader(fp)
+	var line []byte
 	for {
 		var (
-			line   []byte
-			dentry = &Dentry{}
+			buf      []byte
+			isPrefix bool
 		)
-		line, _, err = reader.ReadLine()
+		buf, isPrefix, err = reader.ReadLine()
 		if err != nil {
 			if err == io.EOF {
 				err = nil
@@ -133,6 +142,11 @@ func (mp *metaPartition) loadDentry() (err error) {
 			err = errors.Errorf("[loadDentry] ReadLine: %s", err.Error())
 			return
 		}
+		if isPrefix {
+			line = append(line, buf...)
+			continue
+		}
+		dentry := &Dentry{}
 		if err = json.Unmarshal(line, dentry); err != nil {
 			err = errors.Errorf("[loadDentry] Unmarshal: %s", err.Error())
 			return
@@ -141,6 +155,7 @@ func (mp *metaPartition) loadDentry() (err error) {
 			err = errors.Errorf("[loadDentry]->%s", err.Error())
 			return
 		}
+		line = nil
 	}
 	return
 }
