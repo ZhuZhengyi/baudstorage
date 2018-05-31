@@ -2,6 +2,7 @@ package metanode
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/btree"
@@ -215,7 +216,8 @@ func (mp *metaPartition) confAddNode(req *proto.
 		mp.config.Peers = mp.config.Peers[:len(mp.config.Peers)-1]
 		return
 	}
-	mp.raftPartition.AddNode(req.AddPeer.ID, req.AddPeer.Addr)
+	addr := strings.Split(req.AddPeer.Addr, ":")[0]
+	mp.raftPartition.AddNode(req.AddPeer.ID, addr)
 	mp.applyID = index
 	return
 }
