@@ -3,7 +3,6 @@ package master
 import (
 	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util/log"
 	"sort"
 	"time"
 )
@@ -52,7 +51,7 @@ func (fileCrcArr FileCrcSorterByCount) log() (msg string) {
 	return
 }
 
-func (fc *FileInCore) generateFileCrcTask(volID uint64, liveVols []*Vol, volType string) (tasks []*proto.AdminTask) {
+func (fc *FileInCore) generateFileCrcTask(volID uint64, liveVols []*Vol, volType, clusterID string) (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	if fc.isCheckCrc() == false {
 		return
@@ -70,7 +69,7 @@ func (fc *FileInCore) generateFileCrcTask(volID uint64, liveVols []*Vol, volType
 		msg := fmt.Sprintf("checkFileCrcTaskErr volID:%v  File:%v  Crc diffrent between all Node  "+
 			" it can not repair it ", volID, fc.Name)
 		msg += (FileCrcSorterByCount)(fileCrcArr).log()
-		log.LogError(msg)
+		Warn(clusterID, msg)
 		return
 	}
 
@@ -81,7 +80,7 @@ func (fc *FileInCore) generateFileCrcTask(volID uint64, liveVols []*Vol, volType
 			msg := fmt.Sprintf("checkFileCrcTaskErr volID:%v  File:%v  badCrc On :%v  ",
 				volID, fc.Name, badNode.getLocationAddr())
 			msg += (FileCrcSorterByCount)(fileCrcArr).log()
-			log.LogError(msg)
+			Warn(clusterID, msg)
 		}
 	}
 

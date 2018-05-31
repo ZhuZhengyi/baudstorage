@@ -197,7 +197,7 @@ func (c *Cluster) processLoadVol(v *VolGroup, isRecover bool) {
 		return
 	}
 	v.getFileCount()
-	checkFileTasks := v.checkFile(isRecover)
+	checkFileTasks := v.checkFile(isRecover, c.Name)
 	v.setVolToNormal()
 	c.putDataNodeTasks(checkFileTasks)
 }
