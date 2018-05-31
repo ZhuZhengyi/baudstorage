@@ -85,7 +85,7 @@ func (s *DataNode) createFile(pkg *Packet) {
 	case proto.TinyStoreMode:
 		err = errors.Annotatef(ErrStoreTypeMismatch, " CreateFile only support ExtentMode Vol")
 	case proto.ExtentStoreMode:
-		err = pkg.vol.store.(*storage.ExtentStore).MarkDelete(pkg.FileID, pkg.Offset, int64(pkg.Size))
+		err = pkg.vol.store.(*storage.ExtentStore).Create(pkg.FileID)
 	}
 	if err != nil {
 		err = errors.Annotatef(err, "Request[%v] CreateFile Error", pkg.GetUniqLogId())
@@ -253,7 +253,7 @@ func (s *DataNode) append(pkg *Packet) {
 		err = pkg.vol.store.(*storage.TinyStore).Write(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
 		s.AddDiskErrs(pkg.VolID, err, WriteFlag)
 	case proto.ExtentStoreMode:
-		err = pkg.vol.store.(*storage.TinyStore).Write(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
+		err = pkg.vol.store.(*storage.ExtentStore).Write(pkg.FileID, pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
 		s.AddDiskErrs(pkg.VolID, err, WriteFlag)
 	}
 	if err != nil {
@@ -304,33 +304,42 @@ func (s *DataNode) applyDelObjects(pkg *Packet) {
 	return
 }
 
-func (s *DataNode) streamRead(pkg *Packet, c net.Conn) {
+func (s *DataNode) streamRead(request *Packet, connect net.Conn) {
 	var (
 		err error
 	)
-	needReplySize := pkg.Size
-	offset := pkg.Offset
+	needReplySize := request.Size
+	offset := request.Offset
+	store := request.vol.store.(*storage.ExtentStore)
 	for {
 		if needReplySize <= 0 {
 			break
 		}
 		err = nil
 		currReadSize := uint32(util.Min(int(needReplySize), storage.BlockSize))
-		pkg.Data = make([]byte, currReadSize)
-		pkg.Crc, err = pkg.vol.store.(*storage.ExtentStore).Read(pkg.FileID, offset, int64(currReadSize), pkg.Data)
+		request.Data = make([]byte, currReadSize)
+		request.Crc, err = store.Read(request.FileID, offset, int64(currReadSize), request.Data)
 		if err != nil {
-			err = errors.Annotatef(err, "Request[%v] streamRead Error", pkg.GetUniqLogId())
-			pkg.PackErrorBody(ActionStreamRead, err.Error())
-			s.AddDiskErrs(pkg.VolID, err, ReadFlag)
+			request.PackErrorBody(ActionStreamRead, err.Error())
+			if err=request.WriteToConn(connect);err!=nil {
+				err = fmt.Errorf(request.ActionMesg(ActionWriteToCli,connect.RemoteAddr().String(),
+					request.StartT, err))
+				log.LogErrorf(err.Error())
+			}
 			return
 		}
-		pkg.Size = currReadSize
-		pkg.ResultCode = proto.OpOk
-		if err = pkg.WriteToConn(c); err != nil {
+		request.Size = currReadSize
+		request.ResultCode = proto.OpOk
+		if err = request.WriteToConn(connect); err != nil {
+			err = fmt.Errorf(request.ActionMesg(ActionWriteToCli,connect.RemoteAddr().String(),
+				request.StartT, err))
+			log.LogErrorf(err.Error())
 			return
 		}
 		needReplySize -= currReadSize
 		offset += int64(currReadSize)
+		log.LogDebug(request.ActionMesg(ActionWriteToCli,connect.RemoteAddr().String(),
+			request.StartT, err))
 	}
 	return
 }

@@ -88,7 +88,7 @@ func (msgH *MessageHandler) ClearReqs(s *DataNode) {
 	for e := msgH.sentList.Front(); e != nil; e = e.Next() {
 		if e.Value.(*Packet).nextAddr != "" && !e.Value.(*Packet).IsTailNode() {
 			s.headNodePutChunk(e.Value.(*Packet))
-			s.CleanConn(e.Value.(*Packet).nextConn, ForceClostConnect)
+			s.CleanConn(e.Value.(*Packet).nextConn, ForceCloseConnect)
 		}
 	}
 	replys := len(msgH.replyCh)
@@ -105,30 +105,20 @@ func (msgH *MessageHandler) ClearReplys() {
 	}
 }
 
-func (msgH *MessageHandler) DelListElement(replyID int64, volId uint32, e *list.Element, s *DataNode) (exit bool) {
+func (msgH *MessageHandler) DelListElement(reply *Packet, e *list.Element, s *DataNode, isForClost bool) {
 	msgH.listMux.Lock()
 	defer msgH.listMux.Unlock()
-
-	if !e.Value.(*Packet).isHeadNode() {
-		msgH.sentList.Remove(e)
-		if !e.Value.(*Packet).IsTailNode() {
-			s.CleanConn(e.Value.(*Packet).nextConn, NOClostConnect)
-		}
-		pkg := e.Value.(*Packet)
-		msgH.replyCh <- pkg
-		return
-	}
-
 	for e := msgH.sentList.Front(); e != nil; e = e.Next() {
 		request := e.Value.(*Packet)
-		if replyID == request.ReqID && volId == request.VolID {
+		if reply.ReqID == request.ReqID && reply.VolID == request.VolID &&
+			reply.FileID == request.FileID && reply.Offset == request.Offset {
 			msgH.sentList.Remove(e)
-			s.CleanConn(request.nextConn, NOClostConnect)
+			s.CleanConn(request.nextConn, isForClost)
 			pkg := e.Value.(*Packet)
 			msgH.replyCh <- pkg
 			break
 		} else {
-			break
+			s.CleanConn(request.nextConn, ForceCloseConnect)
 		}
 	}
 

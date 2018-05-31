@@ -161,7 +161,7 @@ func (c *Cluster) syncAddMetaNode(metaNode *MetaNode) (err error) {
 func (c *Cluster) syncAddDataNode(dataNode *DataNode) (err error) {
 	metadata := new(Metadata)
 	metadata.Op = OpSyncAddDataNode
-	metadata.K = DataNodePrefix + dataNode.HttpAddr
+	metadata.K = DataNodePrefix + dataNode.Addr
 	return c.submit(metadata)
 }
 
@@ -210,7 +210,7 @@ func (c *Cluster) applyAddDataNode(cmd *Metadata) {
 
 	if keys[1] == DataNodeAcronym {
 		dataNode := NewDataNode(keys[2])
-		c.dataNodes.Store(dataNode.HttpAddr, dataNode)
+		c.dataNodes.Store(dataNode.Addr, dataNode)
 	}
 }
 
@@ -300,7 +300,7 @@ func (c *Cluster) loadDataNodes() (err error) {
 		encodedKey := it.Key()
 		keys := strings.Split(string(encodedKey.Data()), KeySeparator)
 		dataNode := NewDataNode(keys[2])
-		c.dataNodes.Store(dataNode.HttpAddr, dataNode)
+		c.dataNodes.Store(dataNode.Addr, dataNode)
 		encodedKey.Free()
 	}
 	return

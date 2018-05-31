@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk"
+	"github.com/tiglabs/baudstorage/sdk/vol"
 	"github.com/tiglabs/baudstorage/util"
 )
 
@@ -14,7 +14,7 @@ type Packet struct {
 	fillBytes uint32
 }
 
-func NewWritePacket(vol *sdk.VolGroup, extentId, seqNo uint64, offset int) (p *Packet) {
+func NewWritePacket(vol *vol.VolGroup, extentId, seqNo uint64, offset int) (p *Packet) {
 	p = new(Packet)
 	p.VolID = vol.VolID
 	p.Magic = proto.ProtoMagic
@@ -24,7 +24,8 @@ func NewWritePacket(vol *sdk.VolGroup, extentId, seqNo uint64, offset int) (p *P
 	p.Offset = int64(offset)
 	p.Arg = ([]byte)(vol.GetAllAddrs())
 	p.Arglen = uint32(len(p.Arg))
-	p.ReqID = int64(seqNo)
+	p.Nodes = uint8(len(vol.Hosts) - 1)
+	p.ReqID = proto.GetReqID()
 	p.Opcode = proto.OpWrite
 
 	return
@@ -40,29 +41,35 @@ func NewReadPacket(key proto.ExtentKey, offset, size int) (p *Packet) {
 	p.Opcode = proto.OpStreamRead
 	p.StoreMode = proto.ExtentStoreMode
 	p.ReqID = proto.GetReqID()
+	p.Nodes = 0
 
 	return
 }
 
-func NewCreateExtentPacket(vol *sdk.VolGroup) (p *Packet) {
+func NewCreateExtentPacket(vol *vol.VolGroup) (p *Packet) {
 	p = new(Packet)
-	p.Magic = proto.ProtoMagic
-	p.Opcode = proto.OpCreateFile
 	p.VolID = vol.VolID
+	p.Magic = proto.ProtoMagic
+	p.Data = make([]byte, 0)
 	p.StoreMode = proto.ExtentStoreMode
-	p.ReqID = proto.GetReqID()
 	p.Arg = ([]byte)(vol.GetAllAddrs())
 	p.Arglen = uint32(len(p.Arg))
+	p.Nodes = uint8(len(vol.Hosts) - 1)
+	p.ReqID = proto.GetReqID()
+	p.Opcode = proto.OpCreateFile
+
 	return p
 }
 
-func NewDeleteExtentPacket(vol *sdk.VolGroup, extentId uint64) (p *Packet) {
+func NewDeleteExtentPacket(vol *vol.VolGroup, extentId uint64) (p *Packet) {
 	p = new(Packet)
 	p.Magic = proto.ProtoMagic
 	p.Opcode = proto.OpMarkDelete
 	p.StoreMode = proto.ExtentStoreMode
 	p.VolID = vol.VolID
 	p.FileID = extentId
+	p.ReqID = proto.GetReqID()
+	p.Nodes = uint8(len(vol.Hosts) - 1)
 	p.Arg = ([]byte)(vol.GetAllAddrs())
 	p.Arglen = uint32(len(p.Arg))
 	return p

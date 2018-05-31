@@ -21,7 +21,7 @@ import (
 const (
 	CLIENTREADSIZE  = 4 * util.KB
 	CLIENTWRITESIZE = 4 * util.KB
-	CLIENTWRITENUM  = 1000
+	CLIENTWRITENUM  = 1000 * 1000
 	CRCBYTELEN      = 4
 	TOTALSIZE       = (CLIENTWRITESIZE + CRCBYTELEN) * CLIENTWRITENUM
 )
@@ -87,7 +87,7 @@ func initClient(t *testing.T) (client *ExtentClient) {
 		fmt.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 	var err error
-	client, err = NewExtentClient("stream_write_test", "127.0.0.1:7778", saveExtentKey, updateKey)
+	client, err = NewExtentClient("it3", "10.196.31.173:80", saveExtentKey, updateKey)
 	if err != nil {
 		OccoursErr(fmt.Errorf("init client err[%v]", err.Error()), t)
 	}
@@ -140,7 +140,7 @@ func TestExtentClient_Write(t *testing.T) {
 	client.Open(inode)
 	client.Open(inode)
 	client.Open(inode)
-	for seqNo := 0; seqNo < 10000; seqNo++ {
+	for seqNo := 0; seqNo < 1000000000; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
 		ndata := data[:rand.Intn(CFSBLOCKSIZE*5)]
 
@@ -165,8 +165,14 @@ func TestExtentClient_Write(t *testing.T) {
 			OccoursErr(fmt.Errorf("read inode [%v] seqNO[%v] bytes[%v] err[%v]\n", inode, seqNo, read, err), t)
 		}
 		if !bytes.Equal(rdata, ndata) {
-			fmt.Printf("acatual read bytes[%v]\n", string(rdata))
-			fmt.Printf("expectr read bytes[%v]\n", writeStr)
+			fp, _ := os.OpenFile("org.data", os.O_CREATE|os.O_RDWR, 0666)
+			fp.WriteString(string(ndata))
+			fp.Close()
+			fp, _ = os.OpenFile("rdata.data", os.O_CREATE|os.O_RDWR, 0666)
+			fp.WriteString(string(rdata))
+			fp.Close()
+			fmt.Printf("stream filesize[%v] offset[%v] size[%v] skstream[%v]\n",
+				sk.Size(), writebytes, len(ndata), sk.ToString())
 			OccoursErr(fmt.Errorf("acatual read is differ to writestr"), t)
 		}
 		_, err = localWriteFp.Write(ndata)

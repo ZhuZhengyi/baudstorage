@@ -1,4 +1,4 @@
-package sdk
+package vol
 
 import (
 	"encoding/json"
@@ -34,14 +34,7 @@ type VolsView struct {
 }
 
 func (vg *VolGroup) GetAllAddrs() (m string) {
-	for i, host := range vg.Hosts {
-		if i == len(vg.Hosts)-1 {
-			m = m + host
-		} else {
-			m = m + host + proto.AddrSplit
-		}
-	}
-	return
+	return strings.Join(vg.Hosts[1:],proto.AddrSplit)+proto.AddrSplit
 }
 
 type VolGroupWrapper struct {
@@ -69,7 +62,6 @@ func NewVolGroupWraper(namespace, masterHosts string) (vw *VolGroupWrapper, err 
 }
 
 func (vw *VolGroupWrapper) update() {
-	vw.getVolsFromMaster()
 	ticker := time.NewTicker(time.Minute * 5)
 	for {
 		select {
@@ -100,6 +92,7 @@ func (vw *VolGroupWrapper) getVolsFromMaster() (err error) {
 			log.LogError(fmt.Sprintf(ActionGetVolGroupView+"get VolView from master[%v] err[%v]", m, err.Error()))
 			continue
 		}
+		log.LogInfof("Get VolView from master: %v", string(body))
 		vw.updateVolGroup(views.Vols)
 		break
 	}

@@ -58,6 +58,7 @@ func (s *DataNode) checkAndAddInfo(pkg *Packet) error {
 	case proto.ExtentStoreMode:
 		if pkg.isHeadNode() && pkg.Opcode == proto.OpCreateFile {
 			pkg.FileID = pkg.vol.store.(*storage.ExtentStore).GetExtentId()
+			log.LogDebugf("action[DataNode.checkAndAddInfo] pkg[%v] alloc fileId[%v]", pkg.GetUniqLogId(), pkg.FileID)
 		}
 	}
 	return err
@@ -82,14 +83,17 @@ func (s *DataNode) doRequestCh(req *Packet, msgH *MessageHandler) {
 	var err error
 	if !req.IsTransitPkg() {
 		s.operatePacket(req, msgH.inConn)
-		msgH.replyCh <- req
+		if !(req.Opcode==proto.OpStreamRead){
+			msgH.replyCh <- req
+		}
+
 		return
 	}
 
 	if err = s.sendToNext(req, msgH); err == nil {
 		s.operatePacket(req, msgH.inConn)
 	} else {
-		log.LogError(req.ActionMesg(ActionSendToNext, req.nextAddr,
+		log.LogErrorf("action[DataNode.doRequestCh] %v.", req.ActionMesg(ActionSendToNext, req.nextAddr,
 			req.StartT, fmt.Errorf("failed to send to : %v", req.nextAddr)))
 		if req.IsMarkDeleteReq() {
 			s.operatePacket(req, msgH.inConn)
@@ -116,7 +120,7 @@ func (s *DataNode) doReplyCh(reply *Packet, msgH *MessageHandler) {
 			msgH.ExitSign()
 		}
 	}
-	if !reply.IsMasterCommand() {
+	if !reply.IsMasterCommand(){
 		reply.afterTp()
 		log.LogDebugf("action[DataNode.doReplyCh] %v", reply.ActionMesg(ActionWriteToCli,
 			msgH.inConn.RemoteAddr().String(), reply.StartT, err))
@@ -150,13 +154,13 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 
 	request = e.Value.(*Packet)
 	defer func() {
-		exit = msgH.DelListElement(request.ReqID, request.VolID, e, s)
 		s.statsFlow(request, OutFlow)
 		s.statsFlow(reply, InFlow)
 	}()
 	if request.nextConn == nil {
 		err = errors.Annotatef(fmt.Errorf(ConnIsNullErr), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
+		msgH.DelListElement(request, e, s, ForceCloseConnect)
 		return
 	}
 
@@ -164,23 +168,27 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 	if request.IsErrPack() {
 		err = errors.Annotatef(fmt.Errorf(request.getErr()), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
+		msgH.DelListElement(request, e, s, ForceCloseConnect)
 		log.LogError(request.ActionMesg(ActionReciveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
 		return
 	}
 
 	reply = NewPacket()
 	if err = reply.ReadFromConn(request.nextConn, proto.ReadDeadlineTime); err == nil {
-		if reply.ReqID == request.ReqID && reply.VolID == request.VolID {
+		if reply.ReqID == request.ReqID && reply.VolID == request.VolID && request.Offset == reply.Offset {
 			goto success
 		}
 		if err = msgH.checkReplyAvail(reply); err != nil {
-			log.LogError(err.Error())
+			request.PackErrorBody(ActionReciveFromNext, err.Error())
+			msgH.DelListElement(request, e, s, ForceCloseConnect)
+			log.LogErrorf("action[DataNode.receiveFromNext] %v.", err.Error())
 			return request, true
 		}
 	} else {
 		log.LogError(request.ActionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 		err = errors.Annotatef(err, "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
+		msgH.DelListElement(request, e, s, ForceCloseConnect)
 		return
 	}
 
@@ -194,6 +202,7 @@ success:
 		request.CopyFrom(reply)
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 	}
+	msgH.DelListElement(request, e, s, NOCloseConnect)
 	log.LogDebug(reply.ActionMesg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 
 	return

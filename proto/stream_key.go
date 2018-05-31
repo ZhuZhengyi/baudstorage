@@ -21,6 +21,11 @@ func (sk *StreamKey) Marshal() (data []byte, err error) {
 	return json.Marshal(sk)
 }
 
+func (sk *StreamKey) ToString() (m string) {
+	data,_:=json.Marshal(sk)
+	return string(data)
+}
+
 func (sk *StreamKey) UnMarshal(data []byte) {
 	json.Unmarshal(data, sk)
 }

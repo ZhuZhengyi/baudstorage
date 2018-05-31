@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk"
+	"github.com/tiglabs/baudstorage/sdk/vol"
 )
 
 const KeySegsCnt = 7 // cfs/{version}/{vid}/{fid}/{offset}/{size}/{crc}
@@ -20,7 +20,7 @@ func allocReqId() int64 {
 	return reqId
 }
 
-func newWritePacket(data []byte, vol *sdk.VolGroup) (pkg *proto.Packet) {
+func newWritePacket(data []byte, vol *vol.VolGroup) (pkg *proto.Packet) {
 	pkg = proto.NewPacket()
 	pkg.Opcode = proto.OpWrite
 	pkg.StoreMode = proto.TinyStoreMode
@@ -50,7 +50,7 @@ func newReadPacket(vid, size uint32, fid uint64, ofs int64) (pkg *proto.Packet) 
 	return
 }
 
-func newDelPacket(fid uint64, size uint32, ofs int64, vol *sdk.VolGroup) (pkg *proto.Packet) {
+func newDelPacket(fid uint64, size uint32, ofs int64, vol *vol.VolGroup) (pkg *proto.Packet) {
 	pkg = proto.NewPacket()
 	pkg.Opcode = proto.OpMarkDelete
 	pkg.StoreMode = proto.TinyStoreMode

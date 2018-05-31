@@ -15,8 +15,8 @@ const (
 const ChooseDiskTimes = 3
 
 const (
-	ForceClostConnect = true
-	NOClostConnect    = false
+	ForceCloseConnect = true
+	NOCloseConnect    = false
 )
 
 const (

@@ -35,11 +35,11 @@ var (
 )
 
 func paraNotFound(name string) (err error) {
-	return errors.New(fmt.Sprintf("parameter %v not found", name))
+	return errors.Errorf("parameter %v not found", name)
 }
 
 func elementNotFound(name string) (err error) {
-	return errors.New(fmt.Sprintf("%v not found", name))
+	return errors.Errorf("%v not found", name)
 }
 
 func taskNotFound(id string) (err error) {
@@ -55,6 +55,6 @@ func metaReplicaNotFound(addr string) (err error) {
 }
 
 func hasExist(name string) (err error) {
-	err = errors.New(fmt.Sprintf("%v has exist", name))
+	err = errors.Errorf("%v has exist", name)
 	return
 }
