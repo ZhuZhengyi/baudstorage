@@ -13,7 +13,7 @@ import (
 func TestBufferPool_Get(t *testing.T) {
 	cp := pool.NewBufferPool()
 	for i := 0; i < 1024; i++ {
-		buffer, err := cp.Get(storage.BlockSize)
+		buffer, err := cp.Get(storage.BlockSize+1)
 		if err != nil {
 			t.Fatal(err)
 		}
