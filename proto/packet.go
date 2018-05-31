@@ -15,7 +15,7 @@ import (
 
 var (
 	ReqIDGlobal = int64(1)
-	BufferPool  = pool.NewBufferPool()
+	buffers=pool.NewBufferPool()
 )
 
 func GetReqID() int64 {
@@ -278,11 +278,11 @@ func (p *Packet) UnmarshalData(v interface{}) error {
 }
 
 func (p *Packet) WriteToNoDeadLineConn(c net.Conn) (err error) {
-	header,err := BufferPool.Get(HeaderSize)
+	header,err := buffers.Get(HeaderSize)
 	if err!=nil {
 		header=make([]byte,HeaderSize)
 	}
-	defer BufferPool.Put(header)
+	defer buffers.Put(header)
 
 	p.MarshalHeader(header)
 	if _, err = c.Write(header); err == nil {
@@ -298,11 +298,11 @@ func (p *Packet) WriteToNoDeadLineConn(c net.Conn) (err error) {
 
 func (p *Packet) WriteToConn(c net.Conn) (err error) {
 	c.SetWriteDeadline(time.Now().Add(WriteDeadlineTime * time.Second))
-	header,err := BufferPool.Get(HeaderSize)
+	header,err := buffers.Get(HeaderSize)
 	if err!=nil {
 		header=make([]byte,HeaderSize)
 	}
-	defer BufferPool.Put(header)
+	defer buffers.Put(header)
 
 	p.MarshalHeader(header)
 	if _, err = c.Write(header); err == nil {
@@ -317,11 +317,11 @@ func (p *Packet) WriteToConn(c net.Conn) (err error) {
 }
 
 func (p *Packet) WriteHeaderToConn(c net.Conn) (err error) {
-	header,err := BufferPool.Get(HeaderSize)
+	header,err := buffers.Get(HeaderSize)
 	if err!=nil {
 		header=make([]byte,HeaderSize)
 	}
-	defer BufferPool.Put(header)
+	defer buffers.Put(header)
 	p.MarshalHeader(header)
 	_, err = c.Write(header)
 
@@ -339,11 +339,11 @@ func (p *Packet) ReadFromConn(c net.Conn, deadlineTime time.Duration) (err error
 	if deadlineTime != NoReadDeadlineTime {
 		c.SetReadDeadline(time.Now().Add(deadlineTime * time.Second))
 	}
-	header,err := BufferPool.Get(HeaderSize)
+	header,err := buffers.Get(HeaderSize)
 	if err!=nil {
 		header=make([]byte,HeaderSize)
 	}
-	defer BufferPool.Put(header)
+	defer buffers.Put(header)
 	if _, err = io.ReadFull(c, header); err != nil {
 		return
 	}

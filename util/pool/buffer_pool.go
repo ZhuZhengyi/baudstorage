@@ -2,10 +2,14 @@ package pool
 
 import (
 	"fmt"
-	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
 	"sync"
 	"time"
+	proto2 "github.com/tiglabs/baudstorage/proto"
+)
+
+var (
+	Buffers = NewBufferPool()
 )
 
 type BufferPool struct {
@@ -18,7 +22,7 @@ func NewBufferPool() (bufferP *BufferPool) {
 }
 
 func (bufferP *BufferPool) Get(size int) ([]byte, error) {
-	if !(size == storage.BlockSize || size == proto.HeaderSize) {
+	if !(size == storage.BlockSize || size == proto2.HeaderSize) {
 		return nil, fmt.Errorf("bufferPool can only support 65536 or 45 bytes")
 	}
 
