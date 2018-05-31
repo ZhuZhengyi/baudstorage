@@ -10,14 +10,14 @@ import (
 )
 
 const (
-	ColonSplit                    = ":"
-	CommaSplit                    = ","
-	CfgPeers                      = "peers"
-	VolMissSec                    = "volMissSec"
-	VolTimeOutSec                 = "volTimeOutSec"
-	EveryLoadVolCount             = "everyLoadVolCount"
-	FileDelayCheckCrc             = "fileDelayCheckCrc"
-	ReplicaNum                    = "replicaNum"
+	ColonSplit        = ":"
+	CommaSplit        = ","
+	CfgPeers          = "peers"
+	VolMissSec        = "volMissSec"
+	VolTimeOutSec     = "volTimeOutSec"
+	EveryLoadVolCount = "everyLoadVolCount"
+	FileDelayCheckCrc = "fileDelayCheckCrc"
+	ReplicaNum        = "replicaNum"
 )
 
 const (

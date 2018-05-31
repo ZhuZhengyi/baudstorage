@@ -22,9 +22,8 @@ type DataNode struct {
 	Free                      uint64
 	RackName                  string `json:"Rack"`
 	Addr                      string
-
-	ReportTime time.Time
-	isActive   bool
+	ReportTime                time.Time
+	isActive                  bool
 	sync.Mutex
 	ratio        float64
 	selectCount  uint64
@@ -47,9 +46,9 @@ func NewDataNode(addr, clusterID string) (dataNode *DataNode) {
 func (dataNode *DataNode) checkHeartBeat() {
 	dataNode.Lock()
 	defer dataNode.Unlock()
-	//if time.Since(dataNode.reportTime) > time.Second*(time.Duration(gConfig.NodeTimeOutSec)) {
-	//	dataNode.IsActive = false
-	//}
+	if time.Since(dataNode.ReportTime) > time.Second*time.Duration(DefaultNodeTimeOutSec) {
+		dataNode.isActive = false
+	}
 
 	return
 }

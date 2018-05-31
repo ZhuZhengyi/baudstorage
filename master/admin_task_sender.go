@@ -53,7 +53,7 @@ func (sender *AdminTaskSender) process() {
 	ticker := time.NewTicker(TaskWorkerInterval)
 	defer func() {
 		ticker.Stop()
-		Warn(sender.clusterID,fmt.Sprintf("%v sender stop", sender.targetAddr))
+		Warn(sender.clusterID, fmt.Sprintf("%v sender stop", sender.targetAddr))
 	}()
 	for {
 		select {
@@ -103,7 +103,7 @@ func (sender *AdminTaskSender) sendTasks(tasks []*proto.AdminTask) {
 		if err != nil {
 			msg := fmt.Sprintf("get connection to %v,err,%v", sender.targetAddr, err.Error())
 			log.LogError(msg)
-			Warn(sender.clusterID,msg)
+			Warn(sender.clusterID, msg)
 			//if get connection failed,the task is sent in the next ticker
 			break
 		}
@@ -145,7 +145,7 @@ func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) 
 	} else {
 		log.LogErrorf("action[singleSend] send task failed,err %v", response.Data)
 	}
-	log.LogDebugf(fmt.Sprintf("action[singleSend] sender task:%v success",task.ToString()))
+	log.LogDebugf(fmt.Sprintf("action[singleSend] sender task:%v success", task.ToString()))
 
 	return
 }

@@ -109,6 +109,7 @@ func (c *Cluster) checkDataNodeHeartbeat() {
 	tasks := make([]*proto.AdminTask, 0)
 	c.dataNodes.Range(func(addr, dataNode interface{}) bool {
 		node := dataNode.(*DataNode)
+		node.checkHeartBeat()
 		task := node.generateHeartbeatTask(c.getMasterAddr())
 		tasks = append(tasks, task)
 		return true
@@ -120,6 +121,7 @@ func (c *Cluster) checkMetaNodeHeartbeat() {
 	tasks := make([]*proto.AdminTask, 0)
 	c.metaNodes.Range(func(addr, metaNode interface{}) bool {
 		node := metaNode.(*MetaNode)
+		node.checkHeartbeat()
 		task := node.generateHeartbeatTask(c.getMasterAddr())
 		tasks = append(tasks, task)
 		return true
@@ -162,7 +164,7 @@ func (c *Cluster) addMetaNode(nodeAddr string) (id uint64, err error) {
 errDeal:
 	err = fmt.Errorf("action[addMetaNode],metaNodeAddr:%v err:%v ", nodeAddr, err.Error())
 	log.LogError(errors.ErrorStack(err))
-	Warn(c.Name,err.Error())
+	Warn(c.Name, err.Error())
 	return
 }
 
@@ -181,7 +183,7 @@ func (c *Cluster) addDataNode(nodeAddr string) (err error) {
 errDeal:
 	err = fmt.Errorf("action[addMetaNode],metaNodeAddr:%v err:%v ", nodeAddr, err.Error())
 	log.LogError(errors.ErrorStack(err))
-	Warn(c.Name,err.Error())
+	Warn(c.Name, err.Error())
 	return err
 }
 
@@ -243,7 +245,7 @@ func (c *Cluster) createVolGroup(nsName, volType string) (vg *VolGroup, err erro
 errDeal:
 	err = fmt.Errorf("action[createVolGroup], Err:%v ", err.Error())
 	log.LogError(errors.ErrorStack(err))
-	Warn(c.Name,err.Error())
+	Warn(c.Name, err.Error())
 	return
 }
 
@@ -254,7 +256,7 @@ func (c *Cluster) ChooseTargetDataHosts(replicaNum int) (hosts []string, err err
 	)
 	hosts = make([]string, 0)
 	if masterAddr, err = c.getAvailDataNodeHosts("", hosts, 1); err != nil {
-		return nil,errors.Trace(err)
+		return nil, errors.Trace(err)
 	}
 	hosts = append(hosts, masterAddr[0])
 	otherReplica := replicaNum - 1
@@ -263,10 +265,10 @@ func (c *Cluster) ChooseTargetDataHosts(replicaNum int) (hosts []string, err err
 	}
 	dataNode, err := c.getDataNode(masterAddr[0])
 	if err != nil {
-		return nil,errors.Trace(err)
+		return nil, errors.Trace(err)
 	}
 	if slaveAddrs, err = c.getAvailDataNodeHosts(dataNode.RackName, hosts, otherReplica); err != nil {
-		return nil,errors.Trace(err)
+		return nil, errors.Trace(err)
 	}
 	hosts = append(hosts, slaveAddrs...)
 	if len(hosts) != replicaNum {
@@ -357,7 +359,7 @@ errDeal:
 		"DiskError  TimeOut Report Then Fix It on newHost:%v   Err:%v , PersistenceHosts:%v  ",
 		vg.VolID, offlineAddr, newAddr, err, vg.PersistenceHosts)
 	if err != nil {
-		Warn(c.Name,msg)
+		Warn(c.Name, msg)
 	}
 	log.LogWarn(msg)
 }
@@ -396,7 +398,7 @@ func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {
 errDeal:
 	err = fmt.Errorf("action[createNamespace], name:%v, err:%v ", name, err.Error())
 	log.LogError(errors.ErrorStack(err))
-	Warn(c.Name,err.Error())
+	Warn(c.Name, err.Error())
 	return
 }
 
@@ -441,7 +443,7 @@ func (c *Cluster) ChooseTargetMetaHosts(replicaNum int) (hosts []string, peers [
 	)
 	hosts = make([]string, 0)
 	if masterAddr, masterPeer, err = c.getAvailMetaNodeHosts("", hosts, 1); err != nil {
-		return nil,nil,errors.Trace(err)
+		return nil, nil, errors.Trace(err)
 	}
 	peers = append(peers, masterPeer...)
 	hosts = append(hosts, masterAddr[0])
@@ -451,10 +453,10 @@ func (c *Cluster) ChooseTargetMetaHosts(replicaNum int) (hosts []string, peers [
 	}
 	metaNode, err := c.getMetaNode(masterAddr[0])
 	if err != nil {
-		return nil,nil,errors.Trace(err)
+		return nil, nil, errors.Trace(err)
 	}
 	if slaveAddrs, slavePeers, err = c.getAvailMetaNodeHosts(metaNode.RackName, hosts, otherReplica); err != nil {
-		return nil,nil,errors.Trace(err)
+		return nil, nil, errors.Trace(err)
 	}
 	hosts = append(hosts, slaveAddrs...)
 	peers = append(peers, slavePeers...)
@@ -473,21 +475,21 @@ func (c *Cluster) DataNodeCount() (len int) {
 	return
 }
 
-func (c *Cluster) getAllDataNodes() (dataNodes []NodeView) {
-	dataNodes = make([]NodeView, 0)
+func (c *Cluster) getAllDataNodes() (dataNodes []DataNodeView) {
+	dataNodes = make([]DataNodeView, 0)
 	c.dataNodes.Range(func(addr, node interface{}) bool {
 		dataNode := node.(*DataNode)
-		dataNodes = append(dataNodes, NodeView{Addr: dataNode.Addr, Status: dataNode.isActive})
+		dataNodes = append(dataNodes, DataNodeView{Addr: dataNode.Addr, Status: dataNode.isActive})
 		return true
 	})
 	return
 }
 
-func (c *Cluster) getAllMetaNodes() (metaNodes []NodeView) {
-	metaNodes = make([]NodeView, 0)
+func (c *Cluster) getAllMetaNodes() (metaNodes []MetaNodeView) {
+	metaNodes = make([]MetaNodeView, 0)
 	c.metaNodes.Range(func(addr, node interface{}) bool {
 		metaNode := node.(*MetaNode)
-		metaNodes = append(metaNodes, NodeView{Addr: metaNode.Addr, Status: metaNode.IsActive})
+		metaNodes = append(metaNodes, MetaNodeView{ID: metaNode.ID, Addr: metaNode.Addr, Status: metaNode.IsActive})
 		return true
 	})
 	return

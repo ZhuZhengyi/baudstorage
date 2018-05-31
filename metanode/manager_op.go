@@ -10,6 +10,7 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/baudstorage/util/ump"
 	raftproto "github.com/tiglabs/raft/proto"
+	"os"
 )
 
 func (m *metaManager) opMasterHeartbeat(conn net.Conn, p *Packet) (err error) {
@@ -544,6 +545,7 @@ func (m *metaManager) opOfflineMetaPartition(conn net.Conn, p *Packet) (err erro
 		m.respondToClient(conn, p)
 		return
 	}
+	log.LogDebugf("[opOfflineMetaPartition] recv task: %v", adminTask)
 	reqData, err = json.Marshal(adminTask.Request)
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -587,10 +589,18 @@ func (m *metaManager) opOfflineMetaPartition(conn net.Conn, p *Packet) (err erro
 		resp.Result = err.Error()
 		goto end
 	}
+	{
+		conf := mp.GetBaseConfig()
+		if req.RemovePeer.ID == conf.NodeId {
+			mp.Stop()
+			os.RemoveAll(conf.RootDir)
+		}
+	}
 	resp.Status = proto.OpOk
 end:
 	adminTask.Request = nil
 	adminTask.Response = resp
 	m.respondToMaster(adminTask)
+	log.LogDebugf("[opOfflineMetaPartition]: the end %v", adminTask)
 	return
 }

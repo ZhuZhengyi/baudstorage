@@ -35,7 +35,9 @@ func NewResponseInode() *ResponseInode {
 // GetDentry query dentry from DentryTree with specified dentry info;
 func (mp *metaPartition) getDentry(dentry *Dentry) (*Dentry, uint8) {
 	status := proto.OpOk
+	mp.dentryMu.RLock()
 	item := mp.dentryTree.Get(dentry)
+	mp.dentryMu.RUnlock()
 	if item == nil {
 		status = proto.OpNotExistErr
 		return nil, status
@@ -48,7 +50,9 @@ func (mp *metaPartition) getDentry(dentry *Dentry) (*Dentry, uint8) {
 func (mp *metaPartition) getInode(ino *Inode) (resp *ResponseInode) {
 	resp = NewResponseInode()
 	resp.Status = proto.OpOk
+	mp.inodeMu.RLock()
 	item := mp.inodeTree.Get(ino)
+	mp.inodeMu.RUnlock()
 	if item == nil {
 		resp.Status = proto.OpNotExistErr
 		return
@@ -77,18 +81,19 @@ func (mp *metaPartition) createDentry(dentry *Dentry) (status uint8) {
 }
 
 // DeleteDentry delete dentry from dentry tree.
-func (mp *metaPartition) deleteDentry(dentry *Dentry) (*Dentry, uint8) {
+func (mp *metaPartition) deleteDentry(dentry *Dentry) (resp *ResponseDentry) {
 	// TODO: Implement it.
-	status := proto.OpOk
+	resp = NewResponseDentry()
+	resp.Status = proto.OpOk
 	mp.dentryMu.Lock()
 	item := mp.dentryTree.Delete(dentry)
 	mp.dentryMu.Unlock()
 	if item == nil {
-		status = proto.OpNotExistErr
-		return nil, status
+		resp.Status = proto.OpNotExistErr
+		return
 	}
-	dentry = item.(*Dentry)
-	return dentry, status
+	resp.Msg = item.(*Dentry)
+	return
 }
 
 // CreateInode create inode to inode tree.
@@ -238,8 +243,7 @@ func (mp *metaPartition) confRemoveNode(req *proto.
 		return
 	}
 	if req.RemovePeer.ID == mp.config.NodeId {
-		mp.Stop()
-		os.RemoveAll(mp.config.RootDir)
+		mp.applyID = index
 		return
 	}
 	mp.config.Peers = append(mp.config.Peers[:peerIndex], mp.config.Peers[peerIndex+1:]...)

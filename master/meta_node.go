@@ -17,7 +17,7 @@ type MetaNode struct {
 	Used              uint64 `json:"UsedWeight"`
 	selectCount       uint64
 	carry             float64
-	reportTime        time.Time
+	ReportTime        time.Time
 	metaRangeInfos    []*proto.MetaPartitionReport
 	metaRangeCount    int
 	sync.Mutex
@@ -66,7 +66,7 @@ func (metaNode *MetaNode) IsAvailCarryNode() (ok bool) {
 func (metaNode *MetaNode) setNodeAlive() {
 	metaNode.Lock()
 	defer metaNode.Unlock()
-	metaNode.reportTime = time.Now()
+	metaNode.ReportTime = time.Now()
 	metaNode.IsActive = true
 }
 
@@ -91,4 +91,12 @@ func (metaNode *MetaNode) generateHeartbeatTask(masterAddr string) (task *proto.
 	}
 	task = proto.NewAdminTask(proto.OpMetaNodeHeartbeat, metaNode.Addr, request)
 	return
+}
+
+func (metaNode *MetaNode) checkHeartbeat() {
+	metaNode.Lock()
+	defer metaNode.Unlock()
+	if time.Since(metaNode.ReportTime) > time.Second*time.Duration(DefaultNodeTimeOutSec) {
+		metaNode.IsActive = false
+	}
 }
