@@ -306,7 +306,7 @@ func (s *DataNode) checkChunkInfo(pkg *Packet) (err error) {
 	if (leaderObjId - 1) != chunkInfo.Size {
 		err = ErrChunkOffsetMismatch
 		msg := fmt.Sprintf("Err[%v] leaderObjId[%v] localObjId[%v]", err, leaderObjId, localObjId)
-		log.LogWarn(pkg.ActionMesg(ActionCheckChunkInfo, LocalProcessAddr, pkg.StartT, fmt.Errorf(msg)))
+		log.LogWarn(pkg.ActionMsg(ActionCheckChunkInfo, LocalProcessAddr, pkg.StartT, fmt.Errorf(msg)))
 	}
 
 	return

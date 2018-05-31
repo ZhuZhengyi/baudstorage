@@ -31,11 +31,14 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 		pkg.Size = orgSize
 		if pkg.IsErrPack() {
 			err = fmt.Errorf("operation[%v] error[%v]", pkg.GetOpMesg(pkg.Opcode), string(pkg.Data[:resultSize]))
+			log.LogErrorf("action[DataNode.operatePacket] %v", err)
 		} else if !pkg.IsMasterCommand() {
 			if pkg.IsReadReq() {
-				log.LogRead(pkg.ActionMesg(pkg.GetOpMesg(pkg.Opcode), LocalProcessAddr, start, nil))
+				log.LogReadf("action[DataNode.operatePacket] %v.",
+					pkg.ActionMsg(pkg.GetOpMesg(pkg.Opcode), LocalProcessAddr, start, nil))
 			} else {
-				log.LogWrite(pkg.ActionMesg(pkg.GetOpMesg(pkg.Opcode), LocalProcessAddr, start, nil))
+				log.LogWritef("action[DataNode.operatePacket] %v.",
+					pkg.ActionMsg(pkg.GetOpMesg(pkg.Opcode), LocalProcessAddr, start, nil))
 			}
 		}
 		pkg.Size = resultSize
@@ -322,7 +325,7 @@ func (s *DataNode) streamRead(request *Packet, connect net.Conn) {
 		if err != nil {
 			request.PackErrorBody(ActionStreamRead, err.Error())
 			if err = request.WriteToConn(connect); err != nil {
-				err = fmt.Errorf(request.ActionMesg(ActionWriteToCli, connect.RemoteAddr().String(),
+				err = fmt.Errorf(request.ActionMsg(ActionWriteToCli, connect.RemoteAddr().String(),
 					request.StartT, err))
 				log.LogErrorf(err.Error())
 			}
@@ -331,14 +334,14 @@ func (s *DataNode) streamRead(request *Packet, connect net.Conn) {
 		request.Size = currReadSize
 		request.ResultCode = proto.OpOk
 		if err = request.WriteToConn(connect); err != nil {
-			err = fmt.Errorf(request.ActionMesg(ActionWriteToCli, connect.RemoteAddr().String(),
+			err = fmt.Errorf(request.ActionMsg(ActionWriteToCli, connect.RemoteAddr().String(),
 				request.StartT, err))
 			log.LogErrorf(err.Error())
 			return
 		}
 		needReplySize -= currReadSize
 		offset += int64(currReadSize)
-		log.LogDebugf("action[DataNode.streamRead] %v.", request.ActionMesg(ActionWriteToCli, connect.RemoteAddr().String(),
+		log.LogDebugf("action[DataNode.streamRead] %v.", request.ActionMsg(ActionWriteToCli, connect.RemoteAddr().String(),
 			request.StartT, err))
 	}
 	return

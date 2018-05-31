@@ -11,9 +11,10 @@ import (
 )
 
 type Super struct {
-	name string
-	mw   *meta.MetaWrapper
-	ec   *stream.ExtentClient
+	cluster string
+	name    string
+	mw      *meta.MetaWrapper
+	ec      *stream.ExtentClient
 }
 
 //functions that Super needs to implement
@@ -29,7 +30,6 @@ func NewSuper(namespace, master string) (s *Super, err error) {
 		log.LogErrorf("NewMetaWrapper failed! %v", err.Error())
 		return nil, err
 	}
-	s.name = namespace
 
 	//FIXME:
 	s.ec, err = stream.NewExtentClient(namespace, master, s.mw.AppendExtentKey, s.mw.GetExtents)
@@ -38,6 +38,10 @@ func NewSuper(namespace, master string) (s *Super, err error) {
 		log.LogErrorf("NewExtentClient failed! %v", err.Error())
 		return nil, err
 	}
+
+	s.name = namespace
+	s.cluster = s.mw.Cluster()
+	log.LogInfof("NewSuper: cluster(%v) name(%v)", s.cluster, s.name)
 	return s, nil
 }
 

@@ -75,7 +75,7 @@ func (m *MockServer) packErrorBody(request *proto.Packet, err error) {
 func (m *MockServer) operator(request *proto.Packet, connect net.Conn) (err error) {
 
 	defer func() {
-		log.LogDebug(request.ActionMesg(util.GetFuncTrace(), "remote", time.Now().UnixNano(), err))
+		log.LogDebug(request.ActionMsg(util.GetFuncTrace(), "remote", time.Now().UnixNano(), err))
 	}()
 	switch request.Opcode {
 	case proto.OpCreateFile:
