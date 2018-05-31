@@ -40,7 +40,9 @@ func (mp *metaPartition) DeleteDentry(req *DeleteDentryReq, p *Packet) (err erro
 		p.ResultCode = proto.OpErr
 		return
 	}
-	p.ResultCode = r.(uint8)
+	retMsg := r.(*ResponseDentry)
+	p.ResultCode = retMsg.Status
+	dentry = retMsg.Msg
 	if p.ResultCode == proto.OpOk {
 		var reply []byte
 		resp := &DeleteDentryResp{
