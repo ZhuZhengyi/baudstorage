@@ -257,6 +257,6 @@ func (mp *metaPartition) confRemoveNode(req *proto.
 		return
 	}
 	mp.applyID = index
-	log.LogDebugf("[confRemoveNode] recv: %v", req)
+	log.LogDebugf("[confRemoveNode] end: %v", req)
 	return
 }

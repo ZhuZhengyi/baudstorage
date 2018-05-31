@@ -219,6 +219,7 @@ func (m *metaManager) createPartition(id uint64, nsName string, start,
 		err = errors.Errorf("create partition id=%d is exsited!", id)
 		return
 	}
+	log.LogDebugf("[allpartitions]: %v", m.partitions)
 	err = nil
 	/* Create metaPartition and add metaManager */
 	partId := fmt.Sprintf("%d", id)

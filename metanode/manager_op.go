@@ -85,8 +85,8 @@ func (m *metaManager) opCreateMetaPartition(conn net.Conn, p *Packet) (err error
 			" struct: %s", err.Error())
 		return
 	}
-	log.LogDebugf("[opCreateMetaPartition] accept a from master message: %v",
-		adminTask)
+	log.LogDebugf("[opCreateMetaPartition] [remoteAddr=%s]accept a from"+
+		" master message: %v", conn.RemoteAddr(), adminTask)
 	// Marshal request body.
 	requestJson, err := json.Marshal(adminTask.Request)
 	if err != nil {
