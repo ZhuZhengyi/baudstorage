@@ -48,9 +48,11 @@ func NewMembersFiles() (mf *MembersFileMetas) {
 }
 
 func (v *Vol) extentsRepair() {
+	startTime := time.Now().UnixNano()
+	log.LogDebugf("action[Vol.extentsRepair] extents repair start.")
 	allMembers, err := v.getAllMemberFileMetas()
 	if err != nil {
-		log.LogError(errors.ErrorStack(err))
+		log.LogErrorf("action[Vol.extentsRepair] %v.", errors.ErrorStack(err))
 		return
 	}
 	v.generatorExtentsRepairTasks(allMembers)
@@ -61,6 +63,9 @@ func (v *Vol) extentsRepair() {
 	for _, fixExtentFile := range allMembers[0].NeedFixFileSizeTasks {
 		v.server.streamRepairExtent(fixExtentFile, v)
 	}
+	finishTime := time.Now().UnixNano()
+	log.LogDebugf("action[Vol.extentsRepair] extents repair finish cost %vms.",
+		(finishTime - startTime) / int64(time.Millisecond))
 }
 
 func (v *Vol) getAllMemberFileMetas() (allMembers []*MembersFileMetas, err error) {
