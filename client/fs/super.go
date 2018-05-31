@@ -1,6 +1,8 @@
 package fs
 
 import (
+	"fmt"
+
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"golang.org/x/net/context"
@@ -56,4 +58,8 @@ func (s *Super) Root() (fs.Node, error) {
 
 func (s *Super) Statfs(ctx context.Context, req *fuse.StatfsRequest, resp *fuse.StatfsResponse) error {
 	return nil
+}
+
+func (s *Super) umpKey(act string) string {
+	return fmt.Sprintf("%s_fuseclient_%s", s.cluster, act)
 }
