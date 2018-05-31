@@ -51,10 +51,13 @@ func NewRaftStore(cfg *Config) (mr RaftStore, err error) {
 	rc.NodeID = cfg.NodeID
 	rc.LeaseCheck = true
 	if cfg.HeartbeatPort <= 0 {
-		cfg.HeartbeatPort = HeartbeatPort
+		cfg.HeartbeatPort = DefaultHeartbeatPort
 	}
 	if cfg.ReplicatePort <= 0 {
-		cfg.ReplicatePort = ReplicatePort
+		cfg.ReplicatePort = DefaultReplicatePort
+	}
+	if cfg.RetainLogs == 0 {
+		cfg.RetainLogs = DefaultRetainLogs
 	}
 	rc.HeartbeatAddr = fmt.Sprintf("%s:%d", cfg.IpAddr, cfg.HeartbeatPort)
 	rc.ReplicateAddr = fmt.Sprintf("%s:%d", cfg.IpAddr, cfg.ReplicatePort)
