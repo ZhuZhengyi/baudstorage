@@ -6,7 +6,6 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 	"io/ioutil"
 	"net/http"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -103,7 +102,7 @@ func post(data []byte, url string) (*http.Response, error) {
 func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error) {
 	success := false
 	var err1 error
-	log.LogErrorf("action[DataNode.postToMaster] masterAddrs[%v].", s.masterAddrs)
+	log.LogDebugf("action[DataNode.postToMaster] masterAddrs[%v].", s.masterAddrs)
 
 	for i := 0; i < len(s.masterAddrs); i++ {
 		var resp *http.Response
