@@ -122,7 +122,7 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 		tasks      []*proto.AdminTask
 		racks      []string
 		newHosts   []string
-		peers      []proto.Peer
+		newPeers   []proto.Peer
 		removePeer proto.Peer
 	)
 	log.LogDebugf("action[metaPartitionOffline],nsName[%v],nodeAddr[%v],partitionID[%v]", nsName, nodeAddr, partitionID)
@@ -142,27 +142,30 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 	}
 
 	racks = mp.getRacks(nodeAddr)
-	if newHosts, peers, err = c.getAvailMetaNodeHosts(racks[0], mp.PersistenceHosts, 1); err != nil {
+	if newHosts, newPeers, err = c.getAvailMetaNodeHosts(racks[0], mp.PersistenceHosts, 1); err != nil {
 		goto errDeal
 	}
-
+	if err = mp.removePersistenceHosts(nodeAddr, c, nsName); err != nil {
+		goto errDeal
+	}
 	for _, mr := range mp.Replicas {
 		if mr.Addr == nodeAddr {
 			removePeer = proto.Peer{ID: mr.nodeId, Addr: mr.Addr}
 		} else {
-			peers = append(peers, proto.Peer{ID: mr.nodeId, Addr: mr.Addr})
+			newPeers = append(newPeers, proto.Peer{ID: mr.nodeId, Addr: mr.Addr})
 			newHosts = append(newHosts, mr.Addr)
 		}
 	}
-	mp.Peers = peers
-	if err = c.syncUpdateMetaPartition(nsName, mp); err != nil {
-		goto errDeal
-	}
 	tasks = mp.generateCreateMetaPartitionTasks(newHosts, nsName)
-	if t, err = mp.generateOfflineTask(nsName, removePeer, peers[0]); err != nil {
+	if t, err = mp.generateOfflineTask(nsName, removePeer, newPeers[0]); err != nil {
 		goto errDeal
 	}
 	tasks = append(tasks, t)
+	if err = mp.updateInfoToStore(newHosts, newPeers, nsName, c); err != nil {
+		goto errDeal
+	}
+	mp.RemoveReplicaByAddr(nodeAddr)
+	mp.checkAndRemoveMissMetaReplica(nodeAddr)
 	c.putMetaNodeTasks(tasks)
 	Warn(c.Name, fmt.Sprintf("meta partition[%v] offline addr[%v] success", partitionID, nodeAddr))
 	return
@@ -295,18 +298,6 @@ func (c *Cluster) dealOfflineMetaPartition(nodeAddr string, resp *proto.MetaPart
 		Warn(c.Name, msg)
 		return
 	}
-	mp, err := c.getMetaPartitionByID(resp.PartitionID)
-	if err != nil {
-		goto errDeal
-	}
-	mp.RemoveReplicaByAddr(nodeAddr)
-	if err = mp.removePersistenceHosts(nodeAddr, c, resp.NsName); err != nil {
-		goto errDeal
-	}
-	mp.checkAndRemoveMissMetaReplica(nodeAddr)
-	return
-errDeal:
-	log.LogError(fmt.Sprintf("dealOfflineMetaPartition err: %v", err.Error()))
 	return
 }
 
