@@ -3,6 +3,7 @@ package meta
 import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/baudstorage/util/ump"
 )
 
 // API implementations
@@ -22,6 +23,10 @@ func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *pro
 		log.LogError(err)
 		return
 	}
+
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
 
 	packet, err = mc.send(packet)
 	if err != nil {
@@ -57,6 +62,10 @@ func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, extents 
 	if err != nil {
 		return
 	}
+
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
 
 	packet, err = mc.send(packet)
 	if err != nil {
@@ -95,6 +104,10 @@ func (mw *MetaWrapper) dcreate(mc *MetaConn, parentID uint64, name string, inode
 		return
 	}
 
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
+
 	packet, err = mc.send(packet)
 	if err != nil {
 		return
@@ -116,6 +129,10 @@ func (mw *MetaWrapper) ddelete(mc *MetaConn, parentID uint64, name string) (stat
 	if err != nil {
 		return
 	}
+
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
 
 	packet, err = mc.send(packet)
 	if err != nil {
@@ -148,6 +165,10 @@ func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (statu
 	if err != nil {
 		return
 	}
+
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
 
 	packet, err = mc.send(packet)
 	if err != nil {
@@ -185,6 +206,10 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 		return
 	}
 
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
+
 	packet, err = mc.send(packet)
 	if err != nil {
 		log.LogError(err)
@@ -219,6 +244,10 @@ func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (status int, child
 	if err != nil {
 		return
 	}
+
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
 
 	packet, err = mc.send(packet)
 	if err != nil {
@@ -255,6 +284,10 @@ func (mw *MetaWrapper) appendExtentKey(mc *MetaConn, inode uint64, extent proto.
 		return
 	}
 
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
+
 	packet, err = mc.send(packet)
 	if err != nil {
 		log.LogError(err)
@@ -280,6 +313,10 @@ func (mw *MetaWrapper) getExtents(mc *MetaConn, inode uint64) (status int, exten
 		log.LogError(err)
 		return
 	}
+
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
 
 	packet, err = mc.send(packet)
 	if err != nil {
