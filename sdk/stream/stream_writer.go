@@ -322,5 +322,3 @@ func (stream *StreamWriter) createExtent(vol *vol.VolGroup) (extentId uint64, er
 
 	return extentId, nil
 }
-
-

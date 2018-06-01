@@ -53,6 +53,9 @@ func (m *MetaNode) stopServer() {
 // closed by remote or tcp service have been shutdown.
 func (m *MetaNode) servConn(conn net.Conn, stopC chan uint8) {
 	defer conn.Close()
+	c := conn.(*net.TCPConn)
+	c.SetKeepAlive(true)
+	c.SetNoDelay(true)
 	for {
 		select {
 		case <-stopC:
