@@ -19,9 +19,9 @@ const (
 	AdminGetIp           = "/admin/getIp"
 
 	// Client APIs
-	ClientVols      = "/client/vols"
-	ClientNamespace = "/client/namespace"
-	ClientMetaGroup = "/client/metaGroup"
+	ClientVols          = "/client/vols"
+	ClientNamespace     = "/client/namespace"
+	ClientMetaPartition = "/client/metaPartition"
 
 	// Node APIs
 	AddDataNode               = "/dataNode/add"
@@ -63,7 +63,7 @@ func (m *Master) handleFunctions() {
 	http.Handle(AdminMetaPartitionOffline, m.handlerWithInterceptor())
 	http.Handle(ClientVols, m.handlerWithInterceptor())
 	http.Handle(ClientNamespace, m.handlerWithInterceptor())
-	http.Handle(ClientMetaGroup, m.handlerWithInterceptor())
+	http.Handle(ClientMetaPartition, m.handlerWithInterceptor())
 	http.Handle(DataNodeResponse, m.handlerWithInterceptor())
 	http.Handle(MetaNodeResponse, m.handlerWithInterceptor())
 	http.Handle(AdminGetCluster, m.handlerWithInterceptor())
@@ -111,7 +111,7 @@ func (m *Master) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		m.getVols(w, r)
 	case ClientNamespace:
 		m.getNamespace(w, r)
-	case ClientMetaGroup:
+	case ClientMetaPartition:
 		m.getMetaPartition(w, r)
 	case DataNodeResponse:
 		m.dataNodeTaskResponse(w, r)

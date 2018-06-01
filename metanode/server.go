@@ -5,7 +5,6 @@ import (
 	"net"
 	"strconv"
 
-	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 	"net/http"
@@ -85,27 +84,9 @@ func (m *MetaNode) handlePacket(conn net.Conn, p *Packet) (err error) {
 	return
 }
 
-func (m *MetaNode) startRestServer() (err error) {
+func (m *MetaNode) registerHandler() (err error) {
 	// Register http handler
 	http.HandleFunc("/getAllPartitions", m.allPartitionsHandle)
 	http.HandleFunc("/getInodeInfo", m.inodeInfoHandle)
-	addr := fmt.Sprintf(":%d", m.pprofListen)
-	server := &http.Server{
-		Addr: addr,
-	}
-	go func() {
-		err = server.ListenAndServe()
-		if err != nil {
-			log.LogErrorf("[startRestServer]: %s", err.Error())
-			m.Shutdown()
-		}
-	}()
-	m.httpServer = server
 	return
-}
-
-func (m *MetaNode) stopRestServer() {
-	if m.httpServer != nil {
-		m.httpServer.Close()
-	}
 }

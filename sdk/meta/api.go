@@ -182,6 +182,8 @@ func (mw *MetaWrapper) AppendExtentKey(inode uint64, ek proto.ExtentKey) error {
 	}
 	defer mw.putConn(mc, err)
 
+	log.LogDebugf("AppendExtentKey: inode(%v) ek(%v)", inode, ek)
+
 	status, err := mw.appendExtentKey(mc, inode, ek)
 	if err != nil || status != statusOK {
 		log.LogErrorf("err(%v) status(%v)", err, status)

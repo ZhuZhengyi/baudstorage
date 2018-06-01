@@ -22,6 +22,10 @@ const (
 	ActionGetVolGroupView = "ActionGetVolGroupView"
 )
 
+const (
+	MinWritableVolNum = 20
+)
+
 type VolGroup struct {
 	VolID      uint32
 	Status     uint8
@@ -34,7 +38,7 @@ type VolsView struct {
 }
 
 func (vg *VolGroup) GetAllAddrs() (m string) {
-	return strings.Join(vg.Hosts[1:],proto.AddrSplit)+proto.AddrSplit
+	return strings.Join(vg.Hosts[1:], proto.AddrSplit) + proto.AddrSplit
 }
 
 type VolGroupWrapper struct {
@@ -100,8 +104,9 @@ func (vw *VolGroupWrapper) getVolsFromMaster() (err error) {
 	return
 }
 
-// Note: this method is not protected by lock
 func (vw *VolGroupWrapper) replaceOrInsertVol(vg *VolGroup) {
+	vw.Lock()
+	defer vw.Unlock()
 	if _, ok := vw.volGroups[vg.VolID]; ok {
 		delete(vw.volGroups, vg.VolID)
 	}
@@ -110,16 +115,24 @@ func (vw *VolGroupWrapper) replaceOrInsertVol(vg *VolGroup) {
 
 func (vw *VolGroupWrapper) updateVolGroup(vols []*VolGroup) {
 	rwVolGroups := make([]*VolGroup, 0)
-	vw.Lock()
-	defer vw.Unlock()
-
 	for _, vg := range vols {
-		vw.replaceOrInsertVol(vg)
 		if vg.Status == storage.ReadWriteStore {
 			rwVolGroups = append(rwVolGroups, vg)
 		}
 	}
+
+	// If the view received from master cannot guarentee the minimum number
+	// of volume groups, it is probably due to a **temporary** network problem
+	// between master and datanode. So do not update the vol group view for
+	// now, and use the old information.
+	if len(rwVolGroups) < MinWritableVolNum {
+		return
+	}
 	vw.rwVolGroups = rwVolGroups
+
+	for _, vg := range vols {
+		vw.replaceOrInsertVol(vg)
+	}
 }
 
 func isExcluded(volID uint32, excludes []uint32) bool {
@@ -132,26 +145,23 @@ func isExcluded(volID uint32, excludes []uint32) bool {
 }
 
 func (vw *VolGroupWrapper) GetWriteVol(exclude []uint32) (*VolGroup, error) {
-	vw.RLock()
-	defer vw.RUnlock()
-
-	if len(vw.rwVolGroups) == 0 {
+	rwVolGroups := vw.rwVolGroups
+	if len(rwVolGroups) == 0 {
 		return nil, fmt.Errorf("No writable VolGroup")
 	}
 
 	rand.Seed(time.Now().UnixNano())
-	choose := rand.Intn(len(vw.rwVolGroups))
-	vg := vw.rwVolGroups[choose]
+	choose := rand.Intn(len(rwVolGroups))
+	vg := rwVolGroups[choose]
 	if !isExcluded(vg.VolID, exclude) {
 		return vg, nil
 	}
 
-	for _, vg = range vw.rwVolGroups {
+	for _, vg = range rwVolGroups {
 		if !isExcluded(vg.VolID, exclude) {
 			return vg, nil
 		}
 	}
-
 	return nil, fmt.Errorf("No writable VolGroup")
 }
 
