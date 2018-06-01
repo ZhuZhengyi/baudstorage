@@ -3,131 +3,31 @@ package metanode
 import (
 	"bytes"
 	"encoding/binary"
-	"strings"
-	"time"
-
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
+	"strings"
+	"time"
 )
 
-// Dentry wraps necessary properties of `Dentry` information in file system.
-// Marshal key:
-//  +--------+----------+------+
-//  |  Item  | ParentId | Name |
-//  +--------+----------+------+
-//  |  Bytes |    8     | >=0  |
-//  +--------+----------+------+
-type Dentry struct {
-	ParentId uint64 // FileIdId value of parent inode.
-	Name     string // Name of current dentry.
-	Inode    uint64 // FileIdId value of current inode.
-	Type     uint32 // Dentry type.
-}
-
-// Marshal dentry item to bytes.
-func (d *Dentry) Marshal() (result []byte, err error) {
-	keyBytes := d.MarshalKey()
-	valBytes := d.MarshalValue()
-	keyLen := uint32(len(keyBytes))
-	valLen := uint32(len(valBytes))
-	buff := bytes.NewBuffer(make([]byte, 0))
-	if err = binary.Write(buff, binary.BigEndian, keyLen); err != nil {
-		return
-	}
-	if _, err = buff.Write(keyBytes); err != nil {
-		return
-	}
-	if err = binary.Write(buff, binary.BigEndian, valLen); err != nil {
-
-	}
-	if _, err =  buff.Write(valBytes); err != nil {
-		return
-	}
-	result = buff.Bytes()
-	return
-}
-
-// Unmarshal dentry item from bytes.
-func (d *Dentry) Unmarshal(raw []byte) (err error) {
-	var (
-		keyLen uint32
-		valLen uint32
-	)
-	buff := bytes.NewBuffer(raw)
-	if err = binary.Read(buff, binary.BigEndian, &keyLen); err != nil {
-		return
-	}
-	keyBytes := make([]byte, keyLen)
-	if _, err = buff.Read(keyBytes); err != nil {
-		return
-	}
-	if err = d.UnmarshalKey(keyBytes); err != nil {
-		return
-	}
-	if err = binary.Read(buff, binary.BigEndian, &valLen); err != nil {
-		return
-	}
-	valBytes := make([]byte, valLen)
-	if _, err = buff.Read(valBytes); err != nil {
-		return
-	}
-	err = d.UnmarshalValue(valBytes)
-	return
-}
-
-// Less tests whether the current Dentry item is less than the given one.
-// This method is necessary fot B-Tree item implementation.
-func (d *Dentry) Less(than btree.Item) (less bool) {
-	dentry, ok := than.(*Dentry)
-	less = ok && ((d.ParentId < dentry.ParentId) || ((d.ParentId == dentry.ParentId) && (d.Name < dentry.Name)))
-	return
-}
-
-// MarshalKey is the bytes version of MarshalKey method which returns byte slice result.
-func (d *Dentry) MarshalKey() (k []byte) {
-	buff := bytes.NewBuffer(make([]byte, 0))
-	if err := binary.Write(buff, binary.BigEndian, &d.ParentId); err != nil {
-		panic(err)
-	}
-	buff.Write([]byte(d.Name))
-	k = buff.Bytes()
-	return
-}
-
-// UnmarshalKey unmarshal key from bytes.
-func (d *Dentry) UnmarshalKey(k []byte) (err error) {
-	buff := bytes.NewBuffer(k)
-	if err = binary.Read(buff, binary.BigEndian, &d.ParentId); err != nil {
-		return
-	}
-	d.Name = string(buff.Bytes())
-	return
-}
-
-// MarshalValue marshal key to bytes.
-func (d *Dentry) MarshalValue() (k []byte) {
-	buff := bytes.NewBuffer(make([]byte, 0))
-	if err := binary.Write(buff, binary.BigEndian, &d.Inode); err != nil {
-		panic(err)
-	}
-	if err := binary.Write(buff, binary.BigEndian, &d.Type); err != nil {
-		panic(err)
-	}
-	k = buff.Bytes()
-	return
-}
-
-// UnmarshalValue unmarshal value from bytes.
-func (d *Dentry) UnmarshalValue(val []byte) (err error) {
-	buff := bytes.NewBuffer(val)
-	if err = binary.Read(buff, binary.BigEndian, &d.Inode); err != nil {
-		return
-	}
-	err = binary.Read(buff, binary.BigEndian, &d.Type)
-	return
-}
-
 // Inode wraps necessary properties of `Inode` information in file system.
+// Marshal key:
+//  +-------+-------+
+//  | item  | Inode |
+//  +-------+-------+
+//  | bytes |   8   |
+//  +-------+-------+
+// Marshal value:
+//  +-------+------+------+-----+----+----+----+--------+------------------+
+//  | item  | Type | Size | Gen | CT | AT | MT | ExtLen | MarshaledExtents |
+//  +-------+------+------+-----+----+----+----+--------+------------------+
+//  | bytes |  4   |  8   |  8  | 8  | 8  | 8  |   4    |      ExtLen      |
+//  +-------+------+------+-----+----+----+----+--------+------------------+
+// Marshal entity:
+//  +-------+-----------+--------------+-----------+--------------+
+//  | item  | KeyLength | MarshaledKey | ValLength | MarshaledVal |
+//  +-------+-----------+--------------+-----------+--------------+
+//  | bytes |     4     |   KeyLength  |     4     |   ValLength  |
+//  +-------+-----------+--------------+-----------+--------------+
 type Inode struct {
 	Inode      uint64 // Inode ID
 	Type       uint32
@@ -176,7 +76,7 @@ func (i *Inode) Marshal() (result []byte, err error) {
 	if err = binary.Write(buff, binary.BigEndian, valLen); err != nil {
 
 	}
-	if _, err =  buff.Write(valBytes); err != nil {
+	if _, err = buff.Write(valBytes); err != nil {
 		return
 	}
 	result = buff.Bytes()
@@ -226,9 +126,9 @@ func (i *Inode) UnmarshalKey(k []byte) (err error) {
 // MarshalValue marshal value to bytes.
 func (i *Inode) MarshalValue() (val []byte) {
 	var (
-		err error
-		extents []string
-		extentsSeq []byte
+		err           error
+		extents       []string
+		extentsSeq    []byte
 		extentsSeqLen uint32
 	)
 	buff := bytes.NewBuffer(make([]byte, 0))
@@ -288,14 +188,14 @@ func (i *Inode) UnmarshalValue(val []byte) (err error) {
 		return
 	}
 	var (
-		extents []string
-		extentsSeq []byte
+		extents       []string
+		extentsSeq    []byte
 		extentsSeqLen uint32
 	)
 	if err = binary.Read(buff, binary.BigEndian, &extentsSeqLen); err != nil {
 		return
 	}
-	if extentsSeqLen  == 0 {
+	if extentsSeqLen == 0 {
 		return
 	}
 	extentsSeq = make([]byte, extentsSeqLen)
