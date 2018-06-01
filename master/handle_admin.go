@@ -438,7 +438,7 @@ func (m *Master) loadMetaPartition(w http.ResponseWriter, r *http.Request) {
 	if ns, err = m.cluster.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
-	if mp, err = ns.getMetaPartitionById(partitionID); err != nil {
+	if mp, err = ns.getMetaPartition(partitionID); err != nil {
 		goto errDeal
 	}
 

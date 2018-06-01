@@ -129,7 +129,7 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 	if ns, err = c.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
-	if mp, err = ns.getMetaPartitionById(partitionID); err != nil {
+	if mp, err = ns.getMetaPartition(partitionID); err != nil {
 		goto errDeal
 	}
 
@@ -369,7 +369,7 @@ func (c *Cluster) dealCreateMetaPartitionResp(nodeAddr string, resp *proto.Creat
 		goto errDeal
 	}
 
-	if mp, err = ns.getMetaPartitionById(resp.PartitionID); err != nil {
+	if mp, err = ns.getMetaPartition(resp.PartitionID); err != nil {
 		goto errDeal
 	}
 
