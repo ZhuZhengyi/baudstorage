@@ -417,21 +417,16 @@ func (m *metaManager) opDeleteMetaPartition(conn net.Conn, p *Packet) (err error
 		m.respondToClient(conn, p)
 		return
 	}
-	if !m.serveProxy(conn, mp, p) {
-		return
-	}
 	resp := &proto.DeleteMetaPartitionResponse{
 		PartitionID: req.PartitionID,
-		Status:      proto.TaskFail,
+		Status:      proto.TaskSuccess,
 	}
 	// Ack Master Request
 	m.responseAckOKToMaster(conn, p)
-	if err = mp.DeletePartition(); err != nil {
-		resp.Result = err.Error()
-		goto end
-	}
+	conf := mp.GetBaseConfig()
+	mp.Stop()
+	os.RemoveAll(conf.RootDir)
 	resp.Status = proto.TaskSuccess
-end:
 	adminTask.Response = resp
 	adminTask.Request = nil
 	err = m.respondToMaster(adminTask)
