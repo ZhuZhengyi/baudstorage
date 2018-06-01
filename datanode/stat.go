@@ -6,6 +6,7 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 	"io/ioutil"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -102,7 +103,8 @@ func post(data []byte, url string) (*http.Response, error) {
 func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.LogErrorf("action[DataNode.postToMaster] panic: %v.", r)
+			log.LogErrorf("action[DataNode.postToMaster] panic[%v] stack[%v].", r, string(debug.Stack()))
+			log.LogErrorf("action[DataNode.postToMaster] masterAddrs[%v].", s.masterAddrs)
 		}
 	}()
 	success := false
