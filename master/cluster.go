@@ -390,7 +390,7 @@ func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {
 		goto errDeal
 	}
 	c.namespaces[name] = ns
-	if err = c.CreateMetaPartition(name, 0, DefaultMaxMetaPartitionRange); err != nil {
+	if err = c.CreateMetaPartition(name, 0, DefaultMaxMetaPartitionInodeID); err != nil {
 		delete(c.namespaces, name)
 		goto errDeal
 	}

@@ -316,7 +316,7 @@ func (c *Cluster) dealUpdateMetaPartitionResp(nodeAddr string, resp *proto.Updat
 	if err != nil {
 		goto errDeal
 	}
-	if err = c.CreateMetaPartition(resp.NsName, mp.End, DefaultMaxMetaPartitionRange); err != nil {
+	if err = c.CreateMetaPartition(resp.NsName, mp.End, DefaultMaxMetaPartitionInodeID); err != nil {
 		goto errDeal
 	}
 	return
@@ -619,7 +619,7 @@ func (c *Cluster) UpdateMetaNode(metaNode *MetaNode, threshold bool) {
 		}
 		mp.updateMetaPartition(mr, metaNode)
 		if threshold {
-			end := mr.MaxInodeID + mr.End + DefaultMinMetaPartitionRange
+			end := mr.MaxInodeID + mr.End + DefaultMetaPartitionInodeIDStep
 			mp.updateEnd()
 			t := mp.generateUpdateMetaReplicaTask(mp.PartitionID, end)
 			tasks = append(tasks, t)

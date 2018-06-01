@@ -1,7 +1,5 @@
 package master
 
-import "time"
-
 const (
 	ParaNodeAddr = "addr"
 	ParaName     = "name"
@@ -41,17 +39,16 @@ const (
 )
 
 const (
-	//high 4 bit represent partition is available,low 4 bit represent partition is writable
-	MetaPartitionUnavailable uint8 = 0x00
-	MetaPartitionReadOnly    uint8 = 0x10
-	MetaPartitionReadWrite   uint8 = 0x11
+	MetaPartitionUnavailable uint8 = 0
+	MetaPartitionReadOnly    uint8 = 1
+	MetaPartitionReadWrite   uint8 = 2
 )
 
 const (
-	DefaultMaxMetaPartitionRange = 1<<63 - 1
-	DefaultMinMetaPartitionRange = 1 << 34
-	RuntimeStackBufSize          = 4096
-	TaskWorkerInterval           = time.Second * time.Duration(5)
+	DefaultMaxMetaPartitionInodeID  uint64 = 1<<63 - 1
+	DefaultMetaPartitionInodeIDStep uint64 = 1 << 32
+	DefaultMetaNodeReservedMem      uint64 = 1 << 32
+	RuntimeStackBufSize                    = 4096
 )
 
 const (

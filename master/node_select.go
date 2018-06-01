@@ -193,7 +193,7 @@ func (c *Cluster) GetAvailCarryMetaNodeTab(maxTotal uint64, excludeRack string, 
 			availCount++
 		}
 		nt := new(NodeTab)
-		nt.Carry = metaNode.carry
+		nt.Carry = metaNode.Carry
 		if metaNode.Used < 0 {
 			nt.Weight = 1.0
 		} else {

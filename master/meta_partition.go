@@ -153,8 +153,8 @@ func (mp *MetaPartition) checkStatus(writeLog bool, replicaNum int) {
 	}
 
 	if writeLog {
-		log.LogInfo(fmt.Sprintf("action[checkStatus],id:%v,status:%v,replicaNum:%v",
-			mp.PartitionID, mp.Status, mp.CurReplicaNum))
+		log.LogInfo(fmt.Sprintf("action[checkStatus],id:%v,status:%v,replicaNum:%v,missNodes:%v",
+			mp.PartitionID, mp.Status, mp.CurReplicaNum, mp.MissNodes))
 	}
 }
 

@@ -15,7 +15,8 @@ import (
 
 const (
 	MinTaskLen              = 30
-	TaskWaitResponseTimeOut = time.Second * time.Duration(3)
+	TaskWaitResponseTimeOut = time.Second * time.Duration(5)
+	TaskWorkerInterval      = time.Microsecond * time.Duration(200)
 )
 
 /*
