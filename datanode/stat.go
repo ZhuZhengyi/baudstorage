@@ -101,14 +101,10 @@ func post(data []byte, url string) (*http.Response, error) {
 }
 
 func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.LogErrorf("action[DataNode.postToMaster] panic[%v] stack[%v].", r, string(debug.Stack()))
-			log.LogErrorf("action[DataNode.postToMaster] masterAddrs[%v].", s.masterAddrs)
-		}
-	}()
 	success := false
 	var err1 error
+	log.LogErrorf("action[DataNode.postToMaster] masterAddrs[%v].", s.masterAddrs)
+
 	for i := 0; i < len(s.masterAddrs); i++ {
 		var resp *http.Response
 		if masterAddr == "" {
