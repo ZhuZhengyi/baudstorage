@@ -15,6 +15,7 @@ import (
 	"github.com/tiglabs/baudstorage/raftstore"
 	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/baudstorage/util/pool"
+	"github.com/tiglabs/baudstorage/util/ump"
 	_ "net/http/pprof"
 )
 
@@ -45,6 +46,10 @@ type metaManager struct {
 }
 
 func (m *metaManager) HandleMetaOperation(conn net.Conn, p *Packet) (err error) {
+	umpKey := UMPKey + "_" + p.GetOpMsg()
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
+
 	switch p.Opcode {
 	case proto.OpMetaCreateInode:
 		err = m.opCreateInode(conn, p)
