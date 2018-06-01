@@ -5,17 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/tiglabs/baudstorage/util/pool"
 	"io"
 	"net"
 	"strconv"
 	"sync/atomic"
 	"time"
-	"github.com/tiglabs/baudstorage/util/pool"
 )
 
 var (
 	ReqIDGlobal = int64(1)
-	buffers=pool.NewBufferPool()
+	buffers     = pool.NewBufferPool()
 )
 
 func GetReqID() int64 {
@@ -23,10 +23,10 @@ func GetReqID() int64 {
 }
 
 const (
-	AddrSplit       = "/"
-	HeaderSize      = 45
-	ExtentVol    = "extent"
-	TinyVol      = "tiny"
+	AddrSplit  = "/"
+	HeaderSize = 45
+	ExtentVol  = "extent"
+	TinyVol    = "tiny"
 )
 
 //operations
@@ -125,8 +125,8 @@ func NewPacket() *Packet {
 	return p
 }
 
-func (p *Packet) GetOpMsg(opcode uint8) (m string) {
-	switch opcode {
+func (p *Packet) GetOpMsg() (m string) {
+	switch p.Opcode {
 	case OpCreateFile:
 		m = "CreateFile"
 	case OpMarkDelete:
@@ -158,51 +158,58 @@ func (p *Packet) GetOpMsg(opcode uint8) (m string) {
 	case OpNotExistErr:
 		m = "NotExistErr"
 	case OpMetaCreateInode:
-		m="OpMetaCreateInode"
+		m = "OpMetaCreateInode"
 	case OpMetaDeleteInode:
-		m="OpMetaDeleteInode"
+		m = "OpMetaDeleteInode"
 	case OpMetaCreateDentry:
-		m="OpMetaCreateDentry"
+		m = "OpMetaCreateDentry"
 	case OpMetaDeleteDentry:
-		m="OpMetaDeleteDentry"
+		m = "OpMetaDeleteDentry"
 	case OpMetaOpen:
-		m="OpMetaOpen"
+		m = "OpMetaOpen"
 	case OpMetaLookup:
-		m="OpMetaLookup"
+		m = "OpMetaLookup"
 	case OpMetaReadDir:
-		m="OpMetaReadDir"
+		m = "OpMetaReadDir"
 	case OpMetaInodeGet:
-		m="OpMetaInodeGet"
+		m = "OpMetaInodeGet"
 	case OpMetaExtentsAdd:
-		m="OpMetaExtentsAdd"
+		m = "OpMetaExtentsAdd"
 	case OpMetaExtentsDel:
-		m="OpMetaExtentsDel"
+		m = "OpMetaExtentsDel"
 	case OpMetaExtentsList:
-		m="OpMetaExtentsList"
+		m = "OpMetaExtentsList"
 	case OpCreateMetaPartition:
-		m="OpCreateMetaPartition"
+		m = "OpCreateMetaPartition"
 	case OpMetaNodeHeartbeat:
-		m="OpMetaNodeHeartbeat"
+		m = "OpMetaNodeHeartbeat"
 	case OpDeleteMetaPartition:
-		m="OpDeleteMetaPartition"
+		m = "OpDeleteMetaPartition"
 	case OpUpdateMetaPartition:
-		m="OpUpdateMetaPartition"
+		m = "OpUpdateMetaPartition"
 	case OpLoadMetaPartition:
-		m="OpLoadMetaPartition"
+		m = "OpLoadMetaPartition"
 	case OpOfflineMetaPartition:
-		m="OpOfflineMetaPartition"
+		m = "OpOfflineMetaPartition"
 	case OpCreateVol:
-		m="OpCreateVol"
+		m = "OpCreateVol"
 	case OpDeleteVol:
-		m="OpDeleteVol"
+		m = "OpDeleteVol"
 	case OpLoadVol:
-		m="OpLoadVol"
+		m = "OpLoadVol"
 	case OpDataNodeHeartbeat:
-		m="OpDataNodeHeartbeat"
+		m = "OpDataNodeHeartbeat"
 	case OpReplicateFile:
-		m="OpReplicateFile"
+		m = "OpReplicateFile"
 	case OpDeleteFile:
-		m="OpDeleteFile"
+		m = "OpDeleteFile"
+
+	}
+	return
+}
+
+func (p *Packet) GetResultMesg() (m string) {
+	switch p.ResultCode {
 	case OpDiskNoSpaceErr:
 		m = "DiskNoSpaceErr"
 	case OpDiskErr:
@@ -220,9 +227,10 @@ func (p *Packet) GetOpMsg(opcode uint8) (m string) {
 	case OpInodeFullErr:
 		m = "InodeFullErr"
 	default:
-		return fmt.Sprintf("unknow opcode %v",opcode)
+		return fmt.Sprintf("unknow opcode %v", p.Opcode)
 
 	}
+
 	return
 }
 
@@ -278,9 +286,9 @@ func (p *Packet) UnmarshalData(v interface{}) error {
 }
 
 func (p *Packet) WriteToNoDeadLineConn(c net.Conn) (err error) {
-	header,err := buffers.Get(HeaderSize)
-	if err!=nil {
-		header=make([]byte,HeaderSize)
+	header, err := buffers.Get(HeaderSize)
+	if err != nil {
+		header = make([]byte, HeaderSize)
 	}
 	defer buffers.Put(header)
 
@@ -298,9 +306,9 @@ func (p *Packet) WriteToNoDeadLineConn(c net.Conn) (err error) {
 
 func (p *Packet) WriteToConn(c net.Conn) (err error) {
 	c.SetWriteDeadline(time.Now().Add(WriteDeadlineTime * time.Second))
-	header,err := buffers.Get(HeaderSize)
-	if err!=nil {
-		header=make([]byte,HeaderSize)
+	header, err := buffers.Get(HeaderSize)
+	if err != nil {
+		header = make([]byte, HeaderSize)
 	}
 	defer buffers.Put(header)
 
@@ -317,9 +325,9 @@ func (p *Packet) WriteToConn(c net.Conn) (err error) {
 }
 
 func (p *Packet) WriteHeaderToConn(c net.Conn) (err error) {
-	header,err := buffers.Get(HeaderSize)
-	if err!=nil {
-		header=make([]byte,HeaderSize)
+	header, err := buffers.Get(HeaderSize)
+	if err != nil {
+		header = make([]byte, HeaderSize)
 	}
 	defer buffers.Put(header)
 	p.MarshalHeader(header)
@@ -339,9 +347,9 @@ func (p *Packet) ReadFromConn(c net.Conn, deadlineTime time.Duration) (err error
 	if deadlineTime != NoReadDeadlineTime {
 		c.SetReadDeadline(time.Now().Add(deadlineTime * time.Second))
 	}
-	header,err := buffers.Get(HeaderSize)
-	if err!=nil {
-		header=make([]byte,HeaderSize)
+	header, err := buffers.Get(HeaderSize)
+	if err != nil {
+		header = make([]byte, HeaderSize)
 	}
 	defer buffers.Put(header)
 	if _, err = io.ReadFull(c, header); err != nil {
@@ -407,7 +415,7 @@ func (p *Packet) PackErrorWithBody(errCode uint8, reply []byte) {
 
 func (p *Packet) GetUniqLogId() (m string) {
 	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v_%v", p.ReqID, p.VolID, p.FileID,
-		p.Offset, p.Size, p.GetOpMsg(p.Opcode), p.GetOpMsg(p.ResultCode))
+		p.Offset, p.Size, p.GetOpMsg(), p.GetResultMesg())
 
 	return
 }
