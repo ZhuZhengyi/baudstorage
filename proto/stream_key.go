@@ -61,8 +61,8 @@ func (sk *StreamKey) Put(k ExtentKey) {
 func (sk *StreamKey) Size() (bytes uint64) {
 	sk.Lock()
 	defer sk.Unlock()
-	for _, okey := range sk.Extents {
-		bytes += uint64(okey.Size)
+	for _, ok := range sk.Extents {
+		bytes += uint64(ok.Size)
 	}
 	return
 }

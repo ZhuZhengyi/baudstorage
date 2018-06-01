@@ -100,6 +100,11 @@ func post(data []byte, url string) (*http.Response, error) {
 }
 
 func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.LogErrorf("action[DataNode.postToMaster] panic: %v.", r)
+		}
+	}()
 	success := false
 	var err1 error
 	for i := 0; i < len(s.masterAddrs); i++ {
@@ -134,7 +139,7 @@ func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error)
 			return nil, fmt.Errorf("postTo %v scode %v msg %v", url, scode, string(msg))
 		}
 		success = true
-		log.LogInfo(fmt.Sprintf("url[%v] to master[%v] response[%v] code[%v]", url, masterAddr, string(msg), scode))
+		log.LogInfof("action[DataNode.postToMaster] url[%v] to master[%v] response[%v] code[%v]", url, masterAddr, string(msg), scode)
 		break
 	}
 	if !success {

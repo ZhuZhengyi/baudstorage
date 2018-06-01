@@ -65,7 +65,7 @@ func (v *Vol) extentsRepair() {
 	}
 	finishTime := time.Now().UnixNano()
 	log.LogDebugf("action[Vol.extentsRepair] extents repair finish cost %vms.",
-		(finishTime - startTime) / int64(time.Millisecond))
+		(finishTime-startTime)/int64(time.Millisecond))
 }
 
 func (v *Vol) getAllMemberFileMetas() (allMembers []*MembersFileMetas, err error) {

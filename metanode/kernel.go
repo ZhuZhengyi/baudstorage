@@ -1,9 +1,8 @@
 package metanode
 
 import (
-	"encoding/json"
-	"fmt"
-	"strconv"
+	"bytes"
+	"encoding/binary"
 	"strings"
 	"time"
 
@@ -12,7 +11,12 @@ import (
 )
 
 // Dentry wraps necessary properties of `Dentry` information in file system.
-//
+// Marshal key:
+//  +--------+----------+------+
+//  |  Item  | ParentId | Name |
+//  +--------+----------+------+
+//  |  Bytes |    8     | >=0  |
+//  +--------+----------+------+
 type Dentry struct {
 	ParentId uint64 // FileIdId value of parent inode.
 	Name     string // Name of current dentry.
@@ -20,63 +24,106 @@ type Dentry struct {
 	Type     uint32 // Dentry type.
 }
 
-// Dump Dentry item to bytes.
-func (d *Dentry) Dump() (result []byte, err error) {
-	return json.Marshal(d)
+// Marshal dentry item to bytes.
+func (d *Dentry) Marshal() (result []byte, err error) {
+	keyBytes := d.MarshalKey()
+	valBytes := d.MarshalValue()
+	keyLen := uint32(len(keyBytes))
+	valLen := uint32(len(valBytes))
+	buff := bytes.NewBuffer(make([]byte, 0))
+	if err = binary.Write(buff, binary.BigEndian, keyLen); err != nil {
+		return
+	}
+	if _, err = buff.Write(keyBytes); err != nil {
+		return
+	}
+	if err = binary.Write(buff, binary.BigEndian, valLen); err != nil {
+
+	}
+	if _, err =  buff.Write(valBytes); err != nil {
+		return
+	}
+	result = buff.Bytes()
+	return
 }
 
-// Load Dentry item from bytes.
-func (d *Dentry) Load(raw []byte) (err error) {
-	return json.Unmarshal(raw, d)
+// Unmarshal dentry item from bytes.
+func (d *Dentry) Unmarshal(raw []byte) (err error) {
+	var (
+		keyLen uint32
+		valLen uint32
+	)
+	buff := bytes.NewBuffer(raw)
+	if err = binary.Read(buff, binary.BigEndian, &keyLen); err != nil {
+		return
+	}
+	keyBytes := make([]byte, keyLen)
+	if _, err = buff.Read(keyBytes); err != nil {
+		return
+	}
+	if err = d.UnmarshalKey(keyBytes); err != nil {
+		return
+	}
+	if err = binary.Read(buff, binary.BigEndian, &valLen); err != nil {
+		return
+	}
+	valBytes := make([]byte, valLen)
+	if _, err = buff.Read(valBytes); err != nil {
+		return
+	}
+	err = d.UnmarshalValue(valBytes)
+	return
 }
 
 // Less tests whether the current Dentry item is less than the given one.
 // This method is necessary fot B-Tree item implementation.
 func (d *Dentry) Less(than btree.Item) (less bool) {
 	dentry, ok := than.(*Dentry)
-	less = ok && d.GetKey() < dentry.GetKey()
+	less = ok && ((d.ParentId < dentry.ParentId) || ((d.ParentId == dentry.ParentId) && (d.Name < dentry.Name)))
 	return
 }
 
-// GetKeyString returns string value of key used as an index in the B-Tree consists
-// of ParentId and Name properties and connected by '*'.
-// Since the type of `InodeId` is uint64 and the maximum value is 1.844674407371e+19,
-// so the `ParentId` in key uses 20-bit character alignment to support fuzzy retrieval.
-// Example:
-//  +----------------------------------------------------+
-//  | ParentId    | Name  | Key                          |
-//  +----------------------------------------------------+
-//  |           1 | demo1 | "                   1*demo1" |
-//  | 84467440737 | demo2 | "         84467440737*demo2" |
-//  +----------------------------------------------------+
-func (d *Dentry) GetKey() (m string) {
-	return fmt.Sprintf("%20d*%s", d.ParentId, d.Name)
-}
-
-// GetKeyBytes is the bytes version of GetKey method which returns byte slice result.
-func (d *Dentry) GetKeyBytes() (m []byte) {
-	return []byte(d.GetKey())
-}
-
-func (d *Dentry) ParseKeyBytes(k []byte) (err error) {
-	key := string(k)
-	_, err = fmt.Sscanf(key, "%d*%s", &d.ParentId, &d.Name)
+// MarshalKey is the bytes version of MarshalKey method which returns byte slice result.
+func (d *Dentry) MarshalKey() (k []byte) {
+	buff := bytes.NewBuffer(make([]byte, 0))
+	if err := binary.Write(buff, binary.BigEndian, &d.ParentId); err != nil {
+		panic(err)
+	}
+	buff.Write([]byte(d.Name))
+	k = buff.Bytes()
 	return
 }
 
-// GetValueString returns string value of this Dentry which consists of Inode and Type properties.
-func (d *Dentry) GetValue() (m string) {
-	return fmt.Sprintf("%d*%d", d.Inode, d.Type)
+// UnmarshalKey unmarshal key from bytes.
+func (d *Dentry) UnmarshalKey(k []byte) (err error) {
+	buff := bytes.NewBuffer(k)
+	if err = binary.Read(buff, binary.BigEndian, &d.ParentId); err != nil {
+		return
+	}
+	d.Name = string(buff.Bytes())
+	return
 }
 
-// GetValueBytes is the bytes version of GetValue method which returns byte slice result.
-func (d *Dentry) GetValueBytes() (m []byte) {
-	return []byte(d.GetValue())
+// MarshalValue marshal key to bytes.
+func (d *Dentry) MarshalValue() (k []byte) {
+	buff := bytes.NewBuffer(make([]byte, 0))
+	if err := binary.Write(buff, binary.BigEndian, &d.Inode); err != nil {
+		panic(err)
+	}
+	if err := binary.Write(buff, binary.BigEndian, &d.Type); err != nil {
+		panic(err)
+	}
+	k = buff.Bytes()
+	return
 }
 
-func (d *Dentry) ParseValueBytes(val []byte) (err error) {
-	value := string(val)
-	_, err = fmt.Sscanf(value, "%d*%d", &d.Inode, &d.Type)
+// UnmarshalValue unmarshal value from bytes.
+func (d *Dentry) UnmarshalValue(val []byte) (err error) {
+	buff := bytes.NewBuffer(val)
+	if err = binary.Read(buff, binary.BigEndian, &d.Inode); err != nil {
+		return
+	}
+	err = binary.Read(buff, binary.BigEndian, &d.Type)
 	return
 }
 
@@ -90,16 +137,6 @@ type Inode struct {
 	AccessTime int64
 	ModifyTime int64
 	Extents    *proto.StreamKey
-}
-
-// Dump Inode item to bytes.
-func (i *Inode) Dump() ([]byte, error) {
-	return json.Marshal(i)
-}
-
-// Load Inode item from bytes.
-func (i *Inode) Load(raw []byte) error {
-	return json.Unmarshal(raw, i)
 }
 
 // NewInode returns a new Inode instance pointer with specified Inode ID, name and Inode type code.
@@ -124,82 +161,154 @@ func (i *Inode) Less(than btree.Item) bool {
 	return ok && i.Inode < ino.Inode
 }
 
-// GetKey returns string value of key used as an index in the B-Tree consists of Inode property.
-func (i *Inode) GetKey() (m string) {
-	return fmt.Sprintf("%d", i.Inode)
-}
-
-// GetKeyBytes is the bytes version of GetKey method which returns byte slice result.
-func (i *Inode) GetKeyBytes() (m []byte) {
-	return []byte(i.GetKey())
-}
-
-func (i *Inode) ParseKeyBytes(k []byte) (err error) {
-	key := string(k)
-	inodeID, err := strconv.ParseUint(key, 10, 64)
-	if err != nil {
+func (i *Inode) Marshal() (result []byte, err error) {
+	keyBytes := i.MarshalKey()
+	valBytes := i.MarshalValue()
+	keyLen := uint32(len(keyBytes))
+	valLen := uint32(len(valBytes))
+	buff := bytes.NewBuffer(make([]byte, 0))
+	if err = binary.Write(buff, binary.BigEndian, keyLen); err != nil {
 		return
 	}
-	i.Inode = inodeID
+	if _, err = buff.Write(keyBytes); err != nil {
+		return
+	}
+	if err = binary.Write(buff, binary.BigEndian, valLen); err != nil {
+
+	}
+	if _, err =  buff.Write(valBytes); err != nil {
+		return
+	}
+	result = buff.Bytes()
 	return
 }
 
-// GetValue returns string value of this Inode which consists of Name, Size, AccessTime and
-// ModifyTime properties and connected by '*'.
-func (i *Inode) GetValue() (m string) {
-	s := fmt.Sprintf("%d*%d*%d*%d*%d*%d", i.Type, i.Size, i.Generation, i.CreateTime, i.AccessTime, i.ModifyTime)
-	var exts []string
-	exts = append(exts, s)
+func (i *Inode) Unmarshal(raw []byte) (err error) {
+	var (
+		keyLen uint32
+		valLen uint32
+	)
+	buff := bytes.NewBuffer(raw)
+	if err = binary.Read(buff, binary.BigEndian, &keyLen); err != nil {
+		return
+	}
+	keyBytes := make([]byte, keyLen)
+	if _, err = buff.Read(keyBytes); err != nil {
+		return
+	}
+	if err = i.UnmarshalKey(keyBytes); err != nil {
+		return
+	}
+	if err = binary.Read(buff, binary.BigEndian, &valLen); err != nil {
+		return
+	}
+	valBytes := make([]byte, valLen)
+	if _, err = buff.Read(valBytes); err != nil {
+		return
+	}
+	err = i.UnmarshalValue(valBytes)
+	return
+}
+
+// MarshalKey marshal key to bytes.
+func (i *Inode) MarshalKey() (k []byte) {
+	k = make([]byte, 8)
+	binary.BigEndian.PutUint64(k, i.Inode)
+	return
+}
+
+// UnmarshalKey unmarshal key from bytes.
+func (i *Inode) UnmarshalKey(k []byte) (err error) {
+	i.Inode = binary.BigEndian.Uint64(k)
+	return
+}
+
+// MarshalValue marshal value to bytes.
+func (i *Inode) MarshalValue() (val []byte) {
+	var (
+		err error
+		extents []string
+		extentsSeq []byte
+		extentsSeqLen uint32
+	)
+	buff := bytes.NewBuffer(make([]byte, 0))
+	if err = binary.Write(buff, binary.BigEndian, &i.Type); err != nil {
+		panic(err)
+	}
+	if err = binary.Write(buff, binary.BigEndian, &i.Size); err != nil {
+		panic(err)
+	}
+	if err = binary.Write(buff, binary.BigEndian, &i.Generation); err != nil {
+		panic(err)
+	}
+	if err = binary.Write(buff, binary.BigEndian, &i.CreateTime); err != nil {
+		panic(err)
+	}
+	if err = binary.Write(buff, binary.BigEndian, &i.AccessTime); err != nil {
+		panic(err)
+	}
+	if err = binary.Write(buff, binary.BigEndian, &i.ModifyTime); err != nil {
+		panic(err)
+	}
 	i.Extents.Range(func(i int, v proto.ExtentKey) bool {
-		exts = append(exts, v.Marshal())
+		extents = append(extents, v.Marshal())
 		return true
 	})
-	s = strings.Join(exts, "*")
-	return s
+	extentsSeq = []byte(strings.Join(extents, "*"))
+	extentsSeqLen = uint32(len(extentsSeq))
+	if err = binary.Write(buff, binary.BigEndian, &extentsSeqLen); err != nil {
+		panic(err)
+	}
+	if _, err = buff.Write(extentsSeq); err != nil {
+		panic(err)
+	}
+	val = buff.Bytes()
+	return
 }
 
-// GetValueBytes is the bytes version of GetValue method which returns byte slice result.
-func (i *Inode) GetValueBytes() (m []byte) {
-	return []byte(i.GetValue())
-}
-
-func (i *Inode) ParseValueBytes(val []byte) (err error) {
-	value := string(val)
-	valSlice := strings.Split(value, "*")
-	ttype, err := strconv.ParseUint(valSlice[0], 10, 32)
-	if err != nil {
+// UnmarshalValue unmarshal value from bytes.
+func (i *Inode) UnmarshalValue(val []byte) (err error) {
+	buff := bytes.NewBuffer(val)
+	if err = binary.Read(buff, binary.BigEndian, &i.Type); err != nil {
 		return
 	}
-	size, err := strconv.ParseUint(valSlice[1], 10, 64)
-	if err != nil {
+	if err = binary.Read(buff, binary.BigEndian, &i.Size); err != nil {
 		return
 	}
-	generation, err := strconv.ParseUint(valSlice[2], 10, 64)
-	if err != nil {
+	if err = binary.Read(buff, binary.BigEndian, &i.Generation); err != nil {
 		return
 	}
-	ctime, err := strconv.ParseInt(valSlice[3], 10, 64)
-	if err != nil {
+	if err = binary.Read(buff, binary.BigEndian, &i.CreateTime); err != nil {
 		return
 	}
-	atime, err := strconv.ParseInt(valSlice[4], 10, 64)
-	if err != nil {
+	if err = binary.Read(buff, binary.BigEndian, &i.AccessTime); err != nil {
 		return
 	}
-	mtime, err := strconv.ParseInt(valSlice[5], 10, 64)
-	if err != nil {
+	if err = binary.Read(buff, binary.BigEndian, &i.ModifyTime); err != nil {
 		return
 	}
-	i.Type = uint32(ttype)
-	i.Size = size
-	i.Generation = generation
-	i.CreateTime = ctime
-	i.AccessTime = atime
-	i.ModifyTime = mtime
-	if len(valSlice) <= 6 {
+	var (
+		extents []string
+		extentsSeq []byte
+		extentsSeqLen uint32
+	)
+	if err = binary.Read(buff, binary.BigEndian, &extentsSeqLen); err != nil {
 		return
 	}
-	for _, value = range valSlice[6:] {
+	if extentsSeqLen  == 0 {
+		return
+	}
+	extentsSeq = make([]byte, extentsSeqLen)
+	if _, err = buff.Read(extentsSeq); err != nil {
+		return
+	}
+	extents = strings.Split(string(extentsSeq), "*")
+	if i.Extents == nil {
+		i.Extents = proto.NewStreamKey(i.Inode)
+	} else {
+		i.Extents.Inode = i.Inode
+	}
+	for _, value := range extents {
 		var ext proto.ExtentKey
 		if err = ext.UnMarshal(value); err != nil {
 			return
