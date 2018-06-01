@@ -4,6 +4,7 @@ import (
 	"github.com/juju/errors"
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
+	"os"
 )
 
 // Error definitions for raft store partition.
@@ -36,6 +37,9 @@ type Partition interface {
 	// Stop removes this raft partition from raft server and make this partition shutdown.
 	Stop() error
 
+	// Delete stop and delete this partition forever.
+	Delete() error
+
 	// Status returns current raft status.
 	Status() (status *PartitionStatus)
 
@@ -59,6 +63,7 @@ type Partition interface {
 type partition struct {
 	id       uint64
 	raft     *raft.RaftServer
+	walPath  string
 	config   *PartitionConfig
 	resolver NodeResolver
 }
@@ -92,6 +97,14 @@ func (p *partition) ChangeMember(changeType proto.ConfChangeType, peer proto.Pee
 
 func (p *partition) Stop() (err error) {
 	err = p.raft.RemoveRaft(p.id)
+	return
+}
+
+func (p *partition) Delete() (err error) {
+	if err = p.Stop(); err != nil {
+		return
+	}
+	err = os.RemoveAll(p.walPath)
 	return
 }
 
@@ -131,10 +144,11 @@ func (p *partition) Truncate(index uint64) {
 	}
 }
 
-func newPartition(cfg *PartitionConfig, raft *raft.RaftServer, resolver NodeResolver) Partition {
+func newPartition(cfg *PartitionConfig, raft *raft.RaftServer, walPath string, resolver NodeResolver) Partition {
 	return &partition{
 		id:       cfg.ID,
 		raft:     raft,
+		walPath:  walPath,
 		config:   cfg,
 		resolver: resolver,
 	}
