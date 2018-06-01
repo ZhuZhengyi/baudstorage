@@ -169,7 +169,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 		err = errors.Annotatef(fmt.Errorf(request.getErr()), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 		msgH.DelListElement(request, e, s, ForceCloseConnect)
-		log.LogError(request.ActionMsg(ActionReciveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
+		log.LogErrorf("action[DataNode.receiveFromNext] %v.", request.ActionMsg(ActionReciveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
 		return
 	}
 
@@ -185,7 +185,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 			return request, true
 		}
 	} else {
-		log.LogError(request.ActionMsg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
+		log.LogErrorf("action[DataNode.receiveFromNext] %v.", request.ActionMsg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 		err = errors.Annotatef(err, "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 		msgH.DelListElement(request, e, s, ForceCloseConnect)
@@ -217,7 +217,6 @@ func (s *DataNode) sendToNext(pkg *Packet, msgH *MessageHandler) error {
 		err = pkg.WriteToConn(pkg.nextConn)
 	}
 	pkg.Nodes++
-	s.CleanConn(pkg.nextConn, err != nil)
 	if err != nil {
 		msg := fmt.Sprintf("pkg inconnect[%v] to[%v] err[%v]", msgH.inConn.RemoteAddr().String(), pkg.nextAddr, err.Error())
 		err = errors.Annotatef(fmt.Errorf(msg), "Request[%v] sendToNext Error", pkg.GetUniqLogId())

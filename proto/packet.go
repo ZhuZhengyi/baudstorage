@@ -10,10 +10,12 @@ import (
 	"strconv"
 	"sync/atomic"
 	"time"
+	"github.com/tiglabs/baudstorage/util/pool"
 )
 
 var (
 	ReqIDGlobal = int64(1)
+	buffers=pool.NewBufferPool()
 )
 
 func GetReqID() int64 {
@@ -21,13 +23,8 @@ func GetReqID() int64 {
 }
 
 const (
-	ExtentNameSplit = "_"
-	VolNameSplit    = "_"
 	AddrSplit       = "/"
 	HeaderSize      = 45
-	PkgArgMaxSize   = 100
-	ConnBufferSize  = 4096
-
 	ExtentVol    = "extent"
 	TinyVol      = "tiny"
 )
@@ -128,7 +125,7 @@ func NewPacket() *Packet {
 	return p
 }
 
-func (p *Packet) GetOpMesg(opcode uint8) (m string) {
+func (p *Packet) GetOpMsg(opcode uint8) (m string) {
 	switch opcode {
 	case OpCreateFile:
 		m = "CreateFile"
@@ -281,7 +278,11 @@ func (p *Packet) UnmarshalData(v interface{}) error {
 }
 
 func (p *Packet) WriteToNoDeadLineConn(c net.Conn) (err error) {
-	header := make([]byte, HeaderSize)
+	header,err := buffers.Get(HeaderSize)
+	if err!=nil {
+		header=make([]byte,HeaderSize)
+	}
+	defer buffers.Put(header)
 
 	p.MarshalHeader(header)
 	if _, err = c.Write(header); err == nil {
@@ -297,7 +298,11 @@ func (p *Packet) WriteToNoDeadLineConn(c net.Conn) (err error) {
 
 func (p *Packet) WriteToConn(c net.Conn) (err error) {
 	c.SetWriteDeadline(time.Now().Add(WriteDeadlineTime * time.Second))
-	header := make([]byte, HeaderSize)
+	header,err := buffers.Get(HeaderSize)
+	if err!=nil {
+		header=make([]byte,HeaderSize)
+	}
+	defer buffers.Put(header)
 
 	p.MarshalHeader(header)
 	if _, err = c.Write(header); err == nil {
@@ -312,7 +317,11 @@ func (p *Packet) WriteToConn(c net.Conn) (err error) {
 }
 
 func (p *Packet) WriteHeaderToConn(c net.Conn) (err error) {
-	header := make([]byte, HeaderSize)
+	header,err := buffers.Get(HeaderSize)
+	if err!=nil {
+		header=make([]byte,HeaderSize)
+	}
+	defer buffers.Put(header)
 	p.MarshalHeader(header)
 	_, err = c.Write(header)
 
@@ -330,7 +339,11 @@ func (p *Packet) ReadFromConn(c net.Conn, deadlineTime time.Duration) (err error
 	if deadlineTime != NoReadDeadlineTime {
 		c.SetReadDeadline(time.Now().Add(deadlineTime * time.Second))
 	}
-	header := make([]byte, HeaderSize)
+	header,err := buffers.Get(HeaderSize)
+	if err!=nil {
+		header=make([]byte,HeaderSize)
+	}
+	defer buffers.Put(header)
 	if _, err = io.ReadFull(c, header); err != nil {
 		return
 	}
@@ -394,7 +407,7 @@ func (p *Packet) PackErrorWithBody(errCode uint8, reply []byte) {
 
 func (p *Packet) GetUniqLogId() (m string) {
 	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v_%v", p.ReqID, p.VolID, p.FileID,
-		p.Offset, p.Size, p.GetOpMesg(p.Opcode), p.GetOpMesg(p.ResultCode))
+		p.Offset, p.Size, p.GetOpMsg(p.Opcode), p.GetOpMsg(p.ResultCode))
 
 	return
 }
