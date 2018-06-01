@@ -413,6 +413,7 @@ func (m *Master) metaPartitionOffline(w http.ResponseWriter, r *http.Request) {
 	}
 	msg = fmt.Sprintf(AdminLoadMetaPartition+"partitionID :%v  metaPartitionOffline success", partitionID)
 	io.WriteString(w, msg)
+	Warn(m.clusterName, msg)
 	return
 errDeal:
 	logMsg := getReturnMessage(AdminMetaPartitionOffline, r.RemoteAddr, err.Error(), http.StatusBadRequest)

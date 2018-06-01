@@ -263,7 +263,7 @@ func (mp *MetaPartition) canOffline(nodeAddr string, replicaNum int) (err error)
 		return
 	}
 	liveAddrs := mp.getLiveReplicasAddr(liveReplicas)
-	if int(mp.CurReplicaNum) != len(liveReplicas) && contains(liveAddrs, nodeAddr) {
+	if len(liveReplicas) == (replicaNum/2+1) && contains(liveAddrs, nodeAddr) {
 		err = fmt.Errorf("live replicas num will be less than majority after offline nodeAddr: %v", nodeAddr)
 		return
 	}

@@ -151,9 +151,13 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 			removePeer = proto.Peer{ID: mr.nodeId, Addr: mr.Addr}
 		} else {
 			peers = append(peers, proto.Peer{ID: mr.nodeId, Addr: mr.Addr})
+			newHosts = append(newHosts, mr.Addr)
 		}
 	}
 	mp.Peers = peers
+	if err = c.syncUpdateMetaPartition(nsName, mp); err != nil {
+		goto errDeal
+	}
 	tasks = mp.generateCreateMetaPartitionTasks(newHosts, nsName)
 	if t, err = mp.generateOfflineTask(nsName, removePeer, peers[0]); err != nil {
 		goto errDeal
@@ -219,7 +223,7 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	if task == nil {
 		return
 	}
-	log.LogDebugf(fmt.Sprintf("receive task response:%v from %v", task.ID, nodeAddr))
+	log.LogDebugf(fmt.Sprintf("action[dealMetaNodeTaskResponse] receive Task response:%v from %v", task.ID, nodeAddr))
 	var (
 		metaNode   *MetaNode
 		taskStatus uint8
