@@ -2,8 +2,8 @@ package master
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"github.com/juju/errors"
 	bsProto "github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/raft/proto"
@@ -111,11 +111,11 @@ func (c *Cluster) putVolGroupInfo(opType uint32, nsName string, vg *VolGroup) (e
 func (c *Cluster) submit(metadata *Metadata) (err error) {
 	cmd, err := metadata.Marshal()
 	if err != nil {
-		return
+		return errors.New(err.Error())
 	}
 	if _, err = c.partition.Submit(cmd); err != nil {
-		err = fmt.Errorf("action[metadata_submit] err:%v", err.Error())
-		return
+		msg := fmt.Sprintf("action[metadata_submit] err:%v", err.Error())
+		return errors.New(msg)
 	}
 	return
 }
@@ -144,7 +144,7 @@ func (c *Cluster) putMetaPartitionInfo(opType uint32, nsName string, mp *MetaPar
 	metadata.K = MetaPartitionPrefix + nsName + KeySeparator + partitionID
 	mpv := newMetaPartitionValue(mp)
 	if metadata.V, err = json.Marshal(mpv); err != nil {
-		return
+		return errors.New(err.Error())
 	}
 	return c.submit(metadata)
 }
