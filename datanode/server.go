@@ -99,6 +99,7 @@ func (s *DataNode) Sync() {
 }
 
 func (s *DataNode) onStart(cfg *config.Config) (err error) {
+	s.masterAddrs = make([]string, 0)
 	if err = s.LoadVol(cfg); err != nil {
 		return
 	}
