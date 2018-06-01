@@ -22,7 +22,7 @@ func (sk *StreamKey) Marshal() (data []byte, err error) {
 }
 
 func (sk *StreamKey) ToString() (m string) {
-	data,_:=json.Marshal(sk)
+	data, _ := json.Marshal(sk)
 	return string(data)
 }
 

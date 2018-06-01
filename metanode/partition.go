@@ -116,6 +116,7 @@ type OpPartition interface {
 	DeletePartition() (err error)
 	UpdatePartition(req *proto.UpdateMetaPartitionRequest,
 		resp *proto.UpdateMetaPartitionResponse) (err error)
+	DeleteRaft() error
 }
 
 type MetaPartition interface {
@@ -170,6 +171,9 @@ func (mp *metaPartition) Stop() {
 			mp.config.BeforeStop()
 		}
 		mp.onStop()
+		if mp.config.AfterStop != nil {
+			mp.config.AfterStop()
+		}
 	}
 }
 
@@ -250,7 +254,9 @@ func (mp *metaPartition) startRaft() (err error) {
 }
 
 func (mp *metaPartition) stopRaft() {
-	mp.raftPartition.Stop()
+	if mp.raftPartition != nil {
+		mp.raftPartition.Stop()
+	}
 	return
 }
 
@@ -324,6 +330,11 @@ func (mp *metaPartition) store() (err error) {
 // UpdatePeers
 func (mp *metaPartition) UpdatePeers(peers []proto.Peer) {
 	mp.config.Peers = peers
+}
+
+func (mp *metaPartition) DeleteRaft() (err error) {
+	err = mp.raftPartition.Delete()
+	return
 }
 
 // NextInodeId returns a new ID value of Inode and update offset.

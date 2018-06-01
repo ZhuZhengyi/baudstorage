@@ -82,10 +82,9 @@ func (s *raftStore) CreatePartition(cfg *PartitionConfig) (p Partition, err erro
 	// wc: WaL Configuration.
 	// wp: WaL Path.
 	// ws: WaL Storage.
-	p = newPartition(cfg, s.raftServer, s.resolver)
+	walPath := path.Join(s.walPath, strconv.FormatUint(cfg.ID, 10))
 	wc := &wal.Config{}
-	wp := path.Join(s.walPath, strconv.FormatUint(cfg.ID, 10))
-	ws, err := wal.NewStorage(wp, wc)
+	ws, err := wal.NewStorage(walPath, wc)
 	if err != nil {
 		return
 	}
@@ -108,6 +107,9 @@ func (s *raftStore) CreatePartition(cfg *PartitionConfig) (p Partition, err erro
 		StateMachine: cfg.SM,
 		Applied:      cfg.Applied,
 	}
-	err = s.raftServer.CreateRaft(rc)
+	if err = s.raftServer.CreateRaft(rc); err != nil {
+		return
+	}
+	p = newPartition(cfg, s.raftServer, walPath, s.resolver)
 	return
 }
