@@ -200,7 +200,7 @@ func checkNamespace(r *http.Request) (name string, err error) {
 
 	pattern := "^[a-zA-Z0-9]{3,256}$"
 	reg, err := regexp.Compile(pattern)
-	if err == nil {
+	if err != nil {
 		return "", err
 	}
 

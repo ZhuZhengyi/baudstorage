@@ -145,9 +145,6 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 	if newHosts, newPeers, err = c.getAvailMetaNodeHosts(racks[0], mp.PersistenceHosts, 1); err != nil {
 		goto errDeal
 	}
-	if err = mp.removePersistenceHosts(nodeAddr, c, nsName); err != nil {
-		goto errDeal
-	}
 	for _, mr := range mp.Replicas {
 		if mr.Addr == nodeAddr {
 			removePeer = proto.Peer{ID: mr.nodeId, Addr: mr.Addr}
@@ -216,6 +213,7 @@ func (c *Cluster) checkMetaGroups(ns *NameSpace) {
 	for _, mp := range ns.MetaPartitions {
 		mp.checkStatus(true, int(ns.mpReplicaNum))
 		mp.checkReplicas(c, ns.Name, ns.mpReplicaNum)
+		mp.checkReplicaMiss()
 		tasks = append(tasks, mp.generateReplicaTask(ns.Name)...)
 	}
 	c.putMetaNodeTasks(tasks)
