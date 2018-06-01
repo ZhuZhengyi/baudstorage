@@ -99,7 +99,7 @@ func (stream *StreamReader) initCheck(offset, size int) (canread int, err error)
 		return 0, err
 	}
 
-	if offset >= int(stream.fileSize) {
+	if offset > int(stream.fileSize) {
 		return 0, io.EOF
 	}
 	if offset+size > int(stream.fileSize) {
@@ -169,8 +169,11 @@ func (stream *StreamReader) read(data []byte, offset int, size int) (canRead int
 		}
 		canRead += readerSize[index]
 	}
+	if canRead < size && err == nil {
+		return canRead, io.EOF
+	}
 
-	return canRead, nil
+	return
 }
 
 func (stream *StreamReader) GetReader(offset, size int) (readers []*ExtentReader, readersOffsets []int, readersSize []int) {

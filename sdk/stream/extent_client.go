@@ -181,7 +181,7 @@ func (client *ExtentClient) Read(inode uint64, data []byte, offset int, size int
 	if stream, err = client.getStreamReader(inode); err != nil {
 		return
 	}
-	if size==0{
+	if size == 0 {
 		return
 	}
 

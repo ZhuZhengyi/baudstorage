@@ -143,7 +143,7 @@ func TestExtentClient_Write(t *testing.T) {
 	for seqNo := 0; seqNo < 1000000000; seqNo++ {
 		rand.Seed(time.Now().UnixNano())
 		ndata := data[:rand.Intn(CFSBLOCKSIZE*5)]
-		if len(ndata)==0 {
+		if len(ndata) == 0 {
 			continue
 		}
 		//write
