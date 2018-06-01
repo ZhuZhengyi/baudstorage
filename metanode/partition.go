@@ -193,9 +193,8 @@ func (mp *metaPartition) onStart() (err error) {
 }
 
 func (mp *metaPartition) onStop() {
-	mp.stopRaft()
 	mp.stopSchedule()
-	mp.store()
+	mp.stopRaft()
 }
 
 func (mp *metaPartition) startSchedule() {
@@ -254,7 +253,9 @@ func (mp *metaPartition) startRaft() (err error) {
 }
 
 func (mp *metaPartition) stopRaft() {
-	mp.raftPartition.Stop()
+	if mp.raftPartition != nil {
+		mp.raftPartition.Stop()
+	}
 	return
 }
 

@@ -1,14 +1,13 @@
 package metanode
 
 import (
-	"os"
 	"strings"
 	"time"
 
 	"github.com/google/btree"
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util/log"
+	"os"
 )
 
 type ResponseDentry struct {
@@ -198,13 +197,11 @@ func (mp *metaPartition) updatePartition(end uint64) (status uint8, err error) {
 func (mp *metaPartition) deletePartition() (status uint8) {
 	mp.Stop()
 	os.RemoveAll(mp.config.RootDir)
-	status = proto.OpOk
 	return
 }
 
 func (mp *metaPartition) confAddNode(req *proto.
 	MetaPartitionOfflineRequest, index uint64) (err error) {
-	log.LogDebugf("[confAddNode] recv: %v", req)
 	findAddPeer := false
 	for _, peer := range mp.config.Peers {
 		if peer.ID == req.AddPeer.ID {
@@ -226,13 +223,11 @@ func (mp *metaPartition) confAddNode(req *proto.
 	addr := strings.Split(req.AddPeer.Addr, ":")[0]
 	mp.raftPartition.AddNode(req.AddPeer.ID, addr)
 	mp.applyID = index
-	log.LogDebugf("[confAddNode] end: %v", req)
 	return
 }
 
 func (mp *metaPartition) confRemoveNode(req *proto.
 	MetaPartitionOfflineRequest, index uint64) (err error) {
-	log.LogDebugf("[confRemoveNode] recv: %v", req)
 	fondRemovePeer := false
 	peerIndex := -1
 	for i, peer := range mp.config.Peers {
@@ -248,6 +243,8 @@ func (mp *metaPartition) confRemoveNode(req *proto.
 	}
 	if req.RemovePeer.ID == mp.config.NodeId {
 		mp.applyID = index
+		mp.Stop()
+		os.RemoveAll(mp.config.RootDir)
 		return
 	}
 	mp.config.Peers = append(mp.config.Peers[:peerIndex], mp.config.Peers[peerIndex+1:]...)
@@ -257,6 +254,5 @@ func (mp *metaPartition) confRemoveNode(req *proto.
 		return
 	}
 	mp.applyID = index
-	log.LogDebugf("[confRemoveNode] recv: %v", req)
 	return
 }

@@ -30,8 +30,6 @@ type MetaNode struct {
 	metaDir     string //metaNode store root dir
 	raftDir     string //raftStore log store base dir
 	metaManager MetaManager
-	pprofListen int
-	httpServer  *http.Server
 	localAddr   string
 	retryCount  int
 	raftStore   raftstore.RaftStore
@@ -84,7 +82,7 @@ func (m *MetaNode) onStart(cfg *config.Config) (err error) {
 	if err = m.startUMP(); err != nil {
 		return
 	}
-	if err = m.startRestServer(); err != nil {
+	if err = m.registerHandler(); err != nil {
 		return
 	}
 	if err = m.startServer(); err != nil {
@@ -98,7 +96,6 @@ func (m *MetaNode) onShutdown() {
 	m.stopServer()
 	m.stopMetaManager()
 	m.stopRaftServer()
-	m.stopRestServer()
 }
 
 // Sync will block invoker goroutine until this MetaNode shutdown.
@@ -114,7 +111,6 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 	m.listen = int(cfg.GetFloat(cfgListen))
 	m.metaDir = cfg.GetString(cfgMetaDir)
 	m.raftDir = cfg.GetString(cfgRaftDir)
-	m.pprofListen = int(cfg.GetFloat(cfgPProfPort))
 	addrs := cfg.GetArray(cfgMasterAddrs)
 	for _, addr := range addrs {
 		masterAddrs = append(masterAddrs, addr.(string))
@@ -133,9 +129,6 @@ func (m *MetaNode) validConfig() (err error) {
 	}
 	if m.raftDir == "" {
 		m.raftDir = defaultRaftDir
-	}
-	if m.pprofListen <= 0 || m.pprofListen >= 65535 {
-		m.pprofListen = defaultPporfPort
 	}
 	if len(masterAddrs) == 0 {
 		err = errors.New("master Addrs is empty!")
