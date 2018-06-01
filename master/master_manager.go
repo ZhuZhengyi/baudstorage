@@ -2,7 +2,6 @@ package master
 
 import (
 	"fmt"
-	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/raft/proto"
 )
 
@@ -32,7 +31,7 @@ func (m *Master) handlePeerChange(confChange *proto.ConfChange) (err error) {
 		m.partition.DeleteNode(confChange.Peer.ID)
 		msg = fmt.Sprintf("peerID:%v,nodeAddr[%v] has been removed", confChange.Peer.ID, addr)
 	}
-	log.LogError(msg)
+	Warn(m.clusterName, msg)
 	return
 }
 

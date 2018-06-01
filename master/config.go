@@ -3,7 +3,6 @@ package master
 import (
 	"fmt"
 	"github.com/tiglabs/baudstorage/raftstore"
-	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/raft/proto"
 	"strconv"
 	"strings"
@@ -21,25 +20,23 @@ const (
 )
 
 const (
-	DefaultReplicaNum                            = 3
 	DefaultEveryReleaseVolCount                  = 10
 	DefaultReleaseVolAfterLoadVolSeconds         = 5 * 60
 	DefaultReleaseVolInternalSeconds             = 10
 	DefaultCheckHeartbeatIntervalSeconds         = 60
+	DefaultCheckVolIntervalSeconds               = 60
 	DefaultFileDelayCheckLackSec                 = 5 * DefaultCheckHeartbeatIntervalSeconds
 	DefaultFileDelayCheckCrcSec                  = 20 * DefaultCheckHeartbeatIntervalSeconds
 	NoHeartBeatTimes                             = 3
 	DefaultNodeTimeOutSec                        = NoHeartBeatTimes * DefaultCheckHeartbeatIntervalSeconds
 	DefaultVolTimeOutSec                         = 5 * DefaultCheckHeartbeatIntervalSeconds
 	DefaultVolMissSec                            = 24 * 3600
-	DefaultCheckVolIntervalSeconds               = 60
 	DefaultVolWarnInterval                       = 60 * 60
 	LoadVolWaitTime                              = 100
 	DefaultLoadVolFrequencyTime                  = 60 * 60
 	DefaultEveryLoadVolCount                     = 10
 	DefaultMetaPartitionTimeOutSec               = 5 * DefaultCheckHeartbeatIntervalSeconds
 	DefaultMetaPartitionThreshold        float32 = 0.75
-	DefaultMetaPartitionMemSize                  = 16 * util.GB
 )
 
 //AddrDatabase ...
@@ -65,7 +62,6 @@ type ClusterConfig struct {
 
 func NewClusterConfig() (cfg *ClusterConfig) {
 	cfg = new(ClusterConfig)
-	cfg.replicaNum = DefaultReplicaNum
 	cfg.FileDelayCheckCrcSec = DefaultFileDelayCheckCrcSec
 	cfg.FileDelayCheckLackSec = DefaultFileDelayCheckLackSec
 	cfg.everyReleaseVolCount = DefaultEveryReleaseVolCount
@@ -103,8 +99,9 @@ func (cfg *ClusterConfig) parsePeers(peerStr string) error {
 			return err
 		}
 		cfg.peers = append(cfg.peers, raftstore.PeerAddress{Peer: proto.Peer{ID: id}, Address: ip})
-		fmt.Println(fmt.Sprintf("%v:%v", ip, port))
-		AddrDatabase[id] = fmt.Sprintf("%v:%v", ip, port)
+		address := fmt.Sprintf("%v:%v", ip, port)
+		fmt.Println(address)
+		AddrDatabase[id] = address
 	}
 	return nil
 }

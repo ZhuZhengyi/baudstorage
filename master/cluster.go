@@ -198,7 +198,7 @@ func (c *Cluster) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error) {
 
 func (c *Cluster) getMetaPartitionByID(id uint64) (mp *MetaPartition, err error) {
 	for _, ns := range c.namespaces {
-		if mp, err = ns.getMetaPartitionById(id); err == nil {
+		if mp, err = ns.getMetaPartition(id); err == nil {
 			return
 		}
 	}
@@ -390,7 +390,7 @@ func (c *Cluster) createNamespace(name string, replicaNum uint8) (err error) {
 		goto errDeal
 	}
 	c.namespaces[name] = ns
-	if err = c.CreateMetaPartition(name, 0, DefaultMaxMetaPartitionRange); err != nil {
+	if err = c.CreateMetaPartition(name, 0, DefaultMaxMetaPartitionInodeID); err != nil {
 		delete(c.namespaces, name)
 		goto errDeal
 	}

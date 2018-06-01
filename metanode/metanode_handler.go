@@ -2,10 +2,17 @@ package metanode
 
 import (
 	"encoding/json"
-	"github.com/tiglabs/baudstorage/util/log"
 	"net/http"
+
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
+func (m *MetaNode) registerHandler() (err error) {
+	// Register http handler
+	http.HandleFunc("/getAllPartitions", m.allPartitionsHandle)
+	http.HandleFunc("/getInodeInfo", m.inodeInfoHandle)
+	return
+}
 func (m *MetaNode) allPartitionsHandle(w http.ResponseWriter, r *http.Request) {
 	mm := m.metaManager.(*metaManager)
 	mm.mu.RLock()

@@ -153,8 +153,8 @@ func (mp *MetaPartition) checkStatus(writeLog bool, replicaNum int) {
 	}
 
 	if writeLog {
-		log.LogInfo(fmt.Sprintf("action[checkStatus],id:%v,status:%v,replicaNum:%v",
-			mp.PartitionID, mp.Status, mp.CurReplicaNum))
+		log.LogInfo(fmt.Sprintf("action[checkStatus],id:%v,status:%v,replicaNum:%v,missNodes:%v",
+			mp.PartitionID, mp.Status, mp.CurReplicaNum, mp.MissNodes))
 	}
 }
 
@@ -204,23 +204,13 @@ func (mp *MetaPartition) getRacks(excludeAddr string) (racks []string) {
 
 func (mp *MetaPartition) deleteExcessReplication() (excessAddr string, t *proto.AdminTask, err error) {
 
-	var leaderMr *MetaReplica
 	for _, mr := range mp.Replicas {
-		if mr.IsLeader {
-			leaderMr = mr
-		}
 		if !contains(mp.PersistenceHosts, mr.Addr) {
-			excessAddr = mr.Addr
+			t = mr.generateDeleteReplicaTask(mp.PartitionID)
 			err = MetaPartitionReplicationExcessError
 			break
 		}
 	}
-	if leaderMr == nil {
-		if leaderMr, err = mp.getLeaderMetaReplica(); err != nil {
-			return
-		}
-	}
-	t = leaderMr.generateDeleteReplicaTask(mp.PartitionID)
 	return
 }
 
