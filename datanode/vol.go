@@ -64,7 +64,7 @@ func NewVol(volId uint32, volMode, name, diskPath string, storeMode bool, storeS
 	default:
 		return nil, fmt.Errorf("NewVol[%v] WrongVolMode[%v]", volId, volMode)
 	}
-
+	go v.checkExtent()
 	return
 }
 
