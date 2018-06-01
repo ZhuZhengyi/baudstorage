@@ -63,8 +63,6 @@ func (dataNode *DataNode) setNodeAlive() {
 
 /*check not is offline*/
 func (dataNode *DataNode) checkIsActive() bool {
-	dataNode.Lock()
-	defer dataNode.Unlock()
 	return dataNode.isActive
 
 }

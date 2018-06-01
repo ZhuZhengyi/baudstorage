@@ -15,11 +15,11 @@ type MetaNode struct {
 	MaxMemAvailWeight uint64 `json:"MaxMemAvailWeight"`
 	Total             uint64 `json:"TotalWeight"`
 	Used              uint64 `json:"UsedWeight"`
-	selectCount       uint64
-	carry             float64
+	SelectCount       uint64
+	Carry             float64
 	ReportTime        time.Time
 	metaRangeInfos    []*proto.MetaPartitionReport
-	metaRangeCount    int
+	MetaRangeCount    int
 	sync.Mutex
 }
 
@@ -37,20 +37,20 @@ func (metaNode *MetaNode) clean() {
 func (metaNode *MetaNode) SetCarry(carry float64) {
 	metaNode.Lock()
 	defer metaNode.Unlock()
-	metaNode.carry = carry
+	metaNode.Carry = carry
 }
 
 func (metaNode *MetaNode) SelectNodeForWrite() {
 	metaNode.Lock()
 	defer metaNode.Unlock()
-	metaNode.selectCount++
-	metaNode.carry = metaNode.carry - 1.0
+	metaNode.SelectCount++
+	metaNode.Carry = metaNode.Carry - 1.0
 }
 
 func (metaNode *MetaNode) IsWriteAble() (ok bool) {
 	metaNode.Lock()
 	defer metaNode.Unlock()
-	if metaNode.IsActive == true && metaNode.MaxMemAvailWeight > DefaultMinMetaPartitionRange {
+	if metaNode.IsActive == true && metaNode.MaxMemAvailWeight > DefaultMetaNodeReservedMem {
 		ok = true
 	}
 	return
@@ -60,7 +60,7 @@ func (metaNode *MetaNode) IsAvailCarryNode() (ok bool) {
 	metaNode.Lock()
 	defer metaNode.Unlock()
 
-	return metaNode.carry >= 1
+	return metaNode.Carry >= 1
 }
 
 func (metaNode *MetaNode) setNodeAlive() {
@@ -72,7 +72,7 @@ func (metaNode *MetaNode) setNodeAlive() {
 
 func (metaNode *MetaNode) updateMetric(resp *proto.MetaNodeHeartbeatResponse) {
 	metaNode.metaRangeInfos = resp.MetaPartitionInfo
-	metaNode.metaRangeCount = len(metaNode.metaRangeInfos)
+	metaNode.MetaRangeCount = len(metaNode.metaRangeInfos)
 	metaNode.Total = resp.Total
 	metaNode.Used = resp.Used
 	metaNode.MaxMemAvailWeight = resp.Total - resp.Used

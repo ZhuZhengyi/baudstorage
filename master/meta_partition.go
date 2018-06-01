@@ -153,8 +153,8 @@ func (mp *MetaPartition) checkStatus(writeLog bool, replicaNum int) {
 	}
 
 	if writeLog {
-		log.LogInfo(fmt.Sprintf("action[checkStatus],id:%v,status:%v,replicaNum:%v",
-			mp.PartitionID, mp.Status, mp.CurReplicaNum))
+		log.LogInfo(fmt.Sprintf("action[checkStatus],id:%v,status:%v,replicaNum:%v,missNodes:%v",
+			mp.PartitionID, mp.Status, mp.CurReplicaNum, mp.MissNodes))
 	}
 }
 
@@ -204,23 +204,13 @@ func (mp *MetaPartition) getRacks(excludeAddr string) (racks []string) {
 
 func (mp *MetaPartition) deleteExcessReplication() (excessAddr string, t *proto.AdminTask, err error) {
 
-	var leaderMr *MetaReplica
 	for _, mr := range mp.Replicas {
-		if mr.IsLeader {
-			leaderMr = mr
-		}
 		if !contains(mp.PersistenceHosts, mr.Addr) {
-			excessAddr = mr.Addr
+			t = mr.generateDeleteReplicaTask(mp.PartitionID)
 			err = MetaPartitionReplicationExcessError
 			break
 		}
 	}
-	if leaderMr == nil {
-		if leaderMr, err = mp.getLeaderMetaReplica(); err != nil {
-			return
-		}
-	}
-	t = leaderMr.generateDeleteReplicaTask(mp.PartitionID)
 	return
 }
 
@@ -310,61 +300,9 @@ func (mp *MetaPartition) updateInfoToStore(newHosts []string, newPeers []proto.P
 	return
 }
 
-func (mp *MetaPartition) removePersistenceHosts(addr string, c *Cluster, nsName string) (err error) {
 
-	orgVolHosts := make([]string, len(mp.PersistenceHosts))
-	copy(orgVolHosts, mp.PersistenceHosts)
+func (mp *MetaPartition) checkReplicaMiss(){
 
-	if ok := mp.removeHostsOnUnderStore(addr); !ok {
-		return
-	}
-	if err = mp.updateHosts(c, nsName); err != nil {
-		log.LogWarnf("action[removePersistenceHosts] update hosts failed,  partitionID:%v  Delete host:%v  PersistenceHosts:%v ",
-			mp.PartitionID, addr, mp.PersistenceHosts)
-		mp.PersistenceHosts = orgVolHosts
-	}
-
-	msg := fmt.Sprintf("removePersistenceHosts  partitionID:%v  Delete host:%v  PersistenceHosts:%v ",
-		mp.PartitionID, addr, mp.PersistenceHosts)
-	log.LogDebug(msg)
-
-	return
-}
-
-func (mp *MetaPartition) removeHostsOnUnderStore(host string) (ok bool) {
-	for index, addr := range mp.PersistenceHosts {
-		if addr == host {
-			after := mp.PersistenceHosts[index+1:]
-			mp.PersistenceHosts = mp.PersistenceHosts[:index]
-			mp.PersistenceHosts = append(mp.PersistenceHosts, after...)
-			ok = true
-			break
-		}
-	}
-
-	return
-}
-
-func (mp *MetaPartition) addVolHosts(addAddr string, c *Cluster, nsName string) (err error) {
-	orgVolHosts := make([]string, len(mp.PersistenceHosts))
-	orgGoal := len(mp.PersistenceHosts)
-	copy(orgVolHosts, mp.PersistenceHosts)
-	for _, addr := range mp.PersistenceHosts {
-		if addr == addAddr {
-			return
-		}
-	}
-	mp.PersistenceHosts = append(mp.PersistenceHosts, addAddr)
-	mp.CurReplicaNum = uint8(len(mp.PersistenceHosts))
-	if err = mp.updateHosts(c, nsName); err != nil {
-		mp.PersistenceHosts = orgVolHosts
-		mp.CurReplicaNum = uint8(orgGoal)
-		return
-	}
-	msg := fmt.Sprintf(" addVolHosts partitionID:%v  Add host:%v  PersistenceHosts:%v ",
-		mp.PartitionID, addAddr, mp.PersistenceHosts)
-	log.LogDebug(msg)
-	return
 }
 
 func (mp *MetaPartition) generateReplicaTask(nsName string) (tasks []*proto.AdminTask) {
