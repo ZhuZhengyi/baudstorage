@@ -1,14 +1,23 @@
 package meta
 
 import (
+	"github.com/juju/errors"
+
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/baudstorage/util/ump"
 )
 
 // API implementations
 //
 
 func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *proto.InodeInfo, err error) {
+	defer func() {
+		if err != nil {
+			log.LogError(err)
+		}
+	}()
+
 	req := &proto.CreateInodeRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
@@ -19,32 +28,41 @@ func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *pro
 	packet.Opcode = proto.OpMetaCreateInode
 	err = packet.MarshalData(req)
 	if err != nil {
-		log.LogError(err)
 		return
 	}
 
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
+
 	packet, err = mc.send(packet)
 	if err != nil {
-		log.LogError(err)
+		err = errors.Annotatef(err, "icreate: req(%v)", *req)
 		return
 	}
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
+		log.LogErrorf("icreate: req(%v) result(%v)", *req, packet.GetResultMesg())
 		return
 	}
 
 	resp := new(proto.CreateInodeResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
-		log.LogError(err)
-		log.LogErrorf("data = [%v]\n", string(packet.Data))
+		err = errors.Annotatef(err, "icreate: PacketData(%v)", string(packet.Data))
 		return
 	}
 	return statusOK, resp.Info, nil
 }
 
 func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, extents []proto.ExtentKey, err error) {
+	defer func() {
+		if err != nil {
+			log.LogError(err)
+		}
+	}()
+
 	req := &proto.DeleteInodeRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
@@ -58,27 +76,39 @@ func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, extents 
 		return
 	}
 
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
+
 	packet, err = mc.send(packet)
 	if err != nil {
+		err = errors.Annotatef(err, "idelete: req(%v)", *req)
 		return
 	}
 
-	log.LogDebugf("DeleteInode: partitionID(%v) inode(%v) ResultCode(%v)", mc.id, inode, packet.ResultCode)
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
+		log.LogErrorf("idelete: req(%v) result(%v)", *req, packet.GetResultMesg())
 		return
 	}
 
 	resp := new(proto.DeleteInodeResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
+		err = errors.Annotatef(err, "idelete: PacketData(%v)", string(packet.Data))
 		return
 	}
-	log.LogDebugf("DeleteInode: response(%v)", *resp)
+	log.LogDebugf("idelete: response(%v)", *resp)
 	return statusOK, resp.Extents, nil
 }
 
 func (mw *MetaWrapper) dcreate(mc *MetaConn, parentID uint64, name string, inode uint64, mode uint32) (status int, err error) {
+	defer func() {
+		if err != nil {
+			log.LogError(err)
+		}
+	}()
+
 	req := &proto.CreateDentryRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
@@ -95,14 +125,30 @@ func (mw *MetaWrapper) dcreate(mc *MetaConn, parentID uint64, name string, inode
 		return
 	}
 
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
+
 	packet, err = mc.send(packet)
 	if err != nil {
+		err = errors.Annotatef(err, "dcreate: req(%v)", *req)
 		return
 	}
-	return parseStatus(packet.ResultCode), nil
+
+	status = parseStatus(packet.ResultCode)
+	if status != statusOK {
+		log.LogErrorf("dcreate: req(%v) result(%v)", *req, packet.GetResultMesg())
+	}
+	return
 }
 
 func (mw *MetaWrapper) ddelete(mc *MetaConn, parentID uint64, name string) (status int, inode uint64, err error) {
+	defer func() {
+		if err != nil {
+			log.LogError(err)
+		}
+	}()
+
 	req := &proto.DeleteDentryRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
@@ -117,25 +163,38 @@ func (mw *MetaWrapper) ddelete(mc *MetaConn, parentID uint64, name string) (stat
 		return
 	}
 
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
+
 	packet, err = mc.send(packet)
 	if err != nil {
+		err = errors.Annotatef(err, "ddelete: req(%v)", *req)
 		return
 	}
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
+		log.LogErrorf("ddelete: req(%v) result(%v)", *req, packet.GetResultMesg())
 		return
 	}
 
 	resp := new(proto.DeleteDentryResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
+		err = errors.Annotatef(err, "ddelete: PacketData(%v)", string(packet.Data))
 		return
 	}
 	return statusOK, resp.Inode, nil
 }
 
 func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (status int, inode uint64, mode uint32, err error) {
+	defer func() {
+		if err != nil && status != statusNoent {
+			log.LogError(err)
+		}
+	}()
+
 	req := &proto.LookupRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
@@ -149,26 +208,40 @@ func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (statu
 		return
 	}
 
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
+
 	packet, err = mc.send(packet)
 	if err != nil {
+		err = errors.Annotatef(err, "lookup: req(%v)", *req)
 		return
 	}
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
-		log.LogErrorf("lookup: parentID(%v) name(%v) ResultCode(%v)", parentID, name, packet.ResultCode)
+		if status != statusNoent {
+			log.LogErrorf("lookup: req(%v) result(%v)", *req, packet.GetResultMesg())
+		}
 		return
 	}
 
 	resp := new(proto.LookupResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
+		err = errors.Annotatef(err, "lookup: PacketData(%v)", string(packet.Data))
 		return
 	}
 	return statusOK, resp.Inode, resp.Mode, nil
 }
 
 func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto.InodeInfo, err error) {
+	defer func() {
+		if err != nil && status != statusNoent {
+			log.LogError(err)
+		}
+	}()
+
 	req := &proto.InodeGetRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
@@ -181,32 +254,41 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 	packet.Opcode = proto.OpMetaInodeGet
 	err = packet.MarshalData(req)
 	if err != nil {
-		log.LogError(err)
 		return
 	}
 
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
+
 	packet, err = mc.send(packet)
 	if err != nil {
-		log.LogError(err)
+		err = errors.Annotatef(err, "iget: req(%v)", *req)
 		return
 	}
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
-		log.LogErrorf("iget: status not OK (%v)", packet.ResultCode)
+		log.LogErrorf("iget: req(%v) result(%v)", *req, packet.GetResultMesg())
 		return
 	}
 
 	resp := new(proto.InodeGetResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
-		log.LogError(err)
+		err = errors.Annotatef(err, "iget: PacketData(%v)", string(packet.Data))
 		return
 	}
 	return statusOK, resp.Info, nil
 }
 
 func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (status int, children []proto.Dentry, err error) {
+	defer func() {
+		if err != nil && status != statusNoent {
+			log.LogError(err)
+		}
+	}()
+
 	req := &proto.ReadDirRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
@@ -220,20 +302,27 @@ func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (status int, child
 		return
 	}
 
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
+
 	packet, err = mc.send(packet)
 	if err != nil {
+		err = errors.Annotatef(err, "readdir: req(%v)", *req)
 		return
 	}
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
 		children = make([]proto.Dentry, 0)
+		log.LogErrorf("readdir: req(%v) result(%v)", *req, packet.GetResultMesg())
 		return
 	}
 
 	resp := new(proto.ReadDirResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
+		err = errors.Annotatef(err, "icreate: PacketData(%v)", string(packet.Data))
 		return
 	}
 	return statusOK, resp.Children, nil
@@ -254,6 +343,10 @@ func (mw *MetaWrapper) appendExtentKey(mc *MetaConn, inode uint64, extent proto.
 		log.LogError(err)
 		return
 	}
+
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
 
 	packet, err = mc.send(packet)
 	if err != nil {
@@ -280,6 +373,10 @@ func (mw *MetaWrapper) getExtents(mc *MetaConn, inode uint64) (status int, exten
 		log.LogError(err)
 		return
 	}
+
+	umpKey := mw.umpKey(packet.GetOpMsg())
+	tpObject := ump.BeforeTP(umpKey)
+	defer ump.AfterTP(tpObject, err)
 
 	packet, err = mc.send(packet)
 	if err != nil {

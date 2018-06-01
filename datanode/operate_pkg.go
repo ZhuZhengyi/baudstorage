@@ -127,7 +127,7 @@ func (s *DataNode) createVol(pkg *Packet) {
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
-	_, err := s.postToMaster(data, master.DataNodeResponse)
+	_, err := PostToMaster(data, master.DataNodeResponse)
 	if err != nil {
 		err = errors.Annotatef(err, "create vol failed,volId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))
@@ -149,14 +149,14 @@ func (s *DataNode) heartBeats(pkg *Packet) {
 		bytes, _ := json.Marshal(task.Request)
 		json.Unmarshal(bytes, request)
 		response.Status = proto.TaskSuccess
-		masterAddr = request.MasterAddr
+		CurrMaster = request.MasterAddr
 	} else {
 		response.Status = proto.TaskFail
 		response.Result = "illegal opcode "
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
-	_, err = s.postToMaster(data, master.DataNodeResponse)
+	_, err = PostToMaster(data, master.DataNodeResponse)
 	if err != nil {
 		err = errors.Annotatef(err, "heartbeat to master[%v] failed", request.MasterAddr)
 		log.LogError(errors.ErrorStack(err))
@@ -190,7 +190,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
-	_, err := s.postToMaster(data, master.DataNodeResponse)
+	_, err := PostToMaster(data, master.DataNodeResponse)
 	if err != nil {
 		err = errors.Annotatef(err, "delete vol failed,volId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))
@@ -224,7 +224,7 @@ func (s *DataNode) loadVol(pkg *Packet) {
 	}
 	task.Response = response
 	data, _ := json.Marshal(task)
-	_, err := s.postToMaster(data, master.DataNodeResponse)
+	_, err := PostToMaster(data, master.DataNodeResponse)
 	if err != nil {
 		err = errors.Annotatef(err, "load vol failed,volId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))

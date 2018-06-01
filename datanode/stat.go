@@ -99,36 +99,36 @@ func post(data []byte, url string) (*http.Response, error) {
 	return client.Do(req)
 }
 
-func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error) {
+func PostToMaster(data []byte, url string) (msg []byte, err error) {
 	success := false
 	var err1 error
-	log.LogDebugf("action[DataNode.postToMaster] masterAddrs[%v].", s.masterAddrs)
+	log.LogDebugf("action[DataNode.postToMaster] masterAddrs[%v].", MasterAddrs)
 
-	for i := 0; i < len(s.masterAddrs); i++ {
+	for i := 0; i < len(MasterAddrs); i++ {
 		var resp *http.Response
-		if masterAddr == "" {
-			index := atomic.AddUint32(&s.masterAddrIndex, 1)
-			if index >= uint32(len(s.masterAddrs)) {
+		if CurrMaster == "" {
+			index := atomic.AddUint32(&MasterAddrIndex, 1)
+			if index >= uint32(len(MasterAddrs)) {
 				index = 0
 			}
-			masterAddr = s.masterAddrs[index]
+			CurrMaster = MasterAddrs[index]
 		}
 		err = nil
-		resp, err = post(data, "http://"+masterAddr+url)
+		resp, err = post(data, "http://"+CurrMaster+url)
 		if err != nil {
-			index := atomic.AddUint32(&s.masterAddrIndex, 1)
-			if index >= uint32(len(s.masterAddrs)) {
+			index := atomic.AddUint32(&MasterAddrIndex, 1)
+			if index >= uint32(len(MasterAddrs)) {
 				index = 0
 			}
-			masterAddr = s.masterAddrs[index]
-			resp, err = post(data, "http://"+masterAddr+url)
+			CurrMaster = MasterAddrs[index]
+			resp, err = post(data, "http://"+CurrMaster+url)
 		}
 		scode := resp.StatusCode
 		msg, _ = ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
 		if scode == http.StatusForbidden {
-			masterAddr = string(msg)
-			masterAddr = strings.Replace(masterAddr, "\n", "", 100)
+			CurrMaster = string(msg)
+			CurrMaster = strings.Replace(CurrMaster, "\n", "", 100)
 			log.LogWarn(fmt.Sprintf("action[DataNode.postToMaster] master Addr change to %v, retry post to master", string(msg)))
 			continue
 		}
@@ -136,7 +136,7 @@ func (s *DataNode) postToMaster(data []byte, url string) (msg []byte, err error)
 			return nil, fmt.Errorf("postTo %v scode %v msg %v", url, scode, string(msg))
 		}
 		success = true
-		log.LogInfof("action[DataNode.postToMaster] url[%v] to master[%v] response[%v] code[%v]", url, masterAddr, string(msg), scode)
+		log.LogInfof("action[DataNode.postToMaster] url[%v] to master[%v] response[%v] code[%v]", url, MasterAddrs, string(msg), scode)
 		break
 	}
 	if !success {

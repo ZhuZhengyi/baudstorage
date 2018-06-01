@@ -29,8 +29,11 @@ var (
 	ErrNoDiskForCreateVol  = errors.New("no disk for create vol")
 	ErrBadConfFile         = errors.New("bad config file")
 
-	masterAddr string
-	connPool   = pool.NewConnPool()
+	CurrMaster      string
+	LocalIP         string
+	MasterAddrs     []string
+	MasterAddrIndex uint32
+	ConnPool        = pool.NewConnPool()
 )
 
 const (
@@ -53,8 +56,6 @@ const (
 
 type DataNode struct {
 	space            *SpaceManager
-	masterAddrs      []string
-	masterAddrIndex  uint32
 	port             int
 	profPort         int
 	rackName         string
@@ -99,7 +100,6 @@ func (s *DataNode) Sync() {
 }
 
 func (s *DataNode) onStart(cfg *config.Config) (err error) {
-	s.masterAddrs = make([]string, 0)
 	if err = s.LoadVol(cfg); err != nil {
 		return
 	}
@@ -120,8 +120,11 @@ func (s *DataNode) onShutdown() {
 func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	s.port = int(cfg.GetFloat(ConfigKeyPort))
 	s.clusterId = cfg.GetString(ConfigKeyClusterID)
+	if len(cfg.GetArray(ConfigKeyMasterAddr)) == 0 {
+		return ErrBadConfFile
+	}
 	for _, ip := range cfg.GetArray(ConfigKeyMasterAddr) {
-		s.masterAddrs = append(s.masterAddrs, ip.(string))
+		MasterAddrs = append(MasterAddrs, ip.(string))
 	}
 
 	s.rackName = cfg.GetString(ConfigKeyRack)
@@ -131,8 +134,7 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	s.profPort = int(cfg.GetFloat(ConfigKeyProfPort))
 	s.space = NewSpaceManager(s.rackName)
 
-	if err != nil || s.port == 0 ||
-		masterAddr == "" {
+	if err != nil || s.port == 0 {
 		err = ErrBadConfFile
 		return
 	}
@@ -172,24 +174,24 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 func (s *DataNode) registerToMaster() (err error) {
 	var data []byte
 	// Get IP address and cluster ID from master.
-	data, err = s.postToMaster(nil, GetIpFromMaster)
+	data, err = PostToMaster(nil, GetIpFromMaster)
 	if err != nil {
-		err = fmt.Errorf("cannot get ip from master[%v] err[%v]", s.masterAddrs, err)
+		err = fmt.Errorf("cannot get ip from master[%v] err[%v]", MasterAddrs, err)
 		return
 	}
 	cInfo := new(proto.ClusterInfo)
 	json.Unmarshal(data, cInfo)
-	s.localIp = string(cInfo.Ip)
+	LocalIP = string(cInfo.Ip)
 	s.clusterId = cInfo.Cluster
-	s.localServeAddr = fmt.Sprintf("%s:%v", s.localIp, s.port)
-	if !util.IP(s.localIp) {
-		err = fmt.Errorf("unavalid ip from master[%v] err[%v]", s.masterAddrs, s.localIp)
+	s.localServeAddr = fmt.Sprintf("%s:%v", LocalIP, s.port)
+	if !util.IP(LocalIP) {
+		err = fmt.Errorf("unavalid ip from master[%v] err[%v]", MasterAddrs, LocalIP)
 		return
 	}
 	// Register this data node to master.
-	data, err = s.postToMaster(nil, fmt.Sprintf("%s?addr=%s:%d", master.AddDataNode, s.localIp, s.port))
+	data, err = PostToMaster(nil, fmt.Sprintf("%s?addr=%s:%d", master.AddDataNode, LocalIP, s.port))
 	if err != nil {
-		err = fmt.Errorf("cannot add this data node to master[%v] err[%v]", s.masterAddrs, err)
+		err = fmt.Errorf("cannot add this data node to master[%v] err[%v]", MasterAddrs, err)
 		return
 	}
 	return
@@ -200,7 +202,7 @@ func (s *DataNode) startRestService() {
 	http.HandleFunc("/vols", s.HandleVol)
 	http.HandleFunc("/stats", s.HandleStat)
 
-	address := fmt.Sprintf("%s:%d", s.localIp, s.profPort)
+	address := fmt.Sprintf("%s:%d", LocalIP, s.profPort)
 
 	server := &http.Server{
 		Addr: address,
