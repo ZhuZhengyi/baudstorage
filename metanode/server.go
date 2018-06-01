@@ -7,7 +7,6 @@ import (
 
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
-	"net/http"
 )
 
 // StartTcpService bind and listen specified port and accept tcp connections.
@@ -81,12 +80,5 @@ func (m *MetaNode) servConn(conn net.Conn, stopC chan uint8) {
 func (m *MetaNode) handlePacket(conn net.Conn, p *Packet) (err error) {
 	// Handle request
 	err = m.metaManager.HandleMetaOperation(conn, p)
-	return
-}
-
-func (m *MetaNode) registerHandler() (err error) {
-	// Register http handler
-	http.HandleFunc("/getAllPartitions", m.allPartitionsHandle)
-	http.HandleFunc("/getInodeInfo", m.inodeInfoHandle)
 	return
 }
