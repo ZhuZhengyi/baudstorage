@@ -15,6 +15,7 @@ import (
 type Super struct {
 	cluster string
 	name    string
+	ic      *InodeCache
 	mw      *meta.MetaWrapper
 	ec      *stream.ExtentClient
 }
@@ -33,7 +34,6 @@ func NewSuper(namespace, master string) (s *Super, err error) {
 		return nil, err
 	}
 
-	//FIXME:
 	s.ec, err = stream.NewExtentClient(namespace, master, s.mw.AppendExtentKey, s.mw.GetExtents)
 	//s.ec, err = stream.NewExtentClient(namespace, "localhost:7778", s.mw.AppendExtentKey, s.mw.GetExtents)
 	if err != nil {
@@ -43,6 +43,7 @@ func NewSuper(namespace, master string) (s *Super, err error) {
 
 	s.name = namespace
 	s.cluster = s.mw.Cluster()
+	s.ic = NewInodeCache(DefaultInodeExpiration)
 	log.LogInfof("NewSuper: cluster(%v) name(%v)", s.cluster, s.name)
 	return s, nil
 }

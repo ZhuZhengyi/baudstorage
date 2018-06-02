@@ -32,6 +32,11 @@ const (
 	AttrValidDuration   = 0 * time.Second
 )
 
+const (
+	InodeExpired           = int64(-1)
+	DefaultInodeExpiration = 120 * time.Second
+)
+
 func ParseError(err error) fuse.Errno {
 	switch v := err.(type) {
 	case syscall.Errno:

@@ -55,6 +55,7 @@ func (d *Dir) Create(ctx context.Context, req *fuse.CreateRequest, resp *fuse.Cr
 	}
 
 	inode := NewInode(info)
+	d.super.ic.Put(inode)
 	inode.fillAttr(&resp.Attr)
 	resp.Node = fuse.NodeID(inode.ino)
 	d.super.ec.Open(inode.ino)
@@ -76,6 +77,7 @@ func (d *Dir) Mkdir(ctx context.Context, req *fuse.MkdirRequest) (fs.Node, error
 	}
 
 	inode := NewInode(info)
+	d.super.ic.Put(inode)
 	child := NewDir(d.super, inode)
 	return child, nil
 }

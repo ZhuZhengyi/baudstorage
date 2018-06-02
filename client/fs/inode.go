@@ -13,10 +13,13 @@ import (
 type Inode struct {
 	ino   uint64
 	size  uint64
-	mode  uint32 //Inode Type
+	mode  uint32
 	ctime time.Time
 	mtime time.Time
 	atime time.Time
+
+	// protected under the inode cache lock
+	expiration int64
 }
 
 func NewInode(info *proto.InodeInfo) *Inode {
@@ -27,12 +30,19 @@ func NewInode(info *proto.InodeInfo) *Inode {
 
 func (s *Super) InodeGet(ino uint64) (*Inode, error) {
 	log.LogDebugf("InodeGet: ino(%v)", ino)
+	inode := s.ic.Get(ino)
+	if inode != nil {
+		log.LogDebugf("InodeCache hit: inode(%v)", inode)
+		return inode, nil
+	}
+
 	info, err := s.mw.InodeGet_ll(ino)
 	if err != nil {
 		log.LogErrorf("InodeGet: ino(%v) err(%v)", ino, err.Error())
 		return nil, ParseError(err)
 	}
-	inode := NewInode(info)
+	inode = NewInode(info)
+	s.ic.Put(inode)
 	return inode, nil
 }
 
