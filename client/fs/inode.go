@@ -16,7 +16,6 @@ import (
 type InodeCommon struct {
 	sync.RWMutex
 	super   *Super
-	parent  *Dir
 	blksize uint32
 	nlink   uint32
 }

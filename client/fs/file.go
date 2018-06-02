@@ -30,10 +30,9 @@ var (
 	//TODO:HandleReadAller, NodeSetattrer
 )
 
-func NewFile(s *Super, p *Dir) *File {
+func NewFile(s *Super) *File {
 	file := new(File)
 	file.super = s
-	file.parent = p
 	file.blksize = BLKSIZE_DEFAULT
 	file.nlink = REGULAR_NLINK_DEFAULT
 	return file

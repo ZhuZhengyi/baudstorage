@@ -30,10 +30,9 @@ var (
 	//TODO: NodeSymlinker
 )
 
-func NewDir(s *Super, p *Dir) *Dir {
+func NewDir(s *Super) *Dir {
 	dir := new(Dir)
 	dir.super = s
-	dir.parent = p
 	dir.blksize = BLKSIZE_DEFAULT
 	dir.nlink = DIR_NLINK_DEFAULT
 	return dir
@@ -60,7 +59,7 @@ func (d *Dir) Create(ctx context.Context, req *fuse.CreateRequest, resp *fuse.Cr
 		return nil, nil, ParseError(err)
 	}
 
-	child := NewFile(d.super, d)
+	child := NewFile(d.super)
 	fillInode(&child.inode, info)
 	resp.Node = fuse.NodeID(child.inode.ino)
 	fillAttr(&resp.Attr, child)
@@ -80,7 +79,7 @@ func (d *Dir) Mkdir(ctx context.Context, req *fuse.MkdirRequest) (fs.Node, error
 		return nil, ParseError(err)
 	}
 
-	child := NewDir(d.super, d)
+	child := NewDir(d.super)
 	fillInode(&child.inode, info)
 	return child, nil
 }
@@ -116,11 +115,11 @@ func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 
 	var child fs.Node
 	if mode == ModeRegular {
-		dir := NewFile(d.super, d)
+		dir := NewFile(d.super)
 		err = d.super.InodeGet(ino, &dir.inode)
 		child = dir
 	} else if mode == ModeDir {
-		file := NewDir(d.super, d)
+		file := NewDir(d.super)
 		err = d.super.InodeGet(ino, &file.inode)
 		child = file
 	} else {

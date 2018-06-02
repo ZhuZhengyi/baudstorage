@@ -48,11 +48,10 @@ func NewSuper(namespace, master string) (s *Super, err error) {
 }
 
 func (s *Super) Root() (fs.Node, error) {
-	root := NewDir(s, nil)
+	root := NewDir(s)
 	if err := s.InodeGet(ROOT_INO, &root.inode); err != nil {
 		return nil, err
 	}
-	root.parent = root
 	return root, nil
 }
 
