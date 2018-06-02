@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	ROOT_INO = proto.ROOT_INO
+	RootInode = proto.ROOT_INO
 )
 
 const (

@@ -11,8 +11,8 @@ import (
 )
 
 type File struct {
-	InodeCommon
-	inode Inode
+	super *Super
+	inode *Inode
 }
 
 //functions that File needs to implement
@@ -30,22 +30,19 @@ var (
 	//TODO:HandleReadAller, NodeSetattrer
 )
 
-func NewFile(s *Super) *File {
-	file := new(File)
-	file.super = s
-	file.blksize = BLKSIZE_DEFAULT
-	file.nlink = REGULAR_NLINK_DEFAULT
-	return file
+func NewFile(s *Super, i *Inode) *File {
+	return &File{super: s, inode: i}
 }
 
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
-	log.LogDebugf("Attr: ino(%v)", f.inode.ino)
-	err := f.super.InodeGet(f.inode.ino, &f.inode)
+	ino := f.inode.ino
+	log.LogDebugf("Attr: ino(%v)", ino)
+	inode, err := f.super.InodeGet(ino)
 	if err != nil {
-		log.LogErrorf("Attr: ino(%v) err(%v)", f.inode.ino, err.Error())
+		log.LogErrorf("Attr: ino(%v) err(%v)", ino, err.Error())
 		return ParseError(err)
 	}
-	fillAttr(a, f)
+	inode.fillAttr(a)
 	return nil
 }
 
@@ -53,16 +50,18 @@ func (f *File) Forget() {
 }
 
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
-	log.LogDebugf("Open: ino(%v)", f.inode.ino)
-	f.super.ec.Open(f.inode.ino)
+	ino := f.inode.ino
+	log.LogDebugf("Open: ino(%v)", ino)
+	f.super.ec.Open(ino)
 	return f, nil
 }
 
 func (f *File) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
-	log.LogDebugf("Close: ino(%v)", f.inode.ino)
-	err := f.super.ec.Close(f.inode.ino)
+	ino := f.inode.ino
+	log.LogDebugf("Close: ino(%v)", ino)
+	err := f.super.ec.Close(ino)
 	if err != nil {
-		log.LogErrorf("Close returns error (%v)", err.Error())
+		log.LogErrorf("Close: ino(%v) error (%v)", ino, err.Error())
 		return fuse.EIO
 	}
 	return nil
