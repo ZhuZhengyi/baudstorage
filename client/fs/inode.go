@@ -19,15 +19,20 @@ type Inode struct {
 	atime time.Time
 }
 
+func NewInode(info *proto.InodeInfo) *Inode {
+	inode := new(Inode)
+	inode.fill(info)
+	return inode
+}
+
 func (s *Super) InodeGet(ino uint64) (*Inode, error) {
 	log.LogDebugf("InodeGet: ino(%v)", ino)
-	inode := &Inode{ino: ino}
 	info, err := s.mw.InodeGet_ll(ino)
 	if err != nil {
 		log.LogErrorf("InodeGet: ino(%v) err(%v)", ino, err.Error())
 		return nil, ParseError(err)
 	}
-	inode.fill(info)
+	inode := NewInode(info)
 	return inode, nil
 }
 

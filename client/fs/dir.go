@@ -54,12 +54,12 @@ func (d *Dir) Create(ctx context.Context, req *fuse.CreateRequest, resp *fuse.Cr
 		return nil, nil, ParseError(err)
 	}
 
-	inode := &Inode{}
-	inode.fill(info)
-	child := NewFile(d.super, inode)
-	resp.Node = fuse.NodeID(child.inode.ino)
+	inode := NewInode(info)
 	inode.fillAttr(&resp.Attr)
+	resp.Node = fuse.NodeID(inode.ino)
 	d.super.ec.Open(inode.ino)
+
+	child := NewFile(d.super, inode)
 	return child, child, nil
 }
 
@@ -75,8 +75,7 @@ func (d *Dir) Mkdir(ctx context.Context, req *fuse.MkdirRequest) (fs.Node, error
 		return nil, ParseError(err)
 	}
 
-	inode := &Inode{}
-	inode.fill(info)
+	inode := NewInode(info)
 	child := NewDir(d.super, inode)
 	return child, nil
 }
