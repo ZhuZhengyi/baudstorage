@@ -67,6 +67,7 @@ func (i *Inode) Marshal() (result []byte, err error) {
 	keyLen := uint32(len(keyBytes))
 	valLen := uint32(len(valBytes))
 	buff := bytes.NewBuffer(make([]byte, 0))
+	buff.Grow(128)
 	if err = binary.Write(buff, binary.BigEndian, keyLen); err != nil {
 		return
 	}
@@ -132,6 +133,7 @@ func (i *Inode) MarshalValue() (val []byte) {
 		extentsSeqLen uint32
 	)
 	buff := bytes.NewBuffer(make([]byte, 0))
+	buff.Grow(64)
 	if err = binary.Write(buff, binary.BigEndian, &i.Type); err != nil {
 		panic(err)
 	}
