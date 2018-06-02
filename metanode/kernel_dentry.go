@@ -40,6 +40,7 @@ func (d *Dentry) Marshal() (result []byte, err error) {
 	keyLen := uint32(len(keyBytes))
 	valLen := uint32(len(valBytes))
 	buff := bytes.NewBuffer(make([]byte, 0))
+	buff.Grow(64)
 	if err = binary.Write(buff, binary.BigEndian, keyLen); err != nil {
 		return
 	}
@@ -95,6 +96,7 @@ func (d *Dentry) Less(than btree.Item) (less bool) {
 // MarshalKey is the bytes version of MarshalKey method which returns byte slice result.
 func (d *Dentry) MarshalKey() (k []byte) {
 	buff := bytes.NewBuffer(make([]byte, 0))
+	buff.Grow(32)
 	if err := binary.Write(buff, binary.BigEndian, &d.ParentId); err != nil {
 		panic(err)
 	}
@@ -116,6 +118,7 @@ func (d *Dentry) UnmarshalKey(k []byte) (err error) {
 // MarshalValue marshal key to bytes.
 func (d *Dentry) MarshalValue() (k []byte) {
 	buff := bytes.NewBuffer(make([]byte, 0))
+	buff.Grow(12)
 	if err := binary.Write(buff, binary.BigEndian, &d.Inode); err != nil {
 		panic(err)
 	}
