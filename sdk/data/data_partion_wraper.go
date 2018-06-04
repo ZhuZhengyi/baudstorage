@@ -35,7 +35,7 @@ type DataPartition struct {
 }
 
 type DataPartitionView struct {
-	Partitions []*DataPartition
+	DataPartitions []*DataPartition
 }
 
 func (dp *DataPartition) GetAllAddrs() (m string) {
@@ -98,7 +98,7 @@ func (wrapper *DataPartitionWrapper) getDataPartitionFromMaster() (err error) {
 			continue
 		}
 		log.LogInfof("Get VolView from master: %v", string(body))
-		wrapper.updateDataPartition(views.Partitions)
+		wrapper.updateDataPartition(views.DataPartitions)
 		break
 	}
 
