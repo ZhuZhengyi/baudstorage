@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -44,6 +45,10 @@ func (s *Super) InodeGet(ino uint64) (*Inode, error) {
 	inode = NewInode(info)
 	s.ic.Put(inode)
 	return inode, nil
+}
+
+func (inode *Inode) String() string {
+	return fmt.Sprintf("ino(%v) mode(%v) size(%v) exp(%v)", inode.ino, inode.mode, inode.size, inode.expiration)
 }
 
 func (inode *Inode) fill(info *proto.InodeInfo) {
