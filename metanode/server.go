@@ -31,7 +31,7 @@ func (m *MetaNode) startServer() (err error) {
 				continue
 			}
 			// Start a goroutine for tcp connection handling.
-			go m.servConn(conn, stopC)
+			go m.serveConn(conn, stopC)
 		}
 	}(m.httpStopC)
 	log.LogDebugf("start Server over...")
@@ -51,7 +51,7 @@ func (m *MetaNode) stopServer() {
 
 // ServeConn read data from specified tco connection until connection
 // closed by remote or tcp service have been shutdown.
-func (m *MetaNode) servConn(conn net.Conn, stopC chan uint8) {
+func (m *MetaNode) serveConn(conn net.Conn, stopC chan uint8) {
 	defer conn.Close()
 	c := conn.(*net.TCPConn)
 	c.SetKeepAlive(true)

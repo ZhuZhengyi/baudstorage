@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
@@ -40,7 +41,7 @@ type metaManager struct {
 	rootDir    string
 	raftStore  raftstore.RaftStore
 	connPool   *pool.ConnPool
-	state      ServiceState
+	state      uint32
 	mu         sync.RWMutex
 	partitions map[uint64]MetaPartition // Key: metaRangeId, Val: metaPartition
 }
@@ -93,11 +94,15 @@ func (m *metaManager) HandleMetaOperation(conn net.Conn, p *Packet) (err error) 
 }
 
 func (m *metaManager) Start() (err error) {
-	if TrySwitchState(&m.state, stateReady, stateRunning) {
+	if atomic.CompareAndSwapUint32(&m.state, StateStandby, StateStart) {
 		defer func() {
+			var newState uint32
 			if err != nil {
-				SetState(&m.state, stateReady)
+				newState = StateStandby
+			} else {
+				newState = StateRunning
 			}
+			atomic.StoreUint32(&m.state, newState)
 		}()
 		err = m.onStart()
 	}
@@ -105,7 +110,8 @@ func (m *metaManager) Start() (err error) {
 }
 
 func (m *metaManager) Stop() {
-	if TrySwitchState(&m.state, stateRunning, stateReady) {
+	if atomic.CompareAndSwapUint32(&m.state, StateRunning, StateShutdown) {
+		defer atomic.StoreUint32(&m.state, StateStopped)
 		m.onStop()
 	}
 }
@@ -230,7 +236,7 @@ func (m *metaManager) createPartition(id uint64, nsName string, start,
 	partId := fmt.Sprintf("%d", id)
 	mpc := &MetaPartitionConfig{
 		PartitionId: id,
-		NameSapce:   nsName,
+		NameSpace:   nsName,
 		Start:       start,
 		End:         end,
 		Cursor:      start,

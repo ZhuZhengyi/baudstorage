@@ -8,7 +8,7 @@ import (
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
-	raftproto "github.com/tiglabs/raft/proto"
+	raftProto "github.com/tiglabs/raft/proto"
 	"os"
 )
 
@@ -272,14 +272,14 @@ func (m *metaManager) opMetaInodeGet(conn net.Conn, p *Packet) (err error) {
 	if err != nil {
 		p.PackErrorWithBody(proto.OpNotExistErr, nil)
 		m.respondToClient(conn, p)
-		err = errors.Errorf("[opMetaInodeGet]%s", err.Error())
+		err = errors.Errorf("[opMetaInodeGet] %s", err.Error())
 		return
 	}
 	if !m.serveProxy(conn, mp, p) {
 		return
 	}
 	if err = mp.InodeGet(req, p); err != nil {
-		err = errors.Errorf("[opMetaInodeGet]%s", err.Error())
+		err = errors.Errorf("[opMetaInodeGet] %s", err.Error())
 	}
 	m.respondToClient(conn, p)
 	return
@@ -349,8 +349,9 @@ func (m *metaManager) opMetaExtentsList(conn net.Conn, p *Packet) (err error) {
 	return
 }
 
-//TODO: not implement
 func (m *metaManager) opMetaExtentsDel(conn net.Conn, p *Packet) (err error) {
+	//TODO: not implement yet
+	panic("not implement yet")
 	return
 }
 
@@ -361,7 +362,7 @@ func (m *metaManager) opDeleteMetaPartition(conn net.Conn, p *Packet) (err error
 		m.respondToClient(conn, p)
 		return
 	}
-	log.LogDebugf("[opDeleteMetaPartition]: recv %v", adminTask)
+	log.LogDebugf("[opDeleteMetaPartition]: received %v", adminTask)
 	req := &proto.DeleteMetaPartitionRequest{}
 	reqData, err := json.Marshal(adminTask.Request)
 	if err != nil {
@@ -498,7 +499,7 @@ func (m *metaManager) opOfflineMetaPartition(conn net.Conn, p *Packet) (err erro
 		m.respondToClient(conn, p)
 		return
 	}
-	log.LogDebugf("[opOfflineMetaPartition] recv task: %v", adminTask)
+	log.LogDebugf("[opOfflineMetaPartition] received task: %v", adminTask)
 	reqData, err = json.Marshal(adminTask.Request)
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
@@ -530,14 +531,14 @@ func (m *metaManager) opOfflineMetaPartition(conn net.Conn, p *Packet) (err erro
 		resp.Result = err.Error()
 		goto end
 	}
-	_, err = mp.ChangeMember(raftproto.ConfAddNode,
-		raftproto.Peer{ID: req.AddPeer.ID}, reqData)
+	_, err = mp.ChangeMember(raftProto.ConfAddNode,
+		raftProto.Peer{ID: req.AddPeer.ID}, reqData)
 	if err != nil {
 		resp.Result = err.Error()
 		goto end
 	}
-	_, err = mp.ChangeMember(raftproto.ConfRemoveNode,
-		raftproto.Peer{ID: req.RemovePeer.ID}, reqData)
+	_, err = mp.ChangeMember(raftProto.ConfRemoveNode,
+		raftProto.Peer{ID: req.RemovePeer.ID}, reqData)
 	if err != nil {
 		resp.Result = err.Error()
 		goto end

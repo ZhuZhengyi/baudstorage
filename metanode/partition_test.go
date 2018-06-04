@@ -3,7 +3,7 @@ package metanode
 /*
 var mp *metaPartition
 
-func TeststartRaftServer() {
+func TestStartRaftServer() {
 	raftConf := &raftstore.Config{
 		NodeID:        123456,
 		WalPath:       "raft",

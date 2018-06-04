@@ -38,7 +38,7 @@ Peers: Peers information for raftStore.
 */
 type MetaPartitionConfig struct {
 	PartitionId uint64              `json:"partition_id"`
-	NameSapce   string              `json:"namespace"`
+	NameSpace   string              `json:"namespace"`
 	Start       uint64              `json:"start"`
 	End         uint64              `json:"end"`
 	Peers       []proto.Peer        `json:"peers"`
@@ -141,15 +141,19 @@ type metaPartition struct {
 	inodeTree     *btree.BTree        // B-Tree for Inode.
 	raftPartition raftstore.Partition // RaftStore partition instance of this meta partition.
 	stopC         chan bool
-	state         ServiceState
+	state         uint32
 }
 
 func (mp *metaPartition) Start() (err error) {
-	if TrySwitchState(&mp.state, stateReady, stateRunning) {
+	if atomic.CompareAndSwapUint32(&mp.state, StateStandby, StateStart) {
 		defer func() {
+			var newState uint32
 			if err != nil {
-				SetState(&mp.state, stateReady)
+				newState = StateStandby
+			} else {
+				newState = StateRunning
 			}
+			atomic.StoreUint32(&mp.state, newState)
 		}()
 		if mp.config.BeforeStart != nil {
 			mp.config.BeforeStart()
@@ -166,7 +170,8 @@ func (mp *metaPartition) Start() (err error) {
 }
 
 func (mp *metaPartition) Stop() {
-	if TrySwitchState(&mp.state, stateRunning, stateReady) {
+	if atomic.CompareAndSwapUint32(&mp.state, StateRunning, StateShutdown) {
+		defer atomic.StoreUint32(&mp.state, StateStopped)
 		if mp.config.BeforeStop != nil {
 			mp.config.BeforeStop()
 		}

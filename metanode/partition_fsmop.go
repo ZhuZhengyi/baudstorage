@@ -67,7 +67,6 @@ func (mp *metaPartition) getInodeTree() *btree.BTree {
 
 // CreateDentry insert dentry into dentry tree.
 func (mp *metaPartition) createDentry(dentry *Dentry) (status uint8) {
-	// TODO: Implement it.
 	status = proto.OpOk
 	mp.dentryMu.Lock()
 	if mp.dentryTree.Has(dentry) {
@@ -82,7 +81,6 @@ func (mp *metaPartition) createDentry(dentry *Dentry) (status uint8) {
 
 // DeleteDentry delete dentry from dentry tree.
 func (mp *metaPartition) deleteDentry(dentry *Dentry) (resp *ResponseDentry) {
-	// TODO: Implement it.
 	resp = NewResponseDentry()
 	resp.Status = proto.OpOk
 	mp.dentryMu.Lock()
@@ -98,7 +96,6 @@ func (mp *metaPartition) deleteDentry(dentry *Dentry) (resp *ResponseDentry) {
 
 // CreateInode create inode to inode tree.
 func (mp *metaPartition) createInode(ino *Inode) (status uint8) {
-	// TODO: Implement it.
 	status = proto.OpOk
 	mp.inodeMu.Lock()
 	if mp.inodeTree.Has(ino) {
@@ -113,7 +110,6 @@ func (mp *metaPartition) createInode(ino *Inode) (status uint8) {
 
 // DeleteInode delete specified inode item from inode tree.
 func (mp *metaPartition) deleteInode(ino *Inode) (resp *ResponseInode) {
-	// TODO: Implement it.
 	resp = NewResponseInode()
 	resp.Status = proto.OpOk
 	mp.inodeMu.Lock()
@@ -216,7 +212,7 @@ func (mp *metaPartition) confAddNode(req *proto.
 	mp.config.Peers = append(mp.config.Peers, req.AddPeer)
 	// Write Disk
 	if err = mp.storeMeta(); err != nil {
-		err = errors.Errorf("[applyAddNode]->%s", err.Error())
+		err = errors.Errorf("[applyAddNode] %s", err.Error())
 		mp.config.Peers = mp.config.Peers[:len(mp.config.Peers)-1]
 		return
 	}

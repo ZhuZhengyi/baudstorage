@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/juju/errors"
@@ -34,7 +35,7 @@ type MetaNode struct {
 	retryCount  int
 	raftStore   raftstore.RaftStore
 	httpStopC   chan uint8
-	state       ServiceState
+	state       uint32
 	wg          sync.WaitGroup
 }
 
@@ -44,11 +45,15 @@ type MetaNode struct {
 //  3. Start server and accept connection from master and clients.
 func (m *MetaNode) Start(cfg *config.Config) (err error) {
 	// Parallel safe.
-	if TrySwitchState(&m.state, stateReady, stateRunning) {
+	if atomic.CompareAndSwapUint32(&m.state, StateStandby, StateStart) {
 		defer func() {
+			var newState uint32
 			if err != nil {
-				SetState(&m.state, stateReady)
+				newState = StateStandby
+			} else {
+				newState = StateRunning
 			}
+			atomic.StoreUint32(&m.state, newState)
 		}()
 		if err = m.onStart(cfg); err != nil {
 			return
@@ -60,7 +65,8 @@ func (m *MetaNode) Start(cfg *config.Config) (err error) {
 
 // Shutdown stop this MetaNode.
 func (m *MetaNode) Shutdown() {
-	if TrySwitchState(&m.state, stateRunning, stateReady) {
+	if atomic.CompareAndSwapUint32(&m.state, StateRunning, StateShutdown) {
+		defer atomic.StoreUint32(&m.state, StateStopped)
 		m.onShutdown()
 		m.wg.Done()
 	}
@@ -100,7 +106,9 @@ func (m *MetaNode) onShutdown() {
 
 // Sync will block invoker goroutine until this MetaNode shutdown.
 func (m *MetaNode) Sync() {
-	m.wg.Wait()
+	if atomic.LoadUint32(&m.state) == StateRunning {
+		m.wg.Wait()
+	}
 }
 
 func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
@@ -131,7 +139,7 @@ func (m *MetaNode) validConfig() (err error) {
 		m.raftDir = defaultRaftDir
 	}
 	if len(masterAddrs) == 0 {
-		err = errors.New("master Addrs is empty!")
+		err = errors.New("master address list is empty")
 		return
 	}
 	return
@@ -151,7 +159,7 @@ func (m *MetaNode) startMetaManager() (err error) {
 	}
 	m.metaManager = NewMetaManager(conf)
 	err = m.metaManager.Start()
-	log.LogDebugf("loadMetaManager over...")
+	log.LogDebugf("[startMetaManager] manager start finish.")
 	return
 }
 
@@ -165,12 +173,12 @@ func (m *MetaNode) register() (err error) {
 	for {
 		m.localAddr, err = util.GetLocalIP()
 		if err != nil {
-			log.LogErrorf("[register]:%s", err.Error())
+			log.LogErrorf("[register] %s", err.Error())
 			continue
 		}
 		err = m.postNodeID()
 		if err != nil {
-			log.LogErrorf("[register]->%s", err.Error())
+			log.LogErrorf("[register] %s", err.Error())
 			time.Sleep(3 * time.Second)
 			continue
 		}
@@ -182,12 +190,12 @@ func (m *MetaNode) postNodeID() (err error) {
 	reqPath := fmt.Sprintf("%s?addr=%s:%d", metaNodeURL, m.localAddr, m.listen)
 	msg, err := postToMaster(reqPath, nil)
 	if err != nil {
-		err = errors.Errorf("[postNodeID]->%s", err.Error())
+		err = errors.Errorf("[postNodeID] %s", err.Error())
 		return
 	}
 	nodeIDStr := strings.TrimSpace(string(msg))
 	if nodeIDStr == "" {
-		err = errors.Errorf("[postNodeID]: master response empty body")
+		err = errors.Errorf("[postNodeID] master respond empty body")
 		return
 	}
 	m.nodeId, err = strconv.ParseUint(nodeIDStr, 10, 64)
