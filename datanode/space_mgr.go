@@ -171,7 +171,7 @@ func (s *DataNode) fillHeartBeatResponse(response *proto.DataNodeHeartBeatRespon
 	space := s.space
 	space.dataPartitionLock.RLock()
 	for _, dp := range space.partitions {
-		vr := &proto.PartitionReport{PartitionID: uint64(dp.partitionId), PartitionStatus: dp.status, Total: uint64(dp.partitionSize), Used: uint64(dp.used)}
+		vr := &proto.PartitionReport{PartitionID: uint64(dp.partitionId), PartitionStatus: dp.partitionStatus, Total: uint64(dp.partitionSize), Used: uint64(dp.used)}
 		response.PartitionInfo = append(response.PartitionInfo, vr)
 	}
 	space.dataPartitionLock.RUnlock()
@@ -193,22 +193,22 @@ func (space *SpaceManager) modifyVolsStatus() {
 			switch dp.partitionType {
 			case proto.ExtentVol:
 				store := dp.store.(*storage.ExtentStore)
-				dp.status = store.GetStoreStatus()
+				dp.partitionStatus = store.GetStoreStatus()
 				dp.used = int(store.GetStoreUsedSize())
 			case proto.TinyVol:
 				store := dp.store.(*storage.TinyStore)
-				dp.status = store.GetStoreStatus()
+				dp.partitionStatus = store.GetStoreStatus()
 				if dp.isLeader {
 					store.MoveChunkToUnavailChan()
 				}
 				dp.used = int(store.GetStoreUsedSize())
 			}
-			if dp.isLeader && dp.status == storage.ReadOnlyStore {
-				dp.status = storage.ReadOnlyStore
+			if dp.isLeader && dp.partitionStatus == storage.ReadOnlyStore {
+				dp.partitionStatus = storage.ReadOnlyStore
 			}
 
 			if diskStatus == storage.DiskErrStore {
-				dp.status = storage.DiskErrStore
+				dp.partitionStatus = storage.DiskErrStore
 			}
 		}
 	}

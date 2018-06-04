@@ -340,7 +340,7 @@ func (s *DataNode) headNodeSetChunkInfo(pkg *Packet) (err error) {
 	store := pkg.dataPartition.store.(*storage.TinyStore)
 	chunkId, err = store.GetChunkForWrite()
 	if err != nil {
-		pkg.dataPartition.status = storage.ReadOnlyStore
+		pkg.dataPartition.partitionStatus = storage.ReadOnlyStore
 		return
 	}
 	pkg.FileID = uint64(chunkId)

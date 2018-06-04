@@ -69,7 +69,7 @@ func (dp *DataPartition) extentsRepair() {
 }
 
 func (dp *DataPartition) getAllMemberFileMetas() (allMembers []*MembersFileMetas, err error) {
-	allMembers = make([]*MembersFileMetas, dp.members.ReplicaNum)
+	allMembers = make([]*MembersFileMetas, len(dp.replicaHosts))
 	var files []*storage.FileInfo
 	switch dp.partitionType {
 	case proto.ExtentVol:
@@ -89,9 +89,9 @@ func (dp *DataPartition) getAllMemberFileMetas() (allMembers []*MembersFileMetas
 	}
 	allMembers[0] = mf
 	p := NewGetAllWaterMarker(dp.partitionId, proto.ExtentStoreMode)
-	for i := 1; i < len(dp.members.Hosts); i++ {
+	for i := 1; i < len(dp.replicaHosts); i++ {
 		var conn net.Conn
-		target := dp.members.Hosts[i]
+		target := dp.replicaHosts[i]
 		conn, err = ConnPool.Get(target)
 		if err != nil {
 			err = errors.Annotatef(err, "getAllMemberFileMetas  dataPartition[%v] get host[%v] connect", dp.partitionId, target)
@@ -176,7 +176,7 @@ func (dp *DataPartition) generatorFixFileSizeTasks(allMembers []*MembersFileMeta
 	for fileId, _ := range leader.extents {
 		maxSizeExtentIdIndex := maxSizeExtentMap[fileId]
 		maxSize := allMembers[maxSizeExtentIdIndex].extents[fileId].Size
-		sourceAddr := dp.members.Hosts[maxSizeExtentIdIndex]
+		sourceAddr := dp.replicaHosts[maxSizeExtentIdIndex]
 		for index := 0; index < len(allMembers); index++ {
 			if index == maxSizeExtentIdIndex {
 				continue
@@ -218,7 +218,7 @@ func (dp *DataPartition) NotifyRepair(members []*MembersFileMetas) (err error) {
 	p := NewNotifyRepair(dp.partitionId, storeMode)
 	for i := 1; i < len(members); i++ {
 		var conn net.Conn
-		target := dp.members.Hosts[i]
+		target := dp.replicaHosts[i]
 		conn, err = ConnPool.Get(target)
 		if err != nil {
 			continue

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/juju/errors"
+	"github.com/tiglabs/baudstorage/master"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/storage"
 	"github.com/tiglabs/baudstorage/util/log"
@@ -24,25 +25,17 @@ var (
 )
 
 type DataPartition struct {
-	partitionId   uint32
-	partitionType string
-	path          string
-	diskPath      string
-	partitionSize int
-	used          int
-	store         interface{}
-	status        int
-	isLeader      bool
-	members       *DataPartitionMembers
-	exitCh        chan bool
-}
-
-type DataPartitionMembers struct {
-	PartitionId     uint64
-	PartitionStatus int8
-	ReplicaNum      uint8
-	PartitionType   string
-	Hosts           []string
+	partitionId     uint32
+	partitionType   string
+	partitionStatus int
+	partitionSize   int
+	replicaHosts    []string
+	isLeader        bool
+	path            string
+	diskPath        string
+	used            int
+	store           interface{}
+	exitCh          chan bool
 }
 
 func NewDataPartition(partitionId uint32, partitionType, name, diskPath string, storeMode bool, storeSize int) (dp *DataPartition, err error) {
@@ -73,59 +66,71 @@ func (dp *DataPartition) toName() (m string) {
 }
 
 func (dp *DataPartition) parseVolMember() (err error) {
-	if dp.status == storage.DiskErrStore {
+	if dp.partitionStatus == storage.DiskErrStore {
 		return
 	}
 	dp.isLeader = false
-	isLeader, members, err := dp.getMembers()
+	isLeader, replicas, err := dp.getMembers()
 	if !isLeader {
 		err = ErrNotLeader
 		return
 	}
 	dp.isLeader = isLeader
-	dp.members = members
+	dp.replicaHosts = replicas
 	return nil
 }
 
-func (dp *DataPartition) getMembers() (bool, *DataPartitionMembers, error) {
+func (dp *DataPartition) getMembers() (isLeader bool, replicaHosts []string, err error) {
 	var (
 		HostsBuf []byte
-		err      error
 	)
 
 	url := fmt.Sprintf(AdminGetDataPartition+"?id=%v", dp.partitionId)
 	if HostsBuf, err = PostToMaster(nil, url); err != nil {
 		return false, nil, err
 	}
-	members := new(DataPartitionMembers)
+	response := &master.DataPartition{}
 
-	if err = json.Unmarshal(HostsBuf, &members); err != nil {
+	if err = json.Unmarshal(HostsBuf, &response); err != nil {
 		log.LogError(fmt.Sprintf(ActionGetFollowers+" v[%v] json unmarshal [%v] err[%v]", dp.partitionId, string(HostsBuf), err))
-		return false, nil, err
+		isLeader = false
+		replicaHosts = nil
+		return
 	}
 
-	if len(members.Hosts) >= 1 && members.Hosts[0] != LocalIP {
+	if response.Locations != nil && len(response.Locations) >= 1 && response.Locations[0].Addr != LocalIP {
 		err = errors.Annotatef(ErrNotLeader, "dataPartition[%v] current LocalIP[%v]", dp.partitionId, LocalIP)
-		return false, nil, err
+		isLeader = false
+		replicaHosts = nil
+		return
 	}
 
-	if int(members.ReplicaNum) < LeastGoalNum || len(members.Hosts) < int(members.ReplicaNum) {
+	if int(response.ReplicaNum) < LeastGoalNum || len(response.Locations) < int(response.ReplicaNum) {
 		err = ErrLackOfGoal
-		return false, nil, err
+		isLeader = false
+		replicaHosts = nil
+		return
 	}
 
-	if members.PartitionStatus == storage.DiskErrStore || dp.status == storage.DiskErrStore {
+	if response.Status == master.DataPartitionUnavailable || dp.partitionStatus == storage.DiskErrStore {
 		err = ErrDataPartitionOnBadDisk
-		return false, nil, err
+		isLeader = false
+		replicaHosts = nil
+		return
 	}
 
-	return true, members, nil
+	for _, location := range response.Locations {
+		replicaHosts = append(replicaHosts, location.Addr)
+	}
+	isLeader = true
+
+	return
 }
 
 func (dp *DataPartition) Load() (response *proto.LoadDataPartitionResponse) {
 	response = new(proto.LoadDataPartitionResponse)
 	response.PartitionId = uint64(dp.partitionId)
-	response.PartitionStatus = uint8(dp.status)
+	response.PartitionStatus = uint8(dp.partitionStatus)
 	response.PartitionType = dp.partitionType
 	response.PartitionSnapshot = make([]*proto.File, 0)
 	switch dp.partitionType {
