@@ -309,6 +309,9 @@ func StreamRepairExtent(remoteExtentInfo *storage.FileInfo, dp *DataPartion) (er
 			conn.Close()
 			return errors.Annotatef(err, "streamRepairExtent recive data error")
 		}
+		log.LogInfof("action[StreamRepairExtent] datapartion[%v] extent[%v] start fix from [%v]" +
+			" remoteSize[%v] localSize[%v] needFixSize[%v]",dp.partionId,remoteExtentInfo.FileIdId,
+				remoteExtentInfo.Source,remoteExtentInfo.Size,localExtentInfo.Size,needFixSize)
 		err = store.Write(uint64(localExtentInfo.FileIdId), int64(localExtentInfo.Size), int64(request.Size), request.Data, request.Crc)
 		if err != nil {
 			conn.Close()
