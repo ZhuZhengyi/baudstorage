@@ -30,6 +30,7 @@ type ClusterInfo struct {
 //
 
 func (mw *MetaWrapper) PostGetRequest(addr string) ([]byte, error) {
+	log.LogDebugf("Post to %v", addr)
 	resp, err := http.Get(addr)
 	if err != nil {
 		return nil, err
@@ -55,15 +56,15 @@ func (mw *MetaWrapper) PostGetRequest(addr string) ([]byte, error) {
 	return data, nil
 }
 
-func (mw *MetaWrapper) PullNamespaceView() (*NamespaceView, error) {
-	body, err := mw.PostGetRequest("http://" + mw.leader + MetaPartitionViewURL + mw.namespace)
+func (mw *MetaWrapper) PostToMaster(url string) ([]byte, error) {
+	body, err := mw.PostGetRequest("http://" + mw.leader + url)
 	if err != nil {
 		if err == NotLeader {
 			// MetaWrapper's leader addr is already updated
-			body, err = mw.PostGetRequest("http://" + mw.leader + MetaPartitionViewURL + mw.namespace)
+			body, err = mw.PostGetRequest("http://" + mw.leader + url)
 		} else {
 			for _, addr := range mw.master {
-				body, err = mw.PostGetRequest("http://" + addr + MetaPartitionViewURL + mw.namespace)
+				body, err = mw.PostGetRequest("http://" + addr + url)
 				if err == nil {
 					mw.leader = addr
 					break
@@ -72,6 +73,14 @@ func (mw *MetaWrapper) PullNamespaceView() (*NamespaceView, error) {
 		}
 	}
 
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
+}
+
+func (mw *MetaWrapper) PullNamespaceView() (*NamespaceView, error) {
+	body, err := mw.PostToMaster(MetaPartitionViewURL + mw.namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -84,23 +93,7 @@ func (mw *MetaWrapper) PullNamespaceView() (*NamespaceView, error) {
 }
 
 func (mw *MetaWrapper) UpdateClusterInfo() error {
-	body, err := mw.PostGetRequest("http://" + mw.leader + GetClusterInfoURL)
-	if err != nil {
-		log.LogErrorf("ClusterInfo error: %v", err)
-		if err == NotLeader {
-			// MetaWrapper's leader addr is already updated
-			body, err = mw.PostGetRequest("http://" + mw.leader + GetClusterInfoURL)
-		} else {
-			for _, addr := range mw.master {
-				body, err = mw.PostGetRequest("http://" + addr + GetClusterInfoURL)
-				if err == nil {
-					mw.leader = addr
-					break
-				}
-			}
-		}
-	}
-
+	body, err := mw.PostToMaster(GetClusterInfoURL)
 	if err != nil {
 		log.LogErrorf("ClusterInfo error: %v", err)
 		return err

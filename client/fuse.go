@@ -20,6 +20,7 @@ import (
 	bdfs "github.com/tiglabs/baudstorage/client/fs"
 	"github.com/tiglabs/baudstorage/util/config"
 	"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/baudstorage/util/ump"
 )
 
 const (
@@ -29,6 +30,8 @@ const (
 const (
 	LoggerDir    = "client"
 	LoggerPrefix = "client"
+
+	UmpModuleName = "fuseclient"
 )
 
 var (
@@ -36,6 +39,7 @@ var (
 )
 
 func main() {
+	ump.InitUmp(UmpModuleName)
 	flag.Parse()
 	cfg := config.LoadConfigFile(*configFile)
 

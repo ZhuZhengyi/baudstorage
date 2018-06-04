@@ -322,6 +322,9 @@ out:
 }
 
 func (m *MetaServer) handleDeleteInode(conn net.Conn, p *proto.Packet) error {
+	var data []byte
+
+	resp := &proto.DeleteInodeResponse{}
 	req := &proto.DeleteInodeRequest{}
 	err := json.Unmarshal(p.Data, req)
 	if err != nil {
@@ -329,16 +332,23 @@ func (m *MetaServer) handleDeleteInode(conn net.Conn, p *proto.Packet) error {
 	}
 
 	ino := req.Inode
-	p.Data = nil
-	p.Size = 0
-
 	inode := m.deleteInode(ino)
 	if inode == nil {
 		p.ResultCode = proto.OpNotExistErr
+		goto out
+	}
+
+	resp.Extents = inode.extents
+	if data, err = json.Marshal(resp); err != nil {
+		log.Println(err)
+		p.ResultCode = proto.OpErr
 	} else {
 		p.ResultCode = proto.OpOk
 	}
 
+out:
+	p.Data = data
+	p.Size = uint32(len(data))
 	err = p.WriteToConn(conn)
 	return err
 }
