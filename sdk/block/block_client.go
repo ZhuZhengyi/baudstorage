@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk/vol"
+	"github.com/tiglabs/baudstorage/sdk/data"
 	"github.com/tiglabs/baudstorage/util/pool"
 )
 
@@ -16,7 +16,7 @@ const (
 
 type BlockClient struct {
 	conns       *pool.ConnPool
-	vols        *data.VolGroupWrapper
+	vols        *data.DataPartitionWrapper
 	masterAddrs string
 	isShutDown  bool
 }
@@ -29,7 +29,7 @@ func NewBlockClient(namespace, maddrs string) *BlockClient {
 		vols:        nil,
 	}
 	var err error
-	clt.vols, err = data.NewVolGroupWraper(namespace, maddrs)
+	clt.vols, err = data.NewDataPartitionWrapper(namespace, maddrs)
 	if err != nil {
 		return nil
 	}
@@ -45,10 +45,10 @@ func (clt *BlockClient) Write(data []byte) (key string, err error) {
 		err = errors.New("empty data to write")
 		return
 	}
-	var vol *data.VolGroup
+	var vol *data.DataPartition
 	retried := 0
 	for retried < CltMaxRetry {
-		vol, err = clt.vols.GetWriteVol(nil)
+		vol, err = clt.vols.GetWriteDataPartition(nil)
 		if err != nil {
 			retried++
 			continue
@@ -92,13 +92,13 @@ func (clt *BlockClient) Read(key string) (data []byte, err error) {
 		volId, size uint32
 		offset      int64
 		fileId      uint64
-		vol         *data.VolGroup
+		vol         *data.DataPartition
 	)
 	volId, fileId, offset, size, _, err = unmarshalKey(key)
 	if err != nil {
 		return
 	}
-	vol, err = clt.vols.GetVol(volId)
+	vol, err = clt.vols.GetDataPartition(volId)
 	if err != nil {
 		return
 	}
@@ -146,13 +146,13 @@ func (clt *BlockClient) Delete(key string) (err error) {
 		volId, size uint32
 		offset      int64
 		fileId      uint64
-		vol         *data.VolGroup
+		vol         *data.DataPartition
 	)
 	volId, fileId, offset, size, _, err = unmarshalKey(key)
 	if err != nil {
 		return
 	}
-	vol, err = clt.vols.GetVol(volId)
+	vol, err = clt.vols.GetDataPartition(volId)
 	if err != nil {
 		return
 	}

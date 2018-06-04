@@ -110,7 +110,7 @@ func (msgH *MessageHandler) DelListElement(reply *Packet, e *list.Element, s *Da
 	defer msgH.listMux.Unlock()
 	for e := msgH.sentList.Front(); e != nil; e = e.Next() {
 		request := e.Value.(*Packet)
-		if reply.ReqID == request.ReqID && reply.PartionID == request.PartionID &&
+		if reply.ReqID == request.ReqID && reply.PartitionID == request.PartitionID &&
 			reply.FileID == request.FileID && reply.Offset == request.Offset {
 			msgH.sentList.Remove(e)
 			s.CleanConn(request.nextConn, isForClose)

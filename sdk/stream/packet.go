@@ -14,9 +14,9 @@ type Packet struct {
 	fillBytes uint32
 }
 
-func NewWritePacket(dp *data.DataPartion, extentId, seqNo uint64, offset int) (p *Packet) {
+func NewWritePacket(dp *data.DataPartition, extentId, seqNo uint64, offset int) (p *Packet) {
 	p = new(Packet)
-	p.PartionID = dp.DataPartionID
+	p.PartitionID = dp.DataPartitionID
 	p.Magic = proto.ProtoMagic
 	p.Data = make([]byte, 0)
 	p.StoreMode = proto.ExtentStoreMode
@@ -34,7 +34,7 @@ func NewWritePacket(dp *data.DataPartion, extentId, seqNo uint64, offset int) (p
 func NewReadPacket(key proto.ExtentKey, offset, size int) (p *Packet) {
 	p = new(Packet)
 	p.FileID = key.ExtentId
-	p.PartionID = key.PartionId
+	p.PartitionID = key.PartitionId
 	p.Magic = proto.ProtoMagic
 	p.Offset = int64(offset)
 	p.Size = uint32(size)
@@ -46,9 +46,9 @@ func NewReadPacket(key proto.ExtentKey, offset, size int) (p *Packet) {
 	return
 }
 
-func NewCreateExtentPacket(dp *data.DataPartion) (p *Packet) {
+func NewCreateExtentPacket(dp *data.DataPartition) (p *Packet) {
 	p = new(Packet)
-	p.PartionID = dp.DataPartionID
+	p.PartitionID = dp.DataPartitionID
 	p.Magic = proto.ProtoMagic
 	p.Data = make([]byte, 0)
 	p.StoreMode = proto.ExtentStoreMode
@@ -61,12 +61,12 @@ func NewCreateExtentPacket(dp *data.DataPartion) (p *Packet) {
 	return p
 }
 
-func NewDeleteExtentPacket(dp *data.DataPartion, extentId uint64) (p *Packet) {
+func NewDeleteExtentPacket(dp *data.DataPartition, extentId uint64) (p *Packet) {
 	p = new(Packet)
 	p.Magic = proto.ProtoMagic
 	p.Opcode = proto.OpMarkDelete
 	p.StoreMode = proto.ExtentStoreMode
-	p.PartionID = dp.DataPartionID
+	p.PartitionID = dp.DataPartitionID
 	p.FileID = extentId
 	p.ReqID = proto.GetReqID()
 	p.Nodes = uint8(len(dp.Hosts) - 1)
@@ -75,10 +75,10 @@ func NewDeleteExtentPacket(dp *data.DataPartion, extentId uint64) (p *Packet) {
 	return p
 }
 
-func NewReply(reqId int64, partion uint32, extentId uint64) (p *Packet) {
+func NewReply(reqId int64, partition uint32, extentId uint64) (p *Packet) {
 	p = new(Packet)
 	p.ReqID = reqId
-	p.PartionID = partion
+	p.PartitionID = partition
 	p.FileID = extentId
 	p.Magic = proto.ProtoMagic
 	p.StoreMode = proto.ExtentStoreMode
@@ -87,7 +87,7 @@ func NewReply(reqId int64, partion uint32, extentId uint64) (p *Packet) {
 }
 
 func (p *Packet) IsEqual(q *Packet) bool {
-	if p.ReqID == q.ReqID && p.PartionID == q.PartionID && p.FileID == q.FileID {
+	if p.ReqID == q.ReqID && p.PartitionID == q.PartitionID && p.FileID == q.FileID {
 		return true
 	}
 

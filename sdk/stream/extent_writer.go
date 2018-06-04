@@ -35,8 +35,8 @@ type ExtentWriter struct {
 	inode            uint64     //Current write Inode
 	requestQueue     *list.List //sendPacketList
 	requestQueueLock sync.Mutex
-	dp               *data.DataPartion
-	wrapper          *data.DataPartionWrapper
+	dp               *data.DataPartition
+	wrapper          *data.DataPartitionWrapper
 	extentId         uint64 //current FileIdId
 	currentPacket    *Packet
 	seqNo            uint64 //Current Send Packet Seq
@@ -51,9 +51,9 @@ type ExtentWriter struct {
 	flushLock sync.Mutex
 }
 
-func NewExtentWriter(inode uint64, dp *data.DataPartion, wrapper *data.DataPartionWrapper, extentId uint64) (writer *ExtentWriter, err error) {
+func NewExtentWriter(inode uint64, dp *data.DataPartition, wrapper *data.DataPartitionWrapper, extentId uint64) (writer *ExtentWriter, err error) {
 	if extentId <= 0 {
-		return nil, fmt.Errorf("inode[%v],dp[%v],unavalid extentId[%v]", inode, dp.DataPartionID, extentId)
+		return nil, fmt.Errorf("inode[%v],dp[%v],unavalid extentId[%v]", inode, dp.DataPartitionID, extentId)
 	}
 	writer = new(ExtentWriter)
 	writer.requestQueue = list.New()
@@ -229,7 +229,7 @@ func (writer *ExtentWriter) toString() string {
 		currPkgMesg = writer.currentPacket.GetUniqLogId()
 	}
 	return fmt.Sprintf("extent{inode=%v dp=%v extentId=%v retryCnt=%v handleCh[%v] requestQueueLen[%v] currentPkg=%v}",
-		writer.inode, writer.dp.DataPartionID, writer.extentId, writer.recoverCnt,
+		writer.inode, writer.dp.DataPartitionID, writer.extentId, writer.recoverCnt,
 		len(writer.handleCh), writer.getQueueListLen(), currPkgMesg)
 }
 
@@ -309,7 +309,7 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 
 func (writer *ExtentWriter) toKey() (k proto.ExtentKey) {
 	k = proto.ExtentKey{}
-	k.PartionId = writer.dp.DataPartionID
+	k.PartitionId = writer.dp.DataPartitionID
 	k.Size = uint32(writer.getByteAck())
 	k.ExtentId = writer.extentId
 
@@ -328,7 +328,7 @@ func (writer *ExtentWriter) recive() {
 				continue
 			}
 			request := e.Value.(*Packet)
-			reply := NewReply(request.ReqID, request.PartionID, request.FileID)
+			reply := NewReply(request.ReqID, request.PartitionID, request.FileID)
 			reply.Opcode = request.Opcode
 			reply.Offset = request.Offset
 			reply.Size = request.Size
