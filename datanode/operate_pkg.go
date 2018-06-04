@@ -109,7 +109,7 @@ func (s *DataNode) createDataPartition(pkg *Packet) {
 	if task.OpCode == proto.OpCreateDataPartition {
 		bytes, _ := json.Marshal(task.Request)
 		json.Unmarshal(bytes, request)
-		_, err := s.space.chooseDiskAndCreateVol(uint32(request.PartitionId), request.DataPartitionType, request.PartitionSize)
+		_, err := s.space.chooseDiskAndCreateVol(uint32(request.PartitionId), request.PartitionType, request.PartitionSize)
 		if err != nil {
 			response.PartitionId = uint64(request.PartitionId)
 			response.Status = proto.TaskFail

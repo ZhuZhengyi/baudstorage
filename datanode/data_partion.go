@@ -126,7 +126,7 @@ func (dp *DataPartition) Load() (response *proto.LoadDataPartitionResponse) {
 	response = new(proto.LoadDataPartitionResponse)
 	response.PartitionId = uint64(dp.partitionId)
 	response.PartitionStatus = uint8(dp.status)
-	response.DataPartitionType = dp.partitionType
+	response.PartitionType = dp.partitionType
 	response.PartitionSnapshot = make([]*proto.File, 0)
 	switch dp.partitionType {
 	case proto.ExtentVol:
