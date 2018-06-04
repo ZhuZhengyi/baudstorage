@@ -54,7 +54,7 @@ func (partition *DataPartition) checkBadStatus() {
 func (partition *DataPartition) generateCreateTasks() (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	for _, addr := range partition.PersistenceHosts {
-		t := proto.NewAdminTask(proto.OpCreateDataPartion, addr, newCreateVolRequest(partition.PartitionType, partition.PartitionID))
+		t := proto.NewAdminTask(proto.OpCreateDataPartition, addr, newCreateVolRequest(partition.PartitionType, partition.PartitionID))
 		t.ID = fmt.Sprintf("%v_DataPartitionID[%v]", t.ID, partition.PartitionID)
 		tasks = append(tasks, t)
 	}
@@ -158,7 +158,7 @@ func (partition *DataPartition) generateLoadTasks() (tasks []*proto.AdminTask) {
 			continue
 		}
 		vol.LoadPartitionIsResponse = false
-		t := proto.NewAdminTask(proto.OpLoadDataPartion, vol.Addr, newLoadVolMetricRequest(partition.PartitionType, partition.PartitionID))
+		t := proto.NewAdminTask(proto.OpLoadDataPartition, vol.Addr, newLoadVolMetricRequest(partition.PartitionType, partition.PartitionID))
 		t.ID = fmt.Sprintf("%v_volID[%v]", t.ID, partition.PartitionID)
 		tasks = append(tasks, t)
 	}
@@ -371,7 +371,7 @@ func (partition *DataPartition) addLackReplication() (t *proto.AdminTask, lackAd
 			err = DataReplicaLackError
 			lackAddr = addr
 
-			t = proto.NewAdminTask(proto.OpCreateDataPartion, addr, newCreateVolRequest(partition.PartitionType, partition.PartitionID))
+			t = proto.NewAdminTask(proto.OpCreateDataPartition, addr, newCreateVolRequest(partition.PartitionType, partition.PartitionID))
 			t.ID = fmt.Sprintf("%v_volID[%v]", t.ID, partition.PartitionID)
 			partition.isRecover = true
 			break
