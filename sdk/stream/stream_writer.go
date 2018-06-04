@@ -222,7 +222,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 func (stream *StreamWriter) recoverExtent() (err error) {
 	retryPackets := stream.getWriter().getNeedRetrySendPackets()
 	for i := 0; i < MaxSelectVolForWrite; i++ {
-		stream.execludePartion = append(stream.execludePartion, stream.getWriter().dp)
+		stream.execludePartion = append(stream.execludePartion, stream.getWriter().dp.DataPartionID)
 		if err = stream.allocateNewExtentWriter(); err != nil {
 			err = errors.Annotatef(err, "RecoverExtent Failed")
 			continue
