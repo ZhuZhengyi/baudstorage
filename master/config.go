@@ -20,25 +20,25 @@ const (
 )
 
 const (
-	DefaultEveryReleaseDataPartitionCount               = 10
-	DefaultReleaseDataPartitionAfterLoadSeconds         = 5 * 60
-	DefaultReleaseDataPartitionInternalSeconds          = 10
-	DefaultCheckHeartbeatIntervalSeconds                = 60
-	DefaultCheckDataPartitionIntervalSeconds            = 60
-	DefaultFileDelayCheckLackSec                        = 5 * DefaultCheckHeartbeatIntervalSeconds
-	DefaultFileDelayCheckCrcSec                         = 20 * DefaultCheckHeartbeatIntervalSeconds
-	NoHeartBeatTimes                                    = 3
-	DefaultNodeTimeOutSec                               = NoHeartBeatTimes * DefaultCheckHeartbeatIntervalSeconds
-	DefaultDataPartitionTimeOutSec                      = 5 * DefaultCheckHeartbeatIntervalSeconds
-	DefaultDataPartitionMissSec                         = 24 * 3600
-	DefaultDataPartitionWarnInterval                    = 60 * 60
-	LoadDataPartitionWaitTime                           = 100
-	DefaultLoadDataPartitionFrequencyTime               = 60 * 60
-	DefaultEveryLoadDataPartitionCount                  = 10
-	DefaultMetaPartitionTimeOutSec                      = 5 * DefaultCheckHeartbeatIntervalSeconds
+	DefaultEveryReleaseDataPartitionCount       = 10
+	DefaultReleaseDataPartitionAfterLoadSeconds = 5 * 60
+	DefaultReleaseDataPartitionInternalSeconds  = 10
+	DefaultCheckHeartbeatIntervalSeconds        = 60
+	DefaultCheckDataPartitionIntervalSeconds    = 60
+	DefaultFileDelayCheckLackSec                = 5 * DefaultCheckHeartbeatIntervalSeconds
+	DefaultFileDelayCheckCrcSec                 = 20 * DefaultCheckHeartbeatIntervalSeconds
+	NoHeartBeatTimes                            = 3
+	DefaultNodeTimeOutSec                       = NoHeartBeatTimes * DefaultCheckHeartbeatIntervalSeconds
+	DefaultDataPartitionTimeOutSec              = 5 * DefaultCheckHeartbeatIntervalSeconds
+	DefaultDataPartitionMissSec                 = 24 * 3600
+	DefaultDataPartitionWarnInterval            = 60 * 60
+	LoadDataPartitionWaitTime                   = 100
+	DefaultLoadDataPartitionFrequencyTime       = 60 * 60
+	DefaultEveryLoadDataPartitionCount          = 10
+	DefaultMetaPartitionTimeOutSec              = 5 * DefaultCheckHeartbeatIntervalSeconds
 	//DefaultMetaPartitionMissSec                         = 3600
-	DefaultMetaPartitionWarnInterval                    = 10 * 60
-	DefaultMetaPartitionThreshold               float32 = 0.75
+	DefaultMetaPartitionWarnInterval         = 10 * 60
+	DefaultMetaPartitionThreshold    float32 = 0.75
 )
 
 //AddrDatabase ...

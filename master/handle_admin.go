@@ -122,21 +122,16 @@ errDeal:
 
 func (m *Master) getDataPartition(w http.ResponseWriter, r *http.Request) {
 	var (
-		nsName      string
-		ns          *NameSpace
 		body        []byte
 		dp          *DataPartition
 		partitionID uint64
 		err         error
 	)
-	if partitionID, nsName, err = parseDataPartitionIDAndNamespace(r); err != nil {
+	if partitionID, err = parseDataPartitionID(r); err != nil {
 		goto errDeal
 	}
 
-	if ns, err = m.cluster.getNamespace(nsName); err != nil {
-		goto errDeal
-	}
-	if dp, err = ns.getDataPartitionByID(partitionID); err != nil {
+	if dp, err = m.cluster.getDataPartitionByID(partitionID); err != nil {
 		goto errDeal
 	}
 	if body, err = json.Marshal(dp); err != nil {
@@ -635,6 +630,11 @@ func parseCreateDataPartitionPara(r *http.Request) (count int, name, partitionTy
 		return
 	}
 	return
+}
+
+func parseDataPartitionID(r *http.Request) (ID uint64, err error) {
+	r.ParseForm()
+	return checkDataPartitionID(r)
 }
 
 func parseDataPartitionIDAndNamespace(r *http.Request) (ID uint64, name string, err error) {

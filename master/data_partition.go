@@ -245,7 +245,7 @@ func (partition *DataPartition) getFileCount() {
 	}
 
 	for _, replica := range partition.Replicas {
-		msg = fmt.Sprintf(GetDataReplicaFileCountInfo +"partitionID:%v  replicaAddr:%v  FileCount:%v  "+
+		msg = fmt.Sprintf(GetDataReplicaFileCountInfo+"partitionID:%v  replicaAddr:%v  FileCount:%v  "+
 			"NodeIsActive:%v  replicaIsActive:%v  .replicaStatusOnNode:%v ", partition.PartitionID, replica.Addr, replica.FileCount,
 			replica.GetVolLocationNode().isActive, replica.IsActive(DefaultDataPartitionTimeOutSec), replica.Status)
 		log.LogInfo(msg)
