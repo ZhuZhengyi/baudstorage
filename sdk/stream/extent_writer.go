@@ -53,7 +53,7 @@ type ExtentWriter struct {
 
 func NewExtentWriter(inode uint64, dp *data.DataPartition, wrapper *data.DataPartitionWrapper, extentId uint64) (writer *ExtentWriter, err error) {
 	if extentId <= 0 {
-		return nil, fmt.Errorf("inode[%v],dp[%v],unavalid extentId[%v]", inode, dp.DataPartitionID, extentId)
+		return nil, fmt.Errorf("inode[%v],dp[%v],unavalid extentId[%v]", inode, dp.PartitionID, extentId)
 	}
 	writer = new(ExtentWriter)
 	writer.requestQueue = list.New()
@@ -229,7 +229,7 @@ func (writer *ExtentWriter) toString() string {
 		currPkgMesg = writer.currentPacket.GetUniqLogId()
 	}
 	return fmt.Sprintf("extent{inode=%v dp=%v extentId=%v retryCnt=%v handleCh[%v] requestQueueLen[%v] currentPkg=%v}",
-		writer.inode, writer.dp.DataPartitionID, writer.extentId, writer.recoverCnt,
+		writer.inode, writer.dp.PartitionID, writer.extentId, writer.recoverCnt,
 		len(writer.handleCh), writer.getQueueListLen(), currPkgMesg)
 }
 
@@ -309,7 +309,7 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 
 func (writer *ExtentWriter) toKey() (k proto.ExtentKey) {
 	k = proto.ExtentKey{}
-	k.PartitionId = writer.dp.DataPartitionID
+	k.PartitionId = writer.dp.PartitionID
 	k.Size = uint32(writer.getByteAck())
 	k.ExtentId = writer.extentId
 

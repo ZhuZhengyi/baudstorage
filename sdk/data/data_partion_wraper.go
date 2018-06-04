@@ -27,10 +27,11 @@ const (
 )
 
 type DataPartition struct {
-	DataPartitionID uint32
-	Status          uint8
-	ReplicaNum      uint8
-	Hosts           []string
+	PartitionID   uint32
+	Status        uint8
+	ReplicaNum    uint8
+	PartitionType string
+	Hosts         []string
 }
 
 type DataPartitionView struct {
@@ -107,10 +108,10 @@ func (wrapper *DataPartitionWrapper) getDataPartitionFromMaster() (err error) {
 func (wrapper *DataPartitionWrapper) replaceOrInsertPartition(dp *DataPartition) {
 	wrapper.Lock()
 	defer wrapper.Unlock()
-	if _, ok := wrapper.partitions[dp.DataPartitionID]; ok {
-		delete(wrapper.partitions, dp.DataPartitionID)
+	if _, ok := wrapper.partitions[dp.PartitionID]; ok {
+		delete(wrapper.partitions, dp.PartitionID)
 	}
-	wrapper.partitions[dp.DataPartitionID] = dp
+	wrapper.partitions[dp.PartitionID] = dp
 }
 
 func (wrapper *DataPartitionWrapper) updateDataPartition(partitions []*DataPartition) {
@@ -153,12 +154,12 @@ func (wrapper *DataPartitionWrapper) GetWriteDataPartition(exclude []uint32) (*D
 	rand.Seed(time.Now().UnixNano())
 	choose := rand.Intn(len(rwPartitionGroups))
 	partition := rwPartitionGroups[choose]
-	if !isExcluded(partition.DataPartitionID, exclude) {
+	if !isExcluded(partition.PartitionID, exclude) {
 		return partition, nil
 	}
 
 	for _, partition = range rwPartitionGroups {
-		if !isExcluded(partition.DataPartitionID, exclude) {
+		if !isExcluded(partition.PartitionID, exclude) {
 			return partition, nil
 		}
 	}
