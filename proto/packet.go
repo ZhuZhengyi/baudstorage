@@ -67,9 +67,9 @@ const (
 	OpLoadMetaPartition    uint8 = 0x24
 	OpOfflineMetaPartition uint8 = 0x25
 
-	OpCreateDataPartion uint8 = 0x26
-	OpDeleteDataPartion uint8 = 0x27
-	OpLoadDataPartion   uint8 = 0x28
+	OpCreateDataPartition uint8 = 0x26
+	OpDeleteDataPartition uint8 = 0x27
+	OpLoadDataPartition   uint8 = 0x28
 	OpDataNodeHeartbeat uint8 = 0x29
 	OpReplicateFile     uint8 = 0x2A
 	OpDeleteFile        uint8 = 0x2B
