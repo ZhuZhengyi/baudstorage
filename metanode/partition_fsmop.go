@@ -98,13 +98,12 @@ func (mp *metaPartition) deleteDentry(dentry *Dentry) (resp *ResponseDentry) {
 func (mp *metaPartition) createInode(ino *Inode) (status uint8) {
 	status = proto.OpOk
 	mp.inodeMu.Lock()
+	defer mp.inodeMu.Unlock()
 	if mp.inodeTree.Has(ino) {
-		mp.inodeMu.Unlock()
 		status = proto.OpExistErr
 		return
 	}
 	mp.inodeTree.ReplaceOrInsert(ino)
-	mp.inodeMu.Unlock()
 	return
 }
 

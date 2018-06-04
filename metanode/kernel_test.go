@@ -34,13 +34,13 @@ func Test_Inode(t *testing.T) {
 	ino := NewInode(1, 0)
 	ino.Extents.Put(proto.ExtentKey{
 		PartitionId: 1000,
-		ExtentId:  1222,
-		Size:      10234,
+		ExtentId:    1222,
+		Size:        10234,
 	})
 	ino.Extents.Put(proto.ExtentKey{
 		PartitionId: 1020,
-		ExtentId:  28,
-		Size:      150,
+		ExtentId:    28,
+		Size:        150,
 	})
 	t.Log("source inode:", ino)
 	data, err := ino.Marshal()
