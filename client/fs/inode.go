@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -8,6 +9,10 @@ import (
 
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
+)
+
+const (
+	LogTimeFormat = "20060102150405000"
 )
 
 type Inode struct {
@@ -30,6 +35,13 @@ func NewInode(info *proto.InodeInfo) *Inode {
 
 func (s *Super) InodeGet(ino uint64) (*Inode, error) {
 	log.LogDebugf("InodeGet: ino(%v)", ino)
+
+	start := time.Now()
+	defer func() {
+		elapsed := time.Since(start)
+		log.LogDebugf("InodeGet cost (%v)ns", elapsed.Nanoseconds())
+	}()
+
 	inode := s.ic.Get(ino)
 	if inode != nil {
 		log.LogDebugf("InodeCache hit: inode(%v)", inode)
@@ -44,6 +56,10 @@ func (s *Super) InodeGet(ino uint64) (*Inode, error) {
 	inode = NewInode(info)
 	s.ic.Put(inode)
 	return inode, nil
+}
+
+func (inode *Inode) String() string {
+	return fmt.Sprintf("ino(%v) mode(%v) size(%v) exp(%v)", inode.ino, inode.mode, inode.size, time.Unix(0, inode.expiration).Format(LogTimeFormat))
 }
 
 func (inode *Inode) fill(info *proto.InodeInfo) {
