@@ -75,10 +75,10 @@ func NewDeleteExtentPacket(dp *data.DataPartion, extentId uint64) (p *Packet) {
 	return p
 }
 
-func NewReply(reqId int64, volID uint32, extentId uint64) (p *Packet) {
+func NewReply(reqId int64, partion uint32, extentId uint64) (p *Packet) {
 	p = new(Packet)
 	p.ReqID = reqId
-	p.PartionID = volID
+	p.PartionID = partion
 	p.FileID = extentId
 	p.Magic = proto.ProtoMagic
 	p.StoreMode = proto.ExtentStoreMode

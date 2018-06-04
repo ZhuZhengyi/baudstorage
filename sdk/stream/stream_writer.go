@@ -13,12 +13,12 @@ import (
 )
 
 const (
-	MaxSelectVolForWrite   = 32
-	ActionGetConnect       = "ActionGetConnect"
-	ActionStreamWriteWrite = "ActionStreamWriteWrite"
-	ActionRecoverExtent    = "ActionRecoverExtent"
-	IsFlushIng             = 1
-	NoFlushIng             = -1
+	MaxSelectDataPartionForWrite = 32
+	ActionGetConnect             = "ActionGetConnect"
+	ActionStreamWriteWrite       = "ActionStreamWriteWrite"
+	ActionRecoverExtent          = "ActionRecoverExtent"
+	IsFlushIng                   = 1
+	NoFlushIng                   = -1
 )
 
 type WriteRequest struct {
@@ -186,7 +186,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 			return
 		}
 		stream.errCount++
-		if stream.errCount < MaxSelectVolForWrite {
+		if stream.errCount < MaxSelectDataPartionForWrite {
 			err = stream.recoverExtent()
 			if err == nil {
 				err = stream.flushCurrExtentWriter()
@@ -221,7 +221,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 
 func (stream *StreamWriter) recoverExtent() (err error) {
 	retryPackets := stream.getWriter().getNeedRetrySendPackets()
-	for i := 0; i < MaxSelectVolForWrite; i++ {
+	for i := 0; i < MaxSelectDataPartionForWrite; i++ {
 		stream.execludePartion = append(stream.execludePartion, stream.getWriter().dp.DataPartionID)
 		if err = stream.allocateNewExtentWriter(); err != nil {
 			err = errors.Annotatef(err, "RecoverExtent Failed")
@@ -259,7 +259,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 		writer   *ExtentWriter
 	)
 	err = fmt.Errorf("cannot alloct new extent after maxrery")
-	for i := 0; i < MaxSelectVolForWrite; i++ {
+	for i := 0; i < MaxSelectDataPartionForWrite; i++ {
 		if dp, err = stream.wrapper.GetWriteDataPartion(stream.execludePartion); err != nil {
 			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter "+
 				"failed on getWriteDataPartion,error[%v] execludeDataPartion[%v]", err.Error(), stream.execludePartion))
@@ -296,12 +296,12 @@ func (stream *StreamWriter) createExtent(dp *data.DataPartion) (extentId uint64,
 	)
 	connect, err = stream.wrapper.GetConnect(dp.Hosts[0])
 	if err != nil {
-		err = errors.Annotatef(err, " get connect from volhosts[%v]", dp.Hosts[0])
+		err = errors.Annotatef(err, " get connect from datapartionHosts[%v]", dp.Hosts[0])
 		return
 	}
 	p := NewCreateExtentPacket(dp)
 	if err = p.WriteToConn(connect); err != nil {
-		err = errors.Annotatef(err, "send CreateExtent[%v] to volhosts[%v]", p.GetUniqLogId(), dp.Hosts[0])
+		err = errors.Annotatef(err, "send CreateExtent[%v] to datapartionHosts[%v]", p.GetUniqLogId(), dp.Hosts[0])
 		connect.Close()
 		return
 	}

@@ -44,12 +44,12 @@ func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
 	reader.Lock()
 	p := NewReadPacket(reader.key, offset, size)
 	reader.Unlock()
-	err = reader.readDataFromVol(p, data)
+	err = reader.readDataFromDataPartion(p, data)
 
 	return
 }
 
-func (reader *ExtentReader) readDataFromVol(p *Packet, data []byte) (err error) {
+func (reader *ExtentReader) readDataFromDataPartion(p *Packet, data []byte) (err error) {
 	rand.Seed(time.Now().UnixNano())
 	index := rand.Intn(int(reader.dp.ReplicaNum))
 	host := reader.dp.Hosts[index]

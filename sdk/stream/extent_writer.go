@@ -180,7 +180,7 @@ func (writer *ExtentWriter) recover() (sucess bool) {
 		log.LogError(err.Error())
 
 	}()
-	//get connect from volGroupWraper
+	//get connect from Wraper
 	if connect, err = writer.wrapper.GetConnect(writer.dp.Hosts[0]); err != nil {
 		log.LogError(err)
 		return
