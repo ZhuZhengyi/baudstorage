@@ -548,7 +548,7 @@ func (partition *DataPartition) UpdateVol(vr *proto.VolReport, dataNode *DataNod
 		volLoc = NewDataReplica(dataNode)
 		partition.addMember(volLoc)
 	}
-	volLoc.Status = (uint8)(vr.VolStatus)
+	volLoc.Status = (uint8)(vr.PartionStatus)
 	volLoc.Total = vr.Total
 	volLoc.Used = vr.Used
 	volLoc.SetAlive()

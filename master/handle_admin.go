@@ -443,7 +443,7 @@ func (m *Master) loadMetaPartition(w http.ResponseWriter, r *http.Request) {
 	}
 
 	m.cluster.loadMetaPartitionAndCheckResponse(mp, false)
-	msg = fmt.Sprintf(AdminLoadMetaPartition+"partitionID :%v  success", partitionID)
+	msg = fmt.Sprintf(AdminLoadMetaPartition+"partitionID :%v  Load success", partitionID)
 	io.WriteString(w, msg)
 	log.LogInfo(msg)
 

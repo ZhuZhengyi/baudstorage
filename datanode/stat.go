@@ -31,18 +31,18 @@ type Stats struct {
 	inFlow      uint64
 	outFlow     uint64
 
-	Zone                      string
-	CurrentConns              int64
-	ClusterID                 string
-	TcpAddr                   string
-	Start                     time.Time
-	Total                     uint64
-	Used                      uint64
-	Free                      uint64
-	CreatedVolWeights         uint64 //volCnt*volsize
-	RemainWeightsForCreateVol uint64 //all-usedvolsWieghts
-	CreatedVolCnt             uint64
-	MaxWeightsForCreateVol    uint64
+	Zone                          string
+	CurrentConns                  int64
+	ClusterID                     string
+	TcpAddr                       string
+	Start                         time.Time
+	Total                         uint64
+	Used                          uint64
+	Free                          uint64
+	CreatedPartionWeights         uint64 //dataPartionCnt*dataPartionsize
+	RemainWeightsForCreatePartion uint64 //all-useddataPartionsWieghts
+	CreatedPartionCnt             uint64
+	MaxWeightsForCreatePartion    uint64
 
 	sync.Mutex
 }
@@ -73,16 +73,16 @@ func (s *Stats) AddOutDataSize(size uint64) {
 	atomic.AddUint64(&s.outDataSize, size)
 }
 
-func (s *Stats) updateMetrics(total, used, free, createdVolWeights, remainWeightsForCreateVol, maxWeightsForCreateVol, volcnt uint64) {
+func (s *Stats) updateMetrics(total, used, free, createdVolWeights, remainWeightsForCreateVol, maxWeightsForCreateVol, dataPartioncnt uint64) {
 	s.Lock()
 	defer s.Unlock()
 	s.Total = total
 	s.Used = used
 	s.Free = free
-	s.CreatedVolWeights = createdVolWeights
-	s.RemainWeightsForCreateVol = remainWeightsForCreateVol
-	s.MaxWeightsForCreateVol = maxWeightsForCreateVol
-	s.CreatedVolCnt = volcnt
+	s.CreatedPartionWeights = createdVolWeights
+	s.RemainWeightsForCreatePartion = remainWeightsForCreateVol
+	s.MaxWeightsForCreatePartion = maxWeightsForCreateVol
+	s.CreatedPartionCnt = dataPartioncnt
 }
 
 func post(data []byte, url string) (*http.Response, error) {

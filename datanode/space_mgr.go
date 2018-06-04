@@ -12,17 +12,17 @@ import (
 )
 
 type SpaceManager struct {
-	disks    map[string]*Disk
-	vols     map[uint32]*Vol
-	diskLock sync.RWMutex
-	volLock  sync.RWMutex
-	stats    *Stats
+	disks           map[string]*Disk
+	partions        map[uint32]*DataPartion
+	diskLock        sync.RWMutex
+	dataPartionLock sync.RWMutex
+	stats           *Stats
 }
 
 func NewSpaceManager(rack string) (space *SpaceManager) {
 	space = new(SpaceManager)
 	space.disks = make(map[string]*Disk)
-	space.vols = make(map[uint32]*Vol)
+	space.partions = make(map[uint32]*DataPartion)
 	space.stats = NewStats(rack)
 	go func() {
 		ticker := time.Tick(time.Second * 10)
@@ -58,39 +58,39 @@ func (space *SpaceManager) putDisk(d *Disk) {
 func (space *SpaceManager) updateMetrics() {
 	space.diskLock.RLock()
 	var (
-		total, used, free                            uint64
-		createdVolWeights, remainWeightsForCreateVol uint64
-		maxWeightsForCreateVol, volcnt               uint64
+		total, used, free                                    uint64
+		createdPartionWeights, remainWeightsForCreatePartion uint64
+		maxWeightsForCreatePartion, partionCnt               uint64
 	)
-	maxWeightsForCreateVol = 0
+	maxWeightsForCreatePartion = 0
 	for _, d := range space.disks {
-		d.recomputeVolCnt()
+		d.recomputePartionCnt()
 		total += d.All
 		used += d.Used
 		free += d.Free
-		createdVolWeights += d.CreatedVolWeights
-		remainWeightsForCreateVol += d.RemainWeightsForCreateVol
-		volcnt += d.VolCnt
-		if maxWeightsForCreateVol < d.RemainWeightsForCreateVol {
-			maxWeightsForCreateVol = d.RemainWeightsForCreateVol
+		createdPartionWeights += d.CreatedPartionWeights
+		remainWeightsForCreatePartion += d.RemainWeightsForCreatePartion
+		partionCnt += d.PartionCnt
+		if maxWeightsForCreatePartion < d.RemainWeightsForCreatePartion {
+			maxWeightsForCreatePartion = d.RemainWeightsForCreatePartion
 		}
 	}
 	space.diskLock.RUnlock()
-	log.LogInfof("macheile total[%v] used[%v] free[%v]createdVolWeights[%v]  remainWeightsForCreateVol[%v]"+
-		"volcnt[%v]maxWeightsForCreateVol[%v] ", total, used, free, createdVolWeights, remainWeightsForCreateVol, volcnt, maxWeightsForCreateVol)
-	space.stats.updateMetrics(total, used, free, createdVolWeights,
-		remainWeightsForCreateVol, maxWeightsForCreateVol, volcnt)
+	log.LogInfof("macheile total[%v] used[%v] free[%v]createdPartionWeights[%v]  remainWeightsForCreatePartion[%v]"+
+		"partionCnt[%v]maxWeightsForCreatePartion[%v] ", total, used, free, createdPartionWeights, remainWeightsForCreatePartion, partionCnt, maxWeightsForCreatePartion)
+	space.stats.updateMetrics(total, used, free, createdPartionWeights,
+		remainWeightsForCreatePartion, maxWeightsForCreatePartion, partionCnt)
 }
 
-func (space *SpaceManager) getMinVolCntDisk() (d *Disk) {
+func (space *SpaceManager) getMinPartionCntDisk() (d *Disk) {
 	space.diskLock.RLock()
 	defer space.diskLock.RUnlock()
 	var minVolCnt uint64
 	minVolCnt = math.MaxUint64
 	var path string
 	for index, disk := range space.disks {
-		if atomic.LoadUint64(&disk.VolCnt) < minVolCnt {
-			minVolCnt = atomic.LoadUint64(&disk.VolCnt)
+		if atomic.LoadUint64(&disk.PartionCnt) < minVolCnt {
+			minVolCnt = atomic.LoadUint64(&disk.PartionCnt)
 			path = index
 		}
 	}
@@ -102,53 +102,53 @@ func (space *SpaceManager) getMinVolCntDisk() (d *Disk) {
 	return
 }
 
-func (space *SpaceManager) getVol(volId uint32) (v *Vol) {
-	space.volLock.RLock()
-	defer space.volLock.RUnlock()
-	v = space.vols[volId]
+func (space *SpaceManager) getDataPartion(partionId uint32) (dp *DataPartion) {
+	space.dataPartionLock.RLock()
+	defer space.dataPartionLock.RUnlock()
+	v = space.partions[partionId]
 
 	return
 }
 
-func (space *SpaceManager) putVol(v *Vol) {
-	space.volLock.Lock()
-	defer space.volLock.Unlock()
-	space.vols[v.volId] = v
+func (space *SpaceManager) putDataPartion(dp *DataPartion) {
+	space.dataPartionLock.Lock()
+	defer space.dataPartionLock.Unlock()
+	space.partions[dp.partionId] = dp
 
 	return
 }
 
-func (space *SpaceManager) chooseDiskAndCreateVol(volId uint32, volMode string, storeSize int) (v *Vol, err error) {
-	if space.getVol(volId) != nil {
+func (space *SpaceManager) chooseDiskAndCreateVol(partionId uint32, partionType string, storeSize int) (dp *DataPartion, err error) {
+	if space.getDataPartion(partionId) != nil {
 		return
 	}
-	d := space.getMinVolCntDisk()
+	d := space.getMinPartionCntDisk()
 	if d == nil || d.Free < uint64(storeSize*2) {
 		return nil, ErrNoDiskForCreateVol
 	}
-	v, err = NewVol(volId, volMode, "", d.Path, storage.NewStoreMode, storeSize)
+	dp, err = NewDataPartion(partionId, partionType, "", d.Path, storage.NewStoreMode, storeSize)
 	if err == nil {
-		space.putVol(v)
+		space.putDataPartion(dp)
 	}
 	return
 }
 
 func (space *SpaceManager) deleteVol(vodId uint32) {
-	v := space.getVol(vodId)
-	if v == nil {
+	dp := space.getDataPartion(vodId)
+	if dp == nil {
 		return
 	}
-	space.volLock.Lock()
-	delete(space.vols, vodId)
-	space.volLock.Unlock()
-	v.exitCh <- true
-	switch v.volMode {
+	space.dataPartionLock.Lock()
+	delete(space.partions, vodId)
+	space.dataPartionLock.Unlock()
+	dp.exitCh <- true
+	switch dp.partionType {
 	case proto.ExtentVol:
-		store := v.store.(*storage.ExtentStore)
+		store := dp.store.(*storage.ExtentStore)
 		store.ClostAll()
 
 	case proto.TinyVol:
-		store := v.store.(*storage.TinyStore)
+		store := dp.store.(*storage.TinyStore)
 		store.CloseAll()
 	}
 }
@@ -160,55 +160,55 @@ func (s *DataNode) fillHeartBeatResponse(response *proto.DataNodeHeartBeatRespon
 	response.Used = stat.Used
 	response.Total = stat.Total
 	response.Free = stat.Free
-	response.CreatedVolCnt = uint32(stat.CreatedVolCnt)
-	response.CreatedVolWeights = stat.CreatedVolWeights
-	response.MaxWeightsForCreateVol = stat.MaxWeightsForCreateVol
-	response.RemainWeightsForCreateVol = stat.RemainWeightsForCreateVol
+	response.CreatedVolCnt = uint32(stat.CreatedPartionCnt)
+	response.CreatedVolWeights = stat.CreatedPartionWeights
+	response.MaxWeightsForCreateVol = stat.MaxWeightsForCreatePartion
+	response.RemainWeightsForCreateVol = stat.RemainWeightsForCreatePartion
 	stat.Unlock()
 
 	response.RackName = s.rackName
-	response.VolInfo = make([]*proto.VolReport, 0)
+	response.PartionInfo = make([]*proto.PartionReport, 0)
 	space := s.space
-	space.volLock.RLock()
-	for _, v := range space.vols {
-		vr := &proto.VolReport{VolID: uint64(v.volId), VolStatus: v.status, Total: uint64(v.volSize), Used: uint64(v.used)}
-		response.VolInfo = append(response.VolInfo, vr)
+	space.dataPartionLock.RLock()
+	for _, dp := range space.partions {
+		vr := &proto.PartionReport{PartionID: uint64(dp.partionId), PartionStatus: dp.status, Total: uint64(dp.partionSize), Used: uint64(dp.used)}
+		response.PartionInfo = append(response.PartionInfo, vr)
 	}
-	space.volLock.RUnlock()
+	space.dataPartionLock.RUnlock()
 }
 
 func (space *SpaceManager) modifyVolsStatus() {
 	space.diskLock.RLock()
 	defer space.diskLock.RUnlock()
 	for _, d := range space.disks {
-		volsID := d.getVols()
+		partions := d.getDataPartions()
 		diskStatus := d.Status
 
-		for _, vID := range volsID {
-			v := space.getVol(vID)
-			if v == nil {
+		for _, pid := range partions {
+			dp := space.getDataPartion(pid)
+			if dp == nil {
 				continue
 			}
 
-			switch v.volMode {
+			switch dp.partionType {
 			case proto.ExtentVol:
-				store := v.store.(*storage.ExtentStore)
-				v.status = store.GetStoreStatus()
-				v.used = int(store.GetStoreUsedSize())
+				store := dp.store.(*storage.ExtentStore)
+				dp.status = store.GetStoreStatus()
+				dp.used = int(store.GetStoreUsedSize())
 			case proto.TinyVol:
-				store := v.store.(*storage.TinyStore)
-				v.status = store.GetStoreStatus()
-				if v.isLeader {
+				store := dp.store.(*storage.TinyStore)
+				dp.status = store.GetStoreStatus()
+				if dp.isLeader {
 					store.MoveChunkToUnavailChan()
 				}
-				v.used = int(store.GetStoreUsedSize())
+				dp.used = int(store.GetStoreUsedSize())
 			}
-			if v.isLeader && v.status == storage.ReadOnlyStore {
-				v.status = storage.ReadOnlyStore
+			if dp.isLeader && dp.status == storage.ReadOnlyStore {
+				dp.status = storage.ReadOnlyStore
 			}
 
 			if diskStatus == storage.DiskErrStore {
-				v.status = storage.DiskErrStore
+				dp.status = storage.DiskErrStore
 			}
 		}
 	}

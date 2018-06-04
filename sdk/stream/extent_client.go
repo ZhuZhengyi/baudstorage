@@ -7,7 +7,6 @@ import (
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/sdk/data"
-	"github.com/tiglabs/baudstorage/sdk/vol"
 	"github.com/tiglabs/baudstorage/util/log"
 	"runtime"
 )

@@ -14,43 +14,43 @@ type ClusterInfo struct {
 	Ip      string
 }
 
-type CreateVolRequest struct {
-	VolType string
-	VolId   uint64
-	VolSize int
+type CreateDataPartionRequest struct {
+	DataPartionType string
+	PartionId       uint64
+	PartionSize     int
 }
 
-type CreateVolResponse struct {
-	VolId  uint64
-	Status uint8
-	Result string
+type CreateDataPartionResponse struct {
+	PartionId uint64
+	Status    uint8
+	Result    string
 }
 
-type DeleteVolRequest struct {
-	VolType string
-	VolId   uint64
-	VolSize int
+type DeleteDataPartionRequest struct {
+	DataPartionType string
+	PartionId       uint64
+	PartionSize     int
 }
 
-type DeleteVolResponse struct {
-	Status uint8
-	Result string
-	VolId  uint64
+type DeleteDataPartionResponse struct {
+	Status    uint8
+	Result    string
+	PartionId uint64
 }
 
-type LoadVolRequest struct {
-	VolType string
-	VolId   uint64
+type LoadDataPartionRequest struct {
+	DataPartionType string
+	PartionId       uint64
 }
 
-type LoadVolResponse struct {
-	VolType     string
-	VolId       uint64
-	Used        uint64
-	VolSnapshot []*File
-	Status      uint8
-	VolStatus   uint8
-	Result      string
+type LoadDataPartionResponse struct {
+	DataPartionType string
+	PartionId       uint64
+	Used            uint64
+	PartionSnapshot []*File
+	Status          uint8
+	PartionStatus   uint8
+	Result          string
 }
 
 type File struct {
@@ -83,11 +83,11 @@ type HeartBeatRequest struct {
 	MasterAddr string
 }
 
-type VolReport struct {
-	VolID     uint64
-	VolStatus int
-	Total     uint64
-	Used      uint64
+type PartionReport struct {
+	PartionID     uint64
+	PartionStatus int
+	Total         uint64
+	Used          uint64
 }
 
 type DataNodeHeartBeatResponse struct {
@@ -99,7 +99,7 @@ type DataNodeHeartBeatResponse struct {
 	CreatedVolCnt             uint32
 	MaxWeightsForCreateVol    uint64
 	RackName                  string
-	VolInfo                   []*VolReport
+	PartionInfo               []*PartionReport
 	Status                    uint8
 	Result                    string
 }

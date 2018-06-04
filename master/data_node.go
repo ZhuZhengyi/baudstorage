@@ -29,7 +29,7 @@ type DataNode struct {
 	selectCount  uint64
 	carry        float64
 	sender       *AdminTaskSender
-	VolInfo      []*proto.VolReport
+	VolInfo      []*proto.PartionReport
 	VolInfoCount uint32
 }
 
@@ -78,7 +78,7 @@ func (dataNode *DataNode) UpdateNodeMetric(resp *proto.DataNodeHeartBeatResponse
 	dataNode.Free = resp.Free
 	dataNode.RackName = resp.RackName
 	dataNode.VolInfoCount = resp.CreatedVolCnt
-	dataNode.VolInfo = resp.VolInfo
+	dataNode.VolInfo = resp.PartionInfo
 	dataNode.ratio = (float64)(dataNode.Used) / (float64)(dataNode.Total)
 	dataNode.ReportTime = time.Now()
 }

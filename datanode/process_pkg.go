@@ -57,7 +57,7 @@ func (s *DataNode) checkAndAddInfo(pkg *Packet) error {
 		err = s.handleChunkInfo(pkg)
 	case proto.ExtentStoreMode:
 		if pkg.isHeadNode() && pkg.Opcode == proto.OpCreateFile {
-			pkg.FileID = pkg.vol.store.(*storage.ExtentStore).GetExtentId()
+			pkg.FileID = pkg.dataPartion.store.(*storage.ExtentStore).GetExtentId()
 			log.LogDebugf("action[DataNode.checkAndAddInfo] pkg[%v] alloc fileId[%v]", pkg.GetUniqLogId(), pkg.FileID)
 		}
 	}
@@ -93,7 +93,7 @@ func (s *DataNode) doRequestCh(req *Packet, msgH *MessageHandler) {
 	if err = s.sendToNext(req, msgH); err == nil {
 		s.operatePacket(req, msgH.inConn)
 	} else {
-		log.LogErrorf("action[DataNode.doRequestCh] %v.", req.ActionMsg(ActionSendToNext, req.nextAddr,
+		log.LogErrorf("action[DataNode.doRequestCh] %dp.", req.ActionMsg(ActionSendToNext, req.nextAddr,
 			req.StartT, fmt.Errorf("failed to send to : %v", req.nextAddr)))
 		if req.IsMarkDeleteReq() {
 			s.operatePacket(req, msgH.inConn)
@@ -169,7 +169,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 		err = errors.Annotatef(fmt.Errorf(request.getErr()), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 		msgH.DelListElement(request, e, s, ForceCloseConnect)
-		log.LogErrorf("action[DataNode.receiveFromNext] %v.", request.ActionMsg(ActionReciveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
+		log.LogErrorf("action[DataNode.receiveFromNext] %dp.", request.ActionMsg(ActionReciveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
 		return
 	}
 
@@ -181,11 +181,11 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 		if err = msgH.checkReplyAvail(reply); err != nil {
 			request.PackErrorBody(ActionReciveFromNext, err.Error())
 			msgH.DelListElement(request, e, s, ForceCloseConnect)
-			log.LogErrorf("action[DataNode.receiveFromNext] %v.", err.Error())
+			log.LogErrorf("action[DataNode.receiveFromNext] %dp.", err.Error())
 			return request, true
 		}
 	} else {
-		log.LogErrorf("action[DataNode.receiveFromNext] %v.", request.ActionMsg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
+		log.LogErrorf("action[DataNode.receiveFromNext] %dp.", request.ActionMsg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 		err = errors.Annotatef(err, "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 		msgH.DelListElement(request, e, s, ForceCloseConnect)
@@ -203,7 +203,7 @@ success:
 		request.PackErrorBody(ActionReciveFromNext, err.Error())
 	}
 	msgH.DelListElement(request, e, s, NOCloseConnect)
-	log.LogDebugf("action[DataNode.receiveFromNext] %v.", reply.ActionMsg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
+	log.LogDebugf("action[DataNode.receiveFromNext] %dp.", reply.ActionMsg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
 
 	return
 }
@@ -250,8 +250,8 @@ func (s *DataNode) CheckPacket(pkg *Packet) error {
 	if err != nil {
 		return err
 	}
-	pkg.vol = s.space.getVol(pkg.PartionID)
-	if pkg.vol == nil {
+	pkg.dataPartion = s.space.getDataPartion(pkg.PartionID)
+	if pkg.dataPartion == nil {
 		return ErrVolNotExist
 	}
 

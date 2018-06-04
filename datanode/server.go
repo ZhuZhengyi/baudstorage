@@ -24,9 +24,9 @@ import (
 
 var (
 	ErrStoreTypeMismatch   = errors.New("store type error")
-	ErrVolNotExist         = errors.New("vol not exists")
+	ErrVolNotExist         = errors.New("dataPartion not exists")
 	ErrChunkOffsetMismatch = errors.New("chunk offset not mismatch")
-	ErrNoDiskForCreateVol  = errors.New("no disk for create vol")
+	ErrNoDiskForCreateVol  = errors.New("no disk for create dataPartion")
 	ErrBadConfFile         = errors.New("bad config file")
 
 	CurrMaster      string
@@ -142,13 +142,13 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 		s.rackName = DefaultRackName
 	}
 
-	log.LogDebugf("action[DataNode.LoadVol] load port[%v].", s.port)
-	log.LogDebugf("action[DataNode.LoadVol] load clusterId[%v].", s.clusterId)
-	log.LogDebugf("action[DataNode.LoadVol] load rackName[%v].", s.rackName)
-	log.LogDebugf("action[DataNode.LoadVol] load profPort[%v].", s.profPort)
+	log.LogDebugf("action[DataNode.Load] load port[%v].", s.port)
+	log.LogDebugf("action[DataNode.Load] load clusterId[%v].", s.clusterId)
+	log.LogDebugf("action[DataNode.Load] load rackName[%v].", s.rackName)
+	log.LogDebugf("action[DataNode.Load] load profPort[%v].", s.profPort)
 
 	for _, d := range cfg.GetArray(ConfigKeyDisks) {
-		log.LogDebugf("action[DataNode.LoadVol] load disk raw config[%v].", d)
+		log.LogDebugf("action[DataNode.Load] load disk raw config[%v].", d)
 		// Format "PATH:RESET_SIZE:MAX_ERR
 		arr := strings.Split(d.(string), ":")
 		if len(arr) != 3 {
@@ -199,7 +199,7 @@ func (s *DataNode) registerToMaster() (err error) {
 
 func (s *DataNode) startRestService() {
 	http.HandleFunc("/disks", s.HandleGetDisk)
-	http.HandleFunc("/vols", s.HandleVol)
+	http.HandleFunc("/partions", s.HandleVol)
 	http.HandleFunc("/stats", s.HandleStat)
 
 	address := fmt.Sprintf("%s:%d", LocalIP, s.profPort)
@@ -286,11 +286,11 @@ func NewServer() *DataNode {
 }
 
 func (s *DataNode) AddCompactTask(t *CompactTask) (err error) {
-	v := s.space.getVol(t.volId)
-	if v == nil {
+	dp := s.space.getDataPartion(t.partionId)
+	if dp == nil {
 		return nil
 	}
-	d, _ := s.space.getDisk(v.path)
+	d, _ := s.space.getDisk(dp.path)
 	if d == nil {
 		return nil
 	}
@@ -303,7 +303,7 @@ func (s *DataNode) AddCompactTask(t *CompactTask) (err error) {
 }
 
 func (s *DataNode) checkChunkInfo(pkg *Packet) (err error) {
-	chunkInfo, _ := pkg.vol.store.(*storage.TinyStore).GetWatermark(pkg.FileID)
+	chunkInfo, _ := pkg.dataPartion.store.(*storage.TinyStore).GetWatermark(pkg.FileID)
 	leaderObjId := uint64(pkg.Offset)
 	localObjId := chunkInfo.Size
 	if (leaderObjId - 1) != chunkInfo.Size {
@@ -337,10 +337,10 @@ func (s *DataNode) headNodeSetChunkInfo(pkg *Packet) (err error) {
 	var (
 		chunkId int
 	)
-	store := pkg.vol.store.(*storage.TinyStore)
+	store := pkg.dataPartion.store.(*storage.TinyStore)
 	chunkId, err = store.GetChunkForWrite()
 	if err != nil {
-		pkg.vol.status = storage.ReadOnlyStore
+		pkg.dataPartion.status = storage.ReadOnlyStore
 		return
 	}
 	pkg.FileID = uint64(chunkId)
@@ -357,7 +357,7 @@ func (s *DataNode) headNodePutChunk(pkg *Packet) {
 	if pkg.StoreMode != proto.TinyStoreMode || !pkg.isHeadNode() || !pkg.IsWriteOperation() || !pkg.IsTransitPkg() {
 		return
 	}
-	store := pkg.vol.store.(*storage.TinyStore)
+	store := pkg.dataPartion.store.(*storage.TinyStore)
 	if pkg.IsErrPack() {
 		store.PutUnAvailChunk(int(pkg.FileID))
 	} else {
