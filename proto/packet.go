@@ -191,11 +191,11 @@ func (p *Packet) GetOpMsg() (m string) {
 		m = "OpLoadMetaPartition"
 	case OpOfflineMetaPartition:
 		m = "OpOfflineMetaPartition"
-	case OpCreateDataPartion:
+	case OpCreateDataPartition:
 		m = "OpCreateDataPartion"
-	case OpDeleteDataPartion:
+	case OpDeleteDataPartition:
 		m = "OpDeleteDataPartion"
-	case OpLoadDataPartion:
+	case OpLoadDataPartition:
 		m = "OpLoadDataPartion"
 	case OpDataNodeHeartbeat:
 		m = "OpDataNodeHeartbeat"
