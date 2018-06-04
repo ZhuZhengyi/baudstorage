@@ -31,18 +31,18 @@ type Stats struct {
 	inFlow      uint64
 	outFlow     uint64
 
-	Zone                          string
-	CurrentConns                  int64
-	ClusterID                     string
-	TcpAddr                       string
-	Start                         time.Time
-	Total                         uint64
-	Used                          uint64
-	Free                          uint64
-	CreatedPartionWeights         uint64 //dataPartionCnt*dataPartionsize
-	RemainWeightsForCreatePartion uint64 //all-useddataPartionsWieghts
-	CreatedPartionCnt             uint64
-	MaxWeightsForCreatePartion    uint64
+	Zone                            string
+	CurrentConns                    int64
+	ClusterID                       string
+	TcpAddr                         string
+	Start                           time.Time
+	Total                           uint64
+	Used                            uint64
+	Free                            uint64
+	CreatedPartitionWeights         uint64 //dataPartitionCnt*dataPartitionsize
+	RemainWeightsForCreatePartition uint64 //all-useddataPartitionsWieghts
+	CreatedPartitionCnt             uint64
+	MaxWeightsForCreatePartition    uint64
 
 	sync.Mutex
 }
@@ -73,16 +73,16 @@ func (s *Stats) AddOutDataSize(size uint64) {
 	atomic.AddUint64(&s.outDataSize, size)
 }
 
-func (s *Stats) updateMetrics(total, used, free, createdVolWeights, remainWeightsForCreateVol, maxWeightsForCreateVol, dataPartioncnt uint64) {
+func (s *Stats) updateMetrics(total, used, free, createdVolWeights, remainWeightsForCreateVol, maxWeightsForCreateVol, dataPartitioncnt uint64) {
 	s.Lock()
 	defer s.Unlock()
 	s.Total = total
 	s.Used = used
 	s.Free = free
-	s.CreatedPartionWeights = createdVolWeights
-	s.RemainWeightsForCreatePartion = remainWeightsForCreateVol
-	s.MaxWeightsForCreatePartion = maxWeightsForCreateVol
-	s.CreatedPartionCnt = dataPartioncnt
+	s.CreatedPartitionWeights = createdVolWeights
+	s.RemainWeightsForCreatePartition = remainWeightsForCreateVol
+	s.MaxWeightsForCreatePartition = maxWeightsForCreateVol
+	s.CreatedPartitionCnt = dataPartitioncnt
 }
 
 func post(data []byte, url string) (*http.Response, error) {

@@ -57,7 +57,7 @@ func (s *DataNode) checkAndAddInfo(pkg *Packet) error {
 		err = s.handleChunkInfo(pkg)
 	case proto.ExtentStoreMode:
 		if pkg.isHeadNode() && pkg.Opcode == proto.OpCreateFile {
-			pkg.FileID = pkg.dataPartion.store.(*storage.ExtentStore).GetExtentId()
+			pkg.FileID = pkg.dataPartition.store.(*storage.ExtentStore).GetExtentId()
 			log.LogDebugf("action[DataNode.checkAndAddInfo] pkg[%v] alloc fileId[%v]", pkg.GetUniqLogId(), pkg.FileID)
 		}
 	}
@@ -175,7 +175,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 
 	reply = NewPacket()
 	if err = reply.ReadFromConn(request.nextConn, proto.ReadDeadlineTime); err == nil {
-		if reply.ReqID == request.ReqID && reply.PartionID == request.PartionID && request.Offset == reply.Offset {
+		if reply.ReqID == request.ReqID && reply.PartitionID == request.PartitionID && request.Offset == reply.Offset {
 			goto success
 		}
 		if err = msgH.checkReplyAvail(reply); err != nil {
@@ -250,8 +250,8 @@ func (s *DataNode) CheckPacket(pkg *Packet) error {
 	if err != nil {
 		return err
 	}
-	pkg.dataPartion = s.space.getDataPartion(pkg.PartionID)
-	if pkg.dataPartion == nil {
+	pkg.dataPartition = s.space.getDataPartition(pkg.PartitionID)
+	if pkg.dataPartition == nil {
 		return ErrVolNotExist
 	}
 

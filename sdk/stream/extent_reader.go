@@ -15,16 +15,16 @@ type ExtentReader struct {
 	inode            uint64
 	startInodeOffset int
 	endInodeOffset   int
-	dp               *data.DataPartion
+	dp               *data.DataPartition
 	key              proto.ExtentKey
-	wrapper          *data.DataPartionWrapper
+	wrapper          *data.DataPartitionWrapper
 	sync.Mutex
 }
 
 func NewExtentReader(inode uint64, inInodeOffset int, key proto.ExtentKey,
-	wrapper *data.DataPartionWrapper) (reader *ExtentReader, err error) {
+	wrapper *data.DataPartitionWrapper) (reader *ExtentReader, err error) {
 	reader = new(ExtentReader)
-	reader.dp, err = wrapper.GetDataPartion(key.PartionId)
+	reader.dp, err = wrapper.GetDataPartition(key.PartitionId)
 	if err != nil {
 		return
 	}
@@ -44,12 +44,12 @@ func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
 	reader.Lock()
 	p := NewReadPacket(reader.key, offset, size)
 	reader.Unlock()
-	err = reader.readDataFromDataPartion(p, data)
+	err = reader.readDataFromDataPartition(p, data)
 
 	return
 }
 
-func (reader *ExtentReader) readDataFromDataPartion(p *Packet, data []byte) (err error) {
+func (reader *ExtentReader) readDataFromDataPartition(p *Packet, data []byte) (err error) {
 	rand.Seed(time.Now().UnixNano())
 	index := rand.Intn(int(reader.dp.ReplicaNum))
 	host := reader.dp.Hosts[index]
@@ -78,7 +78,7 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 	if err != nil {
 		return 0, errors.Annotatef(err, reader.toString()+
 			"readDataFromHost dp[%v] cannot get  connect from host[%v] request[%v] ",
-			reader.key.PartionId, host, p.GetUniqLogId())
+			reader.key.PartitionId, host, p.GetUniqLogId())
 
 	}
 	defer func() {
@@ -124,7 +124,7 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 func (reader *ExtentReader) updateKey(key proto.ExtentKey) (update bool) {
 	reader.Lock()
 	defer reader.Unlock()
-	if !(key.PartionId == reader.key.PartionId && key.ExtentId == reader.key.ExtentId) {
+	if !(key.PartitionId == reader.key.PartitionId && key.ExtentId == reader.key.ExtentId) {
 		return
 	}
 	if key.Size <= reader.key.Size {

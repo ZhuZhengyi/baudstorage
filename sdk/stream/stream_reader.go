@@ -20,7 +20,7 @@ type ReadRequest struct {
 
 type StreamReader struct {
 	inode      uint64
-	wrapper    *data.DataPartionWrapper
+	wrapper    *data.DataPartitionWrapper
 	readers    []*ExtentReader
 	getExtents GetExtentsFunc
 	extents    *proto.StreamKey
@@ -31,7 +31,7 @@ type StreamReader struct {
 	sync.Mutex
 }
 
-func NewStreamReader(inode uint64, wrapper *data.DataPartionWrapper, getExtents GetExtentsFunc) (stream *StreamReader, err error) {
+func NewStreamReader(inode uint64, wrapper *data.DataPartitionWrapper, getExtents GetExtentsFunc) (stream *StreamReader, err error) {
 	stream = new(StreamReader)
 	stream.inode = inode
 	stream.wrapper = wrapper

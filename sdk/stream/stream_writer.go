@@ -13,12 +13,12 @@ import (
 )
 
 const (
-	MaxSelectDataPartionForWrite = 32
-	ActionGetConnect             = "ActionGetConnect"
-	ActionStreamWriteWrite       = "ActionStreamWriteWrite"
-	ActionRecoverExtent          = "ActionRecoverExtent"
-	IsFlushIng                   = 1
-	NoFlushIng                   = -1
+	MaxSelectDataPartitionForWrite = 32
+	ActionGetConnect               = "ActionGetConnect"
+	ActionStreamWriteWrite         = "ActionStreamWriteWrite"
+	ActionRecoverExtent            = "ActionRecoverExtent"
+	IsFlushIng                     = 1
+	NoFlushIng                     = -1
 )
 
 type WriteRequest struct {
@@ -30,22 +30,22 @@ type WriteRequest struct {
 
 type StreamWriter struct {
 	sync.Mutex
-	wrapper          *data.DataPartionWrapper
-	currentWriter    *ExtentWriter //current ExtentWriter
-	errCount         int           //error count
-	currentPartionId uint32        //current PartionId
-	currentExtentId  uint64        //current FileIdId
-	currentInode     uint64        //inode
-	flushLock        sync.Mutex
-	execludePartion  []uint32
-	appendExtentKey  AppendExtentKeyFunc
-	isFlushIng       int32
-	requestCh        chan *WriteRequest
-	replyCh          chan *WriteRequest
-	exitCh           chan bool
+	wrapper            *data.DataPartitionWrapper
+	currentWriter      *ExtentWriter //current ExtentWriter
+	errCount           int           //error count
+	currentPartitionId uint32        //current PartitionId
+	currentExtentId    uint64        //current FileIdId
+	currentInode       uint64        //inode
+	flushLock          sync.Mutex
+	execludePartition  []uint32
+	appendExtentKey    AppendExtentKeyFunc
+	isFlushIng         int32
+	requestCh          chan *WriteRequest
+	replyCh            chan *WriteRequest
+	exitCh             chan bool
 }
 
-func NewStreamWriter(wrapper *data.DataPartionWrapper, inode uint64, appendExtentKey AppendExtentKeyFunc) (stream *StreamWriter) {
+func NewStreamWriter(wrapper *data.DataPartitionWrapper, inode uint64, appendExtentKey AppendExtentKeyFunc) (stream *StreamWriter) {
 	stream = new(StreamWriter)
 	stream.wrapper = wrapper
 	stream.appendExtentKey = appendExtentKey
@@ -54,7 +54,7 @@ func NewStreamWriter(wrapper *data.DataPartionWrapper, inode uint64, appendExten
 	stream.requestCh = make(chan *WriteRequest, 1000)
 	stream.replyCh = make(chan *WriteRequest, 1000)
 	stream.exitCh = make(chan bool, 2)
-	stream.execludePartion = make([]uint32, 0)
+	stream.execludePartition = make([]uint32, 0)
 	go stream.server()
 
 	return
@@ -86,8 +86,8 @@ func (stream *StreamWriter) toString() (m string) {
 	if stream.getWriter() != nil {
 		currentWriterMsg = stream.getWriter().toString()
 	}
-	return fmt.Sprintf("inode[%v] currentDataPartion[%v] currentExtentId[%v]"+
-		" errCount[%v]", stream.currentInode, stream.currentPartionId, currentWriterMsg,
+	return fmt.Sprintf("inode[%v] currentDataPartition[%v] currentExtentId[%v]"+
+		" errCount[%v]", stream.currentInode, stream.currentPartitionId, currentWriterMsg,
 		stream.errCount)
 }
 
@@ -186,7 +186,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 			return
 		}
 		stream.errCount++
-		if stream.errCount < MaxSelectDataPartionForWrite {
+		if stream.errCount < MaxSelectDataPartitionForWrite {
 			err = stream.recoverExtent()
 			if err == nil {
 				err = stream.flushCurrExtentWriter()
@@ -221,8 +221,8 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 
 func (stream *StreamWriter) recoverExtent() (err error) {
 	retryPackets := stream.getWriter().getNeedRetrySendPackets()
-	for i := 0; i < MaxSelectDataPartionForWrite; i++ {
-		stream.execludePartion = append(stream.execludePartion, stream.getWriter().dp.DataPartionID)
+	for i := 0; i < MaxSelectDataPartitionForWrite; i++ {
+		stream.execludePartition = append(stream.execludePartition, stream.getWriter().dp.DataPartitionID)
 		if err = stream.allocateNewExtentWriter(); err != nil {
 			err = errors.Annotatef(err, "RecoverExtent Failed")
 			continue
@@ -243,7 +243,7 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 			}
 		}
 		if err == nil {
-			stream.execludePartion = make([]uint32, 0)
+			stream.execludePartition = make([]uint32, 0)
 			break
 		}
 	}
@@ -254,25 +254,25 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 
 func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	var (
-		dp       *data.DataPartion
+		dp       *data.DataPartition
 		extentId uint64
 		writer   *ExtentWriter
 	)
 	err = fmt.Errorf("cannot alloct new extent after maxrery")
-	for i := 0; i < MaxSelectDataPartionForWrite; i++ {
-		if dp, err = stream.wrapper.GetWriteDataPartion(stream.execludePartion); err != nil {
+	for i := 0; i < MaxSelectDataPartitionForWrite; i++ {
+		if dp, err = stream.wrapper.GetWriteDataPartition(stream.execludePartition); err != nil {
 			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter "+
-				"failed on getWriteDataPartion,error[%v] execludeDataPartion[%v]", err.Error(), stream.execludePartion))
+				"failed on getWriteDataPartition,error[%v] execludeDataPartition[%v]", err.Error(), stream.execludePartition))
 			continue
 		}
 		if extentId, err = stream.createExtent(dp); err != nil {
 			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter "+
-				"create Extent,error[%v] execludeDataPartion[%v]", err.Error(), stream.execludePartion))
+				"create Extent,error[%v] execludeDataPartition[%v]", err.Error(), stream.execludePartition))
 			continue
 		}
 		if writer, err = NewExtentWriter(stream.currentInode, dp, stream.wrapper, extentId); err != nil {
 			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter "+
-				"NewExtentWriter[%v],error[%v] execludeDataPartion[%v]", extentId, err.Error(), stream.execludePartion))
+				"NewExtentWriter[%v],error[%v] execludeDataPartition[%v]", extentId, err.Error(), stream.execludePartition))
 			continue
 		}
 		break
@@ -281,7 +281,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 		log.LogErrorf(errors.Annotatef(err, "allocateNewExtentWriter").Error())
 		return errors.Annotatef(err, "allocateNewExtentWriter")
 	}
-	stream.currentPartionId = dp.DataPartionID
+	stream.currentPartitionId = dp.DataPartitionID
 	stream.currentExtentId = extentId
 	stream.setWriter(writer)
 	err = nil
@@ -290,18 +290,18 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	return nil
 }
 
-func (stream *StreamWriter) createExtent(dp *data.DataPartion) (extentId uint64, err error) {
+func (stream *StreamWriter) createExtent(dp *data.DataPartition) (extentId uint64, err error) {
 	var (
 		connect net.Conn
 	)
 	connect, err = stream.wrapper.GetConnect(dp.Hosts[0])
 	if err != nil {
-		err = errors.Annotatef(err, " get connect from datapartionHosts[%v]", dp.Hosts[0])
+		err = errors.Annotatef(err, " get connect from datapartitionHosts[%v]", dp.Hosts[0])
 		return
 	}
 	p := NewCreateExtentPacket(dp)
 	if err = p.WriteToConn(connect); err != nil {
-		err = errors.Annotatef(err, "send CreateExtent[%v] to datapartionHosts[%v]", p.GetUniqLogId(), dp.Hosts[0])
+		err = errors.Annotatef(err, "send CreateExtent[%v] to datapartitionHosts[%v]", p.GetUniqLogId(), dp.Hosts[0])
 		connect.Close()
 		return
 	}
