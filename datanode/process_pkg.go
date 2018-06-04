@@ -57,7 +57,7 @@ func (s *DataNode) checkAndAddInfo(pkg *Packet) error {
 		err = s.handleChunkInfo(pkg)
 	case proto.ExtentStoreMode:
 		if pkg.isHeadNode() && pkg.Opcode == proto.OpCreateFile {
-			pkg.FileID = pkg.vol.store.(*storage.ExtentStore).GetExtentId()
+			pkg.FileID = pkg.dataPartion.store.(*storage.ExtentStore).GetExtentId()
 			log.LogDebugf("action[DataNode.checkAndAddInfo] pkg[%v] alloc fileId[%v]", pkg.GetUniqLogId(), pkg.FileID)
 		}
 	}
@@ -250,8 +250,8 @@ func (s *DataNode) CheckPacket(pkg *Packet) error {
 	if err != nil {
 		return err
 	}
-	pkg.vol = s.space.getDataPartion(pkg.PartionID)
-	if pkg.vol == nil {
+	pkg.dataPartion = s.space.getDataPartion(pkg.PartionID)
+	if pkg.dataPartion == nil {
 		return ErrVolNotExist
 	}
 

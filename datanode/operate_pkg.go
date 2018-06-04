@@ -88,7 +88,7 @@ func (s *DataNode) createFile(pkg *Packet) {
 	case proto.TinyStoreMode:
 		err = errors.Annotatef(ErrStoreTypeMismatch, " CreateFile only support ExtentMode DataPartion")
 	case proto.ExtentStoreMode:
-		err = pkg.vol.store.(*storage.ExtentStore).Create(pkg.FileID)
+		err = pkg.dataPartion.store.(*storage.ExtentStore).Create(pkg.FileID)
 	}
 	if err != nil {
 		err = errors.Annotatef(err, "Request[%v] CreateFile Error", pkg.GetUniqLogId())
@@ -129,7 +129,7 @@ func (s *DataNode) createDataPartion(pkg *Packet) {
 	data, _ := json.Marshal(task)
 	_, err := PostToMaster(data, master.DataNodeResponse)
 	if err != nil {
-		err = errors.Annotatef(err, "create vol failed,partionId[%v]", request.PartionId)
+		err = errors.Annotatef(err, "create dataPartion failed,partionId[%v]", request.PartionId)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
@@ -192,7 +192,7 @@ func (s *DataNode) deleteDataPartion(pkg *Packet) {
 	data, _ := json.Marshal(task)
 	_, err := PostToMaster(data, master.DataNodeResponse)
 	if err != nil {
-		err = errors.Annotatef(err, "delete vol failed,partionId[%v]", request.PartionId)
+		err = errors.Annotatef(err, "delete dataPartion failed,partionId[%v]", request.PartionId)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
@@ -210,7 +210,7 @@ func (s *DataNode) loadDataPartion(pkg *Packet) {
 		if dp == nil {
 			response.Status = proto.TaskFail
 			response.PartionId = uint64(request.PartionId)
-			response.Result = fmt.Sprintf("vol[%v] not found", request.PartionId)
+			response.Result = fmt.Sprintf("dataPartion[%v] not found", request.PartionId)
 			log.LogErrorf("from master Task[%v] failed,error[%v]", task.ToString(), response.Result)
 		} else {
 			response = dp.Load()
@@ -226,7 +226,7 @@ func (s *DataNode) loadDataPartion(pkg *Packet) {
 	data, _ := json.Marshal(task)
 	_, err := PostToMaster(data, master.DataNodeResponse)
 	if err != nil {
-		err = errors.Annotatef(err, "load vol failed,partionId[%v]", request.PartionId)
+		err = errors.Annotatef(err, "load dataPartion failed,partionId[%v]", request.PartionId)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
@@ -235,9 +235,9 @@ func (s *DataNode) markDel(pkg *Packet) {
 	var err error
 	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
-		err = pkg.vol.store.(*storage.TinyStore).MarkDelete(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size))
+		err = pkg.dataPartion.store.(*storage.TinyStore).MarkDelete(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size))
 	case proto.ExtentStoreMode:
-		err = pkg.vol.store.(*storage.ExtentStore).MarkDelete(pkg.FileID, pkg.Offset, int64(pkg.Size))
+		err = pkg.dataPartion.store.(*storage.ExtentStore).MarkDelete(pkg.FileID, pkg.Offset, int64(pkg.Size))
 	}
 	if err != nil {
 		err = errors.Annotatef(err, "Request[%v] MarkDelete Error", pkg.GetUniqLogId())
@@ -253,10 +253,10 @@ func (s *DataNode) append(pkg *Packet) {
 	var err error
 	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
-		err = pkg.vol.store.(*storage.TinyStore).Write(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
+		err = pkg.dataPartion.store.(*storage.TinyStore).Write(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
 		s.AddDiskErrs(pkg.PartionID, err, WriteFlag)
 	case proto.ExtentStoreMode:
-		err = pkg.vol.store.(*storage.ExtentStore).Write(pkg.FileID, pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
+		err = pkg.dataPartion.store.(*storage.ExtentStore).Write(pkg.FileID, pkg.Offset, int64(pkg.Size), pkg.Data, pkg.Crc)
 		s.AddDiskErrs(pkg.PartionID, err, WriteFlag)
 	}
 	if err != nil {
@@ -272,7 +272,7 @@ func (s *DataNode) append(pkg *Packet) {
 func (s *DataNode) read(pkg *Packet) {
 	pkg.Data = make([]byte, pkg.Size)
 	var err error
-	pkg.Crc, err = pkg.vol.store.(*storage.TinyStore).Read(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data)
+	pkg.Crc, err = pkg.dataPartion.store.(*storage.TinyStore).Read(uint32(pkg.FileID), pkg.Offset, int64(pkg.Size), pkg.Data)
 	if err != nil {
 		err = errors.Annotatef(err, "Request[%v] Read Error", pkg.GetUniqLogId())
 		s.AddDiskErrs(pkg.PartionID, err, ReadFlag)
@@ -298,7 +298,7 @@ func (s *DataNode) applyDelObjects(pkg *Packet) {
 		needle := binary.BigEndian.Uint64(pkg.Data[i*storage.ObjectIdLen : (i+1)*storage.ObjectIdLen])
 		needles = append(needles, needle)
 	}
-	if err := pkg.vol.store.(*storage.TinyStore).ApplyDelObjects(uint32(pkg.FileID), needles); err != nil {
+	if err := pkg.dataPartion.store.(*storage.TinyStore).ApplyDelObjects(uint32(pkg.FileID), needles); err != nil {
 		err = errors.Annotatef(err, "Request[%v] ApplyDelObjects Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogRepair, err.Error())
 		return
@@ -313,7 +313,7 @@ func (s *DataNode) streamRead(request *Packet, connect net.Conn) {
 	)
 	needReplySize := request.Size
 	offset := request.Offset
-	store := request.vol.store.(*storage.ExtentStore)
+	store := request.dataPartion.store.(*storage.ExtentStore)
 	for {
 		if needReplySize <= 0 {
 			break
@@ -355,9 +355,9 @@ func (s *DataNode) getWatermark(pkg *Packet) {
 	)
 	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
-		fInfo, err = pkg.vol.store.(*storage.TinyStore).GetWatermark(pkg.FileID)
+		fInfo, err = pkg.dataPartion.store.(*storage.TinyStore).GetWatermark(pkg.FileID)
 	case proto.ExtentStoreMode:
-		fInfo, err = pkg.vol.store.(*storage.ExtentStore).GetWatermark(pkg.FileID)
+		fInfo, err = pkg.dataPartion.store.(*storage.ExtentStore).GetWatermark(pkg.FileID)
 	}
 	if err != nil {
 		err = errors.Annotatef(err, "Request[%v] getWatermark Error", pkg.GetUniqLogId())
@@ -378,9 +378,9 @@ func (s *DataNode) getAllWatermark(pkg *Packet) {
 	)
 	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
-		fInfoList, err = pkg.vol.store.(*storage.TinyStore).GetAllWatermark()
+		fInfoList, err = pkg.dataPartion.store.(*storage.TinyStore).GetAllWatermark()
 	case proto.ExtentStoreMode:
-		fInfoList, err = pkg.vol.store.(*storage.ExtentStore).GetAllWatermark()
+		fInfoList, err = pkg.dataPartion.store.(*storage.ExtentStore).GetAllWatermark()
 	}
 	if err != nil {
 		err = errors.Annotatef(err, "Request[%v] getAllWatermark Error", pkg.GetUniqLogId())
@@ -414,7 +414,7 @@ func (s *DataNode) compactChunk(pkg *Packet) {
 func (s *DataNode) repair(pkg *Packet) {
 	v := s.space.getDataPartion(pkg.PartionID)
 	if v == nil {
-		err := errors.Annotatef(fmt.Errorf("vol not exsit"), "Request[%v] compactChunk Error", pkg.GetUniqLogId())
+		err := errors.Annotatef(fmt.Errorf("dataPartion not exsit"), "Request[%v] compactChunk Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogRepair, err.Error())
 	}
 	switch pkg.StoreMode {

@@ -81,7 +81,7 @@ func (dp *DataPartion) getAllMemberFileMetas() (allMembers []*MembersFileMetas, 
 	}
 	mf := NewMembersFiles()
 	if err != nil {
-		err = errors.Annotatef(err, "getAllMemberFileMetas vol[%v] GetAllWaterMark", dp.partionId)
+		err = errors.Annotatef(err, "getAllMemberFileMetas dataPartion[%v] GetAllWaterMark", dp.partionId)
 		return
 	}
 	for _, fi := range files {
@@ -94,19 +94,19 @@ func (dp *DataPartion) getAllMemberFileMetas() (allMembers []*MembersFileMetas, 
 		target := dp.members.PartionHosts[i]
 		conn, err = ConnPool.Get(target)
 		if err != nil {
-			err = errors.Annotatef(err, "getAllMemberFileMetas  vol[%v] get host[%v] connect", dp.partionId, target)
+			err = errors.Annotatef(err, "getAllMemberFileMetas  dataPartion[%v] get host[%v] connect", dp.partionId, target)
 			return
 		}
 		err = p.WriteToConn(conn)
 		if err != nil {
 			conn.Close()
-			err = errors.Annotatef(err, "getAllMemberFileMetas vol[%v] write to host[%v]", dp.partionId, target)
+			err = errors.Annotatef(err, "getAllMemberFileMetas dataPartion[%v] write to host[%v]", dp.partionId, target)
 			return
 		}
 		err = p.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
 			conn.Close()
-			err = errors.Annotatef(err, "getAllMemberFileMetas vol[%v] read from host[%v]", dp.partionId, target)
+			err = errors.Annotatef(err, "getAllMemberFileMetas dataPartion[%v] read from host[%v]", dp.partionId, target)
 			return
 		}
 		mf := NewMembersFiles()
@@ -209,7 +209,7 @@ func (dp *DataPartion) generatorDeleteExtentsTasks(allMembers []*MembersFileMeta
 	}
 }
 
-/*notify follower to repair vol store*/
+/*notify follower to repair dataPartion store*/
 func (dp *DataPartion) NotifyRepair(members []*MembersFileMetas) (err error) {
 	storeMode := proto.ExtentStoreMode
 	if dp.partionType == proto.TinyVol {
@@ -240,7 +240,7 @@ func (dp *DataPartion) NotifyRepair(members []*MembersFileMetas) (err error) {
 func (s *DataNode) repairExtents(pkg *Packet) {
 	mf := NewMembersFiles()
 	json.Unmarshal(pkg.Data, mf)
-	store := pkg.vol.store.(*storage.ExtentStore)
+	store := pkg.dataPartion.store.(*storage.ExtentStore)
 	for _, deleteExtentId := range mf.NeedDeleteExtentsTasks {
 		store.MarkDelete(uint64(deleteExtentId.FileIdId), 0, 0)
 	}
@@ -260,13 +260,13 @@ func (s *DataNode) repairExtents(pkg *Packet) {
 		if !store.IsExsitExtent(uint64(fixExtent.FileIdId)) {
 			continue
 		}
-		err := StreamRepairExtent(fixExtent, pkg.vol)
+		err := StreamRepairExtent(fixExtent, pkg.dataPartion)
 		if err != nil {
 			localExtentInfo, err1 := store.GetWatermark(uint64(fixExtent.FileIdId))
 			if err != nil {
 				err = errors.Annotatef(err1, "not exsit")
 			}
-			err = errors.Annotatef(err, "vol[%v] extent[%v] streamRepairExtentFailed "+
+			err = errors.Annotatef(err, "dataPartion[%v] extent[%v] streamRepairExtentFailed "+
 				"leaderExtentInfo[%v] localExtentInfo[%v]", fixExtent.ToString(), localExtentInfo.ToString())
 			log.LogError(errors.ErrorStack(err))
 		}

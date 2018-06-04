@@ -19,13 +19,13 @@ var (
 
 type Packet struct {
 	proto.Packet
-	goals    uint8
-	nextConn net.Conn
-	nextAddr string
-	addrs    []string
-	isReturn bool
-	vol      *DataPartion
-	tpObject *ump.TpObject
+	goals       uint8
+	nextConn    net.Conn
+	nextAddr    string
+	addrs       []string
+	isReturn    bool
+	dataPartion *DataPartion
+	tpObject    *ump.TpObject
 }
 
 func (p *Packet) afterTp() (ok bool) {

@@ -57,7 +57,7 @@ func (s *DataNode) repairObjectRead(pkg *Packet, conn *net.TCPConn) {
 	)
 	chunkID = uint32(pkg.FileID)
 	requireOid = uint64(pkg.Offset + 1)
-	localOid, err = pkg.vol.store.(*storage.TinyStore).GetLastOid(chunkID)
+	localOid, err = pkg.dataPartion.store.(*storage.TinyStore).GetLastOid(chunkID)
 	log.LogWrite(pkg.ActionMsg(ActionLeaderToFollowerOpCRepairReadPackResponse,
 		fmt.Sprintf("follower require Oid[%v] localOid[%v]", requireOid, localOid), pkg.StartT, err))
 	if localOid < requireOid {
@@ -120,8 +120,8 @@ func syncData(chunkID uint32, startOid, endOid uint64, pkg *Packet, conn *net.TC
 		err     error
 		objects []*storage.Object
 	)
-	vol := pkg.vol
-	objects = getObjects(vol, chunkID, startOid, endOid)
+	dataPartion := pkg.dataPartion
+	objects = getObjects(dataPartion, chunkID, startOid, endOid)
 	log.LogWrite(pkg.ActionMsg(ActionLeaderToFollowerOpRepairReadPackBuffer, string(len(objects)), pkg.StartT, err))
 	databuf := make([]byte, PkgRepairCReadRespMaxSize)
 	pos := 0
@@ -138,7 +138,7 @@ func syncData(chunkID uint32, startOid, endOid uint64, pkg *Packet, conn *net.TC
 			databuf = make([]byte, PkgRepairCReadRespMaxSize)
 			pos = 0
 		}
-		if packObjectToBuf(databuf[pos:], objects[i], chunkID, vol); err != nil {
+		if packObjectToBuf(databuf[pos:], objects[i], chunkID, dataPartion); err != nil {
 			return err
 		}
 		pos += storage.ObjectHeaderSize
@@ -176,22 +176,22 @@ func (dp *DataPartion) applyRepairObjects(chunkId int, data []byte, endObjectId 
 			err = store.WriteDeleteDentry(o.Oid, chunkId, o.Crc)
 		}
 		if err != nil {
-			return errors.Annotatef(err, "vol[%v] chunkId[%v] oid[%v] writeDeleteDentry failed", dp.partionId, chunkId, o.Oid)
+			return errors.Annotatef(err, "dataPartion[%v] chunkId[%v] oid[%v] writeDeleteDentry failed", dp.partionId, chunkId, o.Oid)
 		}
 		if offset+int(o.Size) > dataLen {
-			return errors.Annotatef(err, "vol[%v] chunkId[%v] oid[%v] no body"+
+			return errors.Annotatef(err, "dataPartion[%v] chunkId[%v] oid[%v] no body"+
 				" expect[%v] actual[%v] failed", dp.partionId, chunkId, o.Oid, o.Size, dataLen-(offset))
 		}
 		ndata := data[offset : offset+int(o.Size)]
 		offset += int(o.Size)
 		ncrc := crc32.ChecksumIEEE(ndata)
 		if ncrc != o.Crc {
-			return errors.Annotatef(err, "vol[%v] chunkId[%v] oid[%v] "+
+			return errors.Annotatef(err, "dataPartion[%v] chunkId[%v] oid[%v] "+
 				"repair data crc  failed,expectCrc[%v] actualCrc[%v]", dp.partionId, chunkId, o.Oid, o.Crc, ncrc)
 		}
 		err = store.Write(uint32(chunkId), int64(o.Oid), int64(o.Size), ndata, o.Crc)
 		if err != nil {
-			return errors.Annotatef(err, "vol[%v] chunkId[%v] oid[%v] write failed", dp.partionId, chunkId, o.Oid)
+			return errors.Annotatef(err, "dataPartion[%v] chunkId[%v] oid[%v] write failed", dp.partionId, chunkId, o.Oid)
 		}
 		applyObjectId = o.Oid
 	}

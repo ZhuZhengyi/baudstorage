@@ -23,7 +23,7 @@ type CompactTask struct {
 }
 
 func (t *CompactTask) toString() (m string) {
-	return fmt.Sprintf("vol[%v]_chunk[%v]_isLeader[%v]", t.partionId, t.chunkId, t.isLeader)
+	return fmt.Sprintf("dataPartion[%v]_chunk[%v]_isLeader[%v]", t.partionId, t.chunkId, t.isLeader)
 }
 
 const (
@@ -199,7 +199,7 @@ func (d *Disk) getDataPartions() (partionIds []uint32) {
 func UnmarshDataPartionName(name string) (partionId uint32, partionSize int, partionMode string, err error) {
 	arr := strings.Split(name, "_")
 	if len(arr) != 4 {
-		err = fmt.Errorf("error vol name[%v]", name)
+		err = fmt.Errorf("error dataPartion name[%v]", name)
 		return
 	}
 	var (

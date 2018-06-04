@@ -24,9 +24,9 @@ import (
 
 var (
 	ErrStoreTypeMismatch   = errors.New("store type error")
-	ErrVolNotExist         = errors.New("vol not exists")
+	ErrVolNotExist         = errors.New("dataPartion not exists")
 	ErrChunkOffsetMismatch = errors.New("chunk offset not mismatch")
-	ErrNoDiskForCreateVol  = errors.New("no disk for create vol")
+	ErrNoDiskForCreateVol  = errors.New("no disk for create dataPartion")
 	ErrBadConfFile         = errors.New("bad config file")
 
 	CurrMaster      string
@@ -303,7 +303,7 @@ func (s *DataNode) AddCompactTask(t *CompactTask) (err error) {
 }
 
 func (s *DataNode) checkChunkInfo(pkg *Packet) (err error) {
-	chunkInfo, _ := pkg.vol.store.(*storage.TinyStore).GetWatermark(pkg.FileID)
+	chunkInfo, _ := pkg.dataPartion.store.(*storage.TinyStore).GetWatermark(pkg.FileID)
 	leaderObjId := uint64(pkg.Offset)
 	localObjId := chunkInfo.Size
 	if (leaderObjId - 1) != chunkInfo.Size {
@@ -337,10 +337,10 @@ func (s *DataNode) headNodeSetChunkInfo(pkg *Packet) (err error) {
 	var (
 		chunkId int
 	)
-	store := pkg.vol.store.(*storage.TinyStore)
+	store := pkg.dataPartion.store.(*storage.TinyStore)
 	chunkId, err = store.GetChunkForWrite()
 	if err != nil {
-		pkg.vol.status = storage.ReadOnlyStore
+		pkg.dataPartion.status = storage.ReadOnlyStore
 		return
 	}
 	pkg.FileID = uint64(chunkId)
@@ -357,7 +357,7 @@ func (s *DataNode) headNodePutChunk(pkg *Packet) {
 	if pkg.StoreMode != proto.TinyStoreMode || !pkg.isHeadNode() || !pkg.IsWriteOperation() || !pkg.IsTransitPkg() {
 		return
 	}
-	store := pkg.vol.store.(*storage.TinyStore)
+	store := pkg.dataPartion.store.(*storage.TinyStore)
 	if pkg.IsErrPack() {
 		store.PutUnAvailChunk(int(pkg.FileID))
 	} else {

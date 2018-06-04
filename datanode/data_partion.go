@@ -92,7 +92,7 @@ func (dp *DataPartion) getMembers() (bool, *PartionMembers, error) {
 		err      error
 	)
 
-	url := fmt.Sprintf(GetDataPartionMember+"?vol=%v", dp.partionId)
+	url := fmt.Sprintf(GetDataPartionMember+"?dataPartion=%v", dp.partionId)
 	if HostsBuf, err = PostToMaster(nil, url); err != nil {
 		return false, nil, err
 	}
@@ -104,7 +104,7 @@ func (dp *DataPartion) getMembers() (bool, *PartionMembers, error) {
 	}
 
 	if len(members.PartionHosts) >= 1 && members.PartionHosts[0] != LocalIP {
-		err = errors.Annotatef(ErrNotLeader, "vol[%v] current LocalIP[%v]", dp.partionId, LocalIP)
+		err = errors.Annotatef(ErrNotLeader, "dataPartion[%v] current LocalIP[%v]", dp.partionId, LocalIP)
 		return false, nil, err
 	}
 
