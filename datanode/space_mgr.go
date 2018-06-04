@@ -12,11 +12,11 @@ import (
 )
 
 type SpaceManager struct {
-	disks    map[string]*Disk
-	partions map[uint32]*DataPartion
-	diskLock sync.RWMutex
-	volLock  sync.RWMutex
-	stats    *Stats
+	disks           map[string]*Disk
+	partions        map[uint32]*DataPartion
+	diskLock        sync.RWMutex
+	dataPartionLock sync.RWMutex
+	stats           *Stats
 }
 
 func NewSpaceManager(rack string) (space *SpaceManager) {
@@ -103,16 +103,16 @@ func (space *SpaceManager) getMinPartionCntDisk() (d *Disk) {
 }
 
 func (space *SpaceManager) getDataPartion(partionId uint32) (dp *DataPartion) {
-	space.volLock.RLock()
-	defer space.volLock.RUnlock()
+	space.dataPartionLock.RLock()
+	defer space.dataPartionLock.RUnlock()
 	v = space.partions[partionId]
 
 	return
 }
 
 func (space *SpaceManager) putDataPartion(dp *DataPartion) {
-	space.volLock.Lock()
-	defer space.volLock.Unlock()
+	space.dataPartionLock.Lock()
+	defer space.dataPartionLock.Unlock()
 	space.partions[dp.partionId] = dp
 
 	return
@@ -135,12 +135,12 @@ func (space *SpaceManager) chooseDiskAndCreateVol(partionId uint32, partionType 
 
 func (space *SpaceManager) deleteVol(vodId uint32) {
 	dp := space.getDataPartion(vodId)
-	if v == nil {
+	if dp == nil {
 		return
 	}
-	space.volLock.Lock()
+	space.dataPartionLock.Lock()
 	delete(space.partions, vodId)
-	space.volLock.Unlock()
+	space.dataPartionLock.Unlock()
 	dp.exitCh <- true
 	switch dp.partionType {
 	case proto.ExtentVol:
@@ -169,12 +169,12 @@ func (s *DataNode) fillHeartBeatResponse(response *proto.DataNodeHeartBeatRespon
 	response.RackName = s.rackName
 	response.PartionInfo = make([]*proto.PartionReport, 0)
 	space := s.space
-	space.volLock.RLock()
+	space.dataPartionLock.RLock()
 	for _, dp := range space.partions {
 		vr := &proto.PartionReport{PartionID: uint64(dp.partionId), PartionStatus: dp.status, Total: uint64(dp.partionSize), Used: uint64(dp.used)}
 		response.PartionInfo = append(response.PartionInfo, vr)
 	}
-	space.volLock.RUnlock()
+	space.dataPartionLock.RUnlock()
 }
 
 func (space *SpaceManager) modifyVolsStatus() {

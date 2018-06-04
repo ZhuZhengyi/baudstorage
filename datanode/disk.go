@@ -127,7 +127,7 @@ func (d *Disk) recomputePartionCnt() {
 	}
 	var count uint64
 	dataPartionSize := 0
-	volnames := make([]string, 0)
+	dataPartionnames := make([]string, 0)
 	for _, finfo := range finfos {
 		if finfo.IsDir() && strings.HasPrefix(finfo.Name(), DataPartionPrefix) {
 			arr := strings.Split(finfo.Name(), "_")
@@ -139,12 +139,12 @@ func (d *Disk) recomputePartionCnt() {
 				continue
 			}
 			count += 1
-			volnames = append(volnames, finfo.Name())
+			dataPartionnames = append(dataPartionnames, finfo.Name())
 		}
 	}
 	d.Lock()
 	atomic.StoreUint64(&d.PartionCnt, count)
-	d.PartionNames = volnames
+	d.PartionNames = dataPartionnames
 	d.RemainWeightsForCreatePartion = d.All - d.RestSize - uint64(len(d.PartionNames)*dataPartionSize)
 	d.CreatedPartionWeights = uint64(len(d.PartionNames) * dataPartionSize)
 	d.Unlock()
@@ -164,7 +164,7 @@ func (d *Disk) UpdateSpaceInfo(localIp string) (err error) {
 	} else {
 		d.Status = storage.ReadWriteStore
 	}
-	msg := fmt.Sprintf("node[%v] Path[%v] total[%v] realAvail[%v] volsAvail[%v]"+
+	msg := fmt.Sprintf("node[%v] Path[%v] total[%v] realAvail[%v] dataPartionsAvail[%v]"+
 		"MinRestSize[%v] maxErrs[%v] ReadErrs[%v] WriteErrs[%v] status[%v]", localIp, d.Path,
 		d.All, d.Free, d.RemainWeightsForCreatePartion, d.RestSize, d.MaxErrs, d.ReadErrs, d.WriteErrs, d.Status)
 	log.LogInfo(msg)
@@ -226,13 +226,13 @@ func (d *Disk) loadDataPartion(space *SpaceManager) {
 	}
 	for _, fileInfo := range fileInfoList {
 		var dp *DataPartion
-		partionId, volSize, partionType, err := UnmarshDataPartionName(fileInfo.Name())
-		log.LogDebugf("acton[Disk.loadDataPartion] disk info path[%v] name[%v] partionId[%v] partionSize[%v] partionType[%v] err[%v].", d.Path, fileInfo.Name(), partionId, volSize, partionType, err)
+		partionId, dataPartionSize, partionType, err := UnmarshDataPartionName(fileInfo.Name())
+		log.LogDebugf("acton[Disk.loadDataPartion] disk info path[%v] name[%v] partionId[%v] partionSize[%v] partionType[%v] err[%v].", d.Path, fileInfo.Name(), partionId, dataPartionSize, partionType, err)
 		if err != nil {
 			log.LogError(fmt.Sprintf("Load[%v] from Disk[%v] Err[%v] ", partionId, d.Path, err.Error()))
 			continue
 		}
-		dp, err = NewDataPartion(partionId, partionType, path.Join(d.Path, fileInfo.Name()), d.Path, storage.ReBootStoreMode, volSize)
+		dp, err = NewDataPartion(partionId, partionType, path.Join(d.Path, fileInfo.Name()), d.Path, storage.ReBootStoreMode, dataPartionSize)
 		if err != nil {
 			log.LogError(fmt.Sprintf("Load[%v] from Disk[%v] Err[%v] ", partionId, d.Path, err.Error()))
 			continue

@@ -15,19 +15,19 @@ func (s *DataNode) HandleGetDisk(w http.ResponseWriter, r *http.Request) {
 	}
 	space.diskLock.RUnlock()
 
-	volInfos := make([]*proto.LoadDataPartionResponse, 0)
-	space.volLock.RLock()
+	dataPartionInfos := make([]*proto.LoadDataPartionResponse, 0)
+	space.dataPartionLock.RLock()
 	for _, dp := range space.partions {
-		volInfos = append(volInfos, dp.Load())
+		dataPartionInfos = append(dataPartionInfos, dp.Load())
 	}
-	space.volLock.RUnlock()
+	space.dataPartionLock.RUnlock()
 	type DisksInfo struct {
 		VolInfo []*proto.LoadDataPartionResponse
 		Disks   []*Disk
 		Rack    string
 	}
 	diskReport := &DisksInfo{
-		VolInfo: volInfos,
+		VolInfo: dataPartionInfos,
 		Disks:   disks,
 		Rack:    s.rackName,
 	}
@@ -44,12 +44,12 @@ func (s *DataNode) HandleStat(w http.ResponseWriter, r *http.Request) {
 
 func (s *DataNode) HandleVol(w http.ResponseWriter, r *http.Request) {
 	space := s.space
-	space.volLock.RLock()
-	volInfos := make([]*proto.LoadDataPartionResponse, 0)
+	space.dataPartionLock.RLock()
+	dataPartionInfos := make([]*proto.LoadDataPartionResponse, 0)
 	for _, v := range space.partions {
-		volInfos = append(volInfos, dp.LoadVol())
+		dataPartionInfos = append(dataPartionInfos, dp.LoadVol())
 	}
-	space.volLock.RUnlock()
-	body, _ := json.Marshal(volInfos)
+	space.dataPartionLock.RUnlock()
+	body, _ := json.Marshal(dataPartionInfos)
 	w.Write(body)
 }

@@ -19,7 +19,7 @@ var (
 	GetDataPartionMember = "/datanode/member"
 	ErrNotLeader         = errors.New("not leader")
 	LeastGoalNum         = 2
-	ErrLackOfGoal        = errors.New("volGoal is not equare volhosts")
+	ErrLackOfGoal        = errors.New("dataPartionGoal is not equare dataPartionhosts")
 	ErrVolOnBadDisk      = errors.New("error bad disk")
 )
 
