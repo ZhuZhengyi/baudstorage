@@ -17,12 +17,12 @@ const (
 	// order they appear (the order listed here) or the format they present (as
 	// described in the comments).  A colon appears after these items:
 	//	2009/01/23 01:23:23.123123 /a/b/c/d.go:23: message
-	Ldate         = 1 << iota     // the date: 2009/01/23
-	Ltime                         // the time: 01:23:23
-	Lmicroseconds                 // microsecond resolution: 01:23:23.123123.  assumes Ltime.
-	Llongfile                     // full file name and line number: /a/b/c/d.go:23
-	Lshortfile                    // final file name element and line number: d.go:23. overrides Llongfile
-	LstdFlags     = Ldate | Ltime // initial values for the standard logger
+	LDate         = 1 << iota     // the date: 2009/01/23
+	LTime                         // the time: 01:23:23
+	LMicroSeconds                 // microsecond resolution: 01:23:23.123123.  assumes LTime.
+	LLongFile                     // full file name and line number: /a/b/c/d.go:23
+	LShortFile                    // final file name element and line number: d.go:23. overrides LLongFile
+	LStdFlags     = LDate | LTime // initial values for the standard logger
 )
 
 // A logger represents an active logging object that generates lines of
@@ -45,7 +45,7 @@ func New(out io.WriteCloser, prefix string, flag int) *Logger {
 	return &Logger{out: out, prefix: prefix, flag: flag}
 }
 
-var std = New(os.Stderr, "", LstdFlags)
+var std = New(os.Stderr, "", LStdFlags)
 
 // Cheap integer to fixed-width decimal ASCII.  Give a negative width to avoid zero-padding.
 // Knows the buffer has capacity.
@@ -69,8 +69,8 @@ func itoa(buf *[]byte, i int, wid int) {
 
 func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int) {
 	*buf = append(*buf, l.prefix...)
-	if l.flag&(Ldate|Ltime|Lmicroseconds) != 0 {
-		if l.flag&Ldate != 0 {
+	if l.flag&(LDate|LTime|LMicroSeconds) != 0 {
+		if l.flag&LDate != 0 {
 			year, month, day := t.Date()
 			itoa(buf, year, 4)
 			*buf = append(*buf, '-')
@@ -79,22 +79,22 @@ func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int) {
 			itoa(buf, day, 2)
 			*buf = append(*buf, ' ')
 		}
-		if l.flag&(Ltime|Lmicroseconds) != 0 {
+		if l.flag&(LTime|LMicroSeconds) != 0 {
 			hour, min, sec := t.Clock()
 			itoa(buf, hour, 2)
 			*buf = append(*buf, ':')
 			itoa(buf, min, 2)
 			*buf = append(*buf, ':')
 			itoa(buf, sec, 2)
-			if l.flag&Lmicroseconds != 0 {
+			if l.flag&LMicroSeconds != 0 {
 				*buf = append(*buf, ',')
 				itoa(buf, t.Nanosecond()/1e6, 3)
 			}
 			*buf = append(*buf, ' ')
 		}
 	}
-	if l.flag&(Lshortfile|Llongfile) != 0 {
-		if l.flag&Lshortfile != 0 {
+	if l.flag&(LShortFile|LLongFile) != 0 {
+		if l.flag&LShortFile != 0 {
 			short := file
 			for i := len(file) - 1; i > 0; i-- {
 				if file[i] == '/' {
@@ -123,7 +123,7 @@ func (l *Logger) Output(calldepth int, s string) error {
 	var line int
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if l.flag&(Lshortfile|Llongfile) != 0 {
+	if l.flag&(LShortFile|LLongFile) != 0 {
 		// release lock while getting caller info - it's expensive.
 		l.mu.Unlock()
 		var ok bool
@@ -324,6 +324,8 @@ func Panicln(v ...interface{}) {
 	panic(s)
 }
 
+type Level uint8
+
 type Log struct {
 	dir    string
 	module string
@@ -334,7 +336,7 @@ type Log struct {
 	read   *Logger
 	update *Logger
 
-	level  int
+	level  Level
 	mesgCh chan string
 
 	startTime time.Time
@@ -351,13 +353,13 @@ var levels = []string{
 }
 
 const (
-	DebugLevel  = 0
-	InfoLevel   = 1
-	WarnLevel   = 2
-	ErrorLevel  = 3
-	FatalLevel  = 4
-	ReadLevel   = 5
-	UpdateLevel = 6
+	DebugLevel  Level = 1
+	InfoLevel         = DebugLevel<<1 + 1
+	WarnLevel         = InfoLevel<<1 + 1
+	ErrorLevel        = WarnLevel<<1 + 1
+	FatalLevel        = ErrorLevel<<1 + 1
+	ReadLevel         = DebugLevel
+	UpdateLevel       = DebugLevel
 
 	LogFileNameDateFormat = "2006-01-02"
 )
@@ -377,7 +379,7 @@ func GetLog() *Log {
 	return glog
 }
 
-func NewLog(dir, module string, level int) (*Log, error) {
+func NewLog(dir, module string, level Level) (*Log, error) {
 	glog = new(Log)
 	glog.dir = dir
 	glog.module = module
@@ -400,9 +402,9 @@ func NewLog(dir, module string, level int) (*Log, error) {
 	return glog, nil
 }
 
-func (l *Log) initLog(logDir, module string, level int) error {
+func (l *Log) initLog(logDir, module string, level Level) error {
 	const LogFileOpt = os.O_RDWR | os.O_CREATE | os.O_APPEND
-	logOpt := LstdFlags | Lmicroseconds
+	logOpt := LStdFlags | LMicroSeconds
 
 	getNewLog := func(logFileName, errString string) (*Logger, error) {
 		fp, e := os.OpenFile(logDir+"/"+module+logFileName, LogFileOpt, 0666)
@@ -464,54 +466,81 @@ func (l *Log) SetPrefix(s, level string) string {
 }
 
 func LogWarn(v ...interface{}) {
+	if WarnLevel&glog.level != glog.level {
+		return
+	}
 	s := fmt.Sprintln(v...)
 	s = glog.SetPrefix(s, levels[2])
 	glog.warn.Print(s)
 }
 
 func LogWarnf(format string, v ...interface{}) {
+	if WarnLevel&glog.level != glog.level {
+		return
+	}
 	s := fmt.Sprintf(format, v...)
 	s = glog.SetPrefix(s, levels[2])
 	glog.warn.Print(s)
 }
 
 func LogInfo(v ...interface{}) {
+	if InfoLevel&glog.level != glog.level {
+		return
+	}
 	s := fmt.Sprintln(v...)
 	s = glog.SetPrefix(s, levels[1])
 	glog.info.Print(s)
 }
 
 func LogInfof(format string, v ...interface{}) {
+	if InfoLevel&glog.level != glog.level {
+		return
+	}
 	s := fmt.Sprintf(format, v...)
 	s = glog.SetPrefix(s, levels[1])
 	glog.info.Print(s)
 }
 
 func LogError(v ...interface{}) {
+	if ErrorLevel&glog.level != glog.level {
+		return
+	}
 	s := fmt.Sprintln(v...)
 	s = glog.SetPrefix(s, levels[3])
 	glog.err.Print(s)
 }
 
 func LogErrorf(format string, v ...interface{}) {
+	if ErrorLevel&glog.level != glog.level {
+		return
+	}
 	s := fmt.Sprintf(format, v...)
 	s = glog.SetPrefix(s, levels[4])
 	glog.err.Print(s)
 }
 
 func LogDebug(v ...interface{}) {
+	if DebugLevel&glog.level != glog.level {
+		return
+	}
 	s := fmt.Sprintln(v...)
 	s = glog.SetPrefix(s, levels[0])
 	glog.debug.Print(s)
 }
 
 func LogDebugf(format string, v ...interface{}) {
+	if DebugLevel&glog.level != glog.level {
+		return
+	}
 	s := fmt.Sprintf(format, v...)
 	s = glog.SetPrefix(s, levels[0])
 	glog.debug.Print(s)
 }
 
 func LogFatal(v ...interface{}) {
+	if FatalLevel&glog.level != glog.level {
+		return
+	}
 	s := fmt.Sprintln(v...)
 	s = glog.SetPrefix(s, levels[4])
 	glog.err.Output(2, s)
@@ -519,6 +548,9 @@ func LogFatal(v ...interface{}) {
 }
 
 func LogFatalf(format string, v ...interface{}) {
+	if FatalLevel&glog.level != glog.level {
+		return
+	}
 	s := fmt.Sprintf(format, v...)
 	s = glog.SetPrefix(s, levels[4])
 	glog.err.Output(2, s)
@@ -526,24 +558,36 @@ func LogFatalf(format string, v ...interface{}) {
 }
 
 func LogRead(v ...interface{}) {
+	if ReadLevel&glog.level != glog.level {
+		return
+	}
 	s := fmt.Sprintln(v...)
 	s = glog.SetPrefix(s, levels[5])
 	glog.read.Print(s)
 }
 
 func LogReadf(format string, v ...interface{}) {
+	if ReadLevel&glog.level != glog.level {
+		return
+	}
 	s := fmt.Sprintf(format, v...)
 	s = glog.SetPrefix(s, levels[5])
 	glog.read.Print(s)
 }
 
 func LogWrite(v ...interface{}) {
+	if UpdateLevel&glog.level != glog.level {
+		return
+	}
 	s := fmt.Sprintln(v...)
 	s = glog.SetPrefix(s, levels[6])
 	glog.update.Print(s)
 }
 
 func LogWritef(format string, v ...interface{}) {
+	if UpdateLevel&glog.level != glog.level {
+		return
+	}
 	s := fmt.Sprintf(format, v...)
 	s = glog.SetPrefix(s, levels[6])
 	glog.update.Print(s)

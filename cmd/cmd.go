@@ -96,7 +96,7 @@ func main() {
 
 	// Init logging
 	var (
-		level int
+		level log.Level
 	)
 	switch strings.ToLower(logLevel) {
 	case "debug":

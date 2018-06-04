@@ -32,16 +32,16 @@ var tests = []tester{
 	// individual pieces:
 	{0, "", ""},
 	{0, "XXX", "XXX"},
-	{Ldate, "", Rdate + " "},
-	{Ltime, "", Rtime + " "},
-	{Ltime | Lmicroseconds, "", Rtime + Rmicroseconds + " "},
-	{Lmicroseconds, "", Rtime + Rmicroseconds + " "}, // microsec implies time
-	{Llongfile, "", Rlongfile + " "},
-	{Lshortfile, "", Rshortfile + " "},
-	{Llongfile | Lshortfile, "", Rshortfile + " "}, // shortfile overrides longfile
+	{LDate, "", Rdate + " "},
+	{LTime, "", Rtime + " "},
+	{LTime | LMicroSeconds, "", Rtime + Rmicroseconds + " "},
+	{LMicroSeconds, "", Rtime + Rmicroseconds + " "}, // microsec implies time
+	{LLongFile, "", Rlongfile + " "},
+	{LShortFile, "", Rshortfile + " "},
+	{LLongFile | LShortFile, "", Rshortfile + " "}, // shortfile overrides longfile
 	// everything at once:
-	{Ldate | Ltime | Lmicroseconds | Llongfile, "XXX", "XXX" + Rdate + " " + Rtime + Rmicroseconds + " " + Rlongfile + " "},
-	{Ldate | Ltime | Lmicroseconds | Lshortfile, "XXX", "XXX" + Rdate + " " + Rtime + Rmicroseconds + " " + Rshortfile + " "},
+	{LDate | LTime | LMicroSeconds | LLongFile, "XXX", "XXX" + Rdate + " " + Rtime + Rmicroseconds + " " + Rlongfile + " "},
+	{LDate | LTime | LMicroSeconds | LShortFile, "XXX", "XXX" + Rdate + " " + Rtime + Rmicroseconds + " " + Rshortfile + " "},
 }
 
 // Test using Println("hello", 23, "world") or using Printf("hello %d world", 23)
@@ -87,15 +87,15 @@ func TestOutput(t *testing.T) {
 
 func TestFlagAndPrefixSetting(t *testing.T) {
 	var b bytes.Buffer
-	l := New(&b, "Test:", LstdFlags)
+	l := New(&b, "Test:", LStdFlags)
 	f := l.Flags()
-	if f != LstdFlags {
-		t.Errorf("Flags 1: expected %x got %x", LstdFlags, f)
+	if f != LStdFlags {
+		t.Errorf("Flags 1: expected %x got %x", LStdFlags, f)
 	}
-	l.SetFlags(f | Lmicroseconds)
+	l.SetFlags(f | LMicroSeconds)
 	f = l.Flags()
-	if f != LstdFlags|Lmicroseconds {
-		t.Errorf("Flags 2: expected %x got %x", LstdFlags|Lmicroseconds, f)
+	if f != LStdFlags|LMicroSeconds {
+		t.Errorf("Flags 2: expected %x got %x", LStdFlags|LMicroSeconds, f)
 	}
 	p := l.Prefix()
 	if p != "Test:" {
