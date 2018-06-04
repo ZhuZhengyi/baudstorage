@@ -42,11 +42,11 @@ func UnmarshalTaskResponse(task *proto.AdminTask) (err error) {
 	log.LogDebug(fmt.Sprintf("received TaskResponse:%v", string(bytes)))
 	var response interface{}
 	switch task.OpCode {
-	case proto.OpCreateDataPartion:
+	case proto.OpCreateDataPartition:
 		response = &proto.CreateDataPartitionResponse{}
-	case proto.OpDeleteDataPartion:
+	case proto.OpDeleteDataPartition:
 		response = &proto.DeleteDataPartitionResponse{}
-	case proto.OpLoadDataPartion:
+	case proto.OpLoadDataPartition:
 		response = &proto.LoadDataPartitionResponse{}
 	case proto.OpCreateMetaPartition:
 		response = &proto.CreateMetaPartitionResponse{}
