@@ -17,13 +17,13 @@ import (
 )
 
 type CompactTask struct {
-	partionId uint32
-	chunkId   int
-	isLeader  bool
+	partitionId uint32
+	chunkId     int
+	isLeader    bool
 }
 
 func (t *CompactTask) toString() (m string) {
-	return fmt.Sprintf("dataPartion[%v]_chunk[%v]_isLeader[%v]", t.partionId, t.chunkId, t.isLeader)
+	return fmt.Sprintf("dataPartition[%v]_chunk[%v]_isLeader[%v]", t.partitionId, t.chunkId, t.isLeader)
 }
 
 const (
@@ -36,21 +36,21 @@ var (
 
 type Disk struct {
 	sync.Mutex
-	Path                          string
-	ReadErrs                      uint64
-	WriteErrs                     uint64
-	All                           uint64
-	Used                          uint64
-	Free                          uint64
-	PartionCnt                    uint64
-	RemainWeightsForCreatePartion uint64
-	CreatedPartionWeights         uint64
-	MaxErrs                       int
-	Status                        int
-	PartionNames                  []string
-	RestSize                      uint64
-	compactCh                     chan *CompactTask
-	space                         *SpaceManager
+	Path                            string
+	ReadErrs                        uint64
+	WriteErrs                       uint64
+	All                             uint64
+	Used                            uint64
+	Free                            uint64
+	PartitionCnt                    uint64
+	RemainWeightsForCreatePartition uint64
+	CreatedPartitionWeights         uint64
+	MaxErrs                         int
+	Status                          int
+	PartitionNames                  []string
+	RestSize                        uint64
+	compactCh                       chan *CompactTask
+	space                           *SpaceManager
 }
 
 func NewDisk(path string, restSize uint64, maxErrs int) (d *Disk) {
@@ -58,7 +58,7 @@ func NewDisk(path string, restSize uint64, maxErrs int) (d *Disk) {
 	d.Path = path
 	d.RestSize = restSize
 	d.MaxErrs = maxErrs
-	d.PartionNames = make([]string, 0)
+	d.PartitionNames = make([]string, 0)
 	d.RestSize = util.GB * 1
 	d.MaxErrs = 2000
 	d.DiskUsage()
@@ -89,7 +89,7 @@ func (d *Disk) addTask(t *CompactTask) (err error) {
 	case d.compactCh <- t:
 		return
 	default:
-		return errors.Annotatef(ErrDiskCompactChanFull, "diskPath:[%v] partionId[%v]", d.Path, t.partionId)
+		return errors.Annotatef(ErrDiskCompactChanFull, "diskPath:[%v] partitionId[%v]", d.Path, t.partitionId)
 	}
 }
 
@@ -101,7 +101,7 @@ func (d *Disk) compact() {
 	for {
 		select {
 		case t := <-d.compactCh:
-			dp := d.space.getDataPartion(t.partionId)
+			dp := d.space.getDataPartition(t.partitionId)
 			if dp == nil {
 				continue
 			}
@@ -119,34 +119,34 @@ func (d *Disk) addWriteErr() {
 	atomic.AddUint64(&d.WriteErrs, 1)
 }
 
-func (d *Disk) recomputePartionCnt() {
+func (d *Disk) recomputePartitionCnt() {
 	d.DiskUsage()
 	finfos, err := ioutil.ReadDir(d.Path)
 	if err != nil {
 		return
 	}
 	var count uint64
-	dataPartionSize := 0
-	dataPartionnames := make([]string, 0)
+	dataPartitionSize := 0
+	dataPartitionnames := make([]string, 0)
 	for _, finfo := range finfos {
-		if finfo.IsDir() && strings.HasPrefix(finfo.Name(), DataPartionPrefix) {
+		if finfo.IsDir() && strings.HasPrefix(finfo.Name(), DataPartitionPrefix) {
 			arr := strings.Split(finfo.Name(), "_")
 			if len(arr) != 4 {
 				continue
 			}
-			_, dataPartionSize, _, err = UnmarshDataPartionName(finfo.Name())
+			_, dataPartitionSize, _, err = UnmarshDataPartitionName(finfo.Name())
 			if err != nil {
 				continue
 			}
 			count += 1
-			dataPartionnames = append(dataPartionnames, finfo.Name())
+			dataPartitionnames = append(dataPartitionnames, finfo.Name())
 		}
 	}
 	d.Lock()
-	atomic.StoreUint64(&d.PartionCnt, count)
-	d.PartionNames = dataPartionnames
-	d.RemainWeightsForCreatePartion = d.All - d.RestSize - uint64(len(d.PartionNames)*dataPartionSize)
-	d.CreatedPartionWeights = uint64(len(d.PartionNames) * dataPartionSize)
+	atomic.StoreUint64(&d.PartitionCnt, count)
+	d.PartitionNames = dataPartitionnames
+	d.RemainWeightsForCreatePartition = d.All - d.RestSize - uint64(len(d.PartitionNames)*dataPartitionSize)
+	d.CreatedPartitionWeights = uint64(len(d.PartitionNames) * dataPartitionSize)
 	d.Unlock()
 }
 
@@ -164,42 +164,42 @@ func (d *Disk) UpdateSpaceInfo(localIp string) (err error) {
 	} else {
 		d.Status = storage.ReadWriteStore
 	}
-	msg := fmt.Sprintf("node[%v] Path[%v] total[%v] realAvail[%v] dataPartionsAvail[%v]"+
+	msg := fmt.Sprintf("node[%v] Path[%v] total[%v] realAvail[%v] dataPartitionsAvail[%v]"+
 		"MinRestSize[%v] maxErrs[%v] ReadErrs[%v] WriteErrs[%v] status[%v]", localIp, d.Path,
-		d.All, d.Free, d.RemainWeightsForCreatePartion, d.RestSize, d.MaxErrs, d.ReadErrs, d.WriteErrs, d.Status)
+		d.All, d.Free, d.RemainWeightsForCreatePartition, d.RestSize, d.MaxErrs, d.ReadErrs, d.WriteErrs, d.Status)
 	log.LogInfo(msg)
 
 	return
 }
 
-func (d *Disk) addVol(dp *DataPartion) {
+func (d *Disk) addVol(dp *DataPartition) {
 	name := dp.toName()
 	d.Lock()
 	defer d.Unlock()
-	d.PartionNames = append(d.PartionNames, name)
-	atomic.AddUint64(&d.PartionCnt, 1)
-	d.RemainWeightsForCreatePartion = d.All - d.RestSize - uint64(len(d.PartionNames)*dp.partionSize)
-	d.CreatedPartionWeights += uint64(dp.partionSize)
+	d.PartitionNames = append(d.PartitionNames, name)
+	atomic.AddUint64(&d.PartitionCnt, 1)
+	d.RemainWeightsForCreatePartition = d.All - d.RestSize - uint64(len(d.PartitionNames)*dp.partitionSize)
+	d.CreatedPartitionWeights += uint64(dp.partitionSize)
 }
 
-func (d *Disk) getDataPartions() (partionIds []uint32) {
+func (d *Disk) getDataPartitions() (partitionIds []uint32) {
 	d.Lock()
 	defer d.Unlock()
-	partionIds = make([]uint32, 0)
-	for _, name := range d.PartionNames {
-		vid, _, _, err := UnmarshDataPartionName(name)
+	partitionIds = make([]uint32, 0)
+	for _, name := range d.PartitionNames {
+		vid, _, _, err := UnmarshDataPartitionName(name)
 		if err != nil {
 			continue
 		}
-		partionIds = append(partionIds, vid)
+		partitionIds = append(partitionIds, vid)
 	}
 	return
 }
 
-func UnmarshDataPartionName(name string) (partionId uint32, partionSize int, partionMode string, err error) {
+func UnmarshDataPartitionName(name string) (partitionId uint32, partitionSize int, partitionMode string, err error) {
 	arr := strings.Split(name, "_")
 	if len(arr) != 4 {
-		err = fmt.Errorf("error dataPartion name[%v]", name)
+		err = fmt.Errorf("error dataPartition name[%v]", name)
 		return
 	}
 	var (
@@ -208,47 +208,47 @@ func UnmarshDataPartionName(name string) (partionId uint32, partionSize int, par
 	if pId, err = strconv.Atoi(arr[2]); err != nil {
 		return
 	}
-	if partionSize, err = strconv.Atoi(arr[3]); err != nil {
+	if partitionSize, err = strconv.Atoi(arr[3]); err != nil {
 		return
 	}
-	partionId = uint32(pId)
-	partionMode = arr[1]
+	partitionId = uint32(pId)
+	partitionMode = arr[1]
 	return
 }
 
-func (d *Disk) loadDataPartion(space *SpaceManager) {
+func (d *Disk) loadDataPartition(space *SpaceManager) {
 	d.Lock()
 	defer d.Unlock()
 	fileInfoList, err := ioutil.ReadDir(d.Path)
 	if err != nil {
-		log.LogErrorf("action[Disk.loadDataPartion] %dp.", err)
+		log.LogErrorf("action[Disk.loadDataPartition] %dp.", err)
 		return
 	}
 	for _, fileInfo := range fileInfoList {
-		var dp *DataPartion
-		partionId, dataPartionSize, partionType, err := UnmarshDataPartionName(fileInfo.Name())
-		log.LogDebugf("acton[Disk.loadDataPartion] disk info path[%v] name[%v] partionId[%v] partionSize[%v] partionType[%v] err[%v].", d.Path, fileInfo.Name(), partionId, dataPartionSize, partionType, err)
+		var dp *DataPartition
+		partitionId, dataPartitionSize, partitionType, err := UnmarshDataPartitionName(fileInfo.Name())
+		log.LogDebugf("acton[Disk.loadDataPartition] disk info path[%v] name[%v] partitionId[%v] partitionSize[%v] partitionType[%v] err[%v].", d.Path, fileInfo.Name(), partitionId, dataPartitionSize, partitionType, err)
 		if err != nil {
-			log.LogError(fmt.Sprintf("Load[%v] from Disk[%v] Err[%v] ", partionId, d.Path, err.Error()))
+			log.LogError(fmt.Sprintf("Load[%v] from Disk[%v] Err[%v] ", partitionId, d.Path, err.Error()))
 			continue
 		}
-		dp, err = NewDataPartion(partionId, partionType, path.Join(d.Path, fileInfo.Name()), d.Path, storage.ReBootStoreMode, dataPartionSize)
+		dp, err = NewDataPartition(partitionId, partitionType, path.Join(d.Path, fileInfo.Name()), d.Path, storage.ReBootStoreMode, dataPartitionSize)
 		if err != nil {
-			log.LogError(fmt.Sprintf("Load[%v] from Disk[%v] Err[%v] ", partionId, d.Path, err.Error()))
+			log.LogError(fmt.Sprintf("Load[%v] from Disk[%v] Err[%v] ", partitionId, d.Path, err.Error()))
 			continue
 		}
-		if space.getDataPartion(dp.partionId) == nil {
-			space.putDataPartion(dp)
+		if space.getDataPartition(dp.partitionId) == nil {
+			space.putDataPartition(dp)
 		}
 
 	}
 }
 
-func (s *DataNode) AddDiskErrs(partionId uint32, err error, flag uint8) {
+func (s *DataNode) AddDiskErrs(partitionId uint32, err error, flag uint8) {
 	if err == nil {
 		return
 	}
-	dp := s.space.getDataPartion(partionId)
+	dp := s.space.getDataPartition(partitionId)
 	if dp == nil {
 		return
 	}
@@ -285,7 +285,7 @@ func IsDiskErr(errMsg string) bool {
 func LoadFromDisk(path string, restSize uint64, maxErrs int, space *SpaceManager) (d *Disk, err error) {
 	if d, err = space.getDisk(path); err != nil {
 		d = NewDisk(path, restSize, maxErrs)
-		d.loadDataPartion(space)
+		d.loadDataPartition(space)
 		space.putDisk(d)
 		err = nil
 	}

@@ -33,12 +33,12 @@ func Test_Dentry(t *testing.T) {
 func Test_Inode(t *testing.T) {
 	ino := NewInode(1, 0)
 	ino.Extents.Put(proto.ExtentKey{
-		PartionId: 1000,
+		PartitionId: 1000,
 		ExtentId:  1222,
 		Size:      10234,
 	})
 	ino.Extents.Put(proto.ExtentKey{
-		PartionId: 1020,
+		PartitionId: 1020,
 		ExtentId:  28,
 		Size:      150,
 	})

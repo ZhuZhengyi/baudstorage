@@ -31,7 +31,7 @@ func newWritePacket(data []byte, vol *data.VolGroup) (pkg *proto.Packet) {
 	argstr := vol.Hosts[1] + proto.AddrSplit + vol.Hosts[2]
 	pkg.Arg = []byte(argstr)
 	pkg.Arglen = uint32(len(pkg.Arg))
-	pkg.PartionID = vol.VolID
+	pkg.PartitionID = vol.VolID
 	pkg.ReqID = allocReqId()
 	return
 }
@@ -45,7 +45,7 @@ func newReadPacket(vid, size uint32, fid uint64, ofs int64) (pkg *proto.Packet) 
 	pkg.FileID = fid
 	pkg.Offset = ofs
 	pkg.Arglen = 0
-	pkg.PartionID = vid
+	pkg.PartitionID = vid
 	pkg.ReqID = allocReqId()
 	return
 }
@@ -59,7 +59,7 @@ func newDelPacket(fid uint64, size uint32, ofs int64, vol *data.VolGroup) (pkg *
 	argstr := vol.Hosts[1] + proto.AddrSplit + vol.Hosts[2]
 	pkg.Arg = []byte(argstr)
 	pkg.Arglen = uint32(len(pkg.Arg))
-	pkg.PartionID = vol.VolID
+	pkg.PartitionID = vol.VolID
 	pkg.Offset = ofs
 	pkg.FileID = fid
 	pkg.ReqID = allocReqId()
@@ -67,7 +67,7 @@ func newDelPacket(fid uint64, size uint32, ofs int64, vol *data.VolGroup) (pkg *
 }
 
 func marshalKey(pkt *proto.Packet) string {
-	key := fmt.Sprintf("cfs/%v/%x/%x/%x/%x/%x", Version, pkt.PartionID, pkt.FileID, pkt.Offset, pkt.Size, pkt.Crc)
+	key := fmt.Sprintf("cfs/%v/%x/%x/%x/%x/%x", Version, pkt.PartitionID, pkt.FileID, pkt.Offset, pkt.Size, pkt.Crc)
 	return key
 }
 

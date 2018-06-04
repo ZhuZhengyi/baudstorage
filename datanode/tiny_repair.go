@@ -13,7 +13,7 @@ import (
 	"net"
 )
 
-func (dp *DataPartion) tinyRepair() {
+func (dp *DataPartition) tinyRepair() {
 	allMembers, err := dp.getAllMemberFileMetas()
 	if err != nil {
 		log.LogError(errors.ErrorStack(err))
@@ -26,13 +26,13 @@ func (dp *DataPartion) tinyRepair() {
 	}
 }
 
-func (dp *DataPartion) generatorTinyRepairTasks(allMembers []*MembersFileMetas) {
+func (dp *DataPartition) generatorTinyRepairTasks(allMembers []*MembersFileMetas) {
 	dp.generatorFixFileSizeTasks(allMembers)
 	dp.generatorTinyDeleteTasks(allMembers)
 
 }
 
-func (dp *DataPartion) generatorTinyDeleteTasks(allMembers []*MembersFileMetas) {
+func (dp *DataPartition) generatorTinyDeleteTasks(allMembers []*MembersFileMetas) {
 	store := dp.store.(*storage.TinyStore)
 	for _, chunkInfo := range allMembers[0].objects {
 		deletes := store.GetDelObjects(uint32(chunkInfo.FileIdId))
@@ -57,7 +57,7 @@ func (s *DataNode) repairObjectRead(pkg *Packet, conn *net.TCPConn) {
 	)
 	chunkID = uint32(pkg.FileID)
 	requireOid = uint64(pkg.Offset + 1)
-	localOid, err = pkg.dataPartion.store.(*storage.TinyStore).GetLastOid(chunkID)
+	localOid, err = pkg.dataPartition.store.(*storage.TinyStore).GetLastOid(chunkID)
 	log.LogWrite(pkg.ActionMsg(ActionLeaderToFollowerOpCRepairReadPackResponse,
 		fmt.Sprintf("follower require Oid[%v] localOid[%v]", requireOid, localOid), pkg.StartT, err))
 	if localOid < requireOid {
@@ -75,7 +75,7 @@ func (s *DataNode) repairObjectRead(pkg *Packet, conn *net.TCPConn) {
 	return
 }
 
-func getObjects(dp *DataPartion, chunkID uint32, startOid, lastOid uint64) (objects []*storage.Object) {
+func getObjects(dp *DataPartition, chunkID uint32, startOid, lastOid uint64) (objects []*storage.Object) {
 	objects = make([]*storage.Object, 0)
 	for startOid <= lastOid {
 		needle, err := dp.store.(*storage.TinyStore).GetObject(chunkID, uint64(startOid))
@@ -101,7 +101,7 @@ func postRepairData(pkg *Packet, lastOid uint64, data []byte, size int, conn *ne
 	return
 }
 
-func packObjectToBuf(databuf []byte, o *storage.Object, chunkID uint32, dp *DataPartion) (err error) {
+func packObjectToBuf(databuf []byte, o *storage.Object, chunkID uint32, dp *DataPartition) (err error) {
 	o.Marshal(databuf)
 	if o.Size == storage.TombstoneFileSize && o.Oid != 0 {
 		return
@@ -120,8 +120,8 @@ func syncData(chunkID uint32, startOid, endOid uint64, pkg *Packet, conn *net.TC
 		err     error
 		objects []*storage.Object
 	)
-	dataPartion := pkg.dataPartion
-	objects = getObjects(dataPartion, chunkID, startOid, endOid)
+	dataPartition := pkg.dataPartition
+	objects = getObjects(dataPartition, chunkID, startOid, endOid)
 	log.LogWrite(pkg.ActionMsg(ActionLeaderToFollowerOpRepairReadPackBuffer, string(len(objects)), pkg.StartT, err))
 	databuf := make([]byte, PkgRepairCReadRespMaxSize)
 	pos := 0
@@ -138,7 +138,7 @@ func syncData(chunkID uint32, startOid, endOid uint64, pkg *Packet, conn *net.TC
 			databuf = make([]byte, PkgRepairCReadRespMaxSize)
 			pos = 0
 		}
-		if packObjectToBuf(databuf[pos:], objects[i], chunkID, dataPartion); err != nil {
+		if packObjectToBuf(databuf[pos:], objects[i], chunkID, dataPartition); err != nil {
 			return err
 		}
 		pos += storage.ObjectHeaderSize
@@ -157,7 +157,7 @@ type RepairChunkTask struct {
 	EndObj   uint64
 }
 
-func (dp *DataPartion) applyRepairObjects(chunkId int, data []byte, endObjectId uint64) (err error) {
+func (dp *DataPartition) applyRepairObjects(chunkId int, data []byte, endObjectId uint64) (err error) {
 	offset := 0
 	store := dp.store.(*storage.TinyStore)
 	var applyObjectId uint64
@@ -176,36 +176,36 @@ func (dp *DataPartion) applyRepairObjects(chunkId int, data []byte, endObjectId 
 			err = store.WriteDeleteDentry(o.Oid, chunkId, o.Crc)
 		}
 		if err != nil {
-			return errors.Annotatef(err, "dataPartion[%v] chunkId[%v] oid[%v] writeDeleteDentry failed", dp.partionId, chunkId, o.Oid)
+			return errors.Annotatef(err, "dataPartition[%v] chunkId[%v] oid[%v] writeDeleteDentry failed", dp.partitionId, chunkId, o.Oid)
 		}
 		if offset+int(o.Size) > dataLen {
-			return errors.Annotatef(err, "dataPartion[%v] chunkId[%v] oid[%v] no body"+
-				" expect[%v] actual[%v] failed", dp.partionId, chunkId, o.Oid, o.Size, dataLen-(offset))
+			return errors.Annotatef(err, "dataPartition[%v] chunkId[%v] oid[%v] no body"+
+				" expect[%v] actual[%v] failed", dp.partitionId, chunkId, o.Oid, o.Size, dataLen-(offset))
 		}
 		ndata := data[offset : offset+int(o.Size)]
 		offset += int(o.Size)
 		ncrc := crc32.ChecksumIEEE(ndata)
 		if ncrc != o.Crc {
-			return errors.Annotatef(err, "dataPartion[%v] chunkId[%v] oid[%v] "+
-				"repair data crc  failed,expectCrc[%v] actualCrc[%v]", dp.partionId, chunkId, o.Oid, o.Crc, ncrc)
+			return errors.Annotatef(err, "dataPartition[%v] chunkId[%v] oid[%v] "+
+				"repair data crc  failed,expectCrc[%v] actualCrc[%v]", dp.partitionId, chunkId, o.Oid, o.Crc, ncrc)
 		}
 		err = store.Write(uint32(chunkId), int64(o.Oid), int64(o.Size), ndata, o.Crc)
 		if err != nil {
-			return errors.Annotatef(err, "dataPartion[%v] chunkId[%v] oid[%v] write failed", dp.partionId, chunkId, o.Oid)
+			return errors.Annotatef(err, "dataPartition[%v] chunkId[%v] oid[%v] write failed", dp.partitionId, chunkId, o.Oid)
 		}
 		applyObjectId = o.Oid
 	}
 	return nil
 }
 
-func (s *DataNode) streamRepairObjects(remoteFileInfo *storage.FileInfo, dp *DataPartion) (err error) {
+func (s *DataNode) streamRepairObjects(remoteFileInfo *storage.FileInfo, dp *DataPartition) (err error) {
 	store := dp.store.(*storage.TinyStore)
 	localChunkInfo, err := store.GetWatermark(uint64(remoteFileInfo.FileIdId))
 	if err != nil {
 		return errors.Annotatef(err, "streamRepairObjects GetWatermark error")
 	}
 	task := &RepairChunkTask{ChunkId: remoteFileInfo.FileIdId, StartObj: localChunkInfo.Size + 1, EndObj: remoteFileInfo.Size}
-	request := NewStreamChunkRepairReadPacket(dp.partionId, remoteFileInfo.FileIdId)
+	request := NewStreamChunkRepairReadPacket(dp.partitionId, remoteFileInfo.FileIdId)
 	request.Data, _ = json.Marshal(task)
 	var conn net.Conn
 	conn, err = ConnPool.Get(remoteFileInfo.Source)

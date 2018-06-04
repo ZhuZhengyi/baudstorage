@@ -347,7 +347,7 @@ func (c *Cluster) dataPartitionOffline(offlineAddr, nsName string, dp *DataParti
 	}
 	dp.offLineInMem(offlineAddr)
 	dp.checkAndRemoveMissVol(offlineAddr)
-	task = proto.NewAdminTask(proto.OpCreateDataPartion, offlineAddr, newCreateVolRequest(dp.PartitionType, dp.PartitionID))
+	task = proto.NewAdminTask(proto.OpCreateDataPartition, offlineAddr, newCreateVolRequest(dp.PartitionType, dp.PartitionID))
 	task.ID = fmt.Sprintf("%v_volID[%v]", task.ID, dp.PartitionID)
 	tasks = make([]*proto.AdminTask, 0)
 	tasks = append(tasks, task)

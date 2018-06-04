@@ -15,7 +15,7 @@ type AppendExtentKeyFunc func(inode uint64, key proto.ExtentKey) error
 type GetExtentsFunc func(inode uint64) ([]proto.ExtentKey, error)
 
 type ExtentClient struct {
-	wrapper         *data.DataPartionWrapper
+	wrapper         *data.DataPartitionWrapper
 	writers         map[uint64]*StreamWriter
 	writerLock      sync.RWMutex
 	readers         map[uint64]*StreamReader
@@ -29,7 +29,7 @@ type ExtentClient struct {
 func NewExtentClient(namespace, master string, appendExtentKey AppendExtentKeyFunc, getExtents GetExtentsFunc) (client *ExtentClient, err error) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	client = new(ExtentClient)
-	client.wrapper, err = data.NewDataPartionWrapper(namespace, master)
+	client.wrapper, err = data.NewDataPartitionWrapper(namespace, master)
 	if err != nil {
 		return nil, fmt.Errorf("init dp Wrapper failed [%v]", err.Error())
 	}
@@ -196,7 +196,7 @@ func (client *ExtentClient) Read(inode uint64, data []byte, offset int, size int
 
 func (client *ExtentClient) Delete(keys []proto.ExtentKey) (err error) {
 	for _, k := range keys {
-		dp, err := client.wrapper.GetDataPartion(k.PartionId)
+		dp, err := client.wrapper.GetDataPartition(k.PartitionId)
 		if err != nil {
 			continue
 		}
@@ -206,7 +206,7 @@ func (client *ExtentClient) Delete(keys []proto.ExtentKey) (err error) {
 	return nil
 }
 
-func (client *ExtentClient) delete(dp *data.DataPartion, extentId uint64) (err error) {
+func (client *ExtentClient) delete(dp *data.DataPartition, extentId uint64) (err error) {
 	connect, err := client.wrapper.GetConnect(dp.Hosts[0])
 	if err != nil {
 		return

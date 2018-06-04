@@ -11,10 +11,10 @@ import (
 const (
 	// Admin APIs
 	AdminGetCluster           = "/admin/getCluster"
-	AdminGetDataPartition     = "/admin/getDataPartition"
-	AdminLoadDataPartition    = "/admin/loadDataPartition"
-	AdminCreateDataPartition  = "/admin/createDataPartition"
-	AdminDataPartitoinOffline = "/admin/dataPartitionOffline"
+	AdminGetDataPartition     = "/dataPartition/get"
+	AdminLoadDataPartition    = "/dataPartition/load"
+	AdminCreateDataPartition  = "/dataPartition/create"
+	AdminDataPartitionOffline = "/dataPartition/offline"
 	AdminCreateNamespace      = "/admin/createNamespace"
 	AdminGetIp                = "/admin/getIp"
 
@@ -25,13 +25,13 @@ const (
 
 	// Node APIs
 	AddDataNode               = "/dataNode/add"
+	DataNodeOffline           = "/dataNode/offline"
+	GetDataNode               = "/dataNode/get"
 	AddMetaNode               = "/metaNode/add"
-	DataNodeOffline           = "/admin/dataNodeOffline"
-	MetaNodeOffline           = "/admin/metaNodeOffline"
-	GetDataNode               = "/admin/getDataNode"
-	GetMetaNode               = "/admin/getMetaNode"
-	AdminLoadMetaPartition    = "/admin/loadMetaPartition"
-	AdminMetaPartitionOffline = "/admin/metaPartitionOffline"
+	MetaNodeOffline           = "/metaNode/offline"
+	GetMetaNode               = "/metaNode/get"
+	AdminLoadMetaPartition    = "/metaPartition/load"
+	AdminMetaPartitionOffline = "/metaPartition/offline"
 
 	// Operation response
 	MetaNodeResponse = "/metaNode/response" // Method: 'POST', ContentType: 'application/json'
@@ -51,7 +51,7 @@ func (m *Master) handleFunctions() {
 	http.Handle(AdminGetDataPartition, m.handlerWithInterceptor())
 	http.Handle(AdminCreateDataPartition, m.handlerWithInterceptor())
 	http.Handle(AdminLoadDataPartition, m.handlerWithInterceptor())
-	http.Handle(AdminDataPartitoinOffline, m.handlerWithInterceptor())
+	http.Handle(AdminDataPartitionOffline, m.handlerWithInterceptor())
 	http.Handle(AdminCreateNamespace, m.handlerWithInterceptor())
 	http.Handle(AddDataNode, m.handlerWithInterceptor())
 	http.Handle(AddMetaNode, m.handlerWithInterceptor())
@@ -95,7 +95,7 @@ func (m *Master) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		m.getDataPartition(w, r)
 	case AdminLoadDataPartition:
 		m.loadDataPartition(w, r)
-	case AdminDataPartitoinOffline:
+	case AdminDataPartitionOffline:
 		m.dataPartitionOffline(w, r)
 	case AdminCreateNamespace:
 		m.createNamespace(w, r)

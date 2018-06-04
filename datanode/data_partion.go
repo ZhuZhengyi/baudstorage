@@ -11,68 +11,68 @@ import (
 )
 
 const (
-	DataPartionPrefix = "datapartion_"
-	EmptyVolName      = ""
+	DataPartitionPrefix = "datapartition_"
+	EmptyVolName        = ""
 )
 
 var (
 	AdminGetDataPartition     = "/admin/getDataPartition"
-	ErrNotLeader            = errors.New("not leader")
-	LeastGoalNum            = 2
-	ErrLackOfGoal           = errors.New("dataPartionGoal is not equare dataPartionhosts")
-	ErrDataPartionOnBadDisk = errors.New("error bad disk")
+	ErrNotLeader              = errors.New("not leader")
+	LeastGoalNum              = 2
+	ErrLackOfGoal             = errors.New("dataPartitionGoal is not equare dataPartitionhosts")
+	ErrDataPartitionOnBadDisk = errors.New("error bad disk")
 )
 
-type DataPartion struct {
-	partionId   uint32
-	partionType string
-	path        string
-	diskPath    string
-	partionSize int
-	used        int
-	store       interface{}
-	status      int
-	isLeader    bool
-	members     *DataPartionMembers
-	exitCh      chan bool
+type DataPartition struct {
+	partitionId   uint32
+	partitionType string
+	path          string
+	diskPath      string
+	partitionSize int
+	used          int
+	store         interface{}
+	status        int
+	isLeader      bool
+	members       *DataPartitionMembers
+	exitCh        chan bool
 }
 
-type DataPartionMembers struct {
-	PartionId     uint64
-	PartionStatus uint8
-	ReplicaNum    uint8
-	PartionType   string
-	Hosts         []string
+type DataPartitionMembers struct {
+	PartitionId     uint64
+	PartitionStatus uint8
+	ReplicaNum      uint8
+	PartitionType   string
+	Hosts           []string
 }
 
-func NewDataPartion(partionId uint32, partionType, name, diskPath string, storeMode bool, storeSize int) (dp *DataPartion, err error) {
-	dp = new(DataPartion)
-	dp.partionId = partionId
-	dp.partionType = partionType
+func NewDataPartition(partitionId uint32, partitionType, name, diskPath string, storeMode bool, storeSize int) (dp *DataPartition, err error) {
+	dp = new(DataPartition)
+	dp.partitionId = partitionId
+	dp.partitionType = partitionType
 	dp.diskPath = diskPath
 	dp.path = name
-	dp.partionSize = storeSize
+	dp.partitionSize = storeSize
 	dp.exitCh = make(chan bool, 10)
 	if name == EmptyVolName {
 		dp.path = path.Join(dp.diskPath, dp.toName())
 	}
-	switch partionType {
+	switch partitionType {
 	case proto.ExtentVol:
 		dp.store, err = storage.NewExtentStore(dp.path, storeSize, storeMode)
 	case proto.TinyVol:
 		dp.store, err = storage.NewTinyStore(dp.path, storeSize, storeMode)
 	default:
-		return nil, fmt.Errorf("NewDataPartion[%v] WrongVolMode[%v]", partionId, partionType)
+		return nil, fmt.Errorf("NewDataPartition[%v] WrongVolMode[%v]", partitionId, partitionType)
 	}
 	go dp.checkExtent()
 	return
 }
 
-func (dp *DataPartion) toName() (m string) {
-	return fmt.Sprintf(DataPartionPrefix+dp.partionType+"_%v_%v", dp.partionId, dp.partionSize)
+func (dp *DataPartition) toName() (m string) {
+	return fmt.Sprintf(DataPartitionPrefix+dp.partitionType+"_%v_%v", dp.partitionId, dp.partitionSize)
 }
 
-func (dp *DataPartion) parseVolMember() (err error) {
+func (dp *DataPartition) parseVolMember() (err error) {
 	if dp.status == storage.DiskErrStore {
 		return
 	}
@@ -87,25 +87,25 @@ func (dp *DataPartion) parseVolMember() (err error) {
 	return nil
 }
 
-func (dp *DataPartion) getMembers() (bool, *DataPartionMembers, error) {
+func (dp *DataPartition) getMembers() (bool, *DataPartitionMembers, error) {
 	var (
 		HostsBuf []byte
 		err      error
 	)
 
-	url := fmt.Sprintf(AdminGetDataPartition+"?id=%v", dp.partionId)
+	url := fmt.Sprintf(AdminGetDataPartition+"?id=%v", dp.partitionId)
 	if HostsBuf, err = PostToMaster(nil, url); err != nil {
 		return false, nil, err
 	}
-	members := new(DataPartionMembers)
+	members := new(DataPartitionMembers)
 
 	if err = json.Unmarshal(HostsBuf, &members); err != nil {
-		log.LogError(fmt.Sprintf(ActionGetFoolwers+" v[%v] json unmarshal [%v] err[%v]", dp.partionId, string(HostsBuf), err))
+		log.LogError(fmt.Sprintf(ActionGetFoolwers+" v[%v] json unmarshal [%v] err[%v]", dp.partitionId, string(HostsBuf), err))
 		return false, nil, err
 	}
 
 	if len(members.Hosts) >= 1 && members.Hosts[0] != LocalIP {
-		err = errors.Annotatef(ErrNotLeader, "dataPartion[%v] current LocalIP[%v]", dp.partionId, LocalIP)
+		err = errors.Annotatef(ErrNotLeader, "dataPartition[%v] current LocalIP[%v]", dp.partitionId, LocalIP)
 		return false, nil, err
 	}
 
@@ -114,25 +114,25 @@ func (dp *DataPartion) getMembers() (bool, *DataPartionMembers, error) {
 		return false, nil, err
 	}
 
-	if members.PartionStatus == storage.DiskErrStore || dp.status == storage.DiskErrStore {
-		err = ErrDataPartionOnBadDisk
+	if members.PartitionStatus == storage.DiskErrStore || dp.status == storage.DiskErrStore {
+		err = ErrDataPartitionOnBadDisk
 		return false, nil, err
 	}
 
 	return true, members, nil
 }
 
-func (dp *DataPartion) Load() (response *proto.LoadDataPartionResponse) {
-	response = new(proto.LoadDataPartionResponse)
-	response.PartionId = uint64(dp.partionId)
-	response.PartionStatus = uint8(dp.status)
-	response.DataPartionType = dp.partionType
-	response.PartionSnapshot = make([]*proto.File, 0)
-	switch dp.partionType {
+func (dp *DataPartition) Load() (response *proto.LoadDataPartitionResponse) {
+	response = new(proto.LoadDataPartitionResponse)
+	response.PartitionId = uint64(dp.partitionId)
+	response.PartitionStatus = uint8(dp.status)
+	response.PartitionType = dp.partitionType
+	response.PartitionSnapshot = make([]*proto.File, 0)
+	switch dp.partitionType {
 	case proto.ExtentVol:
 		var err error
 		store := dp.store.(*storage.ExtentStore)
-		response.PartionSnapshot, err = store.SnapShot()
+		response.PartitionSnapshot, err = store.SnapShot()
 		response.Used = uint64(store.GetStoreUsedSize())
 		if err != nil {
 			response.Status = proto.TaskFail

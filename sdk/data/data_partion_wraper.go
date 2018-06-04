@@ -18,72 +18,72 @@ import (
 )
 
 const (
-	DataPartionViewUrl       = "/client/datapartion?name="
-	ActionGetDataPartionView = "ActionGetDataPartionView"
+	DataPartitionViewUrl       = "/client/datapartition?name="
+	ActionGetDataPartitionView = "ActionGetDataPartitionView"
 )
 
 const (
-	MinWritableDataPartionNum = 20
+	MinWritableDataPartitionNum = 20
 )
 
-type DataPartion struct {
-	DataPartionID uint32
-	Status        uint8
-	ReplicaNum    uint8
-	Hosts         []string
+type DataPartition struct {
+	DataPartitionID uint32
+	Status          uint8
+	ReplicaNum      uint8
+	Hosts           []string
 }
 
-type DataPartionView struct {
-	Partions []*DataPartion
+type DataPartitionView struct {
+	Partitions []*DataPartition
 }
 
-func (dp *DataPartion) GetAllAddrs() (m string) {
+func (dp *DataPartition) GetAllAddrs() (m string) {
 	return strings.Join(dp.Hosts[1:], proto.AddrSplit) + proto.AddrSplit
 }
 
-type DataPartionWrapper struct {
+type DataPartitionWrapper struct {
 	sync.RWMutex
-	namespace string
-	master    []string
-	conns     *pool.ConnPool
-	partions  map[uint32]*DataPartion
-	rwPartion []*DataPartion
+	namespace   string
+	master      []string
+	conns       *pool.ConnPool
+	partitions  map[uint32]*DataPartition
+	rwPartition []*DataPartition
 }
 
-func NewDataPartionWrapper(namespace, masterHosts string) (wrapper *DataPartionWrapper, err error) {
+func NewDataPartitionWrapper(namespace, masterHosts string) (wrapper *DataPartitionWrapper, err error) {
 	master := strings.Split(masterHosts, ",")
-	wrapper = new(DataPartionWrapper)
+	wrapper = new(DataPartitionWrapper)
 	wrapper.master = master
 	wrapper.namespace = namespace
 	wrapper.conns = pool.NewConnPool()
-	wrapper.rwPartion = make([]*DataPartion, 0)
-	wrapper.partions = make(map[uint32]*DataPartion)
-	if err = wrapper.getDataPartionFromMaster(); err != nil {
+	wrapper.rwPartition = make([]*DataPartition, 0)
+	wrapper.partitions = make(map[uint32]*DataPartition)
+	if err = wrapper.getDataPartitionFromMaster(); err != nil {
 		return
 	}
 	go wrapper.update()
 	return
 }
 
-func (wrapper *DataPartionWrapper) update() {
+func (wrapper *DataPartitionWrapper) update() {
 	ticker := time.NewTicker(time.Minute * 5)
 	for {
 		select {
 		case <-ticker.C:
-			wrapper.getDataPartionFromMaster()
+			wrapper.getDataPartitionFromMaster()
 		}
 	}
 }
 
-func (wrapper *DataPartionWrapper) getDataPartionFromMaster() (err error) {
+func (wrapper *DataPartitionWrapper) getDataPartitionFromMaster() (err error) {
 	for _, m := range wrapper.master {
 		if m == "" {
 			continue
 		}
 		var resp *http.Response
-		resp, err = http.Get("http://" + m + DataPartionViewUrl + wrapper.namespace)
+		resp, err = http.Get("http://" + m + DataPartitionViewUrl + wrapper.namespace)
 		if err != nil {
-			log.LogError(fmt.Sprintf(ActionGetDataPartionView+"get VolView from master[%v] err[%v]", m, err.Error()))
+			log.LogError(fmt.Sprintf(ActionGetDataPartitionView+"get VolView from master[%v] err[%v]", m, err.Error()))
 			continue
 		}
 		defer resp.Body.Close()
@@ -91,94 +91,94 @@ func (wrapper *DataPartionWrapper) getDataPartionFromMaster() (err error) {
 		if err != nil {
 			continue
 		}
-		views := new(DataPartionView)
+		views := new(DataPartitionView)
 		if err = json.Unmarshal(body, views); err != nil {
-			log.LogError(fmt.Sprintf(ActionGetDataPartionView+"get VolView from master[%v] err[%v]", m, err.Error()))
+			log.LogError(fmt.Sprintf(ActionGetDataPartitionView+"get VolView from master[%v] err[%v]", m, err.Error()))
 			continue
 		}
 		log.LogInfof("Get VolView from master: %v", string(body))
-		wrapper.updateDataPartion(views.Partions)
+		wrapper.updateDataPartition(views.Partitions)
 		break
 	}
 
 	return
 }
 
-func (wrapper *DataPartionWrapper) replaceOrInsertPartion(dp *DataPartion) {
+func (wrapper *DataPartitionWrapper) replaceOrInsertPartition(dp *DataPartition) {
 	wrapper.Lock()
 	defer wrapper.Unlock()
-	if _, ok := wrapper.partions[dp.DataPartionID]; ok {
-		delete(wrapper.partions, dp.DataPartionID)
+	if _, ok := wrapper.partitions[dp.DataPartitionID]; ok {
+		delete(wrapper.partitions, dp.DataPartitionID)
 	}
-	wrapper.partions[dp.DataPartionID] = dp
+	wrapper.partitions[dp.DataPartitionID] = dp
 }
 
-func (wrapper *DataPartionWrapper) updateDataPartion(partions []*DataPartion) {
-	rwPartionGroups := make([]*DataPartion, 0)
-	for _, dp := range partions {
+func (wrapper *DataPartitionWrapper) updateDataPartition(partitions []*DataPartition) {
+	rwPartitionGroups := make([]*DataPartition, 0)
+	for _, dp := range partitions {
 		if dp.Status == storage.ReadWriteStore {
-			rwPartionGroups = append(rwPartionGroups, dp)
+			rwPartitionGroups = append(rwPartitionGroups, dp)
 		}
 	}
 
 	// If the view received from master cannot guarentee the minimum number
-	// of volume partions, it is probably due to a **temporary** network problem
+	// of volume partitions, it is probably due to a **temporary** network problem
 	// between master and datanode. So do not update the vol group view for
 	// now, and use the old information.
-	if len(rwPartionGroups) < MinWritableDataPartionNum {
+	if len(rwPartitionGroups) < MinWritableDataPartitionNum {
 		return
 	}
-	wrapper.rwPartion = rwPartionGroups
+	wrapper.rwPartition = rwPartitionGroups
 
-	for _, dp := range partions {
-		wrapper.replaceOrInsertPartion(dp)
+	for _, dp := range partitions {
+		wrapper.replaceOrInsertPartition(dp)
 	}
 }
 
-func isExcluded(partionId uint32, excludes []uint32) bool {
+func isExcluded(partitionId uint32, excludes []uint32) bool {
 	for _, id := range excludes {
-		if id == partionId {
+		if id == partitionId {
 			return true
 		}
 	}
 	return false
 }
 
-func (wrapper *DataPartionWrapper) GetWriteDataPartion(exclude []uint32) (*DataPartion, error) {
-	rwPartionGroups := wrapper.rwPartion
-	if len(rwPartionGroups) == 0 {
-		return nil, fmt.Errorf("No writable DataPartion")
+func (wrapper *DataPartitionWrapper) GetWriteDataPartition(exclude []uint32) (*DataPartition, error) {
+	rwPartitionGroups := wrapper.rwPartition
+	if len(rwPartitionGroups) == 0 {
+		return nil, fmt.Errorf("No writable DataPartition")
 	}
 
 	rand.Seed(time.Now().UnixNano())
-	choose := rand.Intn(len(rwPartionGroups))
-	partion := rwPartionGroups[choose]
-	if !isExcluded(partion.DataPartionID, exclude) {
-		return partion, nil
+	choose := rand.Intn(len(rwPartitionGroups))
+	partition := rwPartitionGroups[choose]
+	if !isExcluded(partition.DataPartitionID, exclude) {
+		return partition, nil
 	}
 
-	for _, partion = range rwPartionGroups {
-		if !isExcluded(partion.DataPartionID, exclude) {
-			return partion, nil
+	for _, partition = range rwPartitionGroups {
+		if !isExcluded(partition.DataPartitionID, exclude) {
+			return partition, nil
 		}
 	}
-	return nil, fmt.Errorf("No writable DataPartion")
+	return nil, fmt.Errorf("No writable DataPartition")
 }
 
-func (wrapper *DataPartionWrapper) GetDataPartion(partionID uint32) (*DataPartion, error) {
+func (wrapper *DataPartitionWrapper) GetDataPartition(partitionID uint32) (*DataPartition, error) {
 	wrapper.RLock()
 	defer wrapper.RUnlock()
-	dp, ok := wrapper.partions[partionID]
+	dp, ok := wrapper.partitions[partitionID]
 	if !ok {
-		return nil, fmt.Errorf("DataPartion[%v] not exsit", partionID)
+		return nil, fmt.Errorf("DataPartition[%v] not exsit", partitionID)
 	}
 	return dp, nil
 }
 
-func (wrapper *DataPartionWrapper) GetConnect(addr string) (net.Conn, error) {
+func (wrapper *DataPartitionWrapper) GetConnect(addr string) (net.Conn, error) {
 	return wrapper.conns.Get(addr)
 }
 
-func (wrapper *DataPartionWrapper) PutConnect(conn net.Conn) {
+func (wrapper *DataPartitionWrapper) PutConnect(conn net.Conn) {
 	wrapper.conns.Put(conn)
 }

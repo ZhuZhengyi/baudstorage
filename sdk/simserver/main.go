@@ -512,7 +512,7 @@ func (m *MetaServer) handleAppendExtentKey(conn net.Conn, p *proto.Packet) error
 		inode.size = req.Extent.Size
 	} else {
 		ek := inode.extents[cnt-1]
-		if ek.PartionId != req.Extent.PartionId || ek.ExtentId != req.Extent.ExtentId {
+		if ek.PartitionId != req.Extent.PartitionId || ek.ExtentId != req.Extent.ExtentId {
 			inode.extents = append(inode.extents, req.Extent)
 			inode.size += req.Extent.Size
 		} else {

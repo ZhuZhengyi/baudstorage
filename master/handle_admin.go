@@ -205,12 +205,12 @@ func (m *Master) dataPartitionOffline(w http.ResponseWriter, r *http.Request) {
 		goto errDeal
 	}
 	m.cluster.dataPartitionOffline(addr, nsName, vg, HandleDataPartitionOfflineErr)
-	rstMsg = fmt.Sprintf(AdminDataPartitoinOffline+"dataPartitionID :%v  on node:%v  has offline success", partitionID, addr)
+	rstMsg = fmt.Sprintf(AdminDataPartitionOffline+"dataPartitionID :%v  on node:%v  has offline success", partitionID, addr)
 	io.WriteString(w, rstMsg)
 	Warn(m.clusterName, rstMsg)
 	return
 errDeal:
-	logMsg := getReturnMessage(AdminDataPartitoinOffline, r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	logMsg := getReturnMessage(AdminDataPartitionOffline, r.RemoteAddr, err.Error(), http.StatusBadRequest)
 	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }

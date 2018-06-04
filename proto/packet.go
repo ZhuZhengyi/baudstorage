@@ -67,9 +67,9 @@ const (
 	OpLoadMetaPartition    uint8 = 0x24
 	OpOfflineMetaPartition uint8 = 0x25
 
-	OpCreateDataPartion uint8 = 0x26
-	OpDeleteDataPartion uint8 = 0x27
-	OpLoadDataPartion   uint8 = 0x28
+	OpCreateDataPartition uint8 = 0x26
+	OpDeleteDataPartition uint8 = 0x27
+	OpLoadDataPartition   uint8 = 0x28
 	OpDataNodeHeartbeat uint8 = 0x29
 	OpReplicateFile     uint8 = 0x2A
 	OpDeleteFile        uint8 = 0x2B
@@ -108,7 +108,7 @@ type Packet struct {
 	Crc        uint32
 	Size       uint32
 	Arglen     uint32
-	PartionID  uint32
+	PartitionID  uint32
 	FileID     uint64
 	Offset     int64
 	ReqID      int64
@@ -191,11 +191,11 @@ func (p *Packet) GetOpMsg() (m string) {
 		m = "OpLoadMetaPartition"
 	case OpOfflineMetaPartition:
 		m = "OpOfflineMetaPartition"
-	case OpCreateDataPartion:
+	case OpCreateDataPartition:
 		m = "OpCreateDataPartion"
-	case OpDeleteDataPartion:
+	case OpDeleteDataPartition:
 		m = "OpDeleteDataPartion"
-	case OpLoadDataPartion:
+	case OpLoadDataPartition:
 		m = "OpLoadDataPartion"
 	case OpDataNodeHeartbeat:
 		m = "OpDataNodeHeartbeat"
@@ -243,7 +243,7 @@ func (p *Packet) MarshalHeader(out []byte) {
 	binary.BigEndian.PutUint32(out[5:9], p.Crc)
 	binary.BigEndian.PutUint32(out[9:13], p.Size)
 	binary.BigEndian.PutUint32(out[13:17], p.Arglen)
-	binary.BigEndian.PutUint32(out[17:21], p.PartionID)
+	binary.BigEndian.PutUint32(out[17:21], p.PartitionID)
 	binary.BigEndian.PutUint64(out[21:29], p.FileID)
 	binary.BigEndian.PutUint64(out[29:37], uint64(p.Offset))
 	binary.BigEndian.PutUint64(out[37:HeaderSize], uint64(p.ReqID))
@@ -264,7 +264,7 @@ func (p *Packet) UnmarshalHeader(in []byte) error {
 	p.Crc = binary.BigEndian.Uint32(in[5:9])
 	p.Size = binary.BigEndian.Uint32(in[9:13])
 	p.Arglen = binary.BigEndian.Uint32(in[13:17])
-	p.PartionID = binary.BigEndian.Uint32(in[17:21])
+	p.PartitionID = binary.BigEndian.Uint32(in[17:21])
 	p.FileID = binary.BigEndian.Uint64(in[21:29])
 	p.Offset = int64(binary.BigEndian.Uint64(in[29:37]))
 	p.ReqID = int64(binary.BigEndian.Uint64(in[37:HeaderSize]))
@@ -414,7 +414,7 @@ func (p *Packet) PackErrorWithBody(errCode uint8, reply []byte) {
 }
 
 func (p *Packet) GetUniqLogId() (m string) {
-	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v_%v", p.ReqID, p.PartionID, p.FileID,
+	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v_%v", p.ReqID, p.PartitionID, p.FileID,
 		p.Offset, p.Size, p.GetOpMsg(), p.GetResultMesg())
 
 	return

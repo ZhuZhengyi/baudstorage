@@ -14,43 +14,43 @@ type ClusterInfo struct {
 	Ip      string
 }
 
-type CreateDataPartionRequest struct {
-	DataPartionType string
-	PartionId       uint64
-	PartionSize     int
+type CreateDataPartitionRequest struct {
+	PartitionType string
+	PartitionId   uint64
+	PartitionSize int
 }
 
-type CreateDataPartionResponse struct {
-	PartionId uint64
-	Status    uint8
-	Result    string
+type CreateDataPartitionResponse struct {
+	PartitionId uint64
+	Status      uint8
+	Result      string
 }
 
-type DeleteDataPartionRequest struct {
-	DataPartionType string
-	PartionId       uint64
-	PartionSize     int
+type DeleteDataPartitionRequest struct {
+	DataPartitionType string
+	PartitionId       uint64
+	PartitionSize     int
 }
 
-type DeleteDataPartionResponse struct {
-	Status    uint8
-	Result    string
-	PartionId uint64
+type DeleteDataPartitionResponse struct {
+	Status      uint8
+	Result      string
+	PartitionId uint64
 }
 
-type LoadDataPartionRequest struct {
-	DataPartionType string
-	PartionId       uint64
+type LoadDataPartitionRequest struct {
+	PartitionType string
+	PartitionId   uint64
 }
 
-type LoadDataPartionResponse struct {
-	DataPartionType string
-	PartionId       uint64
-	Used            uint64
-	PartionSnapshot []*File
-	Status          uint8
-	PartionStatus   uint8
-	Result          string
+type LoadDataPartitionResponse struct {
+	PartitionType     string
+	PartitionId       uint64
+	Used              uint64
+	PartitionSnapshot []*File
+	Status            uint8
+	PartitionStatus   uint8
+	Result            string
 }
 
 type File struct {
@@ -83,11 +83,11 @@ type HeartBeatRequest struct {
 	MasterAddr string
 }
 
-type PartionReport struct {
-	PartionID     uint64
-	PartionStatus int
-	Total         uint64
-	Used          uint64
+type PartitionReport struct {
+	PartitionID     uint64
+	PartitionStatus int
+	Total           uint64
+	Used            uint64
 }
 
 type DataNodeHeartBeatResponse struct {
@@ -99,7 +99,7 @@ type DataNodeHeartBeatResponse struct {
 	CreatedVolCnt             uint32
 	MaxWeightsForCreateVol    uint64
 	RackName                  string
-	PartionInfo               []*PartionReport
+	PartitionInfo             []*PartitionReport
 	Status                    uint8
 	Result                    string
 }
