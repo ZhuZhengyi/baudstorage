@@ -222,7 +222,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 func (stream *StreamWriter) recoverExtent() (err error) {
 	retryPackets := stream.getWriter().getNeedRetrySendPackets()
 	for i := 0; i < MaxSelectDataPartionForWrite; i++ {
-		stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.DataPartitionID)
+		stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID)
 		if err = stream.allocateNewExtentWriter(); err != nil {
 			err = errors.Annotatef(err, "RecoverExtent Failed")
 			continue
@@ -281,7 +281,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 		log.LogErrorf(errors.Annotatef(err, "allocateNewExtentWriter").Error())
 		return errors.Annotatef(err, "allocateNewExtentWriter")
 	}
-	stream.currentPartitionId = dp.DataPartitionID
+	stream.currentPartitionId = dp.PartitionID
 	stream.currentExtentId = extentId
 	stream.setWriter(writer)
 	err = nil

@@ -165,7 +165,7 @@ func (d *Disk) UpdateSpaceInfo(localIp string) (err error) {
 		d.Status = storage.ReadWriteStore
 	}
 	msg := fmt.Sprintf("node[%v] Path[%v] total[%v] realAvail[%v] dataPartitionsAvail[%v]"+
-		"MinRestSize[%v] maxErrs[%v] ReadErrs[%v] WriteErrs[%v] status[%v]", localIp, d.Path,
+		"MinRestSize[%v] maxErrs[%v] ReadErrs[%v] WriteErrs[%v] partitionStatus[%v]", localIp, d.Path,
 		d.All, d.Free, d.RemainWeightsForCreatePartition, d.RestSize, d.MaxErrs, d.ReadErrs, d.WriteErrs, d.Status)
 	log.LogInfo(msg)
 

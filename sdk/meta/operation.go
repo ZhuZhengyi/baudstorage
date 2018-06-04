@@ -14,7 +14,7 @@ import (
 func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *proto.InodeInfo, err error) {
 	defer func() {
 		if err != nil {
-			log.LogError(err)
+			log.LogError(errors.ErrorStack(err))
 		}
 	}()
 
@@ -59,7 +59,7 @@ func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *pro
 func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, extents []proto.ExtentKey, err error) {
 	defer func() {
 		if err != nil {
-			log.LogError(err)
+			log.LogError(errors.ErrorStack(err))
 		}
 	}()
 
@@ -105,7 +105,7 @@ func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, extents 
 func (mw *MetaWrapper) dcreate(mc *MetaConn, parentID uint64, name string, inode uint64, mode uint32) (status int, err error) {
 	defer func() {
 		if err != nil {
-			log.LogError(err)
+			log.LogError(errors.ErrorStack(err))
 		}
 	}()
 
@@ -145,7 +145,7 @@ func (mw *MetaWrapper) dcreate(mc *MetaConn, parentID uint64, name string, inode
 func (mw *MetaWrapper) ddelete(mc *MetaConn, parentID uint64, name string) (status int, inode uint64, err error) {
 	defer func() {
 		if err != nil {
-			log.LogError(err)
+			log.LogError(errors.ErrorStack(err))
 		}
 	}()
 
@@ -190,11 +190,12 @@ func (mw *MetaWrapper) ddelete(mc *MetaConn, parentID uint64, name string) (stat
 
 func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (status int, inode uint64, mode uint32, err error) {
 	defer func() {
-		if err != nil && status != statusNoent {
-			log.LogError(err)
+		if err != nil {
+			log.LogError(errors.ErrorStack(err))
 		}
 	}()
 
+	log.LogDebugf("lookup: partitionID(%v) parent(%v) name(%v)", mc.id, parentID, name)
 	req := &proto.LookupRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
@@ -237,8 +238,8 @@ func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (statu
 
 func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto.InodeInfo, err error) {
 	defer func() {
-		if err != nil && status != statusNoent {
-			log.LogError(err)
+		if err != nil {
+			log.LogError(errors.ErrorStack(err))
 		}
 	}()
 
@@ -284,8 +285,8 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 
 func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (status int, children []proto.Dentry, err error) {
 	defer func() {
-		if err != nil && status != statusNoent {
-			log.LogError(err)
+		if err != nil {
+			log.LogError(errors.ErrorStack(err))
 		}
 	}()
 
@@ -322,13 +323,19 @@ func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (status int, child
 	resp := new(proto.ReadDirResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
-		err = errors.Annotatef(err, "icreate: PacketData(%v)", string(packet.Data))
+		err = errors.Annotatef(err, "readdir: PacketData(%v)", string(packet.Data))
 		return
 	}
 	return statusOK, resp.Children, nil
 }
 
 func (mw *MetaWrapper) appendExtentKey(mc *MetaConn, inode uint64, extent proto.ExtentKey) (status int, err error) {
+	defer func() {
+		if err != nil {
+			log.LogError(errors.ErrorStack(err))
+		}
+	}()
+
 	req := &proto.AppendExtentKeyRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
@@ -340,7 +347,6 @@ func (mw *MetaWrapper) appendExtentKey(mc *MetaConn, inode uint64, extent proto.
 	packet.Opcode = proto.OpMetaExtentsAdd
 	err = packet.MarshalData(req)
 	if err != nil {
-		log.LogError(err)
 		return
 	}
 
@@ -350,16 +356,22 @@ func (mw *MetaWrapper) appendExtentKey(mc *MetaConn, inode uint64, extent proto.
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		log.LogError(err)
+		err = errors.Annotatef(err, "appendExtentKey: req(%v)", *req)
 		return
 	}
 	if packet.ResultCode != proto.OpOk {
-		log.LogErrorf("ResultCode(%v)\n", packet.ResultCode)
+		log.LogErrorf("appendExtentKey: result(%v)", packet.GetResultMesg())
 	}
 	return parseStatus(packet.ResultCode), nil
 }
 
 func (mw *MetaWrapper) getExtents(mc *MetaConn, inode uint64) (status int, extents []proto.ExtentKey, err error) {
+	defer func() {
+		if err != nil {
+			log.LogError(errors.ErrorStack(err))
+		}
+	}()
+
 	req := &proto.GetExtentsRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
@@ -370,7 +382,6 @@ func (mw *MetaWrapper) getExtents(mc *MetaConn, inode uint64) (status int, exten
 	packet.Opcode = proto.OpMetaExtentsList
 	err = packet.MarshalData(req)
 	if err != nil {
-		log.LogError(err)
 		return
 	}
 
@@ -380,19 +391,21 @@ func (mw *MetaWrapper) getExtents(mc *MetaConn, inode uint64) (status int, exten
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		log.LogError(err)
+		err = errors.Annotatef(err, "getExtents: req(%v)", *req)
 		return
 	}
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
 		extents = make([]proto.ExtentKey, 0)
+		log.LogErrorf("getExtents: result(%v)", packet.GetResultMesg())
 		return
 	}
 
 	resp := new(proto.GetExtentsResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
+		err = errors.Annotatef(err, "getExtents: PacketData(%v)", string(packet.Data))
 		return
 	}
 	return statusOK, resp.Extents, nil

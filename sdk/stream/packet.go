@@ -16,7 +16,7 @@ type Packet struct {
 
 func NewWritePacket(dp *data.DataPartition, extentId, seqNo uint64, offset int) (p *Packet) {
 	p = new(Packet)
-	p.PartitionID = dp.DataPartitionID
+	p.PartitionID = dp.PartitionID
 	p.Magic = proto.ProtoMagic
 	p.Data = make([]byte, 0)
 	p.StoreMode = proto.ExtentStoreMode
@@ -48,7 +48,7 @@ func NewReadPacket(key proto.ExtentKey, offset, size int) (p *Packet) {
 
 func NewCreateExtentPacket(dp *data.DataPartition) (p *Packet) {
 	p = new(Packet)
-	p.PartitionID = dp.DataPartitionID
+	p.PartitionID = dp.PartitionID
 	p.Magic = proto.ProtoMagic
 	p.Data = make([]byte, 0)
 	p.StoreMode = proto.ExtentStoreMode
@@ -66,7 +66,7 @@ func NewDeleteExtentPacket(dp *data.DataPartition, extentId uint64) (p *Packet) 
 	p.Magic = proto.ProtoMagic
 	p.Opcode = proto.OpMarkDelete
 	p.StoreMode = proto.ExtentStoreMode
-	p.PartitionID = dp.DataPartitionID
+	p.PartitionID = dp.PartitionID
 	p.FileID = extentId
 	p.ReqID = proto.GetReqID()
 	p.Nodes = uint8(len(dp.Hosts) - 1)

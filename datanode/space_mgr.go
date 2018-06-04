@@ -31,6 +31,7 @@ func NewSpaceManager(rack string) (space *SpaceManager) {
 			case <-ticker:
 				space.modifyVolsStatus()
 				space.updateMetrics()
+				space.closeActiveFiles()
 			}
 		}
 	}()
@@ -83,8 +84,8 @@ func (space *SpaceManager) updateMetrics() {
 }
 
 func (space *SpaceManager) getMinPartitionCntDisk() (d *Disk) {
-	space.diskLock.RLock()
-	defer space.diskLock.RUnlock()
+	space.diskLock.Lock()
+	defer space.diskLock.Unlock()
 	var minVolCnt uint64
 	minVolCnt = math.MaxUint64
 	var path string
@@ -153,6 +154,30 @@ func (space *SpaceManager) deleteVol(vodId uint32) {
 	}
 }
 
+func (space *SpaceManager)closeActiveFiles(){
+	partitions:=make([]*DataPartition,0)
+	space.dataPartitionLock.RLock()
+	for _,partition:=range space.partitions{
+		partitions=append(partitions,partition)
+	}
+	defer space.dataPartitionLock.RUnlock()
+	activeFiles:=0
+	for _,partition:=range partitions{
+		if partition.partitionType==proto.ExtentVol{
+			store:=partition.store.(*storage.ExtentStore)
+			activeFiles+=store.GetStoreActiveFiles()
+		}
+	}
+	if activeFiles>=MaxActiveExtents{
+		for _,partition:=range partitions{
+			if partition.partitionType==proto.ExtentVol{
+				store:=partition.store.(*storage.ExtentStore)
+				store.CloseStoreActiveFiles()
+			}
+		}
+	}
+}
+
 func (s *DataNode) fillHeartBeatResponse(response *proto.DataNodeHeartBeatResponse) {
 	response.Status = proto.TaskSuccess
 	stat := s.space.stats
@@ -171,7 +196,7 @@ func (s *DataNode) fillHeartBeatResponse(response *proto.DataNodeHeartBeatRespon
 	space := s.space
 	space.dataPartitionLock.RLock()
 	for _, dp := range space.partitions {
-		vr := &proto.PartitionReport{PartitionID: uint64(dp.partitionId), PartitionStatus: dp.status, Total: uint64(dp.partitionSize), Used: uint64(dp.used)}
+		vr := &proto.PartitionReport{PartitionID: uint64(dp.partitionId), PartitionStatus: dp.partitionStatus, Total: uint64(dp.partitionSize), Used: uint64(dp.used)}
 		response.PartitionInfo = append(response.PartitionInfo, vr)
 	}
 	space.dataPartitionLock.RUnlock()
@@ -193,22 +218,22 @@ func (space *SpaceManager) modifyVolsStatus() {
 			switch dp.partitionType {
 			case proto.ExtentVol:
 				store := dp.store.(*storage.ExtentStore)
-				dp.status = store.GetStoreStatus()
+				dp.partitionStatus = store.GetStoreStatus()
 				dp.used = int(store.GetStoreUsedSize())
 			case proto.TinyVol:
 				store := dp.store.(*storage.TinyStore)
-				dp.status = store.GetStoreStatus()
+				dp.partitionStatus = store.GetStoreStatus()
 				if dp.isLeader {
 					store.MoveChunkToUnavailChan()
 				}
 				dp.used = int(store.GetStoreUsedSize())
 			}
-			if dp.isLeader && dp.status == storage.ReadOnlyStore {
-				dp.status = storage.ReadOnlyStore
+			if dp.isLeader && dp.partitionStatus == storage.ReadOnlyStore {
+				dp.partitionStatus = storage.ReadOnlyStore
 			}
 
 			if diskStatus == storage.DiskErrStore {
-				dp.status = storage.DiskErrStore
+				dp.partitionStatus = storage.DiskErrStore
 			}
 		}
 	}
