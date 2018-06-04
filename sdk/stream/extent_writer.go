@@ -304,7 +304,8 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 	writer.removeRquest(e)
 	orgReplySize:=reply.Size
 	reply.Size=request.Size
-	log.LogDebug(fmt.Sprintf("ActionProcessReply[%v] is recived", reply.GetUniqLogId()))
+	log.LogDebug(fmt.Sprintf("ActionProcessReply[%v] is recived Writer [%v]",
+					reply.GetUniqLogId(),writer.toString()))
 	reply.Size=orgReplySize
 
 	return nil
