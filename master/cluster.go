@@ -344,6 +344,7 @@ func (c *Cluster) dataPartitionOffline(offlineAddr, nsName string, dp *DataParti
 		err      error
 		dataNode *DataNode
 		rack     *Rack
+		ns       *NameSpace
 	)
 	dp.Lock()
 	defer dp.Unlock()
@@ -351,7 +352,11 @@ func (c *Cluster) dataPartitionOffline(offlineAddr, nsName string, dp *DataParti
 		return
 	}
 
-	if err = dp.hasMissOne(); err != nil {
+	if ns, err = c.getNamespace(nsName); err != nil {
+		goto errDeal
+	}
+
+	if err = dp.hasMissOne(int(ns.dpReplicaNum)); err != nil {
 		goto errDeal
 	}
 	if err = dp.canOffLine(offlineAddr); err != nil {

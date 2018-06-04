@@ -35,7 +35,7 @@ func (dpMap *DataPartitionMap) getDataPartition(ID uint64) (*DataPartition, erro
 	if v, ok := dpMap.dataPartitionMap[ID]; ok {
 		return v, nil
 	}
-	log.LogError(fmt.Sprintf("action[getDataPartition],VolId:%v,err:%v", ID, DataPartitionNotFound))
+	log.LogError(fmt.Sprintf("action[getDataPartition],partitionID:%v,err:%v", ID, DataPartitionNotFound))
 	return nil, DataPartitionNotFound
 }
 

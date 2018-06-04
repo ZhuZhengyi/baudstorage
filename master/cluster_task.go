@@ -42,7 +42,7 @@ func (c *Cluster) checkDataPartitions(ns *NameSpace) {
 	ns.dataPartitions.RLock()
 	newReadWriteVolGroups := 0
 	for _, vg := range ns.dataPartitions.dataPartitionMap {
-		vg.checkLocationStatus(c.cfg.DataPartitionTimeOutSec)
+		vg.checkReplicaStatus(c.cfg.DataPartitionTimeOutSec)
 		vg.checkStatus(true, c.cfg.DataPartitionTimeOutSec)
 		vg.checkMiss(c.Name, c.cfg.DataPartitionMissSec, c.cfg.DataPartitionWarnInterval)
 		vg.checkReplicaNum(c, ns.Name)

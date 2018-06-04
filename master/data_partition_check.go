@@ -20,7 +20,7 @@ func (partition *DataPartition) checkStatus(needLog bool, dpTimeOutSec int64) {
 		partition.Status = DataPartitionReadOnly
 	}
 	if needLog == true {
-		msg := fmt.Sprintf("action[checkStatus],volID:%v  goal:%v  liveLocation:%v   VolStatus:%v  RocksDBHost:%v ",
+		msg := fmt.Sprintf("action[checkStatus],partitionID:%v  replicaNum:%v  liveReplicas:%v   Status:%v  RocksDBHost:%v ",
 			partition.PartitionID, partition.ReplicaNum, len(liveReplicas), partition.Status, partition.PersistenceHosts)
 		log.LogInfo(msg)
 	}
@@ -36,7 +36,7 @@ func (partition *DataPartition) checkReplicaStatusOnLiveNode(liveReplicas []*Dat
 	return true
 }
 
-func (partition *DataPartition) checkLocationStatus(timeOutSec int64) {
+func (partition *DataPartition) checkReplicaStatus(timeOutSec int64) {
 	partition.Lock()
 	defer partition.Unlock()
 	for _, replica := range partition.Replicas {
@@ -59,8 +59,8 @@ func (partition *DataPartition) checkMiss(clusterID string, dataPartitionMissSec
 				lastReportTime = dataNode.ReportTime
 				isActive = dataNode.isActive
 			}
-			msg := fmt.Sprintf("action[checkVolMissErr], vol:%v  on Node:%v  "+
-				"miss time > :%v  vlocLastRepostTime:%v   dnodeLastReportTime:%v  nodeisActive:%v So Migrate", partition.PartitionID,
+			msg := fmt.Sprintf("action[checkMissErr], paritionID:%v  on Node:%v  "+
+				"miss time > :%v  lastRepostTime:%v   dnodeLastReportTime:%v  nodeisActive:%v So Migrate", partition.PartitionID,
 				replica.Addr, dataPartitionMissSec, replica.ReportTime, lastReportTime, isActive)
 			Warn(clusterID, msg)
 		}
@@ -68,7 +68,7 @@ func (partition *DataPartition) checkMiss(clusterID string, dataPartitionMissSec
 
 	for _, addr := range partition.PersistenceHosts {
 		if partition.missDataPartition(addr) == true && partition.needWarnMissDataPartition(addr, dataPartitionWarnInterval) {
-			msg := fmt.Sprintf("action[checkVolMissErr], vol:%v  on Node:%v  "+
+			msg := fmt.Sprintf("action[checkMissErr], partitionID:%v  on Node:%v  "+
 				"miss time  > :%v  but server not exsit So Migrate", partition.PartitionID, addr, dataPartitionMissSec)
 			Warn(clusterID, msg)
 		}
@@ -119,7 +119,7 @@ func (partition *DataPartition) checkDiskError() (diskErrorAddrs []string) {
 	partition.Unlock()
 
 	for _, diskAddr := range diskErrorAddrs {
-		msg := fmt.Sprintf("action[%v],vol:%v  On :%v  Disk Error,So Remove it From RocksDBHost", CheckDataPartitionDiskErrorErr, partition.PartitionID, diskAddr)
+		msg := fmt.Sprintf("action[%v],partitionID:%v  On :%v  Disk Error,So Remove it From RocksDBHost", CheckDataPartitionDiskErrorErr, partition.PartitionID, diskAddr)
 		log.LogError(msg)
 	}
 
