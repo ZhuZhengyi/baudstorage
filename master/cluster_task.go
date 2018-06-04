@@ -436,15 +436,15 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	}
 
 	switch task.OpCode {
-	case proto.OpCreateDataPartion:
+	case proto.OpCreateDataPartition:
 		response := task.Response.(*proto.CreateDataPartitionResponse)
 		taskStatus = response.Status
 		err = c.dealCreateVolResponse(task, response)
-	case proto.OpDeleteDataPartion:
+	case proto.OpDeleteDataPartition:
 		response := task.Response.(*proto.DeleteDataPartitionResponse)
 		taskStatus = response.Status
 		err = c.dealDeleteVolResponse(task.OperatorAddr, response)
-	case proto.OpLoadDataPartion:
+	case proto.OpLoadDataPartition:
 		response := task.Response.(*proto.LoadDataPartitionResponse)
 		taskStatus = response.Status
 		err = c.dealLoadVolResponse(task.OperatorAddr, response)
