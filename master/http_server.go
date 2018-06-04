@@ -19,7 +19,7 @@ const (
 	AdminGetIp                = "/admin/getIp"
 
 	// Client APIs
-	ClientVols          = "/client/vols"
+	ClientVols          = "/client/dataPartitions"
 	ClientNamespace     = "/client/namespace"
 	ClientMetaPartition = "/client/metaPartition"
 

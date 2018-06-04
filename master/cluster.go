@@ -23,6 +23,7 @@ type Cluster struct {
 	fsm                     *MetadataFsm
 	partition               raftstore.Partition
 	idAlloc                 *IDAllocator
+	t                       *Topology
 }
 
 func newCluster(name string, leaderInfo *LeaderInfo, fsm *MetadataFsm, partition raftstore.Partition) (c *Cluster) {
@@ -34,6 +35,7 @@ func newCluster(name string, leaderInfo *LeaderInfo, fsm *MetadataFsm, partition
 	c.fsm = fsm
 	c.partition = partition
 	c.idAlloc = newIDAllocator(c.fsm.store, c.partition)
+	c.t = NewTopology()
 	c.startCheckDataPartitions()
 	c.startCheckBackendLoadDataPartitions()
 	c.startCheckReleaseDataPartitions()
@@ -152,7 +154,7 @@ func (c *Cluster) addMetaNode(nodeAddr string) (id uint64, err error) {
 	}
 	metaNode = NewMetaNode(nodeAddr, c.Name)
 
-	if id, err = c.idAlloc.allocatorMetaNodeID(); err != nil {
+	if id, err = c.idAlloc.allocateMetaNodeID(); err != nil {
 		goto errDeal
 	}
 	metaNode.ID = id
@@ -228,7 +230,7 @@ func (c *Cluster) createDataPartition(nsName, partitionType string) (dp *DataPar
 	if targetHosts, err = c.ChooseTargetDataHosts(int(ns.dpReplicaNum)); err != nil {
 		goto errDeal
 	}
-	if partitionID, err = c.idAlloc.allocatorDataPartitionID(); err != nil {
+	if partitionID, err = c.idAlloc.allocateDataPartitionID(); err != nil {
 		goto errDeal
 	}
 	dp = newDataPartition(partitionID, ns.dpReplicaNum, partitionType)
@@ -251,25 +253,49 @@ errDeal:
 func (c *Cluster) ChooseTargetDataHosts(replicaNum int) (hosts []string, err error) {
 	var (
 		masterAddr []string
-		slaveAddrs []string
+		addrs      []string
+		racks      []*Rack
+		rack       *Rack
 	)
 	hosts = make([]string, 0)
-	if masterAddr, err = c.getAvailDataNodeHosts("", hosts, 1); err != nil {
-		return nil, errors.Trace(err)
-	}
-	hosts = append(hosts, masterAddr[0])
-	otherReplica := replicaNum - 1
-	if otherReplica == 0 {
+	if c.isSingleRack() {
+		var newHosts []string
+		if rack, err = c.t.getRack(c.t.racks[0]); err != nil {
+			return nil, errors.Trace(err)
+		}
+		if newHosts, err = rack.getAvailDataNodeHosts(hosts, replicaNum); err != nil {
+			return nil, errors.Trace(err)
+		}
+		hosts = newHosts
 		return
 	}
-	dataNode, err := c.getDataNode(masterAddr[0])
-	if err != nil {
-		return nil, errors.Trace(err)
+
+	if racks, err = c.t.allocRacks(replicaNum, nil); err != nil {
+		return
 	}
-	if slaveAddrs, err = c.getAvailDataNodeHosts(dataNode.RackName, hosts, otherReplica); err != nil {
-		return nil, errors.Trace(err)
+
+	if len(racks) == 2 {
+		masterRack := racks[0]
+		slaveRack := racks[1]
+		masterReplicaNum := replicaNum/2 + 1
+		slaveReplicaNum := replicaNum - masterReplicaNum
+		if masterAddr, err = masterRack.getAvailDataNodeHosts(hosts, masterReplicaNum); err != nil {
+			return nil, errors.Trace(err)
+		}
+		hosts = append(hosts, masterAddr...)
+		if addrs, err = slaveRack.getAvailDataNodeHosts(hosts, slaveReplicaNum); err != nil {
+			return nil, errors.Trace(err)
+		}
+		hosts = append(hosts, addrs...)
+	} else if len(racks) == replicaNum {
+		for index := 0; index < replicaNum; index++ {
+			rack := racks[index]
+			if addrs, err = rack.getAvailDataNodeHosts(hosts, 1); err != nil {
+				return nil, errors.Trace(err)
+			}
+			hosts = append(hosts, addrs...)
+		}
 	}
-	hosts = append(hosts, slaveAddrs...)
 	if len(hosts) != replicaNum {
 		return nil, NoAnyDataNodeForCreateDataPartition
 	}
@@ -317,6 +343,7 @@ func (c *Cluster) dataPartitionOffline(offlineAddr, nsName string, dp *DataParti
 		task     *proto.AdminTask
 		err      error
 		dataNode *DataNode
+		rack     *Rack
 	)
 	dp.Lock()
 	defer dp.Unlock()
@@ -335,7 +362,10 @@ func (c *Cluster) dataPartitionOffline(offlineAddr, nsName string, dp *DataParti
 	if dataNode, err = c.getDataNode(dp.PersistenceHosts[0]); err != nil {
 		goto errDeal
 	}
-	if newHosts, err = c.getAvailDataNodeHosts(dataNode.RackName, dp.PersistenceHosts, 1); err != nil {
+	if rack, err = c.t.getRack(dataNode.RackName); err != nil {
+		goto errDeal
+	}
+	if newHosts, err = rack.getAvailDataNodeHosts(dp.PersistenceHosts, 1); err != nil {
 		goto errDeal
 	}
 	if err = dp.removeHosts(offlineAddr, c, nsName); err != nil {
@@ -419,7 +449,7 @@ func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err err
 		return errors.Trace(err)
 	}
 	log.LogDebugf("target meta hosts:%v,peers:%v", hosts, peers)
-	if partitionID, err = c.idAlloc.allocatorMetaPartitionID(); err != nil {
+	if partitionID, err = c.idAlloc.allocateMetaPartitionID(); err != nil {
 		return errors.Trace(err)
 	}
 	mp = NewMetaPartition(partitionID, start, end, nsName)

@@ -580,6 +580,7 @@ func (c *Cluster) dealDataNodeHeartbeatResp(nodeAddr string, resp *proto.DataNod
 
 	dataNode.UpdateNodeMetric(resp)
 	dataNode.setNodeAlive()
+	c.t.putDataNode(dataNode)
 	c.UpdateDataNode(dataNode)
 	dataNode.VolInfo = nil
 	logMsg = fmt.Sprintf("action[dealDataNodeHeartbeatResp],dataNode:%v ReportTime:%v  success", dataNode.Addr, time.Now().Unix())

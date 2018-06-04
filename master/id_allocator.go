@@ -95,7 +95,7 @@ func (alloc *IDAllocator) restoreMaxMetaNodeID() {
 
 }
 
-func (alloc *IDAllocator) allocatorDataPartitionID() (ID uint64, err error) {
+func (alloc *IDAllocator) allocateDataPartitionID() (ID uint64, err error) {
 	alloc.dataPartitionIDLock.Lock()
 	defer alloc.dataPartitionIDLock.Unlock()
 	var cmd []byte
@@ -113,11 +113,11 @@ func (alloc *IDAllocator) allocatorDataPartitionID() (ID uint64, err error) {
 	}
 	return
 errDeal:
-	log.LogError("action[allocatorDataPartitionID] err:%v", err.Error())
+	log.LogError("action[allocateDataPartitionID] err:%v", err.Error())
 	return
 }
 
-func (alloc *IDAllocator) allocatorMetaPartitionID() (partitionID uint64, err error) {
+func (alloc *IDAllocator) allocateMetaPartitionID() (partitionID uint64, err error) {
 	var cmd []byte
 	alloc.metaPartitionIDLock.Lock()
 	defer alloc.metaPartitionIDLock.Unlock()
@@ -135,11 +135,11 @@ func (alloc *IDAllocator) allocatorMetaPartitionID() (partitionID uint64, err er
 	}
 	return
 errDeal:
-	log.LogError("action[allocatorMetaPartitionID] err:%v", err.Error())
+	log.LogError("action[allocateMetaPartitionID] err:%v", err.Error())
 	return
 }
 
-func (alloc *IDAllocator) allocatorMetaNodeID() (metaNodeID uint64, err error) {
+func (alloc *IDAllocator) allocateMetaNodeID() (metaNodeID uint64, err error) {
 	var cmd []byte
 	alloc.metaNodeIDLock.Lock()
 	defer alloc.metaNodeIDLock.Unlock()
@@ -157,6 +157,6 @@ func (alloc *IDAllocator) allocatorMetaNodeID() (metaNodeID uint64, err error) {
 	}
 	return
 errDeal:
-	log.LogError("action[allocatorMetaNodeID] err:%v", err.Error())
+	log.LogError("action[allocateMetaNodeID] err:%v", err.Error())
 	return
 }
