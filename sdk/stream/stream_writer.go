@@ -221,6 +221,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 
 func (stream *StreamWriter) recoverExtent() (err error) {
 	retryPackets := stream.getWriter().getNeedRetrySendPackets()
+	stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID)
 	for i := 0; i < MaxSelectDataPartionForWrite; i++ {
 		err=nil
 		ek := stream.getWriter().toKey()
@@ -232,11 +233,10 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 			log.LogErrorf("stream[%v] err[%v]",stream.toString(),err.Error())
 			continue
 		}
-
-		stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID)
 		if err = stream.allocateNewExtentWriter(); err != nil {
 			err = errors.Annotatef(err, "RecoverExtent Failed")
 			log.LogErrorf("stream[%v] err[%v]",stream.toString(),err.Error())
+			stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID)
 			continue
 		}
 
@@ -245,6 +245,7 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 			if err != nil {
 				err = errors.Annotatef(err, "pkg[%v] RecoverExtent write failed",p.GetUniqLogId())
 				log.LogErrorf("stream[%v] err[%v]",stream.toString(),err.Error())
+				stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID)
 				break
 			}
 		}
