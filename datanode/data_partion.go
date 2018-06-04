@@ -33,11 +33,11 @@ type DataPartion struct {
 	store       interface{}
 	status      int
 	isLeader    bool
-	members     *DataPartionResponse
+	members     *DataPartionMembers
 	exitCh      chan bool
 }
 
-type DataPartionResponse struct {
+type DataPartionMembers struct {
 	PartionId     uint64
 	PartionStatus uint8
 	ReplicaNum    uint8
@@ -87,7 +87,7 @@ func (dp *DataPartion) parseVolMember() (err error) {
 	return nil
 }
 
-func (dp *DataPartion) getMembers() (bool, *DataPartionResponse, error) {
+func (dp *DataPartion) getMembers() (bool, *DataPartionMembers, error) {
 	var (
 		HostsBuf []byte
 		err      error
@@ -97,7 +97,7 @@ func (dp *DataPartion) getMembers() (bool, *DataPartionResponse, error) {
 	if HostsBuf, err = PostToMaster(nil, url); err != nil {
 		return false, nil, err
 	}
-	members := new(DataPartionResponse)
+	members := new(DataPartionMembers)
 
 	if err = json.Unmarshal(HostsBuf, &members); err != nil {
 		log.LogError(fmt.Sprintf(ActionGetFoolwers+" v[%v] json unmarshal [%v] err[%v]", dp.partionId, string(HostsBuf), err))
