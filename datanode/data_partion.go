@@ -16,7 +16,7 @@ const (
 )
 
 var (
-	GetDataPartionMember    = "/datanode/member"
+	AdminGetDataPartition     = "/admin/getDataPartition"
 	ErrNotLeader            = errors.New("not leader")
 	LeastGoalNum            = 2
 	ErrLackOfGoal           = errors.New("dataPartionGoal is not equare dataPartionhosts")
@@ -93,7 +93,7 @@ func (dp *DataPartion) getMembers() (bool, *DataPartionMembers, error) {
 		err      error
 	)
 
-	url := fmt.Sprintf(GetDataPartionMember+"?dataPartion=%v", dp.partionId)
+	url := fmt.Sprintf(AdminGetDataPartition+"?id=%v", dp.partionId)
 	if HostsBuf, err = PostToMaster(nil, url); err != nil {
 		return false, nil, err
 	}
