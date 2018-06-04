@@ -43,7 +43,7 @@ func NewSuper(namespace, master string) (s *Super, err error) {
 
 	s.name = namespace
 	s.cluster = s.mw.Cluster()
-	s.ic = NewInodeCache(DefaultInodeExpiration)
+	s.ic = NewInodeCache(DefaultInodeExpiration, MaxInodeCache)
 	log.LogInfof("NewSuper: cluster(%v) name(%v)", s.cluster, s.name)
 	return s, nil
 }
