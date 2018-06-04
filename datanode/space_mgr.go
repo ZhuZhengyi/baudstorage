@@ -160,7 +160,7 @@ func (space *SpaceManager)closeActiveFiles(){
 	for _,partition:=range space.partitions{
 		partitions=append(partitions,partition)
 	}
-	space.dataPartitionLock.RUnlock()
+	defer space.dataPartitionLock.RUnlock()
 	activeFiles:=0
 	for _,partition:=range partitions{
 		if partition.partitionType==proto.ExtentVol{
