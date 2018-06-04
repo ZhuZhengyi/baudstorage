@@ -69,7 +69,7 @@ func Mount(cfg *config.Config) error {
 	}
 	defer c.Close()
 
-	_, err = log.NewLog(path.Join(logpath, LoggerDir), LoggerPrefix, log.DebugLevel)
+	_, err = log.NewLog(path.Join(logpath, LoggerDir), LoggerPrefix, log.ErrorLevel)
 	if err != nil {
 		return err
 	}

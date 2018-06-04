@@ -36,7 +36,7 @@ func (ic *InodeCache) Get(ino uint64) *Inode {
 	if !ok {
 		return nil
 	}
-	log.LogDebugf("InodeCache Get: now(%v) inode(%v)", time.Now().UnixNano(), inode)
+	log.LogDebugf("InodeCache Get: now(%v) inode(%v)", time.Now().Format(LogTimeFormat), inode)
 	if time.Now().UnixNano() > inode.expiration {
 		delete(ic.cache, ino)
 		return nil
@@ -47,6 +47,7 @@ func (ic *InodeCache) Get(ino uint64) *Inode {
 func (ic *InodeCache) Delete(ino uint64) {
 	ic.Lock()
 	defer ic.Unlock()
+	log.LogDebugf("InodeCache Delete: ino(%v)", ino)
 	_, ok := ic.cache[ino]
 	if ok {
 		delete(ic.cache, ino)

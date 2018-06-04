@@ -195,6 +195,7 @@ func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (statu
 		}
 	}()
 
+	log.LogDebugf("lookup: partitionID(%v) parent(%v) name(%v)", mc.id, parentID, name)
 	req := &proto.LookupRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
