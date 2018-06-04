@@ -13,12 +13,20 @@ type MetaItem struct {
 	V  []byte `json:"v"`
 }
 
-func (s *MetaItem) Encode() ([]byte, error) {
+func (s *MetaItem) MarshalJson() ([]byte, error) {
 	return json.Marshal(s)
 }
 
-func (s *MetaItem) Decode(data []byte) error {
+func (s *MetaItem) MarshalBinary() (result []byte, err error) {
+	panic("not implement yet")
+}
+
+func (s *MetaItem) UnmarshalJson(data []byte) error {
 	return json.Unmarshal(data, s)
+}
+
+func (s *MetaItem) UnmarshalBinary(raw []byte) (err error) {
+	panic("not implement yet")
 }
 
 func NewMetaPartitionSnapshot(op uint32, key, value []byte) *MetaItem {
@@ -75,7 +83,7 @@ func (si *ItemIterator) Next() (data []byte, err error) {
 			si.curItem = ino
 			snap := NewMetaPartitionSnapshot(opCreateInode, ino.MarshalKey(),
 				ino.MarshalValue())
-			data, err = snap.Encode()
+			data, err = snap.MarshalJson()
 			si.cur++
 			return false
 		})
@@ -94,7 +102,7 @@ func (si *ItemIterator) Next() (data []byte, err error) {
 		si.curItem = dentry
 		snap := NewMetaPartitionSnapshot(opCreateDentry, dentry.MarshalKey(),
 			dentry.MarshalValue())
-		data, err = snap.Encode()
+		data, err = snap.MarshalJson()
 		si.cur++
 		return false
 	})

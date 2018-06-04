@@ -124,7 +124,7 @@ func (space *SpaceManager) chooseDiskAndCreateVol(partitionId uint32, partitionT
 		return
 	}
 	d := space.getMinPartitionCntDisk()
-	if d == nil || d.Free < uint64(storeSize*2) {
+	if d == nil || d.Free < uint64(storeSize) {
 		return nil, ErrNoDiskForCreateVol
 	}
 	dp, err = NewDataPartition(partitionId, partitionType, "", d.Path, storage.NewStoreMode, storeSize)

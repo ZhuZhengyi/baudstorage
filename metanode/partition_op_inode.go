@@ -20,13 +20,13 @@ func (mp *metaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
-	r, err := mp.Put(opCreateInode, val)
+	resp, err := mp.Put(opCreateInode, val)
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		return
 	}
 	var (
-		status = r.(uint8)
+		status = resp.(uint8)
 		reply  []byte
 	)
 	if status == proto.OpOk {

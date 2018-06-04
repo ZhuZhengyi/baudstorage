@@ -75,6 +75,7 @@ forLoop:
 func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte) (actualReadSize int, err error) {
 	expectReadSize := int(p.Size)
 	conn, err := reader.wrapper.GetConnect(host)
+	log.LogReadf("ActionReader expect reader[%v] host[%v] offset[%v] size[%v]",reader.toString(),host,p.Offset,expectReadSize)
 	if err != nil {
 		return 0, errors.Annotatef(err, reader.toString()+
 			"readDataFromHost dp[%v] cannot get  connect from host[%v] request[%v] ",

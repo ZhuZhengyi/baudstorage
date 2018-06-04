@@ -220,37 +220,48 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 }
 
 func (stream *StreamWriter) recoverExtent() (err error) {
-	retryPackets := stream.getWriter().getNeedRetrySendPackets()
+	retryPackets := stream.getWriter().getNeedRetrySendPackets()  //get need retry recover packets
+	stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID) //exclude current PartionId
 	for i := 0; i < MaxSelectDataPartionForWrite; i++ {
-		stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID)
-		if err = stream.allocateNewExtentWriter(); err != nil {
-			err = errors.Annotatef(err, "RecoverExtent Failed")
-			continue
-		}
-		ek := stream.getWriter().toKey()
+		err=nil
+		ek := stream.getWriter().toKey() //first get currentExtent Key
 		if ek.Size != 0 {
-			err = stream.appendExtentKey(stream.currentInode, ek)
+			err = stream.appendExtentKey(stream.currentInode, ek) //put it to metanode
 		}
 		if err != nil {
-			err = errors.Annotatef(err, "update fileSize[%v] to MetaNode Failed", ek.Size)
+			err = errors.Annotatef(err, "update extent[%v] to MetaNode Failed", ek.Size)
+			log.LogErrorf("stream[%v] err[%v]",stream.toString(),err.Error())
+			i--                //if put metanode error,so retry put it to metanode
 			continue
 		}
+		if err = stream.allocateNewExtentWriter(); err != nil {  //allocate new extent
+			err = errors.Annotatef(err, "RecoverExtent Failed")
+			log.LogErrorf("stream[%v] err[%v]",stream.toString(),err.Error())
+			stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID) //if failed,then exclude
+			continue
+		}
+
 		for _, p := range retryPackets {
 			_, err = stream.getWriter().write(p.Data, int(p.Size))
 			if err != nil {
-				err = errors.Annotatef(err, "RecoverExtent write failed")
-				continue
+				err = errors.Annotatef(err, "pkg[%v] RecoverExtent write failed",p.GetUniqLogId())
+				log.LogErrorf("stream[%v] err[%v]",stream.toString(),err.Error())
+				stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID)
+				break
 			}
 		}
 		if err == nil {
 			stream.excludePartition = make([]uint32, 0)
 			break
+		}else {
+			continue
 		}
 	}
 
 	return
 
 }
+
 
 func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	var (

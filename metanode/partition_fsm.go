@@ -12,40 +12,44 @@ import (
 )
 
 func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, err error) {
+	defer func() {
+		if err != nil {
+			mp.applyID = index
+		}
+	}()
 	msg := &MetaItem{}
-	err = msg.Decode(command)
-	if err != nil {
-		goto end
+	if err = msg.UnmarshalJson(command); err != nil {
+		return
 	}
 	switch msg.Op {
 	case opCreateInode:
 		ino := NewInode(0, 0)
 		if err = json.Unmarshal(msg.V, ino); err != nil {
-			goto end
+			return
 		}
 		resp = mp.createInode(ino)
 	case opDeleteInode:
 		ino := NewInode(0, 0)
 		if err = json.Unmarshal(msg.V, ino); err != nil {
-			goto end
+			return
 		}
 		resp = mp.deleteInode(ino)
 	case opCreateDentry:
 		den := &Dentry{}
 		if err = json.Unmarshal(msg.V, den); err != nil {
-			goto end
+			return
 		}
 		resp = mp.createDentry(den)
 	case opDeleteDentry:
 		den := &Dentry{}
 		if err = json.Unmarshal(msg.V, den); err != nil {
-			goto end
+			return
 		}
 		resp = mp.deleteDentry(den)
 	case opOpen:
 		ino := NewInode(0, 0)
 		if err = json.Unmarshal(msg.V, ino); err != nil {
-			goto end
+			return
 		}
 		resp = mp.openFile(ino)
 	case opDeletePartition:
@@ -53,18 +57,16 @@ func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 	case opUpdatePartition:
 		req := &proto.UpdateMetaPartitionRequest{}
 		if err = json.Unmarshal(msg.V, req); err != nil {
-			goto end
+			return
 		}
 		resp, err = mp.updatePartition(req.End)
 	case opExtentsAdd:
 		ino := NewInode(0, 0)
 		if err = json.Unmarshal(msg.V, ino); err != nil {
-			goto end
+			return
 		}
 		resp = mp.appendExtents(ino)
 	}
-end:
-	mp.applyID = index
 	return
 }
 
@@ -108,7 +110,7 @@ func (mp *metaPartition) ApplySnapshot(peers []raftproto.Peer,
 			return err
 		}
 		snap := NewMetaPartitionSnapshot(0, nil, nil)
-		if err = snap.Decode(data); err != nil {
+		if err = snap.UnmarshalJson(data); err != nil {
 			return err
 		}
 		switch snap.Op {
