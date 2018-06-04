@@ -1,8 +1,6 @@
 package fs
 
 import (
-	"syscall"
-
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"golang.org/x/net/context"
@@ -11,8 +9,8 @@ import (
 )
 
 type Dir struct {
-	InodeCommon
-	inode Inode
+	super *Super
+	inode *Inode
 }
 
 //functions that Dir needs to implement
@@ -30,24 +28,20 @@ var (
 	//TODO: NodeSymlinker
 )
 
-func NewDir(s *Super, p *Dir) *Dir {
-	dir := new(Dir)
-	dir.super = s
-	dir.parent = p
-	dir.blksize = BLKSIZE_DEFAULT
-	dir.nlink = DIR_NLINK_DEFAULT
-	return dir
+func NewDir(s *Super, i *Inode) *Dir {
+	return &Dir{super: s, inode: i}
 }
 
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 	log.LogDebugf("Dir Attr: ino(%v)", d.inode.ino)
 
-	err := d.super.InodeGet(d.inode.ino, &d.inode)
+	inode, err := d.super.InodeGet(d.inode.ino)
 	if err != nil {
 		log.LogErrorf("Dir Attr: ino(%v) err(%v)", d.inode.ino, err.Error())
 		return ParseError(err)
 	}
-	fillAttr(a, d)
+	inode.fillAttr(a)
+	d.inode = inode
 	return nil
 }
 
@@ -60,11 +54,13 @@ func (d *Dir) Create(ctx context.Context, req *fuse.CreateRequest, resp *fuse.Cr
 		return nil, nil, ParseError(err)
 	}
 
-	child := NewFile(d.super, d)
-	fillInode(&child.inode, info)
-	resp.Node = fuse.NodeID(child.inode.ino)
-	fillAttr(&resp.Attr, child)
-	d.super.ec.Open(child.inode.ino)
+	inode := NewInode(info)
+	d.super.ic.Put(inode)
+	inode.fillAttr(&resp.Attr)
+	resp.Node = fuse.NodeID(inode.ino)
+	d.super.ec.Open(inode.ino)
+
+	child := NewFile(d.super, inode)
 	return child, child, nil
 }
 
@@ -80,8 +76,9 @@ func (d *Dir) Mkdir(ctx context.Context, req *fuse.MkdirRequest) (fs.Node, error
 		return nil, ParseError(err)
 	}
 
-	child := NewDir(d.super, d)
-	fillInode(&child.inode, info)
+	inode := NewInode(info)
+	d.super.ic.Put(inode)
+	child := NewDir(d.super, inode)
 	return child, nil
 }
 
@@ -114,25 +111,21 @@ func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 		return nil, ParseError(err)
 	}
 
-	var child fs.Node
-	if mode == ModeRegular {
-		dir := NewFile(d.super, d)
-		err = d.super.InodeGet(ino, &dir.inode)
-		child = dir
-	} else if mode == ModeDir {
-		file := NewDir(d.super, d)
-		err = d.super.InodeGet(ino, &file.inode)
-		child = file
-	} else {
-		err = syscall.ENOTSUP
-	}
-
+	inode, err := d.super.InodeGet(ino)
 	if err != nil {
-		log.LogErrorf("Dir Lookup: ino(%v) name(%v) err(%v)", d.inode.ino, req.Name, err.Error())
+		log.LogErrorf("Dir Lookup: parent(%v) name(%v) ino(%v) err(%v)", d.inode.ino, req.Name, ino, err.Error())
 		return nil, ParseError(err)
 	}
+	inode.fillAttr(&resp.Attr)
+
+	var child fs.Node
+	if mode == ModeDir {
+		child = NewDir(d.super, inode)
+	} else {
+		child = NewFile(d.super, inode)
+	}
+
 	resp.Node = fuse.NodeID(ino)
-	fillAttr(&resp.Attr, child)
 	resp.EntryValid = LookupValidDuration
 	return child, nil
 }

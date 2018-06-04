@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	ROOT_INO = proto.ROOT_INO
+	RootInode = proto.ROOT_INO
 )
 
 const (
@@ -30,6 +30,11 @@ const (
 const (
 	LookupValidDuration = 0 * time.Second
 	AttrValidDuration   = 0 * time.Second
+)
+
+const (
+	InodeExpired           = int64(-1)
+	DefaultInodeExpiration = 120 * time.Second
 )
 
 func ParseError(err error) fuse.Errno {
