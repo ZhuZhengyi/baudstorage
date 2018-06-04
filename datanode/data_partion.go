@@ -16,11 +16,11 @@ const (
 )
 
 var (
-	GetDataPartionMember = "/datanode/member"
-	ErrNotLeader         = errors.New("not leader")
-	LeastGoalNum         = 2
-	ErrLackOfGoal        = errors.New("dataPartionGoal is not equare dataPartionhosts")
-	ErrVolOnBadDisk      = errors.New("error bad disk")
+	GetDataPartionMember    = "/datanode/member"
+	ErrNotLeader            = errors.New("not leader")
+	LeastGoalNum            = 2
+	ErrLackOfGoal           = errors.New("dataPartionGoal is not equare dataPartionhosts")
+	ErrDataPartionOnBadDisk = errors.New("error bad disk")
 )
 
 type DataPartion struct {
@@ -115,7 +115,7 @@ func (dp *DataPartion) getMembers() (bool, *DataPartionResponse, error) {
 	}
 
 	if members.PartionStatus == storage.DiskErrStore || dp.status == storage.DiskErrStore {
-		err = ErrVolOnBadDisk
+		err = ErrDataPartionOnBadDisk
 		return false, nil, err
 	}
 
