@@ -168,7 +168,7 @@ func (space *SpaceManager)closeActiveFiles(){
 			activeFiles+=store.GetStoreActiveFiles()
 		}
 	}
-	if activeFiles>=10000{
+	if activeFiles>=MaxActiveExtents{
 		for _,partition:=range partitions{
 			if partition.partitionType==proto.ExtentVol{
 				store:=partition.store.(*storage.ExtentStore)
