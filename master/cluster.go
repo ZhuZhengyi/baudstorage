@@ -187,9 +187,9 @@ errDeal:
 	return err
 }
 
-func (c *Cluster) getVolGroupByVolID(volID uint64) (vol *DataPartition, err error) {
+func (c *Cluster) getDataPartitionByID(partitionID uint64) (dp *DataPartition, err error) {
 	for _, ns := range c.namespaces {
-		if vol, err = ns.getDataPartitionByID(volID); err == nil {
+		if dp, err = ns.getDataPartitionByID(partitionID); err == nil {
 			return
 		}
 	}
@@ -233,7 +233,7 @@ func (c *Cluster) createDataPartition(nsName, partitionType string) (dp *DataPar
 	}
 	dp = newDataPartition(partitionID, ns.dpReplicaNum, partitionType)
 	dp.PersistenceHosts = targetHosts
-	if err = c.syncAddVolGroup(nsName, dp); err != nil {
+	if err = c.syncAddDataPartition(nsName, dp); err != nil {
 		goto errDeal
 	}
 	tasks = dp.generateCreateTasks()
@@ -330,7 +330,7 @@ func (c *Cluster) dataPartitionOffline(offlineAddr, nsName string, dp *DataParti
 	if err = dp.canOffLine(offlineAddr); err != nil {
 		goto errDeal
 	}
-	dp.generatorVolOffLineLog(offlineAddr)
+	dp.generatorOffLineLog(offlineAddr)
 
 	if dataNode, err = c.getDataNode(dp.PersistenceHosts[0]); err != nil {
 		goto errDeal
@@ -338,15 +338,15 @@ func (c *Cluster) dataPartitionOffline(offlineAddr, nsName string, dp *DataParti
 	if newHosts, err = c.getAvailDataNodeHosts(dataNode.RackName, dp.PersistenceHosts, 1); err != nil {
 		goto errDeal
 	}
-	if err = dp.removeVolHosts(offlineAddr, c, nsName); err != nil {
+	if err = dp.removeHosts(offlineAddr, c, nsName); err != nil {
 		goto errDeal
 	}
 	newAddr = newHosts[0]
-	if err = dp.addVolHosts(newAddr, c, nsName); err != nil {
+	if err = dp.addHosts(newAddr, c, nsName); err != nil {
 		goto errDeal
 	}
 	dp.offLineInMem(offlineAddr)
-	dp.checkAndRemoveMissVol(offlineAddr)
+	dp.checkAndRemoveMissReplica(offlineAddr)
 	task = proto.NewAdminTask(proto.OpCreateDataPartition, offlineAddr, newCreateVolRequest(dp.PartitionType, dp.PartitionID))
 	task.ID = fmt.Sprintf("%v_volID[%v]", task.ID, dp.PartitionID)
 	tasks = make([]*proto.AdminTask, 0)

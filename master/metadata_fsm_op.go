@@ -14,10 +14,10 @@ import (
 const (
 	OpSyncAddMetaNode         uint32 = 0x01
 	OpSyncAddDataNode         uint32 = 0x02
-	OpSyncAddVolGroup         uint32 = 0x03
+	OpSyncAddDataPartition    uint32 = 0x03
 	OpSyncAddNamespace        uint32 = 0x04
 	OpSyncAddMetaPartition    uint32 = 0x05
-	OpSyncUpdateVolGroup      uint32 = 0x06
+	OpSyncUpdateDataPartition uint32 = 0x06
 	OpSyncUpdateMetaPartition uint32 = 0x07
 )
 
@@ -25,12 +25,12 @@ const (
 	KeySeparator         = "#"
 	MetaNodeAcronym      = "mn"
 	DataNodeAcronym      = "dn"
-	VolGroupAcronym      = "vg"
+	DataPartitionAcronym = "vg"
 	MetaPartitionAcronym = "mp"
 	NamespaceAcronym     = "ns"
 	MetaNodePrefix       = KeySeparator + MetaNodeAcronym + KeySeparator
 	DataNodePrefix       = KeySeparator + DataNodeAcronym + KeySeparator
-	VolGroupPrefix       = KeySeparator + VolGroupAcronym + KeySeparator
+	DataPartitionPrefix  = KeySeparator + DataPartitionAcronym + KeySeparator
 	NamespacePrefix      = KeySeparator + NamespaceAcronym + KeySeparator
 	MetaPartitionPrefix  = KeySeparator + MetaPartitionAcronym + KeySeparator
 )
@@ -56,19 +56,19 @@ func newMetaPartitionValue(mp *MetaPartition) (mpv *MetaPartitionValue) {
 	return
 }
 
-type VolGroupValue struct {
-	VolID      uint64
-	ReplicaNum uint8
-	Hosts      string
-	VolType    string
+type DataPartitionValue struct {
+	PartitionID   uint64
+	ReplicaNum    uint8
+	Hosts         string
+	PartitionType string
 }
 
-func newVolGroupValue(vg *DataPartition) (vgv *VolGroupValue) {
-	vgv = &VolGroupValue{
-		VolID:      vg.PartitionID,
-		ReplicaNum: vg.ReplicaNum,
-		Hosts:      vg.VolHostsToString(),
-		VolType:    vg.PartitionType,
+func newDataPartitionValue(vg *DataPartition) (dpv *DataPartitionValue) {
+	dpv = &DataPartitionValue{
+		PartitionID:   vg.PartitionID,
+		ReplicaNum:    vg.ReplicaNum,
+		Hosts:         vg.HostsToString(),
+		PartitionType: vg.PartitionType,
 	}
 	return
 }
@@ -87,21 +87,21 @@ func (m *Metadata) Unmarshal(data []byte) (err error) {
 	return json.Unmarshal(data, m)
 }
 
-//key=#vg#nsName#volID,value=json.Marshal(VolGroupValue)
-func (c *Cluster) syncAddVolGroup(nsName string, vg *DataPartition) (err error) {
-	return c.putVolGroupInfo(OpSyncAddVolGroup, nsName, vg)
+//key=#vg#nsName#partitionID,value=json.Marshal(DataPartitionValue)
+func (c *Cluster) syncAddDataPartition(nsName string, dp *DataPartition) (err error) {
+	return c.putDataPartitionInfo(OpSyncAddDataPartition, nsName, dp)
 }
 
-func (c *Cluster) syncUpdateVolGroup(nsName string, vg *DataPartition) (err error) {
-	return c.putVolGroupInfo(OpSyncUpdateVolGroup, nsName, vg)
+func (c *Cluster) syncUpdateDataPartition(nsName string, dp *DataPartition) (err error) {
+	return c.putDataPartitionInfo(OpSyncUpdateDataPartition, nsName, dp)
 }
 
-func (c *Cluster) putVolGroupInfo(opType uint32, nsName string, vg *DataPartition) (err error) {
+func (c *Cluster) putDataPartitionInfo(opType uint32, nsName string, dp *DataPartition) (err error) {
 	metadata := new(Metadata)
 	metadata.Op = opType
-	metadata.K = VolGroupPrefix + nsName + KeySeparator + strconv.FormatUint(vg.PartitionID, 10)
-	vgv := newVolGroupValue(vg)
-	metadata.V, err = json.Marshal(vgv)
+	metadata.K = DataPartitionPrefix + nsName + KeySeparator + strconv.FormatUint(dp.PartitionID, 10)
+	dpv := newDataPartitionValue(dp)
+	metadata.V, err = json.Marshal(dpv)
 	if err != nil {
 		return
 	}
@@ -199,8 +199,8 @@ func (c *Cluster) handleApply(cmd *Metadata) (err error) {
 		c.applyAddNamespace(cmd)
 	case OpSyncAddMetaPartition:
 		c.applyAddMetaPartition(cmd)
-	case OpSyncAddVolGroup:
-		c.applyAddVolGroup(cmd)
+	case OpSyncAddDataPartition:
+		c.applyAddDataPartition(cmd)
 	}
 	return
 }
@@ -250,19 +250,19 @@ func (c *Cluster) applyAddMetaPartition(cmd *Metadata) {
 	}
 }
 
-func (c *Cluster) applyAddVolGroup(cmd *Metadata) {
+func (c *Cluster) applyAddDataPartition(cmd *Metadata) {
 	keys := strings.Split(cmd.K, KeySeparator)
-	if keys[1] == VolGroupAcronym {
-		vgv := &VolGroupValue{}
-		json.Unmarshal(cmd.V, vgv)
-		vg := newDataPartition(vgv.VolID, vgv.ReplicaNum, vgv.VolType)
+	if keys[1] == DataPartitionAcronym {
+		dpv := &DataPartitionValue{}
+		json.Unmarshal(cmd.V, dpv)
+		dp := newDataPartition(dpv.PartitionID, dpv.ReplicaNum, dpv.PartitionType)
 		ns, _ := c.getNamespace(keys[2])
-		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
-		ns.dataPartitions.putDataPartition(vg)
+		dp.PersistenceHosts = strings.Split(dpv.Hosts, UnderlineSeparator)
+		ns.dataPartitions.putDataPartition(dp)
 	}
 }
 
-func (c *Cluster) decodeVolGroupKey(key string) (acronym, nsName string) {
+func (c *Cluster) decodeDataPartitionKey(key string) (acronym, nsName string) {
 	return c.decodeAcronymAndNsName(key)
 }
 
@@ -394,30 +394,30 @@ func (c *Cluster) loadMetaPartitions() (err error) {
 	return
 }
 
-func (c *Cluster) loadVolGroups() (err error) {
+func (c *Cluster) loadDataPartitions() (err error) {
 	snapshot := c.fsm.store.RocksDBSnapshot()
 	it := c.fsm.store.Iterator(snapshot)
 	defer func() {
 		it.Close()
 		c.fsm.store.ReleaseSnapshot(snapshot)
 	}()
-	prefixKey := []byte(VolGroupPrefix)
+	prefixKey := []byte(DataPartitionPrefix)
 	it.Seek(prefixKey)
 	for ; it.ValidForPrefix(prefixKey); it.Next() {
 		encodedKey := it.Key()
 		encodedValue := it.Value()
-		_, nsName := c.decodeVolGroupKey(string(encodedKey.Data()))
+		_, nsName := c.decodeDataPartitionKey(string(encodedKey.Data()))
 		ns, err := c.getNamespace(nsName)
 		if err != nil {
-			err = fmt.Errorf("action[loadVolGroups] err:%v", err.Error())
+			err = fmt.Errorf("action[loadDataPartitions] err:%v", err.Error())
 			return err
 		}
-		vgv := &VolGroupValue{}
+		vgv := &DataPartitionValue{}
 		if err = json.Unmarshal(encodedValue.Data(), vgv); err != nil {
 			err = fmt.Errorf("action[decodeVolValue],value:%v,err:%v", encodedValue.Data(), err)
 			return err
 		}
-		vg := newDataPartition(vgv.VolID, vgv.ReplicaNum, vgv.VolType)
+		vg := newDataPartition(vgv.PartitionID, vgv.ReplicaNum, vgv.PartitionType)
 		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
 		ns.dataPartitions.putDataPartition(vg)
 		encodedKey.Free()

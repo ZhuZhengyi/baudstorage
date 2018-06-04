@@ -6,14 +6,14 @@ import (
 	"time"
 )
 
-func (partition *DataPartition) checkStatus(needLog bool, volTimeOutSec int64) {
+func (partition *DataPartition) checkStatus(needLog bool, dpTimeOutSec int64) {
 	partition.Lock()
 	defer partition.Unlock()
-	liveVolLocs := partition.getLiveVolsByPersistenceHosts(volTimeOutSec)
-	switch len(liveVolLocs) {
+	liveReplicas := partition.getLiveReplicasByPersistenceHosts(dpTimeOutSec)
+	switch len(liveReplicas) {
 	case (int)(partition.ReplicaNum):
 		partition.Status = DataPartitionReadOnly
-		if partition.checkVolLocStatusOnLiveNode(liveVolLocs) == true {
+		if partition.checkReplicaStatusOnLiveNode(liveReplicas) == true {
 			partition.Status = DataPartitionReadWrite
 		}
 	default:
@@ -21,14 +21,14 @@ func (partition *DataPartition) checkStatus(needLog bool, volTimeOutSec int64) {
 	}
 	if needLog == true {
 		msg := fmt.Sprintf("action[checkStatus],volID:%v  goal:%v  liveLocation:%v   VolStatus:%v  RocksDBHost:%v ",
-			partition.PartitionID, partition.ReplicaNum, len(liveVolLocs), partition.Status, partition.PersistenceHosts)
+			partition.PartitionID, partition.ReplicaNum, len(liveReplicas), partition.Status, partition.PersistenceHosts)
 		log.LogInfo(msg)
 	}
 }
 
-func (partition *DataPartition) checkVolLocStatusOnLiveNode(liveLocs []*DataReplica) (volEqual bool) {
-	for _, volLoc := range liveLocs {
-		if volLoc.Status != DataPartitionReadWrite {
+func (partition *DataPartition) checkReplicaStatusOnLiveNode(liveReplicas []*DataReplica) (volEqual bool) {
+	for _, replica := range liveReplicas {
+		if replica.Status != DataPartitionReadWrite {
 			return
 		}
 	}
@@ -36,21 +36,21 @@ func (partition *DataPartition) checkVolLocStatusOnLiveNode(liveLocs []*DataRepl
 	return true
 }
 
-func (partition *DataPartition) checkLocationStatus(volTimeOutSec int64) {
+func (partition *DataPartition) checkLocationStatus(timeOutSec int64) {
 	partition.Lock()
 	defer partition.Unlock()
-	for _, volLoc := range partition.Locations {
-		volLoc.IsLive(volTimeOutSec)
+	for _, replica := range partition.Replicas {
+		replica.IsLive(timeOutSec)
 	}
 
 }
 
-func (partition *DataPartition) checkVolGroupMiss(clusterID string, volMissSec, volWarnInterval int64) {
+func (partition *DataPartition) checkMiss(clusterID string, dataPartitionMissSec, dataPartitionWarnInterval int64) {
 	partition.Lock()
 	defer partition.Unlock()
-	for _, volLoc := range partition.Locations {
-		if partition.isInPersistenceHosts(volLoc.Addr) && volLoc.CheckMiss(volMissSec) == true && partition.needWarnMissVol(volLoc.Addr, volWarnInterval) {
-			dataNode := volLoc.GetVolLocationNode()
+	for _, replica := range partition.Replicas {
+		if partition.isInPersistenceHosts(replica.Addr) && replica.CheckMiss(dataPartitionMissSec) == true && partition.needWarnMissDataPartition(replica.Addr, dataPartitionWarnInterval) {
+			dataNode := replica.GetVolLocationNode()
 			var (
 				lastReportTime time.Time
 			)
@@ -61,27 +61,27 @@ func (partition *DataPartition) checkVolGroupMiss(clusterID string, volMissSec, 
 			}
 			msg := fmt.Sprintf("action[checkVolMissErr], vol:%v  on Node:%v  "+
 				"miss time > :%v  vlocLastRepostTime:%v   dnodeLastReportTime:%v  nodeisActive:%v So Migrate", partition.PartitionID,
-				volLoc.Addr, volMissSec, volLoc.ReportTime, lastReportTime, isActive)
+				replica.Addr, dataPartitionMissSec, replica.ReportTime, lastReportTime, isActive)
 			Warn(clusterID, msg)
 		}
 	}
 
 	for _, addr := range partition.PersistenceHosts {
-		if partition.missVol(addr) == true && partition.needWarnMissVol(addr, volWarnInterval) {
+		if partition.missDataPartition(addr) == true && partition.needWarnMissDataPartition(addr, dataPartitionWarnInterval) {
 			msg := fmt.Sprintf("action[checkVolMissErr], vol:%v  on Node:%v  "+
-				"miss time  > :%v  but server not exsit So Migrate", partition.PartitionID, addr, volMissSec)
+				"miss time  > :%v  but server not exsit So Migrate", partition.PartitionID, addr, dataPartitionMissSec)
 			Warn(clusterID, msg)
 		}
 	}
 }
 
-func (partition *DataPartition) needWarnMissVol(addr string, volWarnInterval int64) (isWarn bool) {
+func (partition *DataPartition) needWarnMissDataPartition(addr string, dataPartitionWarnInterval int64) (isWarn bool) {
 	warnTime, ok := partition.MissNodes[addr]
 	if !ok {
 		partition.MissNodes[addr] = time.Now().Unix()
 		isWarn = true
 	} else {
-		if time.Now().Unix()-warnTime > volWarnInterval {
+		if time.Now().Unix()-warnTime > dataPartitionWarnInterval {
 			isWarn = true
 			partition.MissNodes[addr] = time.Now().Unix()
 		}
@@ -90,35 +90,35 @@ func (partition *DataPartition) needWarnMissVol(addr string, volWarnInterval int
 	return
 }
 
-func (partition *DataPartition) missVol(addr string) (isMiss bool) {
-	_, addrIsInLocs := partition.IsInVolLocs(addr)
+func (partition *DataPartition) missDataPartition(addr string) (isMiss bool) {
+	_, ok := partition.IsInReplicas(addr)
 
-	if addrIsInLocs == false {
+	if ok == false {
 		isMiss = true
 	}
 
 	return
 }
 
-func (partition *DataPartition) checkVolDiskError() (volDiskErrorAddrs []string) {
-	volDiskErrorAddrs = make([]string, 0)
+func (partition *DataPartition) checkDiskError() (diskErrorAddrs []string) {
+	diskErrorAddrs = make([]string, 0)
 	partition.Lock()
 	for _, addr := range partition.PersistenceHosts {
-		volLoc, ok := partition.IsInVolLocs(addr)
+		replica, ok := partition.IsInReplicas(addr)
 		if !ok {
 			continue
 		}
-		if volLoc.Status == DataPartitionUnavailable {
-			volDiskErrorAddrs = append(volDiskErrorAddrs, addr)
+		if replica.Status == DataPartitionUnavailable {
+			diskErrorAddrs = append(diskErrorAddrs, addr)
 		}
 	}
 
-	if len(volDiskErrorAddrs) != (int)(partition.ReplicaNum) && len(volDiskErrorAddrs) > 0 {
+	if len(diskErrorAddrs) != (int)(partition.ReplicaNum) && len(diskErrorAddrs) > 0 {
 		partition.Status = DataPartitionReadOnly
 	}
 	partition.Unlock()
 
-	for _, diskAddr := range volDiskErrorAddrs {
+	for _, diskAddr := range diskErrorAddrs {
 		msg := fmt.Sprintf("action[%v],vol:%v  On :%v  Disk Error,So Remove it From RocksDBHost", CheckDataPartitionDiskErrorErr, partition.PartitionID, diskAddr)
 		log.LogError(msg)
 	}

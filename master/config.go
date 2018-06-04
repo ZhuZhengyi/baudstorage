@@ -9,14 +9,14 @@ import (
 )
 
 const (
-	ColonSplit        = ":"
-	CommaSplit        = ","
-	CfgPeers          = "peers"
-	VolMissSec        = "volMissSec"
-	VolTimeOutSec     = "volTimeOutSec"
-	EveryLoadVolCount = "everyLoadDataPartitionCount"
-	FileDelayCheckCrc = "fileDelayCheckCrc"
-	ReplicaNum        = "replicaNum"
+	ColonSplit                  = ":"
+	CommaSplit                  = ","
+	CfgPeers                    = "peers"
+	DataPartitionMissSec        = "dataPartitionMissSec"
+	DataPartitionTimeOutSec     = "dataPartitionTimeOutSec"
+	EveryLoadDataPartitionCount = "everyLoadDataPartitionCount"
+	FileDelayCheckCrc           = "fileDelayCheckCrc"
+	ReplicaNum                  = "replicaNum"
 )
 
 const (

@@ -44,35 +44,35 @@ func (c *Cluster) checkDataPartitions(ns *NameSpace) {
 	for _, vg := range ns.dataPartitions.dataPartitionMap {
 		vg.checkLocationStatus(c.cfg.DataPartitionTimeOutSec)
 		vg.checkStatus(true, c.cfg.DataPartitionTimeOutSec)
-		vg.checkVolGroupMiss(c.Name, c.cfg.DataPartitionMissSec, c.cfg.DataPartitionWarnInterval)
+		vg.checkMiss(c.Name, c.cfg.DataPartitionMissSec, c.cfg.DataPartitionWarnInterval)
 		vg.checkReplicaNum(c, ns.Name)
 		if vg.Status == DataPartitionReadWrite {
 			newReadWriteVolGroups++
 		}
-		volDiskErrorAddrs := vg.checkVolDiskError()
+		volDiskErrorAddrs := vg.checkDiskError()
 		if volDiskErrorAddrs != nil {
 			for _, addr := range volDiskErrorAddrs {
 				c.dataPartitionOffline(addr, ns.Name, vg, CheckDataPartitionDiskErrorErr)
 			}
 		}
-		volTasks := vg.checkVolReplicationTask()
+		volTasks := vg.checkReplicationTask()
 		c.putDataNodeTasks(volTasks)
 	}
 	ns.dataPartitions.readWriteDataPartitions = newReadWriteVolGroups
 	ns.dataPartitions.RUnlock()
 	ns.dataPartitions.updateDataPartitionResponseCache(true, 0)
-	msg := fmt.Sprintf("action[CheckVolInfo],can readwrite dataPartitions:%v  ", ns.dataPartitions.readWriteDataPartitions)
+	msg := fmt.Sprintf("action[checkDataPartitions],can readWrite dataPartitions:%v  ", ns.dataPartitions.readWriteDataPartitions)
 	log.LogInfo(msg)
 }
 
 func (c *Cluster) backendLoadDataPartition(ns *NameSpace) {
-	needCheckDataPartitoins := ns.dataPartitions.getNeedCheckDataPartitions(c.cfg.everyLoadDataPartitionCount, c.cfg.LoadDataPartitionFrequencyTime)
-	if len(needCheckDataPartitoins) == 0 {
+	needCheckDataPartitions := ns.dataPartitions.getNeedCheckDataPartitions(c.cfg.everyLoadDataPartitionCount, c.cfg.LoadDataPartitionFrequencyTime)
+	if len(needCheckDataPartitions) == 0 {
 		return
 	}
-	c.waitLoadDataPartitionResponse(needCheckDataPartitoins)
-	msg := fmt.Sprintf("action[BackendLoadVol] checkstart:%v everyCheckCount:%v",
-		needCheckDataPartitoins[0].PartitionID, c.cfg.everyLoadDataPartitionCount)
+	c.waitLoadDataPartitionResponse(needCheckDataPartitions)
+	msg := fmt.Sprintf("action[backendLoadDataPartition] checkstart:%v everyCheckCount:%v",
+		needCheckDataPartitions[0].PartitionID, c.cfg.everyLoadDataPartitionCount)
 	log.LogInfo(msg)
 }
 
@@ -202,7 +202,7 @@ func (c *Cluster) processLoadDataPartition(v *DataPartition, isRecover bool) {
 	}
 	v.getFileCount()
 	checkFileTasks := v.checkFile(isRecover, c.Name)
-	v.setVolToNormal()
+	v.setToNormal()
 	c.putDataNodeTasks(checkFileTasks)
 }
 
@@ -489,7 +489,7 @@ func (c *Cluster) createVolSuccessTriggerOperator(nodeAddr string, resp *proto.C
 		vol      *DataReplica
 	)
 
-	if vg, err = c.getVolGroupByVolID(resp.PartitionId); err != nil {
+	if vg, err = c.getDataPartitionByID(resp.PartitionId); err != nil {
 		goto errDeal
 	}
 
@@ -501,7 +501,7 @@ func (c *Cluster) createVolSuccessTriggerOperator(nodeAddr string, resp *proto.C
 	vg.addMember(vol)
 
 	vg.Lock()
-	vg.checkAndRemoveMissVol(vol.Addr)
+	vg.checkAndRemoveMissReplica(vol.Addr)
 	vg.Unlock()
 	return
 errDeal:
@@ -521,7 +521,7 @@ func (c *Cluster) dealDeleteVolResponse(nodeAddr string, resp *proto.DeleteDataP
 		vg *DataPartition
 	)
 	if resp.Status == proto.TaskSuccess {
-		if vg, err = c.getVolGroupByVolID(resp.PartitionId); err != nil {
+		if vg, err = c.getDataPartitionByID(resp.PartitionId); err != nil {
 			return
 		}
 		vg.Lock()
@@ -536,7 +536,7 @@ func (c *Cluster) dealDeleteVolResponse(nodeAddr string, resp *proto.DeleteDataP
 
 func (c *Cluster) dealLoadVolResponse(nodeAddr string, resp *proto.LoadDataPartitionResponse) (err error) {
 	var dataNode *DataNode
-	vg, err := c.getVolGroupByVolID(resp.PartitionId)
+	vg, err := c.getDataPartitionByID(resp.PartitionId)
 	if err != nil || resp.Status == proto.TaskFail || resp.PartitionSnapshot == nil {
 		return
 	}
@@ -553,7 +553,7 @@ func (c *Cluster) dealDeleteFileResponse(nodeAddr string, resp *proto.DeleteFile
 		vg *DataPartition
 	)
 	if resp.Status == proto.TaskSuccess {
-		if vg, err = c.getVolGroupByVolID(resp.VolId); err != nil {
+		if vg, err = c.getDataPartitionByID(resp.VolId); err != nil {
 			return
 		}
 		vg.DeleteFileOnNode(nodeAddr, resp.Name)
@@ -592,14 +592,14 @@ errDeal:
 	return
 }
 
-/*if node report volInfo,so range volInfo,then update volInfo*/
+/*if node report data partition infos,so range data partition infos,then update data partition info*/
 func (c *Cluster) UpdateDataNode(dataNode *DataNode) {
 	for _, vr := range dataNode.VolInfo {
 		if vr == nil {
 			continue
 		}
-		if vol, err := c.getVolGroupByVolID(vr.PartitionID); err == nil {
-			vol.UpdateVol(vr, dataNode)
+		if vol, err := c.getDataPartitionByID(vr.PartitionID); err == nil {
+			vol.UpdateDataPartitionMetric(vr, dataNode)
 		}
 	}
 }
