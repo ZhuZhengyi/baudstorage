@@ -33,15 +33,16 @@ type DataPartion struct {
 	store       interface{}
 	status      int
 	isLeader    bool
-	members     *PartionMembers
+	members     *DataPartionResponse
 	exitCh      chan bool
 }
 
-type PartionMembers struct {
-	PartionStatus int32
-	PartionId     int
-	PartionGoal   int
-	PartionHosts  []string
+type DataPartionResponse struct {
+	PartionId     uint64
+	PartionStatus uint8
+	ReplicaNum    uint8
+	PartionType   string
+	Hosts         []string
 }
 
 func NewDataPartion(partionId uint32, partionType, name, diskPath string, storeMode bool, storeSize int) (dp *DataPartion, err error) {
@@ -86,7 +87,7 @@ func (dp *DataPartion) parseVolMember() (err error) {
 	return nil
 }
 
-func (dp *DataPartion) getMembers() (bool, *PartionMembers, error) {
+func (dp *DataPartion) getMembers() (bool, *DataPartionResponse, error) {
 	var (
 		HostsBuf []byte
 		err      error
@@ -96,19 +97,19 @@ func (dp *DataPartion) getMembers() (bool, *PartionMembers, error) {
 	if HostsBuf, err = PostToMaster(nil, url); err != nil {
 		return false, nil, err
 	}
-	members := new(PartionMembers)
+	members := new(DataPartionResponse)
 
 	if err = json.Unmarshal(HostsBuf, &members); err != nil {
 		log.LogError(fmt.Sprintf(ActionGetFoolwers+" v[%v] json unmarshal [%v] err[%v]", dp.partionId, string(HostsBuf), err))
 		return false, nil, err
 	}
 
-	if len(members.PartionHosts) >= 1 && members.PartionHosts[0] != LocalIP {
+	if len(members.Hosts) >= 1 && members.Hosts[0] != LocalIP {
 		err = errors.Annotatef(ErrNotLeader, "dataPartion[%v] current LocalIP[%v]", dp.partionId, LocalIP)
 		return false, nil, err
 	}
 
-	if members.PartionGoal < LeastGoalNum || len(members.PartionHosts) < members.PartionGoal {
+	if int(members.ReplicaNum) < LeastGoalNum || len(members.Hosts) < int(members.ReplicaNum) {
 		err = ErrLackOfGoal
 		return false, nil, err
 	}
