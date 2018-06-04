@@ -20,7 +20,7 @@ func (vg *VolGroup) checkStatus(needLog bool, volTimeOutSec int64) {
 		vg.Status = VolReadOnly
 	}
 	if needLog == true {
-		msg := fmt.Sprintf("action[checkStatus],volID:%v  goal:%v  liveLocation:%v   VolStatus:%v  RocksDBHost:%v ",
+		msg := fmt.Sprintf("action[checkStatus],volID:%v  goal:%v  liveLocation:%v   PartionStatus:%v  RocksDBHost:%v ",
 			vg.VolID, vg.ReplicaNum, len(liveVolLocs), vg.Status, vg.PersistenceHosts)
 		log.LogInfo(msg)
 	}

@@ -167,12 +167,12 @@ func (s *DataNode) fillHeartBeatResponse(response *proto.DataNodeHeartBeatRespon
 	stat.Unlock()
 
 	response.RackName = s.rackName
-	response.VolInfo = make([]*proto.VolReport, 0)
+	response.PartionInfo = make([]*proto.PartionReport, 0)
 	space := s.space
 	space.volLock.RLock()
 	for _, v := range space.vols {
-		vr := &proto.VolReport{VolID: uint64(dp.partionId), VolStatus: dp.status, Total: uint64(dp.partionSize), Used: uint64(dp.used)}
-		response.VolInfo = append(response.VolInfo, vr)
+		vr := &proto.PartionReport{PartionID: uint64(dp.partionId), PartionStatus: dp.status, Total: uint64(dp.partionSize), Used: uint64(dp.used)}
+		response.PartionInfo = append(response.PartionInfo, vr)
 	}
 	space.volLock.RUnlock()
 }

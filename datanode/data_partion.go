@@ -121,17 +121,17 @@ func (dp *DataPartion) getMembers() (bool, *PartionMembers, error) {
 	return true, members, nil
 }
 
-func (dp *DataPartion) LoadVol() (response *proto.LoadVolResponse) {
-	response = new(proto.LoadVolResponse)
-	response.VolId = uint64(dp.partionId)
-	response.VolStatus = uint8(dp.status)
-	response.VolType = dp.partionType
-	response.VolSnapshot = make([]*proto.File, 0)
+func (dp *DataPartion) LoadVol() (response *proto.LoadDataPartionResponse) {
+	response = new(proto.LoadDataPartionResponse)
+	response.PartionId = uint64(dp.partionId)
+	response.PartionStatus = uint8(dp.status)
+	response.DataPartionType = dp.partionType
+	response.PartionSnapshot = make([]*proto.File, 0)
 	switch dp.partionType {
 	case proto.ExtentVol:
 		var err error
 		store := dp.store.(*storage.ExtentStore)
-		response.VolSnapshot, err = store.SnapShot()
+		response.PartionSnapshot, err = store.SnapShot()
 		response.Used = uint64(store.GetStoreUsedSize())
 		if err != nil {
 			response.Status = proto.TaskFail

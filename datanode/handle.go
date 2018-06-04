@@ -15,14 +15,14 @@ func (s *DataNode) HandleGetDisk(w http.ResponseWriter, r *http.Request) {
 	}
 	space.diskLock.RUnlock()
 
-	volInfos := make([]*proto.LoadVolResponse, 0)
+	volInfos := make([]*proto.LoadDataPartionResponse, 0)
 	space.volLock.RLock()
 	for _, v := range space.vols {
 		volInfos = append(volInfos, dp.LoadVol())
 	}
 	space.volLock.RUnlock()
 	type DisksInfo struct {
-		VolInfo []*proto.LoadVolResponse
+		VolInfo []*proto.LoadDataPartionResponse
 		Disks   []*Disk
 		Rack    string
 	}
@@ -45,7 +45,7 @@ func (s *DataNode) HandleStat(w http.ResponseWriter, r *http.Request) {
 func (s *DataNode) HandleVol(w http.ResponseWriter, r *http.Request) {
 	space := s.space
 	space.volLock.RLock()
-	volInfos := make([]*proto.LoadVolResponse, 0)
+	volInfos := make([]*proto.LoadDataPartionResponse, 0)
 	for _, v := range space.vols {
 		volInfos = append(volInfos, dp.LoadVol())
 	}

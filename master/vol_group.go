@@ -416,7 +416,7 @@ func (vg *VolGroup) checkAndRemoveMissVol(addr string) {
 	}
 }
 
-func (vg *VolGroup) LoadFile(dataNode *DataNode, resp *proto.LoadVolResponse) {
+func (vg *VolGroup) LoadFile(dataNode *DataNode, resp *proto.LoadDataPartionResponse) {
 	vg.Lock()
 	defer vg.Unlock()
 
@@ -428,7 +428,7 @@ func (vg *VolGroup) LoadFile(dataNode *DataNode, resp *proto.LoadVolResponse) {
 	}
 	volLoc := vg.Locations[index]
 	volLoc.LoadVolIsResponse = true
-	for _, vf := range resp.VolSnapshot {
+	for _, vf := range resp.PartionSnapshot {
 		if vf == nil {
 			continue
 		}
@@ -536,7 +536,7 @@ func (vg *VolGroup) addVolHosts(addAddr string, c *Cluster, nsName string) (err 
 	return
 }
 
-func (vg *VolGroup) UpdateVol(vr *proto.VolReport, dataNode *DataNode) {
+func (vg *VolGroup) UpdateVol(vr *proto.PartionReport, dataNode *DataNode) {
 	vg.Lock()
 	volLoc, err := vg.getVolLocation(dataNode.Addr)
 	vg.Unlock()
@@ -548,7 +548,7 @@ func (vg *VolGroup) UpdateVol(vr *proto.VolReport, dataNode *DataNode) {
 		volLoc = NewVol(dataNode)
 		vg.addMember(volLoc)
 	}
-	volLoc.Status = (uint8)(vr.VolStatus)
+	volLoc.Status = (uint8)(vr.PartionStatus)
 	volLoc.Total = vr.Total
 	volLoc.Used = vr.Used
 	volLoc.SetVolAlive()

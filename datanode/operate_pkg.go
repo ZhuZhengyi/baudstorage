@@ -104,23 +104,23 @@ func (s *DataNode) createVol(pkg *Packet) {
 	task := &proto.AdminTask{}
 	json.Unmarshal(pkg.Data, task)
 	pkg.PackOkReply()
-	response := &proto.CreateVolResponse{}
-	request := &proto.CreateVolRequest{}
+	response := &proto.CreateDataPartionResponse{}
+	request := &proto.CreateDataPartionRequest{}
 	if task.OpCode == proto.OpCreateDataPartion {
 		bytes, _ := json.Marshal(task.Request)
 		json.Unmarshal(bytes, request)
-		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
+		_, err := s.space.chooseDiskAndCreateVol(uint32(request.PartionId), request.DataPartionType, request.PartionSize)
 		if err != nil {
-			response.VolId = uint64(request.VolId)
+			response.PartionId = uint64(request.PartionId)
 			response.Status = proto.TaskFail
 			response.Result = err.Error()
 			log.LogErrorf("from master Task[%v] failed,error[%v]", task.ToString(), err.Error())
 		} else {
 			response.Status = proto.TaskSuccess
-			response.VolId = request.VolId
+			response.PartionId = request.PartionId
 		}
 	} else {
-		response.VolId = uint64(request.VolId)
+		response.PartionId = uint64(request.PartionId)
 		response.Status = proto.TaskFail
 		response.Result = "illegal opcode "
 		log.LogErrorf("from master Task[%v] failed,error[%v]", task.ToString(), response.Result)
@@ -129,7 +129,7 @@ func (s *DataNode) createVol(pkg *Packet) {
 	data, _ := json.Marshal(task)
 	_, err := PostToMaster(data, master.DataNodeResponse)
 	if err != nil {
-		err = errors.Annotatef(err, "create vol failed,partionId[%v]", request.VolId)
+		err = errors.Annotatef(err, "create vol failed,partionId[%v]", request.PartionId)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
@@ -167,23 +167,23 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	task := &proto.AdminTask{}
 	json.Unmarshal(pkg.Data, task)
 	pkg.PackOkReply()
-	request := &proto.DeleteVolRequest{}
-	response := &proto.DeleteVolResponse{}
+	request := &proto.DeleteDataPartionRequest{}
+	response := &proto.DeleteDataPartionResponse{}
 	if task.OpCode == proto.OpDeleteDataPartion {
 		bytes, _ := json.Marshal(task.Request)
 		json.Unmarshal(bytes, request)
-		_, err := s.space.chooseDiskAndCreateVol(uint32(request.VolId), request.VolType, request.VolSize)
+		_, err := s.space.chooseDiskAndCreateVol(uint32(request.PartionId), request.DataPartionType, request.PartionSize)
 		if err != nil {
-			response.VolId = uint64(request.VolId)
+			response.PartionId = uint64(request.PartionId)
 			response.Status = proto.TaskFail
 			response.Result = err.Error()
 			log.LogErrorf("from master Task[%v] failed,error[%v]", task.ToString(), err.Error())
 		} else {
-			response.VolId = uint64(request.VolId)
+			response.PartionId = uint64(request.PartionId)
 			response.Status = proto.TaskSuccess
 		}
 	} else {
-		response.VolId = uint64(request.VolId)
+		response.PartionId = uint64(request.PartionId)
 		response.Status = proto.TaskFail
 		response.Result = "illegal opcode "
 		log.LogErrorf("from master Task[%v] failed,error[%v]", task.ToString(), response.Result)
@@ -192,7 +192,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	data, _ := json.Marshal(task)
 	_, err := PostToMaster(data, master.DataNodeResponse)
 	if err != nil {
-		err = errors.Annotatef(err, "delete vol failed,partionId[%v]", request.VolId)
+		err = errors.Annotatef(err, "delete vol failed,partionId[%v]", request.PartionId)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
@@ -201,23 +201,23 @@ func (s *DataNode) loadVol(pkg *Packet) {
 	task := &proto.AdminTask{}
 	json.Unmarshal(pkg.Data, task)
 	pkg.PackOkReply()
-	request := &proto.LoadVolRequest{}
-	response := &proto.LoadVolResponse{}
+	request := &proto.LoadDataPartionRequest{}
+	response := &proto.LoadDataPartionResponse{}
 	if task.OpCode == proto.OpLoadDataPartion {
 		bytes, _ := json.Marshal(task.Request)
 		json.Unmarshal(bytes, request)
-		v := s.space.getVol(uint32(request.VolId))
+		v := s.space.getVol(uint32(request.PartionId))
 		if v == nil {
 			response.Status = proto.TaskFail
-			response.VolId = uint64(request.VolId)
-			response.Result = fmt.Sprintf("vol[%v] not found", request.VolId)
+			response.PartionId = uint64(request.PartionId)
+			response.Result = fmt.Sprintf("vol[%v] not found", request.PartionId)
 			log.LogErrorf("from master Task[%v] failed,error[%v]", task.ToString(), response.Result)
 		} else {
 			response = dp.LoadVol()
-			response.VolId = uint64(request.VolId)
+			response.PartionId = uint64(request.PartionId)
 		}
 	} else {
-		response.VolId = uint64(request.VolId)
+		response.PartionId = uint64(request.PartionId)
 		response.Status = proto.TaskFail
 		response.Result = "illegal opcode "
 		log.LogErrorf("from master Task[%v] failed,error[%v]", task.ToString(), response.Result)
@@ -226,7 +226,7 @@ func (s *DataNode) loadVol(pkg *Packet) {
 	data, _ := json.Marshal(task)
 	_, err := PostToMaster(data, master.DataNodeResponse)
 	if err != nil {
-		err = errors.Annotatef(err, "load vol failed,partionId[%v]", request.VolId)
+		err = errors.Annotatef(err, "load vol failed,partionId[%v]", request.PartionId)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
