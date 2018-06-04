@@ -98,14 +98,14 @@ func (dp *DataPartition) getMembers() (isLeader bool, replicaHosts []string, err
 		return
 	}
 
-	if response.Locations != nil && len(response.Locations) >= 1 && response.Locations[0].Addr != LocalIP {
+	if response.Replicas != nil && len(response.Replicas) >= 1 && response.Replicas[0].Addr != LocalIP {
 		err = errors.Annotatef(ErrNotLeader, "dataPartition[%v] current LocalIP[%v]", dp.partitionId, LocalIP)
 		isLeader = false
 		replicaHosts = nil
 		return
 	}
 
-	if int(response.ReplicaNum) < LeastGoalNum || len(response.Locations) < int(response.ReplicaNum) {
+	if int(response.ReplicaNum) < LeastGoalNum || len(response.Replicas) < int(response.ReplicaNum) {
 		err = ErrLackOfGoal
 		isLeader = false
 		replicaHosts = nil
@@ -119,7 +119,7 @@ func (dp *DataPartition) getMembers() (isLeader bool, replicaHosts []string, err
 		return
 	}
 
-	for _, location := range response.Locations {
+	for _, location := range response.Replicas {
 		replicaHosts = append(replicaHosts, location.Addr)
 	}
 	isLeader = true
