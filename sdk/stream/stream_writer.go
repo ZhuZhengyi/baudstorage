@@ -220,23 +220,24 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 }
 
 func (stream *StreamWriter) recoverExtent() (err error) {
-	retryPackets := stream.getWriter().getNeedRetrySendPackets()
-	stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID)
+	retryPackets := stream.getWriter().getNeedRetrySendPackets()  //get need retry recover packets
+	stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID) //exclude current PartionId
 	for i := 0; i < MaxSelectDataPartionForWrite; i++ {
 		err=nil
-		ek := stream.getWriter().toKey()
+		ek := stream.getWriter().toKey() //first get currentExtent Key
 		if ek.Size != 0 {
-			err = stream.appendExtentKey(stream.currentInode, ek)
+			err = stream.appendExtentKey(stream.currentInode, ek) //put it to metanode
 		}
 		if err != nil {
 			err = errors.Annotatef(err, "update extent[%v] to MetaNode Failed", ek.Size)
 			log.LogErrorf("stream[%v] err[%v]",stream.toString(),err.Error())
+			i--                //if put metanode error,so retry put it to metanode
 			continue
 		}
-		if err = stream.allocateNewExtentWriter(); err != nil {
+		if err = stream.allocateNewExtentWriter(); err != nil {  //allocate new extent
 			err = errors.Annotatef(err, "RecoverExtent Failed")
 			log.LogErrorf("stream[%v] err[%v]",stream.toString(),err.Error())
-			stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID)
+			stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID) //if failed,then exclude
 			continue
 		}
 
