@@ -31,6 +31,7 @@ func NewSpaceManager(rack string) (space *SpaceManager) {
 			case <-ticker:
 				space.modifyVolsStatus()
 				space.updateMetrics()
+				space.closeActiveFiles()
 			}
 		}
 	}()
@@ -150,6 +151,30 @@ func (space *SpaceManager) deleteVol(vodId uint32) {
 	case proto.TinyVol:
 		store := dp.store.(*storage.TinyStore)
 		store.CloseAll()
+	}
+}
+
+func (space *SpaceManager)closeActiveFiles(){
+	partitions:=make([]*DataPartition,0)
+	space.dataPartitionLock.RLock()
+	for _,partition:=range space.partitions{
+		partitions=append(partitions,partition)
+	}
+	space.dataPartitionLock.RUnlock()
+	activeFiles:=0
+	for _,partition:=range partitions{
+		if partition.partitionType==proto.ExtentVol{
+			store:=partition.store.(*storage.ExtentStore)
+			activeFiles+=store.GetStoreActiveFiles()
+		}
+	}
+	if activeFiles>=10000{
+		for _,partition:=range partitions{
+			if partition.partitionType==proto.ExtentVol{
+				store:=partition.store.(*storage.ExtentStore)
+				store.CloseStoreActiveFiles()
+			}
+		}
 	}
 }
 
