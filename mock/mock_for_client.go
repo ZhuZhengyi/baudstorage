@@ -43,15 +43,15 @@ func NewMockServer(datadir string) (m *MockServer, err error) {
 	return
 }
 
-func (m *MockServer) volGroupView() (views []*vol.VolGroup) {
-	views = make([]*vol.VolGroup, 0)
+func (m *MockServer) volGroupView() (views []*data.VolGroup) {
+	views = make([]*data.VolGroup, 0)
 	for i := 1; i <= 1000; i++ {
 		rand.Seed(time.Now().UnixNano())
 		hosts := make([]string, 3)
 		for j := 0; j < 3; j++ {
 			hosts[j] = "127.0.0.1:9000"
 		}
-		v := &vol.VolGroup{
+		v := &data.VolGroup{
 			VolID:      uint32(i),
 			ReplicaNum: 3,
 			Status:     uint8((rand.Int()%2 + 1)),
@@ -178,7 +178,7 @@ func (s *MockServer) serveConn(conn net.Conn) {
 
 func (s *MockServer) clientview(w http.ResponseWriter, r *http.Request) {
 	groups := s.volGroupView()
-	views := &vol.VolsView{Vols: groups}
+	views := &data.VolsView{Vols: groups}
 	body, _ := json.Marshal(views)
 	w.Write(body)
 }

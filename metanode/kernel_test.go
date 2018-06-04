@@ -33,14 +33,14 @@ func Test_Dentry(t *testing.T) {
 func Test_Inode(t *testing.T) {
 	ino := NewInode(1, 0)
 	ino.Extents.Put(proto.ExtentKey{
-		VolId:    1000,
-		ExtentId: 1222,
-		Size:     10234,
+		PartionId: 1000,
+		ExtentId:  1222,
+		Size:      10234,
 	})
 	ino.Extents.Put(proto.ExtentKey{
-		VolId:    1020,
-		ExtentId: 28,
-		Size:     150,
+		PartionId: 1020,
+		ExtentId:  28,
+		Size:      150,
 	})
 	t.Log("source inode:", ino)
 	data, err := ino.Marshal()

@@ -54,7 +54,7 @@ func (vg *VolGroup) checkBadStatus() {
 func (vg *VolGroup) generateCreateVolGroupTasks() (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	for _, addr := range vg.PersistenceHosts {
-		t := proto.NewAdminTask(proto.OpCreateVol, addr, newCreateVolRequest(vg.VolType, vg.VolID))
+		t := proto.NewAdminTask(proto.OpCreateDataPartion, addr, newCreateVolRequest(vg.VolType, vg.VolID))
 		t.ID = fmt.Sprintf("%v_volID[%v]", t.ID, vg.VolID)
 		tasks = append(tasks, t)
 	}
@@ -158,7 +158,7 @@ func (vg *VolGroup) generateLoadVolTasks() (tasks []*proto.AdminTask) {
 			continue
 		}
 		vol.LoadVolIsResponse = false
-		t := proto.NewAdminTask(proto.OpLoadVol, vol.Addr, newLoadVolMetricRequest(vg.VolType, vg.VolID))
+		t := proto.NewAdminTask(proto.OpLoadDataPartion, vol.Addr, newLoadVolMetricRequest(vg.VolType, vg.VolID))
 		t.ID = fmt.Sprintf("%v_volID[%v]", t.ID, vg.VolID)
 		tasks = append(tasks, t)
 	}
@@ -371,7 +371,7 @@ func (vg *VolGroup) addLackReplication() (t *proto.AdminTask, lackAddr string, e
 			err = VolReplicationLackError
 			lackAddr = addr
 
-			t = proto.NewAdminTask(proto.OpCreateVol, addr, newCreateVolRequest(vg.VolType, vg.VolID))
+			t = proto.NewAdminTask(proto.OpCreateDataPartion, addr, newCreateVolRequest(vg.VolType, vg.VolID))
 			t.ID = fmt.Sprintf("%v_volID[%v]", t.ID, vg.VolID)
 			vg.isRecover = true
 			break

@@ -6,6 +6,7 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/sdk/data"
 	"github.com/tiglabs/baudstorage/sdk/vol"
 	"github.com/tiglabs/baudstorage/util/log"
 	"runtime"
@@ -15,7 +16,7 @@ type AppendExtentKeyFunc func(inode uint64, key proto.ExtentKey) error
 type GetExtentsFunc func(inode uint64) ([]proto.ExtentKey, error)
 
 type ExtentClient struct {
-	wrapper         *vol.VolGroupWrapper
+	wrapper         *data.DataPartionWrapper
 	writers         map[uint64]*StreamWriter
 	writerLock      sync.RWMutex
 	readers         map[uint64]*StreamReader
@@ -29,9 +30,9 @@ type ExtentClient struct {
 func NewExtentClient(namespace, master string, appendExtentKey AppendExtentKeyFunc, getExtents GetExtentsFunc) (client *ExtentClient, err error) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	client = new(ExtentClient)
-	client.wrapper, err = vol.NewVolGroupWraper(namespace, master)
+	client.wrapper, err = data.NewDataPartionWrapper(namespace, master)
 	if err != nil {
-		return nil, fmt.Errorf("init volGroup Wrapper failed [%v]", err.Error())
+		return nil, fmt.Errorf("init dp Wrapper failed [%v]", err.Error())
 	}
 	client.writers = make(map[uint64]*StreamWriter)
 	client.readers = make(map[uint64]*StreamReader)
@@ -196,18 +197,18 @@ func (client *ExtentClient) Read(inode uint64, data []byte, offset int, size int
 
 func (client *ExtentClient) Delete(keys []proto.ExtentKey) (err error) {
 	for _, k := range keys {
-		vol, err := client.wrapper.GetVol(k.VolId)
+		dp, err := client.wrapper.GetDataPartion(k.PartionId)
 		if err != nil {
 			continue
 		}
-		client.delete(vol, k.ExtentId)
+		client.delete(dp, k.ExtentId)
 	}
 
 	return nil
 }
 
-func (client *ExtentClient) delete(vol *vol.VolGroup, extentId uint64) (err error) {
-	connect, err := client.wrapper.GetConnect(vol.Hosts[0])
+func (client *ExtentClient) delete(dp *data.DataPartion, extentId uint64) (err error) {
+	connect, err := client.wrapper.GetConnect(dp.Hosts[0])
 	if err != nil {
 		return
 	}
@@ -218,7 +219,7 @@ func (client *ExtentClient) delete(vol *vol.VolGroup, extentId uint64) (err erro
 			connect.Close()
 		}
 	}()
-	p := NewDeleteExtentPacket(vol, extentId)
+	p := NewDeleteExtentPacket(dp, extentId)
 	if err = p.WriteToConn(connect); err != nil {
 		return
 	}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk/vol"
+	"github.com/tiglabs/baudstorage/sdk/data"
 	"github.com/tiglabs/baudstorage/util/log"
 	"io"
 	"sync"
@@ -20,7 +20,7 @@ type ReadRequest struct {
 
 type StreamReader struct {
 	inode      uint64
-	wrapper    *vol.VolGroupWrapper
+	wrapper    *data.DataPartionWrapper
 	readers    []*ExtentReader
 	getExtents GetExtentsFunc
 	extents    *proto.StreamKey
@@ -31,7 +31,7 @@ type StreamReader struct {
 	sync.Mutex
 }
 
-func NewStreamReader(inode uint64, wrapper *vol.VolGroupWrapper, getExtents GetExtentsFunc) (stream *StreamReader, err error) {
+func NewStreamReader(inode uint64, wrapper *data.DataPartionWrapper, getExtents GetExtentsFunc) (stream *StreamReader, err error) {
 	stream = new(StreamReader)
 	stream.inode = inode
 	stream.wrapper = wrapper
@@ -51,7 +51,7 @@ func NewStreamReader(inode uint64, wrapper *vol.VolGroupWrapper, getExtents GetE
 	for _, key := range stream.extents.Extents {
 		if reader, err = NewExtentReader(inode, offset, key, stream.wrapper); err != nil {
 			return nil, errors.Annotatef(err, "NewStreamReader inode[%v] "+
-				"key[%v] vol not found error", inode, key)
+				"key[%v] dp not found error", inode, key)
 		}
 		stream.readers = append(stream.readers, reader)
 		offset += int(key.Size)
@@ -133,7 +133,7 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *proto.StreamKey) (er
 		} else if index > oldReaderCnt-1 {
 			if r, err = NewExtentReader(stream.inode, newOffSet, key, stream.wrapper); err != nil {
 				return errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] "+
-					"vol not found error", stream.inode, key)
+					"dp not found error", stream.inode, key)
 			}
 			readers = append(readers, r)
 			newOffSet += int(key.Size)

@@ -130,18 +130,18 @@ type GetExtentsResponse struct {
 var InvalidKey = errors.New("invalid key error")
 
 type ExtentKey struct {
-	VolId    uint32
-	ExtentId uint64
-	Size     uint32
-	Crc      uint32
+	PartionId uint32
+	ExtentId  uint64
+	Size      uint32
+	Crc       uint32
 }
 
 func (ek *ExtentKey) isEquare(k ExtentKey) bool {
-	return ek.VolId == k.VolId && ek.ExtentId == k.ExtentId
+	return ek.PartionId == k.PartionId && ek.ExtentId == k.ExtentId
 }
 
 func (k *ExtentKey) Marshal() (m string) {
-	return fmt.Sprintf("%v_%v_%v_%v", k.VolId, k.ExtentId, k.Size, k.Crc)
+	return fmt.Sprintf("%v_%v_%v_%v", k.PartionId, k.ExtentId, k.Size, k.Crc)
 }
 
 func (k *ExtentKey) UnMarshal(m string) (err error) {
@@ -161,7 +161,7 @@ func (k *ExtentKey) UnMarshal(m string) (err error) {
 	}
 	vId, _ := strconv.ParseUint(keyArr[0], 10, 32)
 	k.ExtentId, _ = strconv.ParseUint(keyArr[1], 10, 64)
-	k.VolId = uint32(vId)
+	k.PartionId = uint32(vId)
 	k.Size = uint32(size)
 	k.Crc = uint32(crc)
 

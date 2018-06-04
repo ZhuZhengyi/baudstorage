@@ -16,7 +16,7 @@ const (
 
 type BlockClient struct {
 	conns       *pool.ConnPool
-	vols        *vol.VolGroupWrapper
+	vols        *data.VolGroupWrapper
 	masterAddrs string
 	isShutDown  bool
 }
@@ -29,7 +29,7 @@ func NewBlockClient(namespace, maddrs string) *BlockClient {
 		vols:        nil,
 	}
 	var err error
-	clt.vols, err = vol.NewVolGroupWraper(namespace, maddrs)
+	clt.vols, err = data.NewVolGroupWraper(namespace, maddrs)
 	if err != nil {
 		return nil
 	}
@@ -45,7 +45,7 @@ func (clt *BlockClient) Write(data []byte) (key string, err error) {
 		err = errors.New("empty data to write")
 		return
 	}
-	var vol *vol.VolGroup
+	var vol *data.VolGroup
 	retried := 0
 	for retried < CltMaxRetry {
 		vol, err = clt.vols.GetWriteVol(nil)
@@ -92,7 +92,7 @@ func (clt *BlockClient) Read(key string) (data []byte, err error) {
 		volId, size uint32
 		offset      int64
 		fileId      uint64
-		vol         *vol.VolGroup
+		vol         *data.VolGroup
 	)
 	volId, fileId, offset, size, _, err = unmarshalKey(key)
 	if err != nil {
@@ -146,7 +146,7 @@ func (clt *BlockClient) Delete(key string) (err error) {
 		volId, size uint32
 		offset      int64
 		fileId      uint64
-		vol         *vol.VolGroup
+		vol         *data.VolGroup
 	)
 	volId, fileId, offset, size, _, err = unmarshalKey(key)
 	if err != nil {

@@ -175,7 +175,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 
 	reply = NewPacket()
 	if err = reply.ReadFromConn(request.nextConn, proto.ReadDeadlineTime); err == nil {
-		if reply.ReqID == request.ReqID && reply.VolID == request.VolID && request.Offset == reply.Offset {
+		if reply.ReqID == request.ReqID && reply.PartionID == request.PartionID && request.Offset == reply.Offset {
 			goto success
 		}
 		if err = msgH.checkReplyAvail(reply); err != nil {
@@ -250,7 +250,7 @@ func (s *DataNode) CheckPacket(pkg *Packet) error {
 	if err != nil {
 		return err
 	}
-	pkg.vol = s.space.getVol(pkg.VolID)
+	pkg.vol = s.space.getVol(pkg.PartionID)
 	if pkg.vol == nil {
 		return ErrVolNotExist
 	}
