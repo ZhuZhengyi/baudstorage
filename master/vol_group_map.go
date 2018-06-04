@@ -9,75 +9,75 @@ import (
 	"time"
 )
 
-type VolGroupMap struct {
+type DataPartitionMap struct {
 	sync.RWMutex
-	volGroupMap        map[uint64]*DataPartition
-	volGroupCount      int
-	readWriteVolGroups int
-	lastCheckVolID     uint64
-	lastReleaseVolID   uint64
-	volGroups          []*DataPartition
-	cacheVolResponse   []byte
+	dataPartitionMap           map[uint64]*DataPartition
+	dataPartitionCount         int
+	readWriteDataPartitions    int
+	lastCheckPartitionID       uint64
+	lastReleasePartitionID     uint64
+	dataPartitions             []*DataPartition
+	cacheDataPartitionResponse []byte
 }
 
-func NewVolMap() (vm *VolGroupMap) {
-	vm = new(VolGroupMap)
-	vm.volGroupMap = make(map[uint64]*DataPartition, 0)
-	vm.volGroupCount = 1
-	vm.volGroups = make([]*DataPartition, 0)
+func NewDataPartitionMap() (vm *DataPartitionMap) {
+	vm = new(DataPartitionMap)
+	vm.dataPartitionMap = make(map[uint64]*DataPartition, 0)
+	vm.dataPartitionCount = 1
+	vm.dataPartitions = make([]*DataPartition, 0)
 
 	return
 }
 
-func (vm *VolGroupMap) getVol(volID uint64) (*DataPartition, error) {
-	vm.RLock()
-	defer vm.RUnlock()
-	if v, ok := vm.volGroupMap[volID]; ok {
+func (dpMap *DataPartitionMap) getDataPartition(ID uint64) (*DataPartition, error) {
+	dpMap.RLock()
+	defer dpMap.RUnlock()
+	if v, ok := dpMap.dataPartitionMap[ID]; ok {
 		return v, nil
 	}
-	log.LogError(fmt.Sprintf("action[getVol],VolId:%v,err:%v", volID, DataPartitionNotFound))
+	log.LogError(fmt.Sprintf("action[getDataPartition],VolId:%v,err:%v", ID, DataPartitionNotFound))
 	return nil, DataPartitionNotFound
 }
 
-func (vm *VolGroupMap) putVol(v *DataPartition) {
-	vm.Lock()
-	defer vm.Unlock()
-	vm.volGroupMap[v.PartitionID] = v
-	vm.volGroups = append(vm.volGroups, v)
+func (dpMap *DataPartitionMap) putDataPartition(v *DataPartition) {
+	dpMap.Lock()
+	defer dpMap.Unlock()
+	dpMap.dataPartitionMap[v.PartitionID] = v
+	dpMap.dataPartitions = append(dpMap.dataPartitions, v)
 }
 
-func (vm *VolGroupMap) updateVolResponseCache(needUpdate bool, minVolID uint64) (body []byte, err error) {
-	vm.Lock()
-	defer vm.Unlock()
-	if vm.cacheVolResponse == nil || needUpdate || len(vm.cacheVolResponse) == 0 {
-		vm.cacheVolResponse = make([]byte, 0)
-		vrs := vm.GetVolsView(minVolID)
+func (dpMap *DataPartitionMap) updateDataPartitionResponseCache(needUpdate bool, minPartitionID uint64) (body []byte, err error) {
+	dpMap.Lock()
+	defer dpMap.Unlock()
+	if dpMap.cacheDataPartitionResponse == nil || needUpdate || len(dpMap.cacheDataPartitionResponse) == 0 {
+		dpMap.cacheDataPartitionResponse = make([]byte, 0)
+		vrs := dpMap.GetDataPartitionsView(minPartitionID)
 		if len(vrs) == 0 {
-			log.LogError(fmt.Sprintf("action[updateVolResponseCache],minVolID:%v,err:%v",
-				minVolID, NoAvailDataPartition))
+			log.LogError(fmt.Sprintf("action[updateDataPartitionResponseCache],minPartitionID:%v,err:%v",
+				minPartitionID, NoAvailDataPartition))
 			return nil, NoAvailDataPartition
 		}
-		cv := NewVolsView()
-		cv.Vols = vrs
+		cv := NewDataPartitionsView()
+		cv.DataPartitions = vrs
 		if body, err = json.Marshal(cv); err != nil {
-			log.LogError(fmt.Sprintf("action[updateVolResponseCache],minVolID:%v,err:%v",
-				minVolID, err.Error()))
+			log.LogError(fmt.Sprintf("action[updateDataPartitionResponseCache],minPartitionID:%v,err:%v",
+				minPartitionID, err.Error()))
 			return nil, fmt.Errorf("%v,marshal err:%v", NoAvailDataPartition, err.Error())
 		}
-		vm.cacheVolResponse = body
+		dpMap.cacheDataPartitionResponse = body
 		return
 	}
-	body = make([]byte, len(vm.cacheVolResponse))
-	copy(body, vm.cacheVolResponse)
+	body = make([]byte, len(dpMap.cacheDataPartitionResponse))
+	copy(body, dpMap.cacheDataPartitionResponse)
 
 	return
 }
 
-func (vm *VolGroupMap) GetVolsView(minVolID uint64) (vrs []*VolResponse) {
-	vrs = make([]*VolResponse, 0)
-	log.LogDebugf("volGroupMapLen[%v],volGroupsLen[%v],minVolID[%v],volGroupMap[%v],volGroups[%v]", len(vm.volGroupMap), len(vm.volGroups), minVolID, vm.volGroupMap, vm.volGroups)
-	for _, vol := range vm.volGroupMap {
-		if vol.PartitionID <= minVolID {
+func (dpMap *DataPartitionMap) GetDataPartitionsView(minPartitionID uint64) (vrs []*DataPartitionResponse) {
+	vrs = make([]*DataPartitionResponse, 0)
+	log.LogDebugf("volGroupMapLen[%v],volGroupsLen[%v],minPartitionID[%v],dataPartitionMap[%v],dataPartitions[%v]", len(dpMap.dataPartitionMap), len(dpMap.dataPartitions), minPartitionID, dpMap.dataPartitionMap, dpMap.dataPartitions)
+	for _, vol := range dpMap.dataPartitionMap {
+		if vol.PartitionID <= minPartitionID {
 			continue
 		}
 		vr := vol.convertToVolResponse()
@@ -87,36 +87,36 @@ func (vm *VolGroupMap) GetVolsView(minVolID uint64) (vrs []*VolResponse) {
 	return
 }
 
-func (vm *VolGroupMap) getNeedReleaseVolGroups(everyReleaseVolCount int, releaseVolAfterLoadVolSeconds int64) (needReleaseVolGroups []*DataPartition) {
-	needReleaseVolGroups = make([]*DataPartition, 0)
-	vm.RLock()
-	defer vm.RUnlock()
+func (dpMap *DataPartitionMap) getNeedReleaseDataPartitions(everyReleaseDataPartitionCount int, releaseVolAfterLoadVolSeconds int64) (partitions []*DataPartition) {
+	partitions = make([]*DataPartition, 0)
+	dpMap.RLock()
+	defer dpMap.RUnlock()
 
-	for i := 0; i < everyReleaseVolCount; i++ {
-		if vm.lastReleaseVolID > (uint64)(len(vm.volGroupMap)) {
-			vm.lastReleaseVolID = 0
+	for i := 0; i < everyReleaseDataPartitionCount; i++ {
+		if dpMap.lastReleasePartitionID > (uint64)(len(dpMap.dataPartitionMap)) {
+			dpMap.lastReleasePartitionID = 0
 		}
-		vm.lastReleaseVolID++
-		vg, ok := vm.volGroupMap[vm.lastReleaseVolID]
+		dpMap.lastReleasePartitionID++
+		vg, ok := dpMap.dataPartitionMap[dpMap.lastReleasePartitionID]
 		if ok && time.Now().Unix()-vg.LastLoadTime >= releaseVolAfterLoadVolSeconds {
-			needReleaseVolGroups = append(needReleaseVolGroups, vg)
+			partitions = append(partitions, vg)
 		}
 	}
 
 	return
 }
 
-func (vm *VolGroupMap) releaseVolGroups(needReleaseVols []*DataPartition) {
+func (dpMap *DataPartitionMap) releaseDataPartitions(partitions []*DataPartition) {
 	defer func() {
 		if err := recover(); err != nil {
 			const size = RuntimeStackBufSize
 			buf := make([]byte, size)
 			buf = buf[:runtime.Stack(buf, false)]
-			log.LogError(fmt.Sprintf("releaseVolGroups panic %v: %s\n", err, buf))
+			log.LogError(fmt.Sprintf("releaseDataPartitions panic %v: %s\n", err, buf))
 		}
 	}()
 	var wg sync.WaitGroup
-	for _, vg := range needReleaseVols {
+	for _, vg := range partitions {
 		wg.Add(1)
 		go func(vg *DataPartition) {
 			vg.ReleaseVol()
@@ -127,19 +127,19 @@ func (vm *VolGroupMap) releaseVolGroups(needReleaseVols []*DataPartition) {
 
 }
 
-func (vm *VolGroupMap) getNeedCheckVolGroups(everyLoadVolCount int, loadVolFrequencyTime int64) (needCheckVols []*DataPartition) {
-	needCheckVols = make([]*DataPartition, 0)
-	vm.RLock()
-	defer vm.RUnlock()
+func (dpMap *DataPartitionMap) getNeedCheckDataPartitions(everyLoadCount int, loadFrequencyTime int64) (partitions []*DataPartition) {
+	partitions = make([]*DataPartition, 0)
+	dpMap.RLock()
+	defer dpMap.RUnlock()
 
-	for i := 0; i < everyLoadVolCount; i++ {
-		if vm.lastCheckVolID > (uint64)(len(vm.volGroupMap)) {
-			vm.lastCheckVolID = 0
+	for i := 0; i < everyLoadCount; i++ {
+		if dpMap.lastCheckPartitionID > (uint64)(len(dpMap.dataPartitionMap)) {
+			dpMap.lastCheckPartitionID = 0
 		}
-		vm.lastCheckVolID++
-		v, ok := vm.volGroupMap[vm.lastCheckVolID]
-		if ok && time.Now().Unix()-v.LastLoadTime >= loadVolFrequencyTime {
-			needCheckVols = append(needCheckVols, v)
+		dpMap.lastCheckPartitionID++
+		v, ok := dpMap.dataPartitionMap[dpMap.lastCheckPartitionID]
+		if ok && time.Now().Unix()-v.LastLoadTime >= loadFrequencyTime {
+			partitions = append(partitions, v)
 		}
 	}
 

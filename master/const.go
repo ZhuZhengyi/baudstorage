@@ -1,31 +1,30 @@
 package master
 
 const (
-	ParaNodeAddr = "addr"
-	ParaName     = "name"
-	ParaId       = "id"
-	ParaCount    = "count"
-	ParaReplicas = "replicas"
-	ParaVolGroup = "vg"
-	ParaVolType  = "type"
+	ParaNodeAddr          = "addr"
+	ParaName              = "name"
+	ParaId                = "id"
+	ParaCount             = "count"
+	ParaReplicas          = "replicas"
+	ParaDataPartitionType = "type"
 )
 
 const (
-	ExtentVol = "extent"
-	ChunkVol  = "chunk"
+	ExtentDataPartition = "extent"
+	ChunkDataPartition  = "chunk"
 )
 
 const (
-	DeleteExcessReplicationErr  = "DeleteExcessReplicationErr "
-	AddLackReplicationErr       = "AddLackReplicationErr "
-	CheckVolDiskErrorErr        = "CheckVolDiskErrorErr  "
-	GetAvailDataNodeHostsErr    = "GetAvailDataNodeHostsErr "
-	GetAvailMetaNodeHostsErr    = "GetAvailMetaNodeHostsErr "
-	GetLackFileNodeTaskErr      = "GetLackFileNodeTaskErr "
-	DeleteFileInCoreInfo        = "DeleteFileInCoreInfo "
-	GetVolLocationFileCountInfo = "GetVolLocationFileCountInfo "
-	DataNodeOfflineInfo         = "dataNodeOfflineInfo"
-	HandleVolOfflineErr         = "HandleVolOffLineErr "
+	DeleteExcessReplicationErr     = "DeleteExcessReplicationErr "
+	AddLackReplicationErr          = "AddLackReplicationErr "
+	CheckDataPartitionDiskErrorErr = "CheckDataPartitionDiskErrorErr  "
+	GetAvailDataNodeHostsErr       = "GetAvailDataNodeHostsErr "
+	GetAvailMetaNodeHostsErr       = "GetAvailMetaNodeHostsErr "
+	GetLackFileNodeTaskErr         = "GetLackFileNodeTaskErr "
+	DeleteFileInCoreInfo           = "DeleteFileInCoreInfo "
+	GetDataReplicaFileCountInfo    = "GetDataReplicaFileCountInfo "
+	DataNodeOfflineInfo            = "dataNodeOfflineInfo"
+	HandleDataPartitionOfflineErr  = "HandleDataPartitionOffLineErr "
 )
 
 const (
@@ -33,9 +32,9 @@ const (
 )
 
 const (
-	VolUnavailable = 0
-	VolReadOnly    = 1
-	VolReadWrite   = 2
+	DataPartitionUnavailable = 0
+	DataPartitionReadOnly    = 1
+	DataPartitionReadWrite   = 2
 )
 
 const (

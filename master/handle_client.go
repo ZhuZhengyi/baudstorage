@@ -8,21 +8,21 @@ import (
 	"strconv"
 )
 
-type VolResponse struct {
-	VolID      uint64
-	Status     uint8
-	ReplicaNum uint8
-	VolType    string
-	Hosts      []string
+type DataPartitionResponse struct {
+	PartitionID   uint64
+	Status        uint8
+	ReplicaNum    uint8
+	PartitionType string
+	Hosts         []string
 }
 
-type VolsView struct {
-	Vols []*VolResponse
+type DataPartitionsView struct {
+	DataPartitions []*DataPartitionResponse
 }
 
-func NewVolsView() (volsView *VolsView) {
-	volsView = new(VolsView)
-	volsView.Vols = make([]*VolResponse, 0)
+func NewDataPartitionsView() (dataPartitionsView *DataPartitionsView) {
+	dataPartitionsView = new(DataPartitionsView)
+	dataPartitionsView.DataPartitions = make([]*DataPartitionResponse, 0)
 	return
 }
 
@@ -37,14 +37,14 @@ type MetaPartitionView struct {
 type NamespaceView struct {
 	Name           string
 	MetaPartitions []*MetaPartitionView
-	VolGroups      []*VolResponse
+	DataPartitions []*DataPartitionResponse
 }
 
 func NewNamespaceView(name string) (view *NamespaceView) {
 	view = new(NamespaceView)
 	view.Name = name
 	view.MetaPartitions = make([]*MetaPartitionView, 0)
-	view.VolGroups = make([]*VolResponse, 0)
+	view.DataPartitions = make([]*DataPartitionResponse, 0)
 	return
 }
 
@@ -57,7 +57,7 @@ func NewMetaGroupView(partitionID uint64, start, end uint64) (mpView *MetaPartit
 	return
 }
 
-func (m *Master) getVols(w http.ResponseWriter, r *http.Request) {
+func (m *Master) getDataPartitions(w http.ResponseWriter, r *http.Request) {
 	var (
 		body []byte
 		code int
@@ -74,14 +74,14 @@ func (m *Master) getVols(w http.ResponseWriter, r *http.Request) {
 		goto errDeal
 	}
 
-	if body, err = ns.getVolsView(); err != nil {
+	if body, err = ns.getDataPartitionsView(); err != nil {
 		code = http.StatusMethodNotAllowed
 		goto errDeal
 	}
 	w.Write(body)
 	return
 errDeal:
-	logMsg := getReturnMessage("getVols", r.RemoteAddr, err.Error(), code)
+	logMsg := getReturnMessage("getDataPartitions", r.RemoteAddr, err.Error(), code)
 	HandleError(logMsg, err, code, w)
 	return
 }
@@ -119,7 +119,7 @@ func getNamespaceView(ns *NameSpace) (view *NamespaceView) {
 	for _, mp := range ns.MetaPartitions {
 		view.MetaPartitions = append(view.MetaPartitions, getMetaPartitionView(mp))
 	}
-	view.VolGroups = ns.volGroups.GetVolsView(0)
+	view.DataPartitions = ns.dataPartitions.GetDataPartitionsView(0)
 	return
 }
 

@@ -10,13 +10,13 @@ import (
 
 const (
 	// Admin APIs
-	AdminGetCluster      = "/admin/getCluster"
-	AdminGetVol          = "/admin/getVol"
-	AdminLoadVol         = "/admin/loadVol"
-	AdminCreateVol       = "/admin/createVol"
-	AdminVolOffline      = "/admin/volOffline"
-	AdminCreateNamespace = "/admin/createNamespace"
-	AdminGetIp           = "/admin/getIp"
+	AdminGetCluster           = "/admin/getCluster"
+	AdminGetDataPartition     = "/admin/getDataPartition"
+	AdminLoadDataPartition    = "/admin/loadDataPartition"
+	AdminCreateDataPartition  = "/admin/createDataPartition"
+	AdminDataPartitoinOffline = "/admin/dataPartitionOffline"
+	AdminCreateNamespace      = "/admin/createNamespace"
+	AdminGetIp                = "/admin/getIp"
 
 	// Client APIs
 	ClientVols          = "/client/vols"
@@ -48,10 +48,10 @@ func (m *Master) startHttpService() (err error) {
 
 func (m *Master) handleFunctions() {
 	http.HandleFunc(AdminGetIp, m.getIpAndClusterName)
-	http.Handle(AdminGetVol, m.handlerWithInterceptor())
-	http.Handle(AdminCreateVol, m.handlerWithInterceptor())
-	http.Handle(AdminLoadVol, m.handlerWithInterceptor())
-	http.Handle(AdminVolOffline, m.handlerWithInterceptor())
+	http.Handle(AdminGetDataPartition, m.handlerWithInterceptor())
+	http.Handle(AdminCreateDataPartition, m.handlerWithInterceptor())
+	http.Handle(AdminLoadDataPartition, m.handlerWithInterceptor())
+	http.Handle(AdminDataPartitoinOffline, m.handlerWithInterceptor())
 	http.Handle(AdminCreateNamespace, m.handlerWithInterceptor())
 	http.Handle(AddDataNode, m.handlerWithInterceptor())
 	http.Handle(AddMetaNode, m.handlerWithInterceptor())
@@ -85,18 +85,18 @@ func (m *Master) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case AdminGetCluster:
 		m.getCluster(w, r)
-	case AdminCreateVol:
-		m.createVol(w, r)
+	case AdminCreateDataPartition:
+		m.createDataPartition(w, r)
 	case GetDataNode:
 		m.getDataNode(w, r)
 	case GetMetaNode:
 		m.getMetaNode(w, r)
-	case AdminGetVol:
-		m.getVol(w, r)
-	case AdminLoadVol:
-		m.loadVol(w, r)
-	case AdminVolOffline:
-		m.volOffline(w, r)
+	case AdminGetDataPartition:
+		m.getDataPartition(w, r)
+	case AdminLoadDataPartition:
+		m.loadDataPartition(w, r)
+	case AdminDataPartitoinOffline:
+		m.dataPartitionOffline(w, r)
 	case AdminCreateNamespace:
 		m.createNamespace(w, r)
 	case DataNodeOffline:
@@ -108,7 +108,7 @@ func (m *Master) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case AddMetaNode:
 		m.addMetaNode(w, r)
 	case ClientVols:
-		m.getVols(w, r)
+		m.getDataPartitions(w, r)
 	case ClientNamespace:
 		m.getNamespace(w, r)
 	case ClientMetaPartition:

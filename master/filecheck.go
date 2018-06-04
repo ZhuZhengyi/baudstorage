@@ -11,15 +11,15 @@ func (partition *DataPartition) checkFile(isRecoverVolFlag bool, clusterID strin
 	tasks = make([]*proto.AdminTask, 0)
 	partition.Lock()
 	defer partition.Unlock()
-	liveVols := partition.getLiveVols(DefaultVolTimeOutSec)
+	liveVols := partition.getLiveVols(DefaultDataPartitionTimeOutSec)
 	if len(liveVols) == 0 {
 		return
 	}
 
 	switch partition.PartitionType {
-	case ExtentVol:
+	case ExtentDataPartition:
 		partition.checkExtentFile(liveVols, isRecoverVolFlag, clusterID)
-	case ChunkVol:
+	case ChunkDataPartition:
 		partition.checkChunkFile(liveVols, clusterID)
 	}
 
@@ -28,7 +28,7 @@ func (partition *DataPartition) checkFile(isRecoverVolFlag bool, clusterID strin
 
 func (partition *DataPartition) checkChunkFile(liveVols []*DataReplica, clusterID string) (tasks []*proto.AdminTask) {
 	for _, fc := range partition.FileInCoreMap {
-		tasks = append(tasks, fc.generateFileCrcTask(partition.PartitionID, liveVols, ChunkVol, clusterID)...)
+		tasks = append(tasks, fc.generateFileCrcTask(partition.PartitionID, liveVols, ChunkDataPartition, clusterID)...)
 	}
 	return
 }
@@ -45,7 +45,7 @@ func (partition *DataPartition) checkExtentFile(liveVols []*DataReplica, isRecov
 			if fc.isDelayCheck() {
 				tasks = append(tasks, fc.generatorLackFileTask(partition.PartitionID, liveVols)...)
 			}
-			tasks = append(tasks, fc.generateFileCrcTask(partition.PartitionID, liveVols, ExtentVol, clusterID)...)
+			tasks = append(tasks, fc.generateFileCrcTask(partition.PartitionID, liveVols, ExtentDataPartition, clusterID)...)
 		}
 	}
 	return
@@ -60,7 +60,7 @@ func (fc *FileInCore) generatorLackFileTask(volID uint64, liveVols []*DataReplic
 			continue
 		}
 		msg := fc.generatorLackFileLog(volID, lackLoc, liveVols)
-		if lackLoc.Status == VolUnavailable {
+		if lackLoc.Status == DataPartitionUnavailable {
 			msg = msg + fmt.Sprintf(" ,But volLocationStatus :%v  So Can't do Replicat Task",
 				lackLoc.Status)
 			log.LogWarn(msg)

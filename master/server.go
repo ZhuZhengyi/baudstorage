@@ -112,22 +112,22 @@ func (m *Master) checkConfig(cfg *config.Config) (err error) {
 	}
 
 	if volMissSec != "" {
-		if m.config.VolMissSec, err = strconv.ParseInt(volMissSec, 10, 0); err != nil {
+		if m.config.DataPartitionMissSec, err = strconv.ParseInt(volMissSec, 10, 0); err != nil {
 			return fmt.Errorf("%v,err:%v", ErrBadConfFile, err.Error())
 		}
 	}
 	if volTimeOutSec != "" {
-		if m.config.VolTimeOutSec, err = strconv.ParseInt(volTimeOutSec, 10, 0); err != nil {
+		if m.config.DataPartitionTimeOutSec, err = strconv.ParseInt(volTimeOutSec, 10, 0); err != nil {
 			return fmt.Errorf("%v,err:%v", ErrBadConfFile, err.Error())
 		}
 	}
 	if everyLoadVolCount != "" {
-		if m.config.everyLoadVolCount, err = strconv.Atoi(everyLoadVolCount); err != nil {
+		if m.config.everyLoadDataPartitionCount, err = strconv.Atoi(everyLoadVolCount); err != nil {
 			return fmt.Errorf("%v,err:%v", ErrBadConfFile, err.Error())
 		}
 	}
-	if m.config.everyLoadVolCount <= 40 {
-		m.config.everyLoadVolCount = 40
+	if m.config.everyLoadDataPartitionCount <= 40 {
+		m.config.everyLoadDataPartitionCount = 40
 	}
 
 	return

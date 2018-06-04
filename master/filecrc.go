@@ -115,7 +115,7 @@ func (fc *FileInCore) needCrcRepair(liveVols []*DataReplica, volType string) (fm
 		return
 	}
 
-	if volType == ChunkVol {
+	if volType == ChunkDataPartition {
 		if !isSameLastObjectID(fms) || !isSameNeedleCnt(fms) {
 			return
 		}

@@ -14,14 +14,14 @@ import (
 )
 
 type ClusterView struct {
-	Name           string
-	Applied        uint64
-	MaxVolID       uint64
-	MaxMetaNodeID  uint64
-	MaxPartitionID uint64
-	Namespaces     []string
-	MetaNodes      []MetaNodeView
-	DataNodes      []DataNodeView
+	Name               string
+	Applied            uint64
+	MaxDataPartitionID uint64
+	MaxMetaNodeID      uint64
+	MaxMetaPartitionID uint64
+	Namespaces         []string
+	MetaNodes          []MetaNodeView
+	DataNodes          []DataNodeView
 }
 
 type DataNodeView struct {
@@ -41,14 +41,14 @@ func (m *Master) getCluster(w http.ResponseWriter, r *http.Request) {
 		err  error
 	)
 	cv := &ClusterView{
-		Name:           m.cluster.Name,
-		Applied:        m.fsm.applied,
-		MaxVolID:       m.cluster.idAlloc.volID,
-		MaxMetaNodeID:  m.cluster.idAlloc.metaNodeID,
-		MaxPartitionID: m.cluster.idAlloc.partitionID,
-		Namespaces:     make([]string, 0),
-		MetaNodes:      make([]MetaNodeView, 0),
-		DataNodes:      make([]DataNodeView, 0),
+		Name:               m.cluster.Name,
+		Applied:            m.fsm.applied,
+		MaxDataPartitionID: m.cluster.idAlloc.dataPartitionID,
+		MaxMetaNodeID:      m.cluster.idAlloc.metaNodeID,
+		MaxMetaPartitionID: m.cluster.idAlloc.metaPartitionID,
+		Namespaces:         make([]string, 0),
+		MetaNodes:          make([]MetaNodeView, 0),
+		DataNodes:          make([]DataNodeView, 0),
 	}
 
 	cv.Namespaces = m.cluster.getAllNamespaces()
@@ -80,137 +80,137 @@ errDeal:
 	return
 }
 
-func (m *Master) createVol(w http.ResponseWriter, r *http.Request) {
+func (m *Master) createDataPartition(w http.ResponseWriter, r *http.Request) {
 	var (
-		rstMsg         string
-		nsName         string
-		volType        string
-		ns             *NameSpace
-		reqCreateCount int
-		capacity       int
-		lastTotalVols  int
-		err            error
+		rstMsg                  string
+		nsName                  string
+		partitionType           string
+		ns                      *NameSpace
+		reqCreateCount          int
+		capacity                int
+		lastTotalDataPartitions int
+		err                     error
 	)
 
-	if reqCreateCount, nsName, volType, err = parseCreateVolPara(r); err != nil {
+	if reqCreateCount, nsName, partitionType, err = parseCreateDataPartitionPara(r); err != nil {
 		goto errDeal
 	}
 
 	if ns, err = m.cluster.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
-	capacity = m.cluster.getVolCapacity(ns)
-	lastTotalVols = len(ns.volGroups.volGroups)
+	capacity = m.cluster.getDataPartitionCapacity(ns)
+	lastTotalDataPartitions = len(ns.dataPartitions.dataPartitions)
 	for i := 0; i < reqCreateCount; i++ {
-		if (reqCreateCount+lastTotalVols) < len(ns.volGroups.volGroups) || int(m.cluster.idAlloc.volID) >= capacity {
+		if (reqCreateCount+lastTotalDataPartitions) < len(ns.dataPartitions.dataPartitions) || int(m.cluster.idAlloc.dataPartitionID) >= capacity {
 			break
 		}
-		if _, err = m.cluster.createVolGroup(nsName, volType); err != nil {
+		if _, err = m.cluster.createDataPartition(nsName, partitionType); err != nil {
 			goto errDeal
 		}
 	}
-	rstMsg = fmt.Sprintf(" createVol success. cluster volume capacity:%v,namespce has %v vols last,%v vols now",
-		capacity, lastTotalVols, len(ns.volGroups.volGroups))
+	rstMsg = fmt.Sprintf(" createDataPartition success. cluster data partition capacity:%v,namespce has %v data partitions  last,%v data partitions now",
+		capacity, lastTotalDataPartitions, len(ns.dataPartitions.dataPartitions))
 	io.WriteString(w, rstMsg)
 
 	return
 errDeal:
-	rstMsg = getReturnMessage("createVol", r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	rstMsg = getReturnMessage("createDataPartition", r.RemoteAddr, err.Error(), http.StatusBadRequest)
 	HandleError(rstMsg, err, http.StatusBadRequest, w)
 	return
 }
 
-func (m *Master) getVol(w http.ResponseWriter, r *http.Request) {
+func (m *Master) getDataPartition(w http.ResponseWriter, r *http.Request) {
 	var (
-		nsName string
-		ns     *NameSpace
-		body   []byte
-		vol    *DataPartition
-		volID  uint64
-		err    error
+		nsName      string
+		ns          *NameSpace
+		body        []byte
+		dp          *DataPartition
+		partitionID uint64
+		err         error
 	)
-	if volID, nsName, err = parseVolIDAndNamespace(r); err != nil {
+	if partitionID, nsName, err = parseDataPartitionIDAndNamespace(r); err != nil {
 		goto errDeal
 	}
 
 	if ns, err = m.cluster.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
-	if vol, err = ns.getVolGroupByVolID(volID); err != nil {
+	if dp, err = ns.getDataPartitionByID(partitionID); err != nil {
 		goto errDeal
 	}
-	if body, err = json.Marshal(vol); err != nil {
+	if body, err = json.Marshal(dp); err != nil {
 		goto errDeal
 	}
 	io.WriteString(w, string(body))
 
 	return
 errDeal:
-	logMsg := getReturnMessage("getVol", r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	logMsg := getReturnMessage("getDataPartition", r.RemoteAddr, err.Error(), http.StatusBadRequest)
 	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
-func (m *Master) loadVol(w http.ResponseWriter, r *http.Request) {
+func (m *Master) loadDataPartition(w http.ResponseWriter, r *http.Request) {
 	var (
-		nsName string
-		ns     *NameSpace
-		msg    string
-		v      *DataPartition
-		volID  uint64
-		err    error
+		nsName      string
+		ns          *NameSpace
+		msg         string
+		dp          *DataPartition
+		partitionID uint64
+		err         error
 	)
 
-	if volID, nsName, err = parseVolIDAndNamespace(r); err != nil {
+	if partitionID, nsName, err = parseDataPartitionIDAndNamespace(r); err != nil {
 		goto errDeal
 	}
 
 	if ns, err = m.cluster.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
-	if v, err = ns.getVolGroupByVolID(volID); err != nil {
+	if dp, err = ns.getDataPartitionByID(partitionID); err != nil {
 		goto errDeal
 	}
 
-	m.cluster.loadVolAndCheckResponse(v, false)
-	msg = fmt.Sprintf(AdminLoadVol+"volID :%v  LoadVol success", volID)
+	m.cluster.loadDataPartitionAndCheckResponse(dp, false)
+	msg = fmt.Sprintf(AdminLoadDataPartition+"partitionID :%v  load data partition success", partitionID)
 	io.WriteString(w, msg)
 	log.LogInfo(msg)
 
 	return
 errDeal:
-	logMsg := getReturnMessage(AdminLoadVol, r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	logMsg := getReturnMessage(AdminLoadDataPartition, r.RemoteAddr, err.Error(), http.StatusBadRequest)
 	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
 
-func (m *Master) volOffline(w http.ResponseWriter, r *http.Request) {
+func (m *Master) dataPartitionOffline(w http.ResponseWriter, r *http.Request) {
 	var (
-		nsName string
-		ns     *NameSpace
-		rstMsg string
-		vg     *DataPartition
-		addr   string
-		volID  uint64
-		err    error
+		nsName      string
+		ns          *NameSpace
+		rstMsg      string
+		vg          *DataPartition
+		addr        string
+		partitionID uint64
+		err         error
 	)
 
-	if addr, volID, nsName, err = parseVolOfflinePara(r); err != nil {
+	if addr, partitionID, nsName, err = parseDataPartitionOfflinePara(r); err != nil {
 		goto errDeal
 	}
 	if ns, err = m.cluster.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
-	if vg, err = ns.getVolGroupByVolID(volID); err != nil {
+	if vg, err = ns.getDataPartitionByID(partitionID); err != nil {
 		goto errDeal
 	}
-	m.cluster.volOffline(addr, nsName, vg, HandleVolOfflineErr)
-	rstMsg = fmt.Sprintf(AdminVolOffline+"volID :%v  on node:%v  has offline success", volID, addr)
+	m.cluster.dataPartitionOffline(addr, nsName, vg, HandleDataPartitionOfflineErr)
+	rstMsg = fmt.Sprintf(AdminDataPartitoinOffline+"dataPartitionID :%v  on node:%v  has offline success", partitionID, addr)
 	io.WriteString(w, rstMsg)
 	Warn(m.clusterName, rstMsg)
 	return
 errDeal:
-	logMsg := getReturnMessage(AdminVolOffline, r.RemoteAddr, err.Error(), http.StatusBadRequest)
+	logMsg := getReturnMessage(AdminDataPartitoinOffline, r.RemoteAddr, err.Error(), http.StatusBadRequest)
 	HandleError(logMsg, err, http.StatusBadRequest, w)
 	return
 }
@@ -443,7 +443,7 @@ func (m *Master) loadMetaPartition(w http.ResponseWriter, r *http.Request) {
 	}
 
 	m.cluster.loadMetaPartitionAndCheckResponse(mp, false)
-	msg = fmt.Sprintf(AdminLoadMetaPartition+"partitionID :%v  LoadVol success", partitionID)
+	msg = fmt.Sprintf(AdminLoadMetaPartition+"partitionID :%v  success", partitionID)
 	io.WriteString(w, msg)
 	log.LogInfo(msg)
 
@@ -612,7 +612,7 @@ func parseCreateNamespacePara(r *http.Request) (name string, replicaNum int, err
 	return
 }
 
-func parseCreateVolPara(r *http.Request) (count int, name, volType string, err error) {
+func parseCreateDataPartitionPara(r *http.Request) (count int, name, partitionType string, err error) {
 	r.ParseForm()
 	if countStr := r.FormValue(ParaCount); countStr == "" {
 		err = paraNotFound(ParaCount)
@@ -625,21 +625,21 @@ func parseCreateVolPara(r *http.Request) (count int, name, volType string, err e
 		return
 	}
 
-	if volType = r.FormValue(ParaVolType); volType == "" {
-		err = paraNotFound(ParaVolType)
+	if partitionType = r.FormValue(ParaDataPartitionType); partitionType == "" {
+		err = paraNotFound(ParaDataPartitionType)
 		return
 	}
 
-	if !(strings.TrimSpace(volType) == proto.ExtentVol || strings.TrimSpace(volType) == proto.TinyVol) {
+	if !(strings.TrimSpace(partitionType) == proto.ExtentVol || strings.TrimSpace(partitionType) == proto.TinyVol) {
 		err = InvalidDataPartitionType
 		return
 	}
 	return
 }
 
-func parseVolIDAndNamespace(r *http.Request) (volID uint64, name string, err error) {
+func parseDataPartitionIDAndNamespace(r *http.Request) (ID uint64, name string, err error) {
 	r.ParseForm()
-	if volID, err = checkVolGroupID(r); err != nil {
+	if ID, err = checkDataPartitionID(r); err != nil {
 		return
 	}
 	if name, err = checkNamespace(r); err != nil {
@@ -648,18 +648,18 @@ func parseVolIDAndNamespace(r *http.Request) (volID uint64, name string, err err
 	return
 }
 
-func checkVolGroupID(r *http.Request) (volID uint64, err error) {
+func checkDataPartitionID(r *http.Request) (ID uint64, err error) {
 	var value string
-	if value = r.FormValue(ParaVolGroup); value == "" {
-		err = paraNotFound(ParaVolGroup)
+	if value = r.FormValue(ParaId); value == "" {
+		err = paraNotFound(ParaId)
 		return
 	}
 	return strconv.ParseUint(value, 10, 64)
 }
 
-func parseVolOfflinePara(r *http.Request) (nodeAddr string, volID uint64, name string, err error) {
+func parseDataPartitionOfflinePara(r *http.Request) (nodeAddr string, ID uint64, name string, err error) {
 	r.ParseForm()
-	if volID, err = checkVolGroupID(r); err != nil {
+	if ID, err = checkDataPartitionID(r); err != nil {
 		return
 	}
 	if nodeAddr, err = checkNodeAddr(r); err != nil {

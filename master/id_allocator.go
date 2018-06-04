@@ -16,14 +16,14 @@ const (
 )
 
 type IDAllocator struct {
-	volID           uint64
-	partitionID     uint64
-	metaNodeID      uint64
-	volIDLock       sync.Mutex
-	partitionIDLock sync.Mutex
-	metaNodeIDLock  sync.Mutex
-	store           *raftstore.RocksDBStore
-	partition       raftstore.Partition
+	dataPartitionID     uint64
+	metaPartitionID     uint64
+	metaNodeID          uint64
+	dataPartitionIDLock sync.Mutex
+	metaPartitionIDLock sync.Mutex
+	metaNodeIDLock      sync.Mutex
+	store               *raftstore.RocksDBStore
+	partition           raftstore.Partition
 }
 
 func newIDAllocator(store *raftstore.RocksDBStore, partition raftstore.Partition) (alloc *IDAllocator) {
@@ -34,30 +34,30 @@ func newIDAllocator(store *raftstore.RocksDBStore, partition raftstore.Partition
 }
 
 func (alloc *IDAllocator) restore() {
-	alloc.restoreMaxVolID()
-	alloc.restoreMaxPartitionID()
+	alloc.restoreMaxDataPartitionID()
+	alloc.restoreMaxMetaPartitionID()
 	alloc.restoreMaxMetaNodeID()
 }
 
-func (alloc *IDAllocator) restoreMaxVolID() {
+func (alloc *IDAllocator) restoreMaxDataPartitionID() {
 	value, err := alloc.store.Get(MaxVolIDKey)
 	bytes := value.([]byte)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to restore maxVolId,err:%v ", err.Error()))
+		panic(fmt.Sprintf("Failed to restore maxDataPartitionId,err:%v ", err.Error()))
 	}
 
 	if len(bytes) == 0 {
-		alloc.volID = 0
+		alloc.dataPartitionID = 0
 		return
 	}
-	maxVolId, err := strconv.ParseUint(string(bytes), 10, 64)
+	maxDataPartitionId, err := strconv.ParseUint(string(bytes), 10, 64)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to restore maxVolId,err:%v ", err.Error()))
+		panic(fmt.Sprintf("Failed to restore maxDataPartitionId,err:%v ", err.Error()))
 	}
-	alloc.volID = maxVolId
+	alloc.dataPartitionID = maxDataPartitionId
 }
 
-func (alloc *IDAllocator) restoreMaxPartitionID() {
+func (alloc *IDAllocator) restoreMaxMetaPartitionID() {
 	value, err := alloc.store.Get(MaxPartitionIDKey)
 	bytes := value.([]byte)
 	if err != nil {
@@ -65,14 +65,14 @@ func (alloc *IDAllocator) restoreMaxPartitionID() {
 	}
 
 	if len(bytes) == 0 {
-		alloc.partitionID = 0
+		alloc.metaPartitionID = 0
 		return
 	}
 	maxPartitionID, err := strconv.ParseUint(string(bytes), 10, 64)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to restore maxPartitionID,err:%v ", err.Error()))
 	}
-	alloc.partitionID = maxPartitionID
+	alloc.metaPartitionID = maxPartitionID
 
 }
 
@@ -95,14 +95,14 @@ func (alloc *IDAllocator) restoreMaxMetaNodeID() {
 
 }
 
-func (alloc *IDAllocator) allocatorVolID() (volID uint64, err error) {
-	alloc.volIDLock.Lock()
-	defer alloc.volIDLock.Unlock()
+func (alloc *IDAllocator) allocatorDataPartitionID() (ID uint64, err error) {
+	alloc.dataPartitionIDLock.Lock()
+	defer alloc.dataPartitionIDLock.Unlock()
 	var cmd []byte
 	metadata := new(Metadata)
-	volID = atomic.AddUint64(&alloc.volID, 1)
+	ID = atomic.AddUint64(&alloc.dataPartitionID, 1)
 	metadata.K = MaxVolIDKey
-	value := strconv.FormatUint(uint64(volID), 10)
+	value := strconv.FormatUint(uint64(ID), 10)
 	metadata.V = []byte(value)
 	cmd, err = metadata.Marshal()
 	if err != nil {
@@ -113,17 +113,17 @@ func (alloc *IDAllocator) allocatorVolID() (volID uint64, err error) {
 	}
 	return
 errDeal:
-	log.LogError("action[allocatorVolID] err:%v", err.Error())
+	log.LogError("action[allocatorDataPartitionID] err:%v", err.Error())
 	return
 }
 
-func (alloc *IDAllocator) allocatorPartitionID() (partitionID uint64, err error) {
+func (alloc *IDAllocator) allocatorMetaPartitionID() (partitionID uint64, err error) {
 	var cmd []byte
-	alloc.partitionIDLock.Lock()
-	defer alloc.partitionIDLock.Unlock()
+	alloc.metaPartitionIDLock.Lock()
+	defer alloc.metaPartitionIDLock.Unlock()
 	metadata := new(Metadata)
 	metadata.K = MaxPartitionIDKey
-	partitionID = atomic.AddUint64(&alloc.partitionID, 1)
+	partitionID = atomic.AddUint64(&alloc.metaPartitionID, 1)
 	value := strconv.FormatUint(uint64(partitionID), 10)
 	metadata.V = []byte(value)
 	cmd, err = metadata.Marshal()
@@ -135,7 +135,7 @@ func (alloc *IDAllocator) allocatorPartitionID() (partitionID uint64, err error)
 	}
 	return
 errDeal:
-	log.LogError("action[allocatorPartitionID] err:%v", err.Error())
+	log.LogError("action[allocatorMetaPartitionID] err:%v", err.Error())
 	return
 }
 

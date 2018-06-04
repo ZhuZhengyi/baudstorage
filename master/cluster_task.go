@@ -38,79 +38,79 @@ func (c *Cluster) putMetaNodeTasks(tasks []*proto.AdminTask) {
 	}
 }
 
-func (c *Cluster) checkVolGroups(ns *NameSpace) {
-	ns.volGroups.RLock()
+func (c *Cluster) checkDataPartitions(ns *NameSpace) {
+	ns.dataPartitions.RLock()
 	newReadWriteVolGroups := 0
-	for _, vg := range ns.volGroups.volGroupMap {
-		vg.checkLocationStatus(c.cfg.VolTimeOutSec)
-		vg.checkStatus(true, c.cfg.VolTimeOutSec)
-		vg.checkVolGroupMiss(c.Name, c.cfg.VolMissSec, c.cfg.VolWarnInterval)
+	for _, vg := range ns.dataPartitions.dataPartitionMap {
+		vg.checkLocationStatus(c.cfg.DataPartitionTimeOutSec)
+		vg.checkStatus(true, c.cfg.DataPartitionTimeOutSec)
+		vg.checkVolGroupMiss(c.Name, c.cfg.DataPartitionMissSec, c.cfg.DataPartitionWarnInterval)
 		vg.checkReplicaNum(c, ns.Name)
-		if vg.Status == VolReadWrite {
+		if vg.Status == DataPartitionReadWrite {
 			newReadWriteVolGroups++
 		}
 		volDiskErrorAddrs := vg.checkVolDiskError()
 		if volDiskErrorAddrs != nil {
 			for _, addr := range volDiskErrorAddrs {
-				c.volOffline(addr, ns.Name, vg, CheckVolDiskErrorErr)
+				c.dataPartitionOffline(addr, ns.Name, vg, CheckDataPartitionDiskErrorErr)
 			}
 		}
 		volTasks := vg.checkVolReplicationTask()
 		c.putDataNodeTasks(volTasks)
 	}
-	ns.volGroups.readWriteVolGroups = newReadWriteVolGroups
-	ns.volGroups.RUnlock()
-	ns.volGroups.updateVolResponseCache(true, 0)
-	msg := fmt.Sprintf("action[CheckVolInfo],can readwrite volGroups:%v  ", ns.volGroups.readWriteVolGroups)
+	ns.dataPartitions.readWriteDataPartitions = newReadWriteVolGroups
+	ns.dataPartitions.RUnlock()
+	ns.dataPartitions.updateDataPartitionResponseCache(true, 0)
+	msg := fmt.Sprintf("action[CheckVolInfo],can readwrite dataPartitions:%v  ", ns.dataPartitions.readWriteDataPartitions)
 	log.LogInfo(msg)
 }
 
-func (c *Cluster) backendLoadVolGroup(ns *NameSpace) {
-	needCheckVols := ns.volGroups.getNeedCheckVolGroups(c.cfg.everyLoadVolCount, c.cfg.LoadVolFrequencyTime)
-	if len(needCheckVols) == 0 {
+func (c *Cluster) backendLoadDataPartition(ns *NameSpace) {
+	needCheckDataPartitoins := ns.dataPartitions.getNeedCheckDataPartitions(c.cfg.everyLoadDataPartitionCount, c.cfg.LoadDataPartitionFrequencyTime)
+	if len(needCheckDataPartitoins) == 0 {
 		return
 	}
-	c.waitLoadVolResponse(needCheckVols)
+	c.waitLoadDataPartitionResponse(needCheckDataPartitoins)
 	msg := fmt.Sprintf("action[BackendLoadVol] checkstart:%v everyCheckCount:%v",
-		needCheckVols[0].PartitionID, c.cfg.everyLoadVolCount)
+		needCheckDataPartitoins[0].PartitionID, c.cfg.everyLoadDataPartitionCount)
 	log.LogInfo(msg)
 }
 
-func (c *Cluster) waitLoadVolResponse(needCheckVols []*DataPartition) {
+func (c *Cluster) waitLoadDataPartitionResponse(partitions []*DataPartition) {
 
 	defer func() {
 		if err := recover(); err != nil {
 			const size = RuntimeStackBufSize
 			buf := make([]byte, size)
 			buf = buf[:runtime.Stack(buf, false)]
-			log.LogError(fmt.Sprintf("waitLoadVolResponse panic %v: %s\n", err, buf))
+			log.LogError(fmt.Sprintf("waitLoadDataPartitionResponse panic %v: %s\n", err, buf))
 		}
 	}()
 	var wg sync.WaitGroup
-	for _, v := range needCheckVols {
+	for _, v := range partitions {
 		wg.Add(1)
 		go func(v *DataPartition) {
-			c.processLoadVol(v, false)
+			c.processLoadDataPartition(v, false)
 			wg.Done()
 		}(v)
 	}
 	wg.Wait()
 }
 
-func (c *Cluster) processReleaseVolAfterLoadVolGroup(ns *NameSpace) {
-	needReleaseVols := ns.volGroups.getNeedReleaseVolGroups(c.cfg.everyReleaseVolCount, c.cfg.releaseVolAfterLoadVolSeconds)
-	if len(needReleaseVols) == 0 {
+func (c *Cluster) processReleaseDataPartitionAfterLoad(ns *NameSpace) {
+	needReleaseDataPartitions := ns.dataPartitions.getNeedReleaseDataPartitions(c.cfg.everyReleaseDataPartitionCount, c.cfg.releaseDataPartitionAfterLoadSeconds)
+	if len(needReleaseDataPartitions) == 0 {
 		return
 	}
-	ns.volGroups.releaseVolGroups(needReleaseVols)
-	msg := fmt.Sprintf("action[processReleaseVolAfterLoadVolGroup]  release vol start:%v everyReleaseVolCount:%v",
-		needReleaseVols[0].PartitionID, c.cfg.everyReleaseVolCount)
+	ns.dataPartitions.releaseDataPartitions(needReleaseDataPartitions)
+	msg := fmt.Sprintf("action[processReleaseDataPartitionAfterLoad]  release data partition start:%v everyReleaseDataPartitionCount:%v",
+		needReleaseDataPartitions[0].PartitionID, c.cfg.everyReleaseDataPartitionCount)
 	log.LogInfo(msg)
 }
 
-func (c *Cluster) loadVolAndCheckResponse(v *DataPartition, isRecover bool) {
+func (c *Cluster) loadDataPartitionAndCheckResponse(v *DataPartition, isRecover bool) {
 	go func() {
-		c.processLoadVol(v, isRecover)
+		c.processLoadDataPartition(v, isRecover)
 	}()
 }
 
@@ -185,19 +185,19 @@ func (c *Cluster) processLoadMetaPartition(mp *MetaPartition, isRecover bool) {
 	//todo check response
 }
 
-func (c *Cluster) processLoadVol(v *DataPartition, isRecover bool) {
-	log.LogInfo(fmt.Sprintf("action[processLoadVol],volID:%v,isRecover:%v", v.PartitionID, isRecover))
-	loadVolTasks := v.generateLoadVolTasks()
-	c.putDataNodeTasks(loadVolTasks)
-	for i := 0; i < LoadVolWaitTime; i++ {
-		if v.checkLoadVolResponse(c.cfg.VolTimeOutSec) {
-			log.LogInfo(fmt.Sprintf("action[%v] triger all replication,volID:%v ", "loadVolAndCheckResponse", v.PartitionID))
+func (c *Cluster) processLoadDataPartition(v *DataPartition, isRecover bool) {
+	log.LogInfo(fmt.Sprintf("action[processLoadDataPartition],volID:%v,isRecover:%v", v.PartitionID, isRecover))
+	loadTasks := v.generateLoadTasks()
+	c.putDataNodeTasks(loadTasks)
+	for i := 0; i < LoadDataPartitionWaitTime; i++ {
+		if v.checkLoadResponse(c.cfg.DataPartitionTimeOutSec) {
+			log.LogInfo(fmt.Sprintf("action[%v] triger all replication,volID:%v ", "loadDataPartitionAndCheckResponse", v.PartitionID))
 			break
 		}
 		time.Sleep(time.Second)
 	}
 	// response is time out
-	if v.checkLoadVolResponse(c.cfg.VolTimeOutSec) == false {
+	if v.checkLoadResponse(c.cfg.DataPartitionTimeOutSec) == false {
 		return
 	}
 	v.getFileCount()
@@ -206,14 +206,14 @@ func (c *Cluster) processLoadVol(v *DataPartition, isRecover bool) {
 	c.putDataNodeTasks(checkFileTasks)
 }
 
-func (c *Cluster) checkMetaGroups(ns *NameSpace) {
+func (c *Cluster) checkMetaPartitions(ns *NameSpace) {
 	ns.metaPartitionLock.RLock()
 	defer ns.metaPartitionLock.RUnlock()
 	var tasks []*proto.AdminTask
 	for _, mp := range ns.MetaPartitions {
 		mp.checkStatus(true, int(ns.mpReplicaNum))
 		mp.checkReplicas(c, ns.Name, ns.mpReplicaNum)
-		mp.checkReplicaMiss(c.Name,DefaultMetaPartitionTimeOutSec,DefaultMetaPartitionWarnInterval)
+		mp.checkReplicaMiss(c.Name, DefaultMetaPartitionTimeOutSec, DefaultMetaPartitionWarnInterval)
 		tasks = append(tasks, mp.generateReplicaTask(ns.Name)...)
 	}
 	c.putMetaNodeTasks(tasks)
@@ -431,7 +431,6 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 		goto errDeal
 	}
 
-
 	if err := UnmarshalTaskResponse(task); err != nil {
 		goto errDeal
 	}
@@ -498,7 +497,7 @@ func (c *Cluster) createVolSuccessTriggerOperator(nodeAddr string, resp *proto.C
 		goto errDeal
 	}
 	vol = NewDataReplica(dataNode)
-	vol.Status = VolReadWrite
+	vol.Status = DataPartitionReadWrite
 	vg.addMember(vol)
 
 	vg.Lock()
@@ -526,7 +525,7 @@ func (c *Cluster) dealDeleteVolResponse(nodeAddr string, resp *proto.DeleteVolRe
 			return
 		}
 		vg.Lock()
-		vg.volOffLineInMem(nodeAddr)
+		vg.offLineInMem(nodeAddr)
 		vg.Unlock()
 	} else {
 		Warn(c.Name, fmt.Sprintf("delete vol[%v] failed", nodeAddr))

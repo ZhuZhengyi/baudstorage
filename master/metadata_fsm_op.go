@@ -120,15 +120,15 @@ func (c *Cluster) submit(metadata *Metadata) (err error) {
 	return
 }
 
-//key=#ns#nsName#volReplicaNum,value=nil
+//key=#ns#nsName#dpReplicaNum,value=nil
 func (c *Cluster) syncAddNamespace(ns *NameSpace) (err error) {
 	metadata := new(Metadata)
 	metadata.Op = OpSyncAddNamespace
-	metadata.K = NamespacePrefix + ns.Name + KeySeparator + strconv.FormatUint(uint64(ns.volReplicaNum), 10)
+	metadata.K = NamespacePrefix + ns.Name + KeySeparator + strconv.FormatUint(uint64(ns.dpReplicaNum), 10)
 	return c.submit(metadata)
 }
 
-////key=#mp#nsName#partitionID,value=json.Marshal(MetaPartitionValue)
+////key=#mp#nsName#metaPartitionID,value=json.Marshal(MetaPartitionValue)
 func (c *Cluster) syncAddMetaPartition(nsName string, mp *MetaPartition) (err error) {
 	return c.putMetaPartitionInfo(OpSyncAddMetaPartition, nsName, mp)
 }
@@ -258,7 +258,7 @@ func (c *Cluster) applyAddVolGroup(cmd *Metadata) {
 		vg := newDataPartition(vgv.VolID, vgv.ReplicaNum, vgv.VolType)
 		ns, _ := c.getNamespace(keys[2])
 		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
-		ns.volGroups.putVol(vg)
+		ns.dataPartitions.putDataPartition(vg)
 	}
 }
 
@@ -419,7 +419,7 @@ func (c *Cluster) loadVolGroups() (err error) {
 		}
 		vg := newDataPartition(vgv.VolID, vgv.ReplicaNum, vgv.VolType)
 		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
-		ns.volGroups.putVol(vg)
+		ns.dataPartitions.putDataPartition(vg)
 		encodedKey.Free()
 		encodedValue.Free()
 	}

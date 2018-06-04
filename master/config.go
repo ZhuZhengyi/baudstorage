@@ -14,49 +14,49 @@ const (
 	CfgPeers          = "peers"
 	VolMissSec        = "volMissSec"
 	VolTimeOutSec     = "volTimeOutSec"
-	EveryLoadVolCount = "everyLoadVolCount"
+	EveryLoadVolCount = "everyLoadDataPartitionCount"
 	FileDelayCheckCrc = "fileDelayCheckCrc"
 	ReplicaNum        = "replicaNum"
 )
 
 const (
-	DefaultEveryReleaseVolCount                  = 10
-	DefaultReleaseVolAfterLoadVolSeconds         = 5 * 60
-	DefaultReleaseVolInternalSeconds             = 10
-	DefaultCheckHeartbeatIntervalSeconds         = 60
-	DefaultCheckVolIntervalSeconds               = 60
-	DefaultFileDelayCheckLackSec                 = 5 * DefaultCheckHeartbeatIntervalSeconds
-	DefaultFileDelayCheckCrcSec                  = 20 * DefaultCheckHeartbeatIntervalSeconds
-	NoHeartBeatTimes                             = 3
-	DefaultNodeTimeOutSec                        = NoHeartBeatTimes * DefaultCheckHeartbeatIntervalSeconds
-	DefaultVolTimeOutSec                         = 5 * DefaultCheckHeartbeatIntervalSeconds
-	DefaultVolMissSec                            = 24 * 3600
-	DefaultVolWarnInterval                       = 60 * 60
-	LoadVolWaitTime                              = 100
-	DefaultLoadVolFrequencyTime                  = 60 * 60
-	DefaultEveryLoadVolCount                     = 10
-	DefaultMetaPartitionTimeOutSec               = 5 * DefaultCheckHeartbeatIntervalSeconds
-	DefaultMetaPartitionMissSec                  = 3600
-	DefaultMetaPartitionWarnInterval             = 10 * 60
-	DefaultMetaPartitionThreshold        float32 = 0.75
+	DefaultEveryReleaseDataPartitionCount               = 10
+	DefaultReleaseDataPartitionAfterLoadSeconds         = 5 * 60
+	DefaultReleaseDataPartitionInternalSeconds          = 10
+	DefaultCheckHeartbeatIntervalSeconds                = 60
+	DefaultCheckDataPartitionIntervalSeconds            = 60
+	DefaultFileDelayCheckLackSec                        = 5 * DefaultCheckHeartbeatIntervalSeconds
+	DefaultFileDelayCheckCrcSec                         = 20 * DefaultCheckHeartbeatIntervalSeconds
+	NoHeartBeatTimes                                    = 3
+	DefaultNodeTimeOutSec                               = NoHeartBeatTimes * DefaultCheckHeartbeatIntervalSeconds
+	DefaultDataPartitionTimeOutSec                      = 5 * DefaultCheckHeartbeatIntervalSeconds
+	DefaultDataPartitionMissSec                         = 24 * 3600
+	DefaultDataPartitionWarnInterval                    = 60 * 60
+	LoadDataPartitionWaitTime                           = 100
+	DefaultLoadDataPartitionFrequencyTime               = 60 * 60
+	DefaultEveryLoadDataPartitionCount                  = 10
+	DefaultMetaPartitionTimeOutSec                      = 5 * DefaultCheckHeartbeatIntervalSeconds
+	//DefaultMetaPartitionMissSec                         = 3600
+	DefaultMetaPartitionWarnInterval                    = 10 * 60
+	DefaultMetaPartitionThreshold               float32 = 0.75
 )
 
 //AddrDatabase ...
 var AddrDatabase = make(map[uint64]string)
 
 type ClusterConfig struct {
-	FileDelayCheckCrcSec          int64
-	FileDelayCheckLackSec         int64
-	releaseVolAfterLoadVolSeconds int64
-	NodeTimeOutSec                int64
-	VolMissSec                    int64
-	VolTimeOutSec                 int64
-	VolWarnInterval               int64
-	LoadVolFrequencyTime          int64
-	CheckVolIntervalSeconds       int
-	everyReleaseVolCount          int
-	everyLoadVolCount             int
-	replicaNum                    int
+	FileDelayCheckCrcSec                 int64
+	FileDelayCheckLackSec                int64
+	releaseDataPartitionAfterLoadSeconds int64
+	NodeTimeOutSec                       int64
+	DataPartitionMissSec                 int64
+	DataPartitionTimeOutSec              int64
+	DataPartitionWarnInterval            int64
+	LoadDataPartitionFrequencyTime       int64
+	CheckDataPartitionIntervalSeconds    int
+	everyReleaseDataPartitionCount       int
+	everyLoadDataPartitionCount          int
+	replicaNum                           int
 
 	peers     []raftstore.PeerAddress
 	peerAddrs []string
@@ -66,15 +66,15 @@ func NewClusterConfig() (cfg *ClusterConfig) {
 	cfg = new(ClusterConfig)
 	cfg.FileDelayCheckCrcSec = DefaultFileDelayCheckCrcSec
 	cfg.FileDelayCheckLackSec = DefaultFileDelayCheckLackSec
-	cfg.everyReleaseVolCount = DefaultEveryReleaseVolCount
-	cfg.releaseVolAfterLoadVolSeconds = DefaultReleaseVolAfterLoadVolSeconds
+	cfg.everyReleaseDataPartitionCount = DefaultEveryReleaseDataPartitionCount
+	cfg.releaseDataPartitionAfterLoadSeconds = DefaultReleaseDataPartitionAfterLoadSeconds
 	cfg.NodeTimeOutSec = DefaultNodeTimeOutSec
-	cfg.VolMissSec = DefaultVolMissSec
-	cfg.VolTimeOutSec = DefaultVolTimeOutSec
-	cfg.CheckVolIntervalSeconds = DefaultCheckVolIntervalSeconds
-	cfg.VolWarnInterval = DefaultVolWarnInterval
-	cfg.everyLoadVolCount = DefaultEveryLoadVolCount
-	cfg.LoadVolFrequencyTime = DefaultLoadVolFrequencyTime
+	cfg.DataPartitionMissSec = DefaultDataPartitionMissSec
+	cfg.DataPartitionTimeOutSec = DefaultDataPartitionTimeOutSec
+	cfg.CheckDataPartitionIntervalSeconds = DefaultCheckDataPartitionIntervalSeconds
+	cfg.DataPartitionWarnInterval = DefaultDataPartitionWarnInterval
+	cfg.everyLoadDataPartitionCount = DefaultEveryLoadDataPartitionCount
+	cfg.LoadDataPartitionFrequencyTime = DefaultLoadDataPartitionFrequencyTime
 	return
 }
 

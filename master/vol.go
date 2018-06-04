@@ -34,7 +34,7 @@ func (replica *DataReplica) CheckMiss(missSec int64) (isMiss bool) {
 }
 
 func (replica *DataReplica) IsLive(timeOutSec int64) (avail bool) {
-	if replica.dataNode.isActive == true && replica.Status != VolUnavailable &&
+	if replica.dataNode.isActive == true && replica.Status != DataPartitionUnavailable &&
 		replica.IsActive(timeOutSec) == true {
 		avail = true
 	}
@@ -55,7 +55,7 @@ func (replica *DataReplica) CheckLocIsAvailContainsDiskError() (avail bool) {
 	dataNode := replica.GetVolLocationNode()
 	dataNode.Lock()
 	defer dataNode.Unlock()
-	if dataNode.isActive == true && replica.IsActive(DefaultVolTimeOutSec) == true {
+	if dataNode.isActive == true && replica.IsActive(DefaultDataPartitionTimeOutSec) == true {
 		avail = true
 	}
 

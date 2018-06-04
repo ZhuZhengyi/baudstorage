@@ -34,11 +34,11 @@ func newCluster(name string, leaderInfo *LeaderInfo, fsm *MetadataFsm, partition
 	c.fsm = fsm
 	c.partition = partition
 	c.idAlloc = newIDAllocator(c.fsm.store, c.partition)
-	c.startCheckVolGroups()
-	c.startCheckBackendLoadVolGroups()
-	c.startCheckReleaseVolGroups()
+	c.startCheckDataPartitions()
+	c.startCheckBackendLoadDataPartitions()
+	c.startCheckReleaseDataPartitions()
 	c.startCheckHeartbeat()
-	c.startCheckMetaGroups()
+	c.startCheckMetaPartitions()
 	return
 }
 
@@ -46,25 +46,25 @@ func (c *Cluster) getMasterAddr() (addr string) {
 	return c.leaderInfo.addr
 }
 
-func (c *Cluster) startCheckVolGroups() {
+func (c *Cluster) startCheckDataPartitions() {
 	go func() {
 		for {
 			if c.partition.IsLeader() {
 				for _, ns := range c.namespaces {
-					c.checkVolGroups(ns)
+					c.checkDataPartitions(ns)
 				}
 			}
-			time.Sleep(time.Second * time.Duration(c.cfg.CheckVolIntervalSeconds))
+			time.Sleep(time.Second * time.Duration(c.cfg.CheckDataPartitionIntervalSeconds))
 		}
 	}()
 }
 
-func (c *Cluster) startCheckBackendLoadVolGroups() {
+func (c *Cluster) startCheckBackendLoadDataPartitions() {
 	go func() {
 		for {
 			if c.partition.IsLeader() {
 				for _, ns := range c.namespaces {
-					c.backendLoadVolGroup(ns)
+					c.backendLoadDataPartition(ns)
 				}
 			}
 			time.Sleep(time.Second)
@@ -72,15 +72,15 @@ func (c *Cluster) startCheckBackendLoadVolGroups() {
 	}()
 }
 
-func (c *Cluster) startCheckReleaseVolGroups() {
+func (c *Cluster) startCheckReleaseDataPartitions() {
 	go func() {
 		for {
 			if c.partition.IsLeader() {
 				for _, ns := range c.namespaces {
-					c.processReleaseVolAfterLoadVolGroup(ns)
+					c.processReleaseDataPartitionAfterLoad(ns)
 				}
 			}
-			time.Sleep(time.Second * DefaultReleaseVolInternalSeconds)
+			time.Sleep(time.Second * DefaultReleaseDataPartitionInternalSeconds)
 		}
 	}()
 }
@@ -129,15 +129,15 @@ func (c *Cluster) checkMetaNodeHeartbeat() {
 	c.putMetaNodeTasks(tasks)
 }
 
-func (c *Cluster) startCheckMetaGroups() {
+func (c *Cluster) startCheckMetaPartitions() {
 	go func() {
 		for {
 			if c.partition.IsLeader() {
 				for _, ns := range c.namespaces {
-					c.checkMetaGroups(ns)
+					c.checkMetaPartitions(ns)
 				}
 			}
-			time.Sleep(time.Second * time.Duration(c.cfg.CheckVolIntervalSeconds))
+			time.Sleep(time.Second * time.Duration(c.cfg.CheckDataPartitionIntervalSeconds))
 		}
 	}()
 }
@@ -189,7 +189,7 @@ errDeal:
 
 func (c *Cluster) getVolGroupByVolID(volID uint64) (vol *DataPartition, err error) {
 	for _, ns := range c.namespaces {
-		if vol, err = ns.getVolGroupByVolID(volID); err == nil {
+		if vol, err = ns.getDataPartitionByID(volID); err == nil {
 			return
 		}
 	}
@@ -213,10 +213,10 @@ func (c *Cluster) getNamespace(nsName string) (ns *NameSpace, err error) {
 	return
 }
 
-func (c *Cluster) createVolGroup(nsName, volType string) (vg *DataPartition, err error) {
+func (c *Cluster) createDataPartition(nsName, partitionType string) (dp *DataPartition, err error) {
 	var (
 		ns          *NameSpace
-		volID       uint64
+		partitionID uint64
 		tasks       []*proto.AdminTask
 		targetHosts []string
 	)
@@ -225,25 +225,24 @@ func (c *Cluster) createVolGroup(nsName, volType string) (vg *DataPartition, err
 	if ns, err = c.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
-	if targetHosts, err = c.ChooseTargetDataHosts(int(ns.volReplicaNum)); err != nil {
+	if targetHosts, err = c.ChooseTargetDataHosts(int(ns.dpReplicaNum)); err != nil {
 		goto errDeal
 	}
-	//volID++
-	if volID, err = c.idAlloc.allocatorVolID(); err != nil {
+	if partitionID, err = c.idAlloc.allocatorDataPartitionID(); err != nil {
 		goto errDeal
 	}
-	vg = newDataPartition(volID, ns.volReplicaNum, volType)
-	vg.PersistenceHosts = targetHosts
-	if err = c.syncAddVolGroup(nsName, vg); err != nil {
+	dp = newDataPartition(partitionID, ns.dpReplicaNum, partitionType)
+	dp.PersistenceHosts = targetHosts
+	if err = c.syncAddVolGroup(nsName, dp); err != nil {
 		goto errDeal
 	}
-	tasks = vg.generateCreateDataPartitionTasks()
+	tasks = dp.generateCreateTasks()
 	c.putDataNodeTasks(tasks)
-	ns.volGroups.putVol(vg)
+	ns.dataPartitions.putDataPartition(dp)
 
 	return
 errDeal:
-	err = fmt.Errorf("action[createVolGroup], Err:%v ", err.Error())
+	err = fmt.Errorf("action[createDataPartition], Err:%v ", err.Error())
 	log.LogError(errors.ErrorStack(err))
 	Warn(c.Name, err.Error())
 	return
@@ -301,15 +300,15 @@ func (c *Cluster) dataNodeOffLine(dataNode *DataNode) {
 	msg := fmt.Sprintf("action[dataNodeOffLine], Node[%v] OffLine", dataNode.Addr)
 	log.LogWarn(msg)
 	for _, ns := range c.namespaces {
-		for _, vg := range ns.volGroups.volGroups {
-			c.volOffline(dataNode.Addr, ns.Name, vg, DataNodeOfflineInfo)
+		for _, vg := range ns.dataPartitions.dataPartitions {
+			c.dataPartitionOffline(dataNode.Addr, ns.Name, vg, DataNodeOfflineInfo)
 		}
 	}
 	c.dataNodes.Delete(dataNode.Addr)
 
 }
 
-func (c *Cluster) volOffline(offlineAddr, nsName string, vg *DataPartition, errMsg string) {
+func (c *Cluster) dataPartitionOffline(offlineAddr, nsName string, dp *DataPartition, errMsg string) {
 	var (
 		newHosts []string
 		newAddr  string
@@ -319,37 +318,37 @@ func (c *Cluster) volOffline(offlineAddr, nsName string, vg *DataPartition, errM
 		err      error
 		dataNode *DataNode
 	)
-	vg.Lock()
-	defer vg.Unlock()
-	if ok := vg.isInPersistenceHosts(offlineAddr); !ok {
+	dp.Lock()
+	defer dp.Unlock()
+	if ok := dp.isInPersistenceHosts(offlineAddr); !ok {
 		return
 	}
 
-	if err = vg.hasMissOne(); err != nil {
+	if err = dp.hasMissOne(); err != nil {
 		goto errDeal
 	}
-	if err = vg.canOffLine(offlineAddr); err != nil {
+	if err = dp.canOffLine(offlineAddr); err != nil {
 		goto errDeal
 	}
-	vg.generatorVolOffLineLog(offlineAddr)
+	dp.generatorVolOffLineLog(offlineAddr)
 
-	if dataNode, err = c.getDataNode(vg.PersistenceHosts[0]); err != nil {
+	if dataNode, err = c.getDataNode(dp.PersistenceHosts[0]); err != nil {
 		goto errDeal
 	}
-	if newHosts, err = c.getAvailDataNodeHosts(dataNode.RackName, vg.PersistenceHosts, 1); err != nil {
+	if newHosts, err = c.getAvailDataNodeHosts(dataNode.RackName, dp.PersistenceHosts, 1); err != nil {
 		goto errDeal
 	}
-	if err = vg.removeVolHosts(offlineAddr, c, nsName); err != nil {
+	if err = dp.removeVolHosts(offlineAddr, c, nsName); err != nil {
 		goto errDeal
 	}
 	newAddr = newHosts[0]
-	if err = vg.addVolHosts(newAddr, c, nsName); err != nil {
+	if err = dp.addVolHosts(newAddr, c, nsName); err != nil {
 		goto errDeal
 	}
-	vg.volOffLineInMem(offlineAddr)
-	vg.checkAndRemoveMissVol(offlineAddr)
-	task = proto.NewAdminTask(proto.OpCreateDataPartion, offlineAddr, newCreateVolRequest(vg.PartitionType, vg.PartitionID))
-	task.ID = fmt.Sprintf("%v_volID[%v]", task.ID, vg.PartitionID)
+	dp.offLineInMem(offlineAddr)
+	dp.checkAndRemoveMissVol(offlineAddr)
+	task = proto.NewAdminTask(proto.OpCreateDataPartion, offlineAddr, newCreateVolRequest(dp.PartitionType, dp.PartitionID))
+	task.ID = fmt.Sprintf("%v_volID[%v]", task.ID, dp.PartitionID)
 	tasks = make([]*proto.AdminTask, 0)
 	tasks = append(tasks, task)
 	c.putDataNodeTasks(tasks)
@@ -357,7 +356,7 @@ func (c *Cluster) volOffline(offlineAddr, nsName string, vg *DataPartition, errM
 errDeal:
 	msg = fmt.Sprintf(errMsg+" vol:%v  on Node:%v  "+
 		"DiskError  TimeOut Report Then Fix It on newHost:%v   Err:%v , PersistenceHosts:%v  ",
-		vg.PartitionID, offlineAddr, newAddr, err, vg.PersistenceHosts)
+		dp.PartitionID, offlineAddr, newAddr, err, dp.PersistenceHosts)
 	if err != nil {
 		Warn(c.Name, msg)
 	}
@@ -420,7 +419,7 @@ func (c *Cluster) CreateMetaPartition(nsName string, start, end uint64) (err err
 		return errors.Trace(err)
 	}
 	log.LogDebugf("target meta hosts:%v,peers:%v", hosts, peers)
-	if partitionID, err = c.idAlloc.allocatorPartitionID(); err != nil {
+	if partitionID, err = c.idAlloc.allocatorMetaPartitionID(); err != nil {
 		return errors.Trace(err)
 	}
 	mp = NewMetaPartition(partitionID, start, end, nsName)
@@ -503,7 +502,7 @@ func (c *Cluster) getAllNamespaces() (namespaces []string) {
 	return
 }
 
-func (c *Cluster) getVolCapacity(ns *NameSpace) (count int) {
+func (c *Cluster) getDataPartitionCapacity(ns *NameSpace) (count int) {
 	var (
 		totalCount uint64
 		mutex      sync.Mutex
@@ -515,6 +514,6 @@ func (c *Cluster) getVolCapacity(ns *NameSpace) (count int) {
 		totalCount = totalCount + dataNode.RemainWeightsForCreateVol/util.DefaultVolSize
 		return true
 	})
-	count = int(totalCount / uint64(ns.volReplicaNum))
+	count = int(totalCount / uint64(ns.dpReplicaNum))
 	return
 }

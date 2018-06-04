@@ -6,19 +6,19 @@ import (
 
 type NameSpace struct {
 	Name              string
-	volReplicaNum     uint8
+	dpReplicaNum      uint8
 	mpReplicaNum      uint8
 	threshold         float32
 	MetaPartitions    map[uint64]*MetaPartition
 	metaPartitionLock sync.RWMutex
-	volGroups         *VolGroupMap
+	dataPartitions    *DataPartitionMap
 	sync.Mutex
 }
 
 func NewNameSpace(name string, replicaNum uint8) (ns *NameSpace) {
 	ns = &NameSpace{Name: name, MetaPartitions: make(map[uint64]*MetaPartition, 0)}
-	ns.volGroups = NewVolMap()
-	ns.volReplicaNum = replicaNum
+	ns.dataPartitions = NewDataPartitionMap()
+	ns.dpReplicaNum = replicaNum
 	ns.threshold = DefaultMetaPartitionThreshold
 	if replicaNum%2 == 0 {
 		ns.mpReplicaNum = replicaNum + 1
@@ -36,8 +36,8 @@ func (ns *NameSpace) AddMetaPartition(mp *MetaPartition) {
 	}
 }
 
-func (ns *NameSpace) getVolGroupByVolID(volID uint64) (vol *DataPartition, err error) {
-	return ns.volGroups.getVol(volID)
+func (ns *NameSpace) getDataPartitionByID(partitionID uint64) (dp *DataPartition, err error) {
+	return ns.dataPartitions.getDataPartition(partitionID)
 }
 
 func (ns *NameSpace) getMetaPartition(partitionID uint64) (mp *MetaPartition, err error) {
@@ -48,6 +48,6 @@ func (ns *NameSpace) getMetaPartition(partitionID uint64) (mp *MetaPartition, er
 	return
 }
 
-func (ns *NameSpace) getVolsView() (body []byte, err error) {
-	return ns.volGroups.updateVolResponseCache(false, 0)
+func (ns *NameSpace) getDataPartitionsView() (body []byte, err error) {
+	return ns.dataPartitions.updateDataPartitionResponseCache(false, 0)
 }

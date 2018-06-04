@@ -12,12 +12,12 @@ func (partition *DataPartition) checkStatus(needLog bool, volTimeOutSec int64) {
 	liveVolLocs := partition.getLiveVolsByPersistenceHosts(volTimeOutSec)
 	switch len(liveVolLocs) {
 	case (int)(partition.ReplicaNum):
-		partition.Status = VolReadOnly
+		partition.Status = DataPartitionReadOnly
 		if partition.checkVolLocStatusOnLiveNode(liveVolLocs) == true {
-			partition.Status = VolReadWrite
+			partition.Status = DataPartitionReadWrite
 		}
 	default:
-		partition.Status = VolReadOnly
+		partition.Status = DataPartitionReadOnly
 	}
 	if needLog == true {
 		msg := fmt.Sprintf("action[checkStatus],volID:%v  goal:%v  liveLocation:%v   VolStatus:%v  RocksDBHost:%v ",
@@ -28,7 +28,7 @@ func (partition *DataPartition) checkStatus(needLog bool, volTimeOutSec int64) {
 
 func (partition *DataPartition) checkVolLocStatusOnLiveNode(liveLocs []*DataReplica) (volEqual bool) {
 	for _, volLoc := range liveLocs {
-		if volLoc.Status != VolReadWrite {
+		if volLoc.Status != DataPartitionReadWrite {
 			return
 		}
 	}
@@ -108,18 +108,18 @@ func (partition *DataPartition) checkVolDiskError() (volDiskErrorAddrs []string)
 		if !ok {
 			continue
 		}
-		if volLoc.Status == VolUnavailable {
+		if volLoc.Status == DataPartitionUnavailable {
 			volDiskErrorAddrs = append(volDiskErrorAddrs, addr)
 		}
 	}
 
 	if len(volDiskErrorAddrs) != (int)(partition.ReplicaNum) && len(volDiskErrorAddrs) > 0 {
-		partition.Status = VolReadOnly
+		partition.Status = DataPartitionReadOnly
 	}
 	partition.Unlock()
 
 	for _, diskAddr := range volDiskErrorAddrs {
-		msg := fmt.Sprintf("action[%v],vol:%v  On :%v  Disk Error,So Remove it From RocksDBHost", CheckVolDiskErrorErr, partition.PartitionID, diskAddr)
+		msg := fmt.Sprintf("action[%v],vol:%v  On :%v  Disk Error,So Remove it From RocksDBHost", CheckDataPartitionDiskErrorErr, partition.PartitionID, diskAddr)
 		log.LogError(msg)
 	}
 
