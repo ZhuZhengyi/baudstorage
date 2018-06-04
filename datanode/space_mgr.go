@@ -31,6 +31,7 @@ func NewSpaceManager(rack string) (space *SpaceManager) {
 			case <-ticker:
 				space.modifyVolsStatus()
 				space.updateMetrics()
+				space.closeActiveFiles()
 			}
 		}
 	}()
@@ -83,8 +84,8 @@ func (space *SpaceManager) updateMetrics() {
 }
 
 func (space *SpaceManager) getMinPartitionCntDisk() (d *Disk) {
-	space.diskLock.RLock()
-	defer space.diskLock.RUnlock()
+	space.diskLock.Lock()
+	defer space.diskLock.Unlock()
 	var minVolCnt uint64
 	minVolCnt = math.MaxUint64
 	var path string
@@ -123,7 +124,7 @@ func (space *SpaceManager) chooseDiskAndCreateVol(partitionId uint32, partitionT
 		return
 	}
 	d := space.getMinPartitionCntDisk()
-	if d == nil || d.Free < uint64(storeSize*2) {
+	if d == nil || d.Free < uint64(storeSize) {
 		return nil, ErrNoDiskForCreateVol
 	}
 	dp, err = NewDataPartition(partitionId, partitionType, "", d.Path, storage.NewStoreMode, storeSize)
@@ -150,6 +151,30 @@ func (space *SpaceManager) deleteVol(vodId uint32) {
 	case proto.TinyVol:
 		store := dp.store.(*storage.TinyStore)
 		store.CloseAll()
+	}
+}
+
+func (space *SpaceManager)closeActiveFiles(){
+	partitions:=make([]*DataPartition,0)
+	space.dataPartitionLock.RLock()
+	for _,partition:=range space.partitions{
+		partitions=append(partitions,partition)
+	}
+	defer space.dataPartitionLock.RUnlock()
+	activeFiles:=0
+	for _,partition:=range partitions{
+		if partition.partitionType==proto.ExtentVol{
+			store:=partition.store.(*storage.ExtentStore)
+			activeFiles+=store.GetStoreActiveFiles()
+		}
+	}
+	if activeFiles>=MaxActiveExtents{
+		for _,partition:=range partitions{
+			if partition.partitionType==proto.ExtentVol{
+				store:=partition.store.(*storage.ExtentStore)
+				store.CloseStoreActiveFiles()
+			}
+		}
 	}
 }
 

@@ -30,8 +30,9 @@ func (mw *MetaWrapper) Create_ll(parentID uint64, name string, mode uint32) (*pr
 
 	// Create Inode
 
+	var currStart uint64
 	for {
-		currStart := mw.currStart
+		currStart = mw.currStart
 		mp = mw.getPartitionByInode(currStart)
 		if mp == nil {
 			return nil, syscall.ENOMEM
@@ -52,7 +53,7 @@ func (mw *MetaWrapper) Create_ll(parentID uint64, name string, mode uint32) (*pr
 
 		mp = mw.getNextPartition(currStart)
 		if mp == nil {
-			continue
+			break
 		}
 		atomic.CompareAndSwapUint64(&mw.currStart, currStart, mp.Start)
 	}

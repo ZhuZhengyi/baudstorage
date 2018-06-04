@@ -9,6 +9,7 @@ import (
 var (
 	NoAvailDataPartition  = errors.New("no avail data partition")
 	DataPartitionNotFound = errors.New("data partition not found")
+	RackNotFound          = errors.New("rack not found")
 	DataNodeNotFound      = errors.New("data node not found")
 	MetaNodeNotFound      = errors.New("meta node not found")
 	NamespaceNotFound     = errors.New("namespace not found")
@@ -25,6 +26,7 @@ var (
 	NoHaveAnyMetaNodeToWrite             = errors.New("No have any meta node for create meta partition")
 	CannotOffLineErr                     = errors.New("cannot offline because avail data replica <0")
 	NoAnyDataNodeForCreateDataPartition  = errors.New("no have enough data server for create data partition")
+	NoRackForCreateDataPartition         = errors.New("no rack for create data partition")
 	NoAnyMetaNodeForCreateMetaPartition  = errors.New("no have enough meta server for create meta partition")
 	MetaReplicaExcessError               = errors.New("meta partition Replication Excess error")
 	NoHaveMajorityReplica                = errors.New("no have majority replica error")
