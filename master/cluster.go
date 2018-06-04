@@ -12,17 +12,17 @@ import (
 )
 
 type Cluster struct {
-	Name          string
-	namespaces    map[string]*NameSpace
-	dataNodes     sync.Map
-	metaNodes     sync.Map
-	createVolLock sync.Mutex
-	createNsLock  sync.Mutex
-	leaderInfo    *LeaderInfo
-	cfg           *ClusterConfig
-	fsm           *MetadataFsm
-	partition     raftstore.Partition
-	idAlloc       *IDAllocator
+	Name                    string
+	namespaces              map[string]*NameSpace
+	dataNodes               sync.Map
+	metaNodes               sync.Map
+	createDataPartitionLock sync.Mutex
+	createNsLock            sync.Mutex
+	leaderInfo              *LeaderInfo
+	cfg                     *ClusterConfig
+	fsm                     *MetadataFsm
+	partition               raftstore.Partition
+	idAlloc                 *IDAllocator
 }
 
 func newCluster(name string, leaderInfo *LeaderInfo, fsm *MetadataFsm, partition raftstore.Partition) (c *Cluster) {
@@ -220,8 +220,8 @@ func (c *Cluster) createVolGroup(nsName, volType string) (vg *DataPartition, err
 		tasks       []*proto.AdminTask
 		targetHosts []string
 	)
-	c.createVolLock.Lock()
-	defer c.createVolLock.Unlock()
+	c.createDataPartitionLock.Lock()
+	defer c.createDataPartitionLock.Unlock()
 	if ns, err = c.getNamespace(nsName); err != nil {
 		goto errDeal
 	}
@@ -348,7 +348,7 @@ func (c *Cluster) volOffline(offlineAddr, nsName string, vg *DataPartition, errM
 	}
 	vg.volOffLineInMem(offlineAddr)
 	vg.checkAndRemoveMissVol(offlineAddr)
-	task = proto.NewAdminTask(proto.OpCreateVol, offlineAddr, newCreateVolRequest(vg.PartitionType, vg.PartitionID))
+	task = proto.NewAdminTask(proto.OpCreateDataPartion, offlineAddr, newCreateVolRequest(vg.PartitionType, vg.PartitionID))
 	task.ID = fmt.Sprintf("%v_volID[%v]", task.ID, vg.PartitionID)
 	tasks = make([]*proto.AdminTask, 0)
 	tasks = append(tasks, task)

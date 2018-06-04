@@ -213,7 +213,7 @@ func (c *Cluster) checkMetaGroups(ns *NameSpace) {
 	for _, mp := range ns.MetaPartitions {
 		mp.checkStatus(true, int(ns.mpReplicaNum))
 		mp.checkReplicas(c, ns.Name, ns.mpReplicaNum)
-		mp.checkReplicaMiss(DefaultMetaPartitionWarnInterval)
+		mp.checkReplicaMiss(c.Name,DefaultMetaPartitionTimeOutSec,DefaultMetaPartitionWarnInterval)
 		tasks = append(tasks, mp.generateReplicaTask(ns.Name)...)
 	}
 	c.putMetaNodeTasks(tasks)

@@ -326,7 +326,7 @@ func (mp *MetaPartition) needWarnMissReplica(addr string, warnInterval int64) (i
 	return false
 }
 
-func (mp *MetaPartition) checkReplicaMiss(clusterID string, volMissSec, warnInterval int64) {
+func (mp *MetaPartition) checkReplicaMiss(clusterID string, partitionMissSec, warnInterval int64) {
 	mp.Lock()
 	defer mp.Unlock()
 	//has report
@@ -343,7 +343,7 @@ func (mp *MetaPartition) checkReplicaMiss(clusterID string, volMissSec, warnInte
 			}
 			msg := fmt.Sprintf("action[checkReplicaMiss], partition:%v  on Node:%v  "+
 				"miss time > :%v  vlocLastRepostTime:%v   dnodeLastReportTime:%v  nodeisActive:%v So Migrate", mp.PartitionID,
-				replica.Addr, volMissSec, replica.ReportTime, lastReportTime, isActive)
+				replica.Addr, partitionMissSec, replica.ReportTime, lastReportTime, isActive)
 			Warn(clusterID, msg)
 		}
 	}
