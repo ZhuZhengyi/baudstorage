@@ -222,35 +222,44 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 func (stream *StreamWriter) recoverExtent() (err error) {
 	retryPackets := stream.getWriter().getNeedRetrySendPackets()
 	for i := 0; i < MaxSelectDataPartionForWrite; i++ {
-		stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID)
-		if err = stream.allocateNewExtentWriter(); err != nil {
-			err = errors.Annotatef(err, "RecoverExtent Failed")
-			continue
-		}
+		err=nil
 		ek := stream.getWriter().toKey()
 		if ek.Size != 0 {
 			err = stream.appendExtentKey(stream.currentInode, ek)
 		}
 		if err != nil {
-			err = errors.Annotatef(err, "update fileSize[%v] to MetaNode Failed", ek.Size)
+			err = errors.Annotatef(err, "update extent[%v] to MetaNode Failed", ek.Size)
+			log.LogErrorf("stream[%v] err[%v]",stream.toString(),err.Error())
 			continue
 		}
+
+		stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID)
+		if err = stream.allocateNewExtentWriter(); err != nil {
+			err = errors.Annotatef(err, "RecoverExtent Failed")
+			log.LogErrorf("stream[%v] err[%v]",stream.toString(),err.Error())
+			continue
+		}
+
 		for _, p := range retryPackets {
 			_, err = stream.getWriter().write(p.Data, int(p.Size))
 			if err != nil {
-				err = errors.Annotatef(err, "RecoverExtent write failed")
-				continue
+				err = errors.Annotatef(err, "pkg[%v] RecoverExtent write failed",p.GetUniqLogId())
+				log.LogErrorf("stream[%v] err[%v]",stream.toString(),err.Error())
+				break
 			}
 		}
 		if err == nil {
 			stream.excludePartition = make([]uint32, 0)
 			break
+		}else {
+			continue
 		}
 	}
 
 	return
 
 }
+
 
 func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	var (
