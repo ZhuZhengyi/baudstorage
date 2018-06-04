@@ -208,7 +208,7 @@ func (s *DataNode) streamRepairObjects(remoteFileInfo *storage.FileInfo, v *Vol)
 	request := NewStreamChunkRepairReadPacket(v.volId, remoteFileInfo.FileIdId)
 	request.Data, _ = json.Marshal(task)
 	var conn net.Conn
-	conn, err = connPool.Get(remoteFileInfo.Source)
+	conn, err = ConnPool.Get(remoteFileInfo.Source)
 	if err != nil {
 		return errors.Annotatef(err, "streamRepairObjects get conn from host[%v] error", remoteFileInfo.Source)
 	}
@@ -224,7 +224,7 @@ func (s *DataNode) streamRepairObjects(remoteFileInfo *storage.FileInfo, v *Vol)
 			return errors.Annotatef(err, "streamRepairObjects GetWatermark error")
 		}
 		if localExtentInfo.Size >= remoteFileInfo.Size {
-			connPool.Put(conn)
+			ConnPool.Put(conn)
 			break
 		}
 		err = request.ReadFromConn(conn, proto.ReadDeadlineTime)

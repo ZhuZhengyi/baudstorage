@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk/vol"
+	"github.com/tiglabs/baudstorage/sdk/data"
 	"github.com/tiglabs/baudstorage/util"
 )
 
@@ -14,17 +14,17 @@ type Packet struct {
 	fillBytes uint32
 }
 
-func NewWritePacket(vol *vol.VolGroup, extentId, seqNo uint64, offset int) (p *Packet) {
+func NewWritePacket(dp *data.DataPartion, extentId, seqNo uint64, offset int) (p *Packet) {
 	p = new(Packet)
-	p.VolID = vol.VolID
+	p.PartionID = dp.DataPartionID
 	p.Magic = proto.ProtoMagic
 	p.Data = make([]byte, 0)
 	p.StoreMode = proto.ExtentStoreMode
 	p.FileID = extentId
 	p.Offset = int64(offset)
-	p.Arg = ([]byte)(vol.GetAllAddrs())
+	p.Arg = ([]byte)(dp.GetAllAddrs())
 	p.Arglen = uint32(len(p.Arg))
-	p.Nodes = uint8(len(vol.Hosts) - 1)
+	p.Nodes = uint8(len(dp.Hosts) - 1)
 	p.ReqID = proto.GetReqID()
 	p.Opcode = proto.OpWrite
 
@@ -34,7 +34,7 @@ func NewWritePacket(vol *vol.VolGroup, extentId, seqNo uint64, offset int) (p *P
 func NewReadPacket(key proto.ExtentKey, offset, size int) (p *Packet) {
 	p = new(Packet)
 	p.FileID = key.ExtentId
-	p.VolID = key.VolId
+	p.PartionID = key.PartionId
 	p.Magic = proto.ProtoMagic
 	p.Offset = int64(offset)
 	p.Size = uint32(size)
@@ -46,31 +46,31 @@ func NewReadPacket(key proto.ExtentKey, offset, size int) (p *Packet) {
 	return
 }
 
-func NewCreateExtentPacket(vol *vol.VolGroup) (p *Packet) {
+func NewCreateExtentPacket(dp *data.DataPartion) (p *Packet) {
 	p = new(Packet)
-	p.VolID = vol.VolID
+	p.PartionID = dp.DataPartionID
 	p.Magic = proto.ProtoMagic
 	p.Data = make([]byte, 0)
 	p.StoreMode = proto.ExtentStoreMode
-	p.Arg = ([]byte)(vol.GetAllAddrs())
+	p.Arg = ([]byte)(dp.GetAllAddrs())
 	p.Arglen = uint32(len(p.Arg))
-	p.Nodes = uint8(len(vol.Hosts) - 1)
+	p.Nodes = uint8(len(dp.Hosts) - 1)
 	p.ReqID = proto.GetReqID()
 	p.Opcode = proto.OpCreateFile
 
 	return p
 }
 
-func NewDeleteExtentPacket(vol *vol.VolGroup, extentId uint64) (p *Packet) {
+func NewDeleteExtentPacket(dp *data.DataPartion, extentId uint64) (p *Packet) {
 	p = new(Packet)
 	p.Magic = proto.ProtoMagic
 	p.Opcode = proto.OpMarkDelete
 	p.StoreMode = proto.ExtentStoreMode
-	p.VolID = vol.VolID
+	p.PartionID = dp.DataPartionID
 	p.FileID = extentId
 	p.ReqID = proto.GetReqID()
-	p.Nodes = uint8(len(vol.Hosts) - 1)
-	p.Arg = ([]byte)(vol.GetAllAddrs())
+	p.Nodes = uint8(len(dp.Hosts) - 1)
+	p.Arg = ([]byte)(dp.GetAllAddrs())
 	p.Arglen = uint32(len(p.Arg))
 	return p
 }
@@ -78,7 +78,7 @@ func NewDeleteExtentPacket(vol *vol.VolGroup, extentId uint64) (p *Packet) {
 func NewReply(reqId int64, volID uint32, extentId uint64) (p *Packet) {
 	p = new(Packet)
 	p.ReqID = reqId
-	p.VolID = volID
+	p.PartionID = volID
 	p.FileID = extentId
 	p.Magic = proto.ProtoMagic
 	p.StoreMode = proto.ExtentStoreMode
@@ -87,7 +87,7 @@ func NewReply(reqId int64, volID uint32, extentId uint64) (p *Packet) {
 }
 
 func (p *Packet) IsEqual(q *Packet) bool {
-	if p.ReqID == q.ReqID && p.VolID == q.VolID && p.FileID == q.FileID {
+	if p.ReqID == q.ReqID && p.PartionID == q.PartionID && p.FileID == q.FileID {
 		return true
 	}
 

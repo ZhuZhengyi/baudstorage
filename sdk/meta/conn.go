@@ -1,19 +1,19 @@
 package meta
 
 import (
-	"fmt"
 	"io"
 	"net"
 
 	"github.com/juju/errors"
 
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util/log"
+	//"github.com/tiglabs/baudstorage/util/log"
 )
 
 type MetaConn struct {
 	conn net.Conn
 	id   uint64 //PartitionID
+	addr string //MetaNode addr
 }
 
 // Connection managements
@@ -21,7 +21,7 @@ type MetaConn struct {
 
 func (mw *MetaWrapper) getConn(mp *MetaPartition) (*MetaConn, error) {
 	addr := mp.LeaderAddr
-	log.LogDebugf("Get connection: PartitionID(%v) addr(%v)\n", mp.PartitionID, addr)
+	//log.LogDebugf("Get connection: PartitionID(%v) addr(%v)\n", mp.PartitionID, addr)
 	conn, err := mw.conns.Get(addr)
 	if err != nil {
 		for _, addr = range mp.Members {
@@ -36,8 +36,8 @@ func (mw *MetaWrapper) getConn(mp *MetaPartition) (*MetaConn, error) {
 		return nil, err
 	}
 
-	log.LogDebugf("Get connection: PartitionID(%v) addr(%v)\n", mp.PartitionID, addr)
-	mc := &MetaConn{conn: conn, id: mp.PartitionID}
+	//log.LogDebugf("Get connection: PartitionID(%v) addr(%v)\n", mp.PartitionID, addr)
+	mc := &MetaConn{conn: conn, id: mp.PartitionID, addr: addr}
 	return mc, nil
 }
 
@@ -64,14 +64,12 @@ func (mw *MetaWrapper) connect(inode uint64) (*MetaConn, error) {
 func (mc *MetaConn) send(req *proto.Packet) (*proto.Packet, error) {
 	err := req.WriteToConn(mc.conn)
 	if err != nil {
-		fmt.Println("Write to conn error: ", err)
-		return nil, err
+		return nil, errors.Annotatef(err, "Failed to write to conn: PartitionID(%v) addr(%v)", mc.id, mc.addr)
 	}
 	resp := proto.NewPacket()
 	err = resp.ReadFromConn(mc.conn, proto.ReadDeadlineTime)
 	if err != nil && err != io.EOF {
-		fmt.Println("Read from conn error: ", err)
-		return nil, err
+		return nil, errors.Annotatef(err, "Failed to read from conn: PartitionID(%v) addr(%v)", mc.id, mc.addr)
 	}
 	return resp, nil
 }

@@ -322,6 +322,9 @@ out:
 }
 
 func (m *MetaServer) handleDeleteInode(conn net.Conn, p *proto.Packet) error {
+	var data []byte
+
+	resp := &proto.DeleteInodeResponse{}
 	req := &proto.DeleteInodeRequest{}
 	err := json.Unmarshal(p.Data, req)
 	if err != nil {
@@ -329,16 +332,23 @@ func (m *MetaServer) handleDeleteInode(conn net.Conn, p *proto.Packet) error {
 	}
 
 	ino := req.Inode
-	p.Data = nil
-	p.Size = 0
-
 	inode := m.deleteInode(ino)
 	if inode == nil {
 		p.ResultCode = proto.OpNotExistErr
+		goto out
+	}
+
+	resp.Extents = inode.extents
+	if data, err = json.Marshal(resp); err != nil {
+		log.Println(err)
+		p.ResultCode = proto.OpErr
 	} else {
 		p.ResultCode = proto.OpOk
 	}
 
+out:
+	p.Data = data
+	p.Size = uint32(len(data))
 	err = p.WriteToConn(conn)
 	return err
 }
@@ -502,7 +512,7 @@ func (m *MetaServer) handleAppendExtentKey(conn net.Conn, p *proto.Packet) error
 		inode.size = req.Extent.Size
 	} else {
 		ek := inode.extents[cnt-1]
-		if ek.VolId != req.Extent.VolId || ek.ExtentId != req.Extent.ExtentId {
+		if ek.PartionId != req.Extent.PartionId || ek.ExtentId != req.Extent.ExtentId {
 			inode.extents = append(inode.extents, req.Extent)
 			inode.size += req.Extent.Size
 		} else {

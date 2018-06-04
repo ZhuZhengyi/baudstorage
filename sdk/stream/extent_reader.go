@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
+	"github.com/tiglabs/baudstorage/sdk/data"
 	"github.com/tiglabs/baudstorage/sdk/vol"
 	"github.com/tiglabs/baudstorage/util/log"
 	"math/rand"
@@ -15,16 +16,16 @@ type ExtentReader struct {
 	inode            uint64
 	startInodeOffset int
 	endInodeOffset   int
-	vol              *vol.VolGroup
+	dp               *data.DataPartion
 	key              proto.ExtentKey
-	wrapper          *vol.VolGroupWrapper
+	wrapper          *data.DataPartionWrapper
 	sync.Mutex
 }
 
 func NewExtentReader(inode uint64, inInodeOffset int, key proto.ExtentKey,
-	wrapper *vol.VolGroupWrapper) (reader *ExtentReader, err error) {
+	wrapper *data.DataPartionWrapper) (reader *ExtentReader, err error) {
 	reader = new(ExtentReader)
-	reader.vol, err = wrapper.GetVol(key.VolId)
+	reader.dp, err = wrapper.GetDataPartion(key.PartionId)
 	if err != nil {
 		return
 	}
@@ -51,8 +52,8 @@ func (reader *ExtentReader) read(data []byte, offset, size int) (err error) {
 
 func (reader *ExtentReader) readDataFromVol(p *Packet, data []byte) (err error) {
 	rand.Seed(time.Now().UnixNano())
-	index := rand.Intn(int(reader.vol.ReplicaNum))
-	host := reader.vol.Hosts[index]
+	index := rand.Intn(int(reader.dp.ReplicaNum))
+	host := reader.dp.Hosts[index]
 	if _, err = reader.readDataFromHost(p, host, data); err != nil {
 		log.LogError(err.Error())
 		goto FORLOOP
@@ -60,7 +61,7 @@ func (reader *ExtentReader) readDataFromVol(p *Packet, data []byte) (err error) 
 	return
 
 FORLOOP:
-	for _, host := range reader.vol.Hosts {
+	for _, host := range reader.dp.Hosts {
 		_, err = reader.readDataFromHost(p, host, data)
 		if err == nil {
 			return
@@ -77,8 +78,8 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 	conn, err := reader.wrapper.GetConnect(host)
 	if err != nil {
 		return 0, errors.Annotatef(err, reader.toString()+
-			"readDataFromHost vol[%v] cannot get  connect from host[%v] request[%v] ",
-			reader.key.VolId, host, p.GetUniqLogId())
+			"readDataFromHost dp[%v] cannot get  connect from host[%v] request[%v] ",
+			reader.key.PartionId, host, p.GetUniqLogId())
 
 	}
 	defer func() {
@@ -124,7 +125,7 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 func (reader *ExtentReader) updateKey(key proto.ExtentKey) (update bool) {
 	reader.Lock()
 	defer reader.Unlock()
-	if !(key.VolId == reader.key.VolId && key.ExtentId == reader.key.ExtentId) {
+	if !(key.PartionId == reader.key.PartionId && key.ExtentId == reader.key.ExtentId) {
 		return
 	}
 	if key.Size <= reader.key.Size {

@@ -39,7 +39,7 @@ func (sk *StreamKey) Put(k ExtentKey) {
 	}
 	lastIndex := len(sk.Extents) - 1
 	lastKey := sk.Extents[lastIndex]
-	if lastKey.VolId == k.VolId && lastKey.ExtentId == k.ExtentId {
+	if lastKey.PartionId == k.PartionId && lastKey.ExtentId == k.ExtentId {
 		if k.Size > lastKey.Size {
 			sk.Extents[lastIndex].Size = k.Size
 			return
@@ -48,7 +48,7 @@ func (sk *StreamKey) Put(k ExtentKey) {
 	}
 	var haveFileSize uint32
 	for index, ek := range sk.Extents {
-		if index != lastIndex && ek.VolId == k.VolId && ek.ExtentId == k.ExtentId {
+		if index != lastIndex && ek.PartionId == k.PartionId && ek.ExtentId == k.ExtentId {
 			haveFileSize += ek.Size
 		}
 	}
@@ -61,8 +61,8 @@ func (sk *StreamKey) Put(k ExtentKey) {
 func (sk *StreamKey) Size() (bytes uint64) {
 	sk.Lock()
 	defer sk.Unlock()
-	for _, okey := range sk.Extents {
-		bytes += uint64(okey.Size)
+	for _, ok := range sk.Extents {
+		bytes += uint64(ok.Size)
 	}
 	return
 }

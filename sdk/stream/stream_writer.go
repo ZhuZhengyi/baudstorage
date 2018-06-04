@@ -7,7 +7,7 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk/vol"
+	"github.com/tiglabs/baudstorage/sdk/data"
 	"github.com/tiglabs/baudstorage/util/log"
 	"net"
 )
@@ -30,22 +30,22 @@ type WriteRequest struct {
 
 type StreamWriter struct {
 	sync.Mutex
-	wrapper         *vol.VolGroupWrapper
-	currentWriter   *ExtentWriter //current ExtentWriter
-	errCount        int           //error count
-	currentVolId    uint32        //current VolId
-	currentExtentId uint64        //current FileIdId
-	currentInode    uint64        //inode
-	flushLock       sync.Mutex
-	execludeVols    []uint32
-	appendExtentKey AppendExtentKeyFunc
-	isFlushIng      int32
-	requestCh       chan *WriteRequest
-	replyCh         chan *WriteRequest
-	exitCh          chan bool
+	wrapper          *data.DataPartionWrapper
+	currentWriter    *ExtentWriter //current ExtentWriter
+	errCount         int           //error count
+	currentPartionId uint32        //current PartionId
+	currentExtentId  uint64        //current FileIdId
+	currentInode     uint64        //inode
+	flushLock        sync.Mutex
+	execludePartion  []uint32
+	appendExtentKey  AppendExtentKeyFunc
+	isFlushIng       int32
+	requestCh        chan *WriteRequest
+	replyCh          chan *WriteRequest
+	exitCh           chan bool
 }
 
-func NewStreamWriter(wrapper *vol.VolGroupWrapper, inode uint64, appendExtentKey AppendExtentKeyFunc) (stream *StreamWriter) {
+func NewStreamWriter(wrapper *data.DataPartionWrapper, inode uint64, appendExtentKey AppendExtentKeyFunc) (stream *StreamWriter) {
 	stream = new(StreamWriter)
 	stream.wrapper = wrapper
 	stream.appendExtentKey = appendExtentKey
@@ -54,7 +54,7 @@ func NewStreamWriter(wrapper *vol.VolGroupWrapper, inode uint64, appendExtentKey
 	stream.requestCh = make(chan *WriteRequest, 1000)
 	stream.replyCh = make(chan *WriteRequest, 1000)
 	stream.exitCh = make(chan bool, 2)
-	stream.execludeVols = make([]uint32, 0)
+	stream.execludePartion = make([]uint32, 0)
 	go stream.server()
 
 	return
@@ -87,11 +87,11 @@ func (stream *StreamWriter) toString() (m string) {
 		currentWriterMsg = stream.getWriter().toString()
 	}
 	return fmt.Sprintf("inode[%v] currentVol[%v] currentExtentId[%v]"+
-		" errCount[%v]", stream.currentInode, stream.currentVolId, currentWriterMsg,
+		" errCount[%v]", stream.currentInode, stream.currentPartionId, currentWriterMsg,
 		stream.errCount)
 }
 
-//stream init,alloc a extent ,select vol and extent
+//stream init,alloc a extent ,select dp and extent
 func (stream *StreamWriter) init() (err error) {
 	if stream.getWriter() != nil && stream.getWriter().isFullExtent() {
 		err = stream.flushCurrExtentWriter()
@@ -222,7 +222,7 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 func (stream *StreamWriter) recoverExtent() (err error) {
 	retryPackets := stream.getWriter().getNeedRetrySendPackets()
 	for i := 0; i < MaxSelectVolForWrite; i++ {
-		stream.execludeVols = append(stream.execludeVols, stream.getWriter().volID)
+		stream.execludePartion = append(stream.execludePartion, stream.getWriter().dp)
 		if err = stream.allocateNewExtentWriter(); err != nil {
 			err = errors.Annotatef(err, "RecoverExtent Failed")
 			continue
@@ -243,7 +243,7 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 			}
 		}
 		if err == nil {
-			stream.execludeVols = make([]uint32, 0)
+			stream.execludePartion = make([]uint32, 0)
 			break
 		}
 	}
@@ -254,25 +254,25 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 
 func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	var (
-		vol      *vol.VolGroup
+		dp       *data.DataPartion
 		extentId uint64
 		writer   *ExtentWriter
 	)
 	err = fmt.Errorf("cannot alloct new extent after maxrery")
 	for i := 0; i < MaxSelectVolForWrite; i++ {
-		if vol, err = stream.wrapper.GetWriteVol(stream.execludeVols); err != nil {
+		if dp, err = stream.wrapper.GetWriteDataPartion(stream.execludePartion); err != nil {
 			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter "+
-				"failed on getWriteVol,error[%v] execludeVols[%v]", err.Error(), stream.execludeVols))
+				"failed on getWriteDataPartion,error[%v] execludeDataPartion[%v]", err.Error(), stream.execludePartion))
 			continue
 		}
-		if extentId, err = stream.createExtent(vol); err != nil {
+		if extentId, err = stream.createExtent(dp); err != nil {
 			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter "+
-				"create Extent,error[%v] execludeVols[%v]", err.Error(), stream.execludeVols))
+				"create Extent,error[%v] execludeDataPartion[%v]", err.Error(), stream.execludePartion))
 			continue
 		}
-		if writer, err = NewExtentWriter(stream.currentInode, vol, stream.wrapper, extentId); err != nil {
+		if writer, err = NewExtentWriter(stream.currentInode, dp, stream.wrapper, extentId); err != nil {
 			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter "+
-				"NewExtentWriter[%v],error[%v] execludeVols[%v]", extentId, err.Error(), stream.execludeVols))
+				"NewExtentWriter[%v],error[%v] execludeDataPartion[%v]", extentId, err.Error(), stream.execludePartion))
 			continue
 		}
 		break
@@ -281,7 +281,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 		log.LogErrorf(errors.Annotatef(err, "allocateNewExtentWriter").Error())
 		return errors.Annotatef(err, "allocateNewExtentWriter")
 	}
-	stream.currentVolId = vol.VolID
+	stream.currentPartionId = dp.DataPartionID
 	stream.currentExtentId = extentId
 	stream.setWriter(writer)
 	err = nil
@@ -290,30 +290,30 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	return nil
 }
 
-func (stream *StreamWriter) createExtent(vol *vol.VolGroup) (extentId uint64, err error) {
+func (stream *StreamWriter) createExtent(dp *data.DataPartion) (extentId uint64, err error) {
 	var (
 		connect net.Conn
 	)
-	connect, err = stream.wrapper.GetConnect(vol.Hosts[0])
+	connect, err = stream.wrapper.GetConnect(dp.Hosts[0])
 	if err != nil {
-		err = errors.Annotatef(err, " get connect from volhosts[%v]", vol.Hosts[0])
+		err = errors.Annotatef(err, " get connect from volhosts[%v]", dp.Hosts[0])
 		return
 	}
-	p := NewCreateExtentPacket(vol)
+	p := NewCreateExtentPacket(dp)
 	if err = p.WriteToConn(connect); err != nil {
-		err = errors.Annotatef(err, "send CreateExtent[%v] to volhosts[%v]", p.GetUniqLogId(), vol.Hosts[0])
+		err = errors.Annotatef(err, "send CreateExtent[%v] to volhosts[%v]", p.GetUniqLogId(), dp.Hosts[0])
 		connect.Close()
 		return
 	}
 	if err = p.ReadFromConn(connect, proto.ReadDeadlineTime); err != nil {
-		err = errors.Annotatef(err, "recive CreateExtent[%v] failed", p.GetUniqLogId(), vol.Hosts[0])
+		err = errors.Annotatef(err, "recive CreateExtent[%v] failed", p.GetUniqLogId(), dp.Hosts[0])
 		connect.Close()
 		return
 	}
 	extentId = p.FileID
 	if p.FileID <= 0 {
 		err = errors.Annotatef(err, "unavali extentId[%v] from [%v] response",
-			extentId, vol.Hosts[0])
+			extentId, dp.Hosts[0])
 		connect.Close()
 		return
 
@@ -322,5 +322,3 @@ func (stream *StreamWriter) createExtent(vol *vol.VolGroup) (extentId uint64, er
 
 	return extentId, nil
 }
-
-

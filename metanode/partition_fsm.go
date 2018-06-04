@@ -114,13 +114,13 @@ func (mp *metaPartition) ApplySnapshot(peers []raftproto.Peer,
 		switch snap.Op {
 		case opCreateInode:
 			var ino = &Inode{}
-			ino.ParseKeyBytes(snap.K)
-			ino.ParseValueBytes(snap.V)
+			ino.UnmarshalKey(snap.K)
+			ino.UnmarshalValue(snap.V)
 			mp.createInode(ino)
 		case opCreateDentry:
 			dentry := &Dentry{}
-			dentry.ParseKeyBytes(snap.K)
-			dentry.ParseValueBytes(snap.V)
+			dentry.UnmarshalKey(snap.K)
+			dentry.UnmarshalValue(snap.V)
 			mp.createDentry(dentry)
 		default:
 			return fmt.Errorf("unknown op=%d", snap.Op)

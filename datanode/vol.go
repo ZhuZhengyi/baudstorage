@@ -34,7 +34,6 @@ type Vol struct {
 	status   int
 	isLeader bool
 	members  *VolMembers
-	server   *DataNode
 	exitCh   chan bool
 }
 
@@ -94,7 +93,7 @@ func (v *Vol) getMembers() (bool, *VolMembers, error) {
 	)
 
 	url := fmt.Sprintf(GetVolMember+"?vol=%v", v.volId)
-	if volHostsBuf, err = v.server.postToMaster(nil, url); err != nil {
+	if volHostsBuf, err = PostToMaster(nil, url); err != nil {
 		return false, nil, err
 	}
 	members := new(VolMembers)
@@ -104,8 +103,8 @@ func (v *Vol) getMembers() (bool, *VolMembers, error) {
 		return false, nil, err
 	}
 
-	if len(members.VolHosts) >= 1 && members.VolHosts[0] != v.server.localServeAddr {
-		err = errors.Annotatef(ErrNotLeader, "vol[%v] current LocalIP[%v]", v.volId, v.server.localServeAddr)
+	if len(members.VolHosts) >= 1 && members.VolHosts[0] != LocalIP {
+		err = errors.Annotatef(ErrNotLeader, "vol[%v] current LocalIP[%v]", v.volId, LocalIP)
 		return false, nil, err
 	}
 

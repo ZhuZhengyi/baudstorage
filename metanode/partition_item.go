@@ -73,8 +73,8 @@ func (si *ItemIterator) Next() (data []byte, err error) {
 				return true
 			}
 			si.curItem = ino
-			snap := NewMetaPartitionSnapshot(opCreateInode, ino.GetKeyBytes(),
-				ino.GetValueBytes())
+			snap := NewMetaPartitionSnapshot(opCreateInode, ino.MarshalKey(),
+				ino.MarshalValue())
 			data, err = snap.Encode()
 			si.cur++
 			return false
@@ -82,7 +82,7 @@ func (si *ItemIterator) Next() (data []byte, err error) {
 		return
 	}
 
-	//ascend Dentry tree
+	// ascend range dentry tree
 	if si.cur == (si.inoLen + 1) {
 		si.curItem = nil
 	}
@@ -92,8 +92,8 @@ func (si *ItemIterator) Next() (data []byte, err error) {
 			return true
 		}
 		si.curItem = dentry
-		snap := NewMetaPartitionSnapshot(opCreateDentry, dentry.GetKeyBytes(),
-			dentry.GetValueBytes())
+		snap := NewMetaPartitionSnapshot(opCreateDentry, dentry.MarshalKey(),
+			dentry.MarshalValue())
 		data, err = snap.Encode()
 		si.cur++
 		return false

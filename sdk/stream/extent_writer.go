@@ -9,7 +9,7 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/sdk/vol"
+	"github.com/tiglabs/baudstorage/sdk/data"
 	"github.com/tiglabs/baudstorage/util"
 	"github.com/tiglabs/baudstorage/util/log"
 	"time"
@@ -35,9 +35,8 @@ type ExtentWriter struct {
 	inode            uint64     //Current write Inode
 	requestQueue     *list.List //sendPacketList
 	requestQueueLock sync.Mutex
-	volGroup         *vol.VolGroup
-	volID            uint32
-	wrapper          *vol.VolGroupWrapper
+	dp               *data.DataPartion
+	wrapper          *data.DataPartionWrapper
 	extentId         uint64 //current FileIdId
 	currentPacket    *Packet
 	seqNo            uint64 //Current Send Packet Seq
@@ -52,19 +51,18 @@ type ExtentWriter struct {
 	flushLock sync.Mutex
 }
 
-func NewExtentWriter(inode uint64, vol *vol.VolGroup, wrapper *vol.VolGroupWrapper, extentId uint64) (writer *ExtentWriter, err error) {
+func NewExtentWriter(inode uint64, dp *data.DataPartion, wrapper *data.DataPartionWrapper, extentId uint64) (writer *ExtentWriter, err error) {
 	if extentId <= 0 {
-		return nil, fmt.Errorf("inode[%v],vol[%v],unavalid extentId[%v]", inode, vol.VolID, extentId)
+		return nil, fmt.Errorf("inode[%v],dp[%v],unavalid extentId[%v]", inode, dp.DataPartionID, extentId)
 	}
 	writer = new(ExtentWriter)
 	writer.requestQueue = list.New()
 	writer.handleCh = make(chan bool, DefaultWriteBufferSize/(64*util.KB))
 	writer.extentId = extentId
-	writer.volGroup = vol
-	writer.volID = vol.VolID
+	writer.dp = dp
 	writer.inode = inode
 	writer.wrapper = wrapper
-	writer.connect, err = wrapper.GetConnect(vol.Hosts[0])
+	writer.connect, err = wrapper.GetConnect(dp.Hosts[0])
 	if err != nil {
 		return
 	}
@@ -106,7 +104,7 @@ func (writer *ExtentWriter) write(data []byte, size int) (total int, err error) 
 	for total < size && !writer.isFullExtent() {
 		writer.Lock()
 		if writer.currentPacket == nil {
-			writer.currentPacket = NewWritePacket(writer.volGroup, writer.extentId, writer.getSeqNo(), writer.offset)
+			writer.currentPacket = NewWritePacket(writer.dp, writer.extentId, writer.getSeqNo(), writer.offset)
 			writer.addSeqNo() //init a packet
 		}
 		canWrite = writer.currentPacket.fill(data[total:size], size-total) //fill this packet
@@ -183,7 +181,7 @@ func (writer *ExtentWriter) recover() (sucess bool) {
 
 	}()
 	//get connect from volGroupWraper
-	if connect, err = writer.wrapper.GetConnect(writer.volGroup.Hosts[0]); err != nil {
+	if connect, err = writer.wrapper.GetConnect(writer.dp.Hosts[0]); err != nil {
 		log.LogError(err)
 		return
 	}
@@ -230,8 +228,8 @@ func (writer *ExtentWriter) toString() string {
 	if writer.getPacket() != nil {
 		currPkgMesg = writer.currentPacket.GetUniqLogId()
 	}
-	return fmt.Sprintf("extent{inode=%v volGroup=%v extentId=%v retryCnt=%v handleCh[%v] requestQueueLen[%v] currentPkg=%v}",
-		writer.inode, writer.volGroup.VolID, writer.extentId, writer.recoverCnt,
+	return fmt.Sprintf("extent{inode=%v dp=%v extentId=%v retryCnt=%v handleCh[%v] requestQueueLen[%v] currentPkg=%v}",
+		writer.inode, writer.dp.DataPartionID, writer.extentId, writer.recoverCnt,
 		len(writer.handleCh), writer.getQueueListLen(), currPkgMesg)
 }
 
@@ -311,7 +309,7 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 
 func (writer *ExtentWriter) toKey() (k proto.ExtentKey) {
 	k = proto.ExtentKey{}
-	k.VolId = writer.volGroup.VolID
+	k.PartionId = writer.dp.DataPartionID
 	k.Size = uint32(writer.getByteAck())
 	k.ExtentId = writer.extentId
 
@@ -330,7 +328,7 @@ func (writer *ExtentWriter) recive() {
 				continue
 			}
 			request := e.Value.(*Packet)
-			reply := NewReply(request.ReqID, request.VolID, request.FileID)
+			reply := NewReply(request.ReqID, request.PartionID, request.FileID)
 			reply.Opcode = request.Opcode
 			reply.Offset = request.Offset
 			reply.Size = request.Size

@@ -20,7 +20,7 @@ func allocReqId() int64 {
 	return reqId
 }
 
-func newWritePacket(data []byte, vol *vol.VolGroup) (pkg *proto.Packet) {
+func newWritePacket(data []byte, vol *data.VolGroup) (pkg *proto.Packet) {
 	pkg = proto.NewPacket()
 	pkg.Opcode = proto.OpWrite
 	pkg.StoreMode = proto.TinyStoreMode
@@ -31,7 +31,7 @@ func newWritePacket(data []byte, vol *vol.VolGroup) (pkg *proto.Packet) {
 	argstr := vol.Hosts[1] + proto.AddrSplit + vol.Hosts[2]
 	pkg.Arg = []byte(argstr)
 	pkg.Arglen = uint32(len(pkg.Arg))
-	pkg.VolID = vol.VolID
+	pkg.PartionID = vol.VolID
 	pkg.ReqID = allocReqId()
 	return
 }
@@ -45,12 +45,12 @@ func newReadPacket(vid, size uint32, fid uint64, ofs int64) (pkg *proto.Packet) 
 	pkg.FileID = fid
 	pkg.Offset = ofs
 	pkg.Arglen = 0
-	pkg.VolID = vid
+	pkg.PartionID = vid
 	pkg.ReqID = allocReqId()
 	return
 }
 
-func newDelPacket(fid uint64, size uint32, ofs int64, vol *vol.VolGroup) (pkg *proto.Packet) {
+func newDelPacket(fid uint64, size uint32, ofs int64, vol *data.VolGroup) (pkg *proto.Packet) {
 	pkg = proto.NewPacket()
 	pkg.Opcode = proto.OpMarkDelete
 	pkg.StoreMode = proto.TinyStoreMode
@@ -59,7 +59,7 @@ func newDelPacket(fid uint64, size uint32, ofs int64, vol *vol.VolGroup) (pkg *p
 	argstr := vol.Hosts[1] + proto.AddrSplit + vol.Hosts[2]
 	pkg.Arg = []byte(argstr)
 	pkg.Arglen = uint32(len(pkg.Arg))
-	pkg.VolID = vol.VolID
+	pkg.PartionID = vol.VolID
 	pkg.Offset = ofs
 	pkg.FileID = fid
 	pkg.ReqID = allocReqId()
@@ -67,7 +67,7 @@ func newDelPacket(fid uint64, size uint32, ofs int64, vol *vol.VolGroup) (pkg *p
 }
 
 func marshalKey(pkt *proto.Packet) string {
-	key := fmt.Sprintf("cfs/%v/%x/%x/%x/%x/%x", Version, pkt.VolID, pkt.FileID, pkt.Offset, pkt.Size, pkt.Crc)
+	key := fmt.Sprintf("cfs/%v/%x/%x/%x/%x/%x", Version, pkt.PartionID, pkt.FileID, pkt.Offset, pkt.Size, pkt.Crc)
 	return key
 }
 

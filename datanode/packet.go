@@ -71,7 +71,7 @@ func NewPacket() (p *Packet) {
 }
 
 func (p *Packet) IsMasterCommand() bool {
-	if p.Opcode == proto.OpDataNodeHeartbeat || p.Opcode == proto.OpLoadVol || p.Opcode == proto.OpCreateVol {
+	if p.Opcode == proto.OpDataNodeHeartbeat || p.Opcode == proto.OpLoadDataPartion || p.Opcode == proto.OpCreateDataPartion {
 		return true
 	}
 	return false
@@ -99,7 +99,7 @@ func (p *Packet) IsTransitPkg() bool {
 func NewGetAllWaterMarker(volId uint32, storeMode uint8) (p *Packet) {
 	p = new(Packet)
 	p.Opcode = proto.OpGetAllWatermark
-	p.VolID = volId
+	p.PartionID = volId
 	p.Magic = proto.ProtoMagic
 	p.ReqID = proto.GetReqID()
 	p.StoreMode = storeMode
@@ -110,7 +110,7 @@ func NewGetAllWaterMarker(volId uint32, storeMode uint8) (p *Packet) {
 func NewStreamReadPacket(volId uint32, extentId, offset, size int) (p *Packet) {
 	p = new(Packet)
 	p.FileID = uint64(extentId)
-	p.VolID = volId
+	p.PartionID = volId
 	p.Magic = proto.ProtoMagic
 	p.Offset = int64(offset)
 	p.Size = uint32(size)
@@ -124,7 +124,7 @@ func NewStreamReadPacket(volId uint32, extentId, offset, size int) (p *Packet) {
 func NewStreamChunkRepairReadPacket(volId uint32, chunkId int) (p *Packet) {
 	p = new(Packet)
 	p.FileID = uint64(chunkId)
-	p.VolID = volId
+	p.PartionID = volId
 	p.Magic = proto.ProtoMagic
 	p.Opcode = proto.OpCRepairRead
 	p.StoreMode = proto.TinyStoreMode
@@ -136,7 +136,7 @@ func NewStreamChunkRepairReadPacket(volId uint32, chunkId int) (p *Packet) {
 func NewNotifyRepair(volId uint32, storeMode int) (p *Packet) {
 	p = new(Packet)
 	p.Opcode = proto.OpNotifyRepair
-	p.VolID = volId
+	p.PartionID = volId
 	p.Magic = proto.ProtoMagic
 	p.ReqID = proto.GetReqID()
 	p.StoreMode = uint8(storeMode)
