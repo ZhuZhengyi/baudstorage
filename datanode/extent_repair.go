@@ -10,16 +10,16 @@ import (
 	"time"
 )
 
-func (v *Vol) checkExtent() {
+func (dp *DataPartion) checkExtent() {
 	ticker := time.Tick(time.Second * 100)
 	for {
 		select {
 		case <-ticker:
-			if err := v.parseVolMember(); err != nil {
+			if err := dp.parseVolMember(); err != nil {
 				continue
 			}
-			v.extentsRepair()
-		case <-v.exitCh:
+			dp.extentsRepair()
+		case <-dp.exitCh:
 			return
 		}
 	}
@@ -47,16 +47,16 @@ func NewMembersFiles() (mf *MembersFileMetas) {
 	return
 }
 
-func (v *Vol) extentsRepair() {
+func (dp *DataPartion) extentsRepair() {
 	startTime := time.Now().UnixNano()
-	log.LogDebugf("action[Vol.extentsRepair] extents repair start.")
-	allMembers, err := v.getAllMemberFileMetas()
+	log.LogDebugf("action[DataPartion.extentsRepair] extents repair start.")
+	allMembers, err := dp.getAllMemberFileMetas()
 	if err != nil {
-		log.LogErrorf("action[Vol.extentsRepair] %v.", errors.ErrorStack(err))
+		log.LogErrorf("action[DataPartion.extentsRepair] %dp.", errors.ErrorStack(err))
 		return
 	}
-	v.generatorExtentsRepairTasks(allMembers)
-	err = v.NotifyRepair(allMembers)
+	dp.generatorExtentsRepairTasks(allMembers)
+	err = dp.NotifyRepair(allMembers)
 	if err != nil {
 		log.LogError(errors.ErrorStack(err))
 	}
@@ -64,56 +64,56 @@ func (v *Vol) extentsRepair() {
 		StreamRepairExtent(fixExtentFile, v)
 	}
 	finishTime := time.Now().UnixNano()
-	log.LogDebugf("action[Vol.extentsRepair] extents repair finish cost %vms.",
+	log.LogDebugf("action[DataPartion.extentsRepair] extents repair finish cost %vms.",
 		(finishTime-startTime)/int64(time.Millisecond))
 }
 
-func (v *Vol) getAllMemberFileMetas() (allMembers []*MembersFileMetas, err error) {
-	allMembers = make([]*MembersFileMetas, v.members.VolGoal)
+func (dp *DataPartion) getAllMemberFileMetas() (allMembers []*MembersFileMetas, err error) {
+	allMembers = make([]*MembersFileMetas, dp.members.PartionGoal)
 	var files []*storage.FileInfo
-	switch v.volMode {
+	switch dp.partionType {
 	case proto.ExtentVol:
-		store := v.store.(*storage.ExtentStore)
+		store := dp.store.(*storage.ExtentStore)
 		files, err = store.GetAllWatermark()
 	case proto.TinyVol:
-		store := v.store.(*storage.TinyStore)
+		store := dp.store.(*storage.TinyStore)
 		files, err = store.GetAllWatermark()
 	}
 	mf := NewMembersFiles()
 	if err != nil {
-		err = errors.Annotatef(err, "getAllMemberFileMetas vol[%v] GetAllWaterMark", v.volId)
+		err = errors.Annotatef(err, "getAllMemberFileMetas vol[%v] GetAllWaterMark", dp.partionId)
 		return
 	}
 	for _, fi := range files {
 		mf.extents[fi.FileIdId] = fi
 	}
 	allMembers[0] = mf
-	p := NewGetAllWaterMarker(v.volId, proto.ExtentStoreMode)
-	for i := 1; i < len(v.members.VolHosts); i++ {
+	p := NewGetAllWaterMarker(dp.partionId, proto.ExtentStoreMode)
+	for i := 1; i < len(dp.members.PartionHosts); i++ {
 		var conn net.Conn
-		target := v.members.VolHosts[i]
+		target := dp.members.PartionHosts[i]
 		conn, err = ConnPool.Get(target)
 		if err != nil {
-			err = errors.Annotatef(err, "getAllMemberFileMetas  vol[%v] get host[%v] connect", v.volId, target)
+			err = errors.Annotatef(err, "getAllMemberFileMetas  vol[%v] get host[%v] connect", dp.partionId, target)
 			return
 		}
 		err = p.WriteToConn(conn)
 		if err != nil {
 			conn.Close()
-			err = errors.Annotatef(err, "getAllMemberFileMetas vol[%v] write to host[%v]", v.volId, target)
+			err = errors.Annotatef(err, "getAllMemberFileMetas vol[%v] write to host[%v]", dp.partionId, target)
 			return
 		}
 		err = p.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
 			conn.Close()
-			err = errors.Annotatef(err, "getAllMemberFileMetas vol[%v] read from host[%v]", v.volId, target)
+			err = errors.Annotatef(err, "getAllMemberFileMetas vol[%v] read from host[%v]", dp.partionId, target)
 			return
 		}
 		mf := NewMembersFiles()
 		err = json.Unmarshal(p.Data[:p.Size], mf)
 		if err != nil {
 			ConnPool.Put(conn)
-			err = errors.Annotatef(err, "getAllMemberFileMetas json unmarsh [%v]", v.volId, string(p.Data[:p.Size]))
+			err = errors.Annotatef(err, "getAllMemberFileMetas json unmarsh [%v]", dp.partionId, string(p.Data[:p.Size]))
 			return
 		}
 		for _, fi := range files {
@@ -124,16 +124,16 @@ func (v *Vol) getAllMemberFileMetas() (allMembers []*MembersFileMetas, err error
 	return
 }
 
-func (v *Vol) generatorExtentsRepairTasks(allMembers []*MembersFileMetas) {
-	v.generatorAddExtentsTasks(allMembers) //add extentTask
-	v.generatorFixFileSizeTasks(allMembers)
-	v.generatorDeleteExtentsTasks(allMembers)
+func (dp *DataPartion) generatorExtentsRepairTasks(allMembers []*MembersFileMetas) {
+	dp.generatorAddExtentsTasks(allMembers) //add extentTask
+	dp.generatorFixFileSizeTasks(allMembers)
+	dp.generatorDeleteExtentsTasks(allMembers)
 
 }
 
 /* pasre all extent,select maxExtentSize to member index map
  */
-func (v *Vol) mapMaxSizeExtentToIndex(allMembers []*MembersFileMetas) (maxSizeExtentMap map[int]int) {
+func (dp *DataPartion) mapMaxSizeExtentToIndex(allMembers []*MembersFileMetas) (maxSizeExtentMap map[int]int) {
 	leader := allMembers[0]
 	maxSizeExtentMap = make(map[int]int)
 	for fileId, _ := range leader.extents { //range leader all extentFiles
@@ -155,7 +155,7 @@ func (v *Vol) mapMaxSizeExtentToIndex(allMembers []*MembersFileMetas) (maxSizeEx
 }
 
 /*generator add extent if follower not have this extent*/
-func (v *Vol) generatorAddExtentsTasks(allMembers []*MembersFileMetas) {
+func (dp *DataPartion) generatorAddExtentsTasks(allMembers []*MembersFileMetas) {
 	leader := allMembers[0]
 	leaderAddr := LocalIP
 	for fileId, leaderFile := range leader.extents {
@@ -170,13 +170,13 @@ func (v *Vol) generatorAddExtentsTasks(allMembers []*MembersFileMetas) {
 }
 
 /*generator fix extent Size ,if all members  Not the same length*/
-func (v *Vol) generatorFixFileSizeTasks(allMembers []*MembersFileMetas) {
+func (dp *DataPartion) generatorFixFileSizeTasks(allMembers []*MembersFileMetas) {
 	leader := allMembers[0]
-	maxSizeExtentMap := v.mapMaxSizeExtentToIndex(allMembers) //map maxSize extentId to allMembers index
+	maxSizeExtentMap := dp.mapMaxSizeExtentToIndex(allMembers) //map maxSize extentId to allMembers index
 	for fileId, _ := range leader.extents {
 		maxSizeExtentIdIndex := maxSizeExtentMap[fileId]
 		maxSize := allMembers[maxSizeExtentIdIndex].extents[fileId].Size
-		sourceAddr := v.members.VolHosts[maxSizeExtentIdIndex]
+		sourceAddr := dp.members.PartionHosts[maxSizeExtentIdIndex]
 		for index := 0; index < len(allMembers); index++ {
 			if index == maxSizeExtentIdIndex {
 				continue
@@ -194,8 +194,8 @@ func (v *Vol) generatorFixFileSizeTasks(allMembers []*MembersFileMetas) {
 }
 
 /*generator fix extent Size ,if all members  Not the same length*/
-func (v *Vol) generatorDeleteExtentsTasks(allMembers []*MembersFileMetas) {
-	store := v.store.(*storage.ExtentStore)
+func (dp *DataPartion) generatorDeleteExtentsTasks(allMembers []*MembersFileMetas) {
+	store := dp.store.(*storage.ExtentStore)
 	deletes := store.GetDelObjects()
 	leaderAddr := LocalIP
 	for _, deleteFileId := range deletes {
@@ -210,15 +210,15 @@ func (v *Vol) generatorDeleteExtentsTasks(allMembers []*MembersFileMetas) {
 }
 
 /*notify follower to repair vol store*/
-func (v *Vol) NotifyRepair(members []*MembersFileMetas) (err error) {
+func (dp *DataPartion) NotifyRepair(members []*MembersFileMetas) (err error) {
 	storeMode := proto.ExtentStoreMode
-	if v.volMode == proto.TinyVol {
+	if dp.partionType == proto.TinyVol {
 		storeMode = proto.TinyStoreMode
 	}
-	p := NewNotifyRepair(v.volId, storeMode)
+	p := NewNotifyRepair(dp.partionId, storeMode)
 	for i := 1; i < len(members); i++ {
 		var conn net.Conn
-		target := v.members.VolHosts[i]
+		target := dp.members.PartionHosts[i]
 		conn, err = ConnPool.Get(target)
 		if err != nil {
 			continue
@@ -273,8 +273,8 @@ func (s *DataNode) repairExtents(pkg *Packet) {
 	}
 }
 
-func StreamRepairExtent(remoteExtentInfo *storage.FileInfo, v *Vol) (err error) {
-	store := v.store.(*storage.ExtentStore)
+func StreamRepairExtent(remoteExtentInfo *storage.FileInfo, dp *DataPartion) (err error) {
+	store := dp.store.(*storage.ExtentStore)
 	if !store.IsExsitExtent(uint64(remoteExtentInfo.FileIdId)) {
 		return nil
 	}
@@ -283,7 +283,7 @@ func StreamRepairExtent(remoteExtentInfo *storage.FileInfo, v *Vol) (err error) 
 		return errors.Annotatef(err, "streamRepairExtent GetWatermark error")
 	}
 	needFixSize := remoteExtentInfo.Size - localExtentInfo.Size
-	request := NewStreamReadPacket(v.volId, remoteExtentInfo.FileIdId, int(localExtentInfo.Size), int(needFixSize))
+	request := NewStreamReadPacket(dp.partionId, remoteExtentInfo.FileIdId, int(localExtentInfo.Size), int(needFixSize))
 	var conn net.Conn
 	conn, err = ConnPool.Get(remoteExtentInfo.Source)
 	if err != nil {

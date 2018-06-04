@@ -34,10 +34,10 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 			log.LogErrorf("action[DataNode.operatePacket] %v", err)
 		} else if !pkg.IsMasterCommand() {
 			if pkg.IsReadReq() {
-				log.LogReadf("action[DataNode.operatePacket] %v.",
+				log.LogReadf("action[DataNode.operatePacket] %dp.",
 					pkg.ActionMsg(pkg.GetOpMsg(), LocalProcessAddr, start, nil))
 			} else {
-				log.LogWritef("action[DataNode.operatePacket] %v.",
+				log.LogWritef("action[DataNode.operatePacket] %dp.",
 					pkg.ActionMsg(pkg.GetOpMsg(), LocalProcessAddr, start, nil))
 			}
 		}
@@ -86,7 +86,7 @@ func (s *DataNode) createFile(pkg *Packet) {
 	var err error
 	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
-		err = errors.Annotatef(ErrStoreTypeMismatch, " CreateFile only support ExtentMode Vol")
+		err = errors.Annotatef(ErrStoreTypeMismatch, " CreateFile only support ExtentMode DataPartion")
 	case proto.ExtentStoreMode:
 		err = pkg.vol.store.(*storage.ExtentStore).Create(pkg.FileID)
 	}
@@ -129,7 +129,7 @@ func (s *DataNode) createVol(pkg *Packet) {
 	data, _ := json.Marshal(task)
 	_, err := PostToMaster(data, master.DataNodeResponse)
 	if err != nil {
-		err = errors.Annotatef(err, "create vol failed,volId[%v]", request.VolId)
+		err = errors.Annotatef(err, "create vol failed,partionId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
@@ -192,7 +192,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	data, _ := json.Marshal(task)
 	_, err := PostToMaster(data, master.DataNodeResponse)
 	if err != nil {
-		err = errors.Annotatef(err, "delete vol failed,volId[%v]", request.VolId)
+		err = errors.Annotatef(err, "delete vol failed,partionId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
@@ -213,7 +213,7 @@ func (s *DataNode) loadVol(pkg *Packet) {
 			response.Result = fmt.Sprintf("vol[%v] not found", request.VolId)
 			log.LogErrorf("from master Task[%v] failed,error[%v]", task.ToString(), response.Result)
 		} else {
-			response = v.LoadVol()
+			response = dp.LoadVol()
 			response.VolId = uint64(request.VolId)
 		}
 	} else {
@@ -226,7 +226,7 @@ func (s *DataNode) loadVol(pkg *Packet) {
 	data, _ := json.Marshal(task)
 	_, err := PostToMaster(data, master.DataNodeResponse)
 	if err != nil {
-		err = errors.Annotatef(err, "load vol failed,volId[%v]", request.VolId)
+		err = errors.Annotatef(err, "load vol failed,partionId[%v]", request.VolId)
 		log.LogError(errors.ErrorStack(err))
 	}
 }
@@ -341,7 +341,7 @@ func (s *DataNode) streamRead(request *Packet, connect net.Conn) {
 		}
 		needReplySize -= currReadSize
 		offset += int64(currReadSize)
-		log.LogDebugf("action[DataNode.streamRead] %v.", request.ActionMsg(ActionWriteToCli, connect.RemoteAddr().String(),
+		log.LogDebugf("action[DataNode.streamRead] %dp.", request.ActionMsg(ActionWriteToCli, connect.RemoteAddr().String(),
 			request.StartT, err))
 	}
 	return
@@ -396,9 +396,9 @@ func (s *DataNode) compactChunk(pkg *Packet) {
 	cId := uint32(pkg.FileID)
 	vId := pkg.PartionID
 	task := &CompactTask{
-		volId:    vId,
-		chunkId:  int(cId),
-		isLeader: false,
+		partionId: vId,
+		chunkId:   int(cId),
+		isLeader:  false,
 	}
 	err := s.AddCompactTask(task)
 	if err != nil {

@@ -24,7 +24,7 @@ type Packet struct {
 	nextAddr string
 	addrs    []string
 	isReturn bool
-	vol      *Vol
+	vol      *DataPartion
 	tpObject *ump.TpObject
 }
 
@@ -96,10 +96,10 @@ func (p *Packet) IsTransitPkg() bool {
 	return r
 }
 
-func NewGetAllWaterMarker(volId uint32, storeMode uint8) (p *Packet) {
+func NewGetAllWaterMarker(partionId uint32, storeMode uint8) (p *Packet) {
 	p = new(Packet)
 	p.Opcode = proto.OpGetAllWatermark
-	p.PartionID = volId
+	p.PartionID = partionId
 	p.Magic = proto.ProtoMagic
 	p.ReqID = proto.GetReqID()
 	p.StoreMode = storeMode
@@ -107,10 +107,10 @@ func NewGetAllWaterMarker(volId uint32, storeMode uint8) (p *Packet) {
 	return
 }
 
-func NewStreamReadPacket(volId uint32, extentId, offset, size int) (p *Packet) {
+func NewStreamReadPacket(partionId uint32, extentId, offset, size int) (p *Packet) {
 	p = new(Packet)
 	p.FileID = uint64(extentId)
-	p.PartionID = volId
+	p.PartionID = partionId
 	p.Magic = proto.ProtoMagic
 	p.Offset = int64(offset)
 	p.Size = uint32(size)
@@ -121,10 +121,10 @@ func NewStreamReadPacket(volId uint32, extentId, offset, size int) (p *Packet) {
 	return
 }
 
-func NewStreamChunkRepairReadPacket(volId uint32, chunkId int) (p *Packet) {
+func NewStreamChunkRepairReadPacket(partionId uint32, chunkId int) (p *Packet) {
 	p = new(Packet)
 	p.FileID = uint64(chunkId)
-	p.PartionID = volId
+	p.PartionID = partionId
 	p.Magic = proto.ProtoMagic
 	p.Opcode = proto.OpCRepairRead
 	p.StoreMode = proto.TinyStoreMode
@@ -133,10 +133,10 @@ func NewStreamChunkRepairReadPacket(volId uint32, chunkId int) (p *Packet) {
 	return
 }
 
-func NewNotifyRepair(volId uint32, storeMode int) (p *Packet) {
+func NewNotifyRepair(partionId uint32, storeMode int) (p *Packet) {
 	p = new(Packet)
 	p.Opcode = proto.OpNotifyRepair
-	p.PartionID = volId
+	p.PartionID = partionId
 	p.Magic = proto.ProtoMagic
 	p.ReqID = proto.GetReqID()
 	p.StoreMode = uint8(storeMode)

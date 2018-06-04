@@ -13,7 +13,7 @@ import (
 
 type SpaceManager struct {
 	disks    map[string]*Disk
-	vols     map[uint32]*Vol
+	vols     map[uint32]*DataPartion
 	diskLock sync.RWMutex
 	volLock  sync.RWMutex
 	stats    *Stats
@@ -22,7 +22,7 @@ type SpaceManager struct {
 func NewSpaceManager(rack string) (space *SpaceManager) {
 	space = new(SpaceManager)
 	space.disks = make(map[string]*Disk)
-	space.vols = make(map[uint32]*Vol)
+	space.vols = make(map[uint32]*DataPartion)
 	space.stats = NewStats(rack)
 	go func() {
 		ticker := time.Tick(time.Second * 10)
@@ -64,15 +64,15 @@ func (space *SpaceManager) updateMetrics() {
 	)
 	maxWeightsForCreateVol = 0
 	for _, d := range space.disks {
-		d.recomputeVolCnt()
+		d.recomputePartionCnt()
 		total += d.All
 		used += d.Used
 		free += d.Free
-		createdVolWeights += d.CreatedVolWeights
-		remainWeightsForCreateVol += d.RemainWeightsForCreateVol
-		volcnt += d.VolCnt
-		if maxWeightsForCreateVol < d.RemainWeightsForCreateVol {
-			maxWeightsForCreateVol = d.RemainWeightsForCreateVol
+		createdVolWeights += d.CreatedPartionWeights
+		remainWeightsForCreateVol += d.RemainWeightsForCreatePartion
+		volcnt += d.PartionCnt
+		if maxWeightsForCreateVol < d.RemainWeightsForCreatePartion {
+			maxWeightsForCreateVol = d.RemainWeightsForCreatePartion
 		}
 	}
 	space.diskLock.RUnlock()
@@ -89,8 +89,8 @@ func (space *SpaceManager) getMinVolCntDisk() (d *Disk) {
 	minVolCnt = math.MaxUint64
 	var path string
 	for index, disk := range space.disks {
-		if atomic.LoadUint64(&disk.VolCnt) < minVolCnt {
-			minVolCnt = atomic.LoadUint64(&disk.VolCnt)
+		if atomic.LoadUint64(&disk.PartionCnt) < minVolCnt {
+			minVolCnt = atomic.LoadUint64(&disk.PartionCnt)
 			path = index
 		}
 	}
@@ -102,31 +102,31 @@ func (space *SpaceManager) getMinVolCntDisk() (d *Disk) {
 	return
 }
 
-func (space *SpaceManager) getVol(volId uint32) (v *Vol) {
+func (space *SpaceManager) getVol(partionId uint32) (dp *DataPartion) {
 	space.volLock.RLock()
 	defer space.volLock.RUnlock()
-	v = space.vols[volId]
+	v = space.vols[partionId]
 
 	return
 }
 
-func (space *SpaceManager) putVol(v *Vol) {
+func (space *SpaceManager) putVol(dp *DataPartion) {
 	space.volLock.Lock()
 	defer space.volLock.Unlock()
-	space.vols[v.volId] = v
+	space.vols[dp.partionId] = v
 
 	return
 }
 
-func (space *SpaceManager) chooseDiskAndCreateVol(volId uint32, volMode string, storeSize int) (v *Vol, err error) {
-	if space.getVol(volId) != nil {
+func (space *SpaceManager) chooseDiskAndCreateVol(partionId uint32, partionType string, storeSize int) (dp *DataPartion, err error) {
+	if space.getVol(partionId) != nil {
 		return
 	}
 	d := space.getMinVolCntDisk()
 	if d == nil || d.Free < uint64(storeSize*2) {
 		return nil, ErrNoDiskForCreateVol
 	}
-	v, err = NewVol(volId, volMode, "", d.Path, storage.NewStoreMode, storeSize)
+	v, err = NewVol(partionId, partionType, "", d.Path, storage.NewStoreMode, storeSize)
 	if err == nil {
 		space.putVol(v)
 	}
@@ -141,14 +141,14 @@ func (space *SpaceManager) deleteVol(vodId uint32) {
 	space.volLock.Lock()
 	delete(space.vols, vodId)
 	space.volLock.Unlock()
-	v.exitCh <- true
-	switch v.volMode {
+	dp.exitCh <- true
+	switch dp.partionType {
 	case proto.ExtentVol:
-		store := v.store.(*storage.ExtentStore)
+		store := dp.store.(*storage.ExtentStore)
 		store.ClostAll()
 
 	case proto.TinyVol:
-		store := v.store.(*storage.TinyStore)
+		store := dp.store.(*storage.TinyStore)
 		store.CloseAll()
 	}
 }
@@ -171,7 +171,7 @@ func (s *DataNode) fillHeartBeatResponse(response *proto.DataNodeHeartBeatRespon
 	space := s.space
 	space.volLock.RLock()
 	for _, v := range space.vols {
-		vr := &proto.VolReport{VolID: uint64(v.volId), VolStatus: v.status, Total: uint64(v.volSize), Used: uint64(v.used)}
+		vr := &proto.VolReport{VolID: uint64(dp.partionId), VolStatus: dp.status, Total: uint64(dp.partionSize), Used: uint64(dp.used)}
 		response.VolInfo = append(response.VolInfo, vr)
 	}
 	space.volLock.RUnlock()
@@ -190,25 +190,25 @@ func (space *SpaceManager) modifyVolsStatus() {
 				continue
 			}
 
-			switch v.volMode {
+			switch dp.partionType {
 			case proto.ExtentVol:
-				store := v.store.(*storage.ExtentStore)
-				v.status = store.GetStoreStatus()
-				v.used = int(store.GetStoreUsedSize())
+				store := dp.store.(*storage.ExtentStore)
+				dp.status = store.GetStoreStatus()
+				dp.used = int(store.GetStoreUsedSize())
 			case proto.TinyVol:
-				store := v.store.(*storage.TinyStore)
-				v.status = store.GetStoreStatus()
-				if v.isLeader {
+				store := dp.store.(*storage.TinyStore)
+				dp.status = store.GetStoreStatus()
+				if dp.isLeader {
 					store.MoveChunkToUnavailChan()
 				}
-				v.used = int(store.GetStoreUsedSize())
+				dp.used = int(store.GetStoreUsedSize())
 			}
-			if v.isLeader && v.status == storage.ReadOnlyStore {
-				v.status = storage.ReadOnlyStore
+			if dp.isLeader && dp.status == storage.ReadOnlyStore {
+				dp.status = storage.ReadOnlyStore
 			}
 
 			if diskStatus == storage.DiskErrStore {
-				v.status = storage.DiskErrStore
+				dp.status = storage.DiskErrStore
 			}
 		}
 	}

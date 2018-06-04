@@ -286,11 +286,11 @@ func NewServer() *DataNode {
 }
 
 func (s *DataNode) AddCompactTask(t *CompactTask) (err error) {
-	v := s.space.getVol(t.volId)
+	v := s.space.getVol(t.partionId)
 	if v == nil {
 		return nil
 	}
-	d, _ := s.space.getDisk(v.path)
+	d, _ := s.space.getDisk(dp.path)
 	if d == nil {
 		return nil
 	}

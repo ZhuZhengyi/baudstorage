@@ -17,13 +17,13 @@ import (
 )
 
 type CompactTask struct {
-	volId    uint32
-	chunkId  int
-	isLeader bool
+	partionId uint32
+	chunkId   int
+	isLeader  bool
 }
 
 func (t *CompactTask) toString() (m string) {
-	return fmt.Sprintf("vol[%v]_chunk[%v]_isLeader[%v]", t.volId, t.chunkId, t.isLeader)
+	return fmt.Sprintf("vol[%v]_chunk[%v]_isLeader[%v]", t.partionId, t.chunkId, t.isLeader)
 }
 
 const (
@@ -36,21 +36,21 @@ var (
 
 type Disk struct {
 	sync.Mutex
-	Path                      string
-	ReadErrs                  uint64
-	WriteErrs                 uint64
-	All                       uint64
-	Used                      uint64
-	Free                      uint64
-	VolCnt                    uint64
-	RemainWeightsForCreateVol uint64
-	CreatedVolWeights         uint64
-	MaxErrs                   int
-	Status                    int
-	VolsName                  []string
-	RestSize                  uint64
-	compactCh                 chan *CompactTask
-	space                     *SpaceManager
+	Path                          string
+	ReadErrs                      uint64
+	WriteErrs                     uint64
+	All                           uint64
+	Used                          uint64
+	Free                          uint64
+	PartionCnt                    uint64
+	RemainWeightsForCreatePartion uint64
+	CreatedPartionWeights         uint64
+	MaxErrs                       int
+	Status                        int
+	PartionNames                  []string
+	RestSize                      uint64
+	compactCh                     chan *CompactTask
+	space                         *SpaceManager
 }
 
 func NewDisk(path string, restSize uint64, maxErrs int) (d *Disk) {
@@ -58,7 +58,7 @@ func NewDisk(path string, restSize uint64, maxErrs int) (d *Disk) {
 	d.Path = path
 	d.RestSize = restSize
 	d.MaxErrs = maxErrs
-	d.VolsName = make([]string, 0)
+	d.PartionNames = make([]string, 0)
 	d.RestSize = util.GB * 1
 	d.MaxErrs = 2000
 	d.DiskUsage()
@@ -89,7 +89,7 @@ func (d *Disk) addTask(t *CompactTask) (err error) {
 	case d.compactCh <- t:
 		return
 	default:
-		return errors.Annotatef(ErrDiskCompactChanFull, "diskPath:[%v] volId[%v]", d.Path, t.volId)
+		return errors.Annotatef(ErrDiskCompactChanFull, "diskPath:[%v] partionId[%v]", d.Path, t.partionId)
 	}
 }
 
@@ -101,11 +101,11 @@ func (d *Disk) compact() {
 	for {
 		select {
 		case t := <-d.compactCh:
-			v := d.space.getVol(t.volId)
+			v := d.space.getVol(t.partionId)
 			if v == nil {
 				continue
 			}
-			err, release := v.store.(*storage.TinyStore).DoCompactWork(t.chunkId)
+			err, release := dp.store.(*storage.TinyStore).DoCompactWork(t.chunkId)
 			if err != nil {
 				log.LogError("action[Disk.compact] task[%v] compact error[%v]", t.toString(), err.Error())
 			} else {
@@ -119,22 +119,22 @@ func (d *Disk) addWriteErr() {
 	atomic.AddUint64(&d.WriteErrs, 1)
 }
 
-func (d *Disk) recomputeVolCnt() {
+func (d *Disk) recomputePartionCnt() {
 	d.DiskUsage()
 	finfos, err := ioutil.ReadDir(d.Path)
 	if err != nil {
 		return
 	}
 	var count uint64
-	volSize := 0
+	dataPartionSize := 0
 	volnames := make([]string, 0)
 	for _, finfo := range finfos {
-		if finfo.IsDir() && strings.HasPrefix(finfo.Name(), VolPrefix) {
+		if finfo.IsDir() && strings.HasPrefix(finfo.Name(), DataPartionPrefix) {
 			arr := strings.Split(finfo.Name(), "_")
 			if len(arr) != 4 {
 				continue
 			}
-			_, volSize, _, err = UnmarshVolName(finfo.Name())
+			_, dataPartionSize, _, err = UnmarshDataPartionName(finfo.Name())
 			if err != nil {
 				continue
 			}
@@ -143,10 +143,10 @@ func (d *Disk) recomputeVolCnt() {
 		}
 	}
 	d.Lock()
-	atomic.StoreUint64(&d.VolCnt, count)
-	d.VolsName = volnames
-	d.RemainWeightsForCreateVol = d.All - d.RestSize - uint64(len(d.VolsName)*volSize)
-	d.CreatedVolWeights = uint64(len(d.VolsName) * volSize)
+	atomic.StoreUint64(&d.PartionCnt, count)
+	d.PartionNames = volnames
+	d.RemainWeightsForCreatePartion = d.All - d.RestSize - uint64(len(d.PartionNames)*dataPartionSize)
+	d.CreatedPartionWeights = uint64(len(d.PartionNames) * dataPartionSize)
 	d.Unlock()
 }
 
@@ -166,93 +166,93 @@ func (d *Disk) UpdateSpaceInfo(localIp string) (err error) {
 	}
 	msg := fmt.Sprintf("node[%v] Path[%v] total[%v] realAvail[%v] volsAvail[%v]"+
 		"MinRestSize[%v] maxErrs[%v] ReadErrs[%v] WriteErrs[%v] status[%v]", localIp, d.Path,
-		d.All, d.Free, d.RemainWeightsForCreateVol, d.RestSize, d.MaxErrs, d.ReadErrs, d.WriteErrs, d.Status)
+		d.All, d.Free, d.RemainWeightsForCreatePartion, d.RestSize, d.MaxErrs, d.ReadErrs, d.WriteErrs, d.Status)
 	log.LogInfo(msg)
 
 	return
 }
 
-func (d *Disk) addVol(v *Vol) {
-	name := v.toName()
+func (d *Disk) addVol(dp *DataPartion) {
+	name := dp.toName()
 	d.Lock()
 	defer d.Unlock()
-	d.VolsName = append(d.VolsName, name)
-	atomic.AddUint64(&d.VolCnt, 1)
-	d.RemainWeightsForCreateVol = d.All - d.RestSize - uint64(len(d.VolsName)*v.volSize)
-	d.CreatedVolWeights += uint64(v.volSize)
+	d.PartionNames = append(d.PartionNames, name)
+	atomic.AddUint64(&d.PartionCnt, 1)
+	d.RemainWeightsForCreatePartion = d.All - d.RestSize - uint64(len(d.PartionNames)*dp.partionSize)
+	d.CreatedPartionWeights += uint64(dp.partionSize)
 }
 
-func (d *Disk) getVols() (volIds []uint32) {
+func (d *Disk) getVols() (partionIds []uint32) {
 	d.Lock()
 	defer d.Unlock()
-	volIds = make([]uint32, 0)
-	for _, name := range d.VolsName {
-		vid, _, _, err := UnmarshVolName(name)
+	partionIds = make([]uint32, 0)
+	for _, name := range d.PartionNames {
+		vid, _, _, err := UnmarshDataPartionName(name)
 		if err != nil {
 			continue
 		}
-		volIds = append(volIds, vid)
+		partionIds = append(partionIds, vid)
 	}
 	return
 }
 
-func UnmarshVolName(name string) (volId uint32, volSize int, volMode string, err error) {
+func UnmarshDataPartionName(name string) (partionId uint32, partionSize int, partionMode string, err error) {
 	arr := strings.Split(name, "_")
 	if len(arr) != 4 {
 		err = fmt.Errorf("error vol name[%v]", name)
 		return
 	}
 	var (
-		vId int
+		pId int
 	)
-	if vId, err = strconv.Atoi(arr[2]); err != nil {
+	if pId, err = strconv.Atoi(arr[2]); err != nil {
 		return
 	}
-	if volSize, err = strconv.Atoi(arr[3]); err != nil {
+	if partionSize, err = strconv.Atoi(arr[3]); err != nil {
 		return
 	}
-	volId = uint32(vId)
-	volMode = arr[1]
+	partionId = uint32(pId)
+	partionMode = arr[1]
 	return
 }
 
-func (d *Disk) loadVol(space *SpaceManager) {
+func (d *Disk) loadDataPartion(space *SpaceManager) {
 	d.Lock()
 	defer d.Unlock()
 	fileInfoList, err := ioutil.ReadDir(d.Path)
 	if err != nil {
-		log.LogErrorf("action[Disk.loadVol] %v.", err)
+		log.LogErrorf("action[Disk.loadDataPartion] %dp.", err)
 		return
 	}
 	for _, fileInfo := range fileInfoList {
-		var v *Vol
-		volId, volSize, volMode, err := UnmarshVolName(fileInfo.Name())
-		log.LogDebugf("acton[Disk.loadVol] disk info path[%v] name[%v] volId[%v] volSize[%v] volMode[%v] err[%v].", d.Path, fileInfo.Name(), volId, volSize, volMode, err)
+		var dp *DataPartion
+		partionId, volSize, partionType, err := UnmarshDataPartionName(fileInfo.Name())
+		log.LogDebugf("acton[Disk.loadDataPartion] disk info path[%v] name[%v] partionId[%v] partionSize[%v] partionType[%v] err[%v].", d.Path, fileInfo.Name(), partionId, volSize, partionType, err)
 		if err != nil {
-			log.LogError(fmt.Sprintf("LoadVol[%v] from Disk[%v] Err[%v] ", volId, d.Path, err.Error()))
+			log.LogError(fmt.Sprintf("LoadVol[%v] from Disk[%v] Err[%v] ", partionId, d.Path, err.Error()))
 			continue
 		}
-		v, err = NewVol(volId, volMode, path.Join(d.Path, fileInfo.Name()), d.Path, storage.ReBootStoreMode, volSize)
+		v, err = NewVol(partionId, partionType, path.Join(d.Path, fileInfo.Name()), d.Path, storage.ReBootStoreMode, volSize)
 		if err != nil {
-			log.LogError(fmt.Sprintf("LoadVol[%v] from Disk[%v] Err[%v] ", volId, d.Path, err.Error()))
+			log.LogError(fmt.Sprintf("LoadVol[%v] from Disk[%v] Err[%v] ", partionId, d.Path, err.Error()))
 			continue
 		}
-		if space.getVol(v.volId) == nil {
+		if space.getVol(dp.partionId) == nil {
 			space.putVol(v)
 		}
 
 	}
 }
 
-func (s *DataNode) AddDiskErrs(volId uint32, err error, flag uint8) {
+func (s *DataNode) AddDiskErrs(partionId uint32, err error, flag uint8) {
 	if err == nil {
 		return
 	}
-	v := s.space.getVol(volId)
+	v := s.space.getVol(partionId)
 	if v == nil {
 		return
 	}
-	d, _ := s.space.getDisk(v.path)
+	d, _ := s.space.getDisk(dp.path)
 	if d == nil || err == nil {
 		return
 	}
@@ -285,7 +285,7 @@ func IsDiskErr(errMsg string) bool {
 func LoadFromDisk(path string, restSize uint64, maxErrs int, space *SpaceManager) (d *Disk, err error) {
 	if d, err = space.getDisk(path); err != nil {
 		d = NewDisk(path, restSize, maxErrs)
-		d.loadVol(space)
+		d.loadDataPartion(space)
 		space.putDisk(d)
 		err = nil
 	}
