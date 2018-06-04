@@ -11,7 +11,7 @@ func (partition *DataPartition) checkFile(isRecoverVolFlag bool, clusterID strin
 	tasks = make([]*proto.AdminTask, 0)
 	partition.Lock()
 	defer partition.Unlock()
-	liveVols := partition.getLiveVols(DefaultDataPartitionTimeOutSec)
+	liveVols := partition.getLiveReplicas(DefaultDataPartitionTimeOutSec)
 	if len(liveVols) == 0 {
 		return
 	}

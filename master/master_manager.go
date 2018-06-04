@@ -69,7 +69,7 @@ func (m *Master) loadMetadata() {
 	if err := m.cluster.loadMetaPartitions(); err != nil {
 		panic(err)
 	}
-	if err := m.cluster.loadVolGroups(); err != nil {
+	if err := m.cluster.loadDataPartitions(); err != nil {
 		panic(err)
 	}
 

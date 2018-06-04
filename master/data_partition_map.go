@@ -20,11 +20,11 @@ type DataPartitionMap struct {
 	cacheDataPartitionResponse []byte
 }
 
-func NewDataPartitionMap() (vm *DataPartitionMap) {
-	vm = new(DataPartitionMap)
-	vm.dataPartitionMap = make(map[uint64]*DataPartition, 0)
-	vm.dataPartitionCount = 1
-	vm.dataPartitions = make([]*DataPartition, 0)
+func NewDataPartitionMap() (dpMap *DataPartitionMap) {
+	dpMap = new(DataPartitionMap)
+	dpMap.dataPartitionMap = make(map[uint64]*DataPartition, 0)
+	dpMap.dataPartitionCount = 1
+	dpMap.dataPartitions = make([]*DataPartition, 0)
 
 	return
 }
@@ -39,11 +39,11 @@ func (dpMap *DataPartitionMap) getDataPartition(ID uint64) (*DataPartition, erro
 	return nil, DataPartitionNotFound
 }
 
-func (dpMap *DataPartitionMap) putDataPartition(v *DataPartition) {
+func (dpMap *DataPartitionMap) putDataPartition(dp *DataPartition) {
 	dpMap.Lock()
 	defer dpMap.Unlock()
-	dpMap.dataPartitionMap[v.PartitionID] = v
-	dpMap.dataPartitions = append(dpMap.dataPartitions, v)
+	dpMap.dataPartitionMap[dp.PartitionID] = dp
+	dpMap.dataPartitions = append(dpMap.dataPartitions, dp)
 }
 
 func (dpMap *DataPartitionMap) updateDataPartitionResponseCache(needUpdate bool, minPartitionID uint64) (body []byte, err error) {
@@ -51,14 +51,14 @@ func (dpMap *DataPartitionMap) updateDataPartitionResponseCache(needUpdate bool,
 	defer dpMap.Unlock()
 	if dpMap.cacheDataPartitionResponse == nil || needUpdate || len(dpMap.cacheDataPartitionResponse) == 0 {
 		dpMap.cacheDataPartitionResponse = make([]byte, 0)
-		vrs := dpMap.GetDataPartitionsView(minPartitionID)
-		if len(vrs) == 0 {
+		dpResps := dpMap.GetDataPartitionsView(minPartitionID)
+		if len(dpResps) == 0 {
 			log.LogError(fmt.Sprintf("action[updateDataPartitionResponseCache],minPartitionID:%v,err:%v",
 				minPartitionID, NoAvailDataPartition))
 			return nil, NoAvailDataPartition
 		}
 		cv := NewDataPartitionsView()
-		cv.DataPartitions = vrs
+		cv.DataPartitions = dpResps
 		if body, err = json.Marshal(cv); err != nil {
 			log.LogError(fmt.Sprintf("action[updateDataPartitionResponseCache],minPartitionID:%v,err:%v",
 				minPartitionID, err.Error()))
@@ -73,15 +73,15 @@ func (dpMap *DataPartitionMap) updateDataPartitionResponseCache(needUpdate bool,
 	return
 }
 
-func (dpMap *DataPartitionMap) GetDataPartitionsView(minPartitionID uint64) (vrs []*DataPartitionResponse) {
-	vrs = make([]*DataPartitionResponse, 0)
-	log.LogDebugf("volGroupMapLen[%v],volGroupsLen[%v],minPartitionID[%v],dataPartitionMap[%v],dataPartitions[%v]", len(dpMap.dataPartitionMap), len(dpMap.dataPartitions), minPartitionID, dpMap.dataPartitionMap, dpMap.dataPartitions)
-	for _, vol := range dpMap.dataPartitionMap {
-		if vol.PartitionID <= minPartitionID {
+func (dpMap *DataPartitionMap) GetDataPartitionsView(minPartitionID uint64) (dpResps []*DataPartitionResponse) {
+	dpResps = make([]*DataPartitionResponse, 0)
+	log.LogDebugf("DataPartitionMapLen[%v],DataPartitionsLen[%v],minPartitionID[%v],dataPartitionMap[%v],dataPartitions[%v]", len(dpMap.dataPartitionMap), len(dpMap.dataPartitions), minPartitionID, dpMap.dataPartitionMap, dpMap.dataPartitions)
+	for _, dp := range dpMap.dataPartitionMap {
+		if dp.PartitionID <= minPartitionID {
 			continue
 		}
-		vr := vol.convertToVolResponse()
-		vrs = append(vrs, vr)
+		dpResp := dp.convertToDataPartitionResponse()
+		dpResps = append(dpResps, dpResp)
 	}
 
 	return
@@ -97,9 +97,9 @@ func (dpMap *DataPartitionMap) getNeedReleaseDataPartitions(everyReleaseDataPart
 			dpMap.lastReleasePartitionID = 0
 		}
 		dpMap.lastReleasePartitionID++
-		vg, ok := dpMap.dataPartitionMap[dpMap.lastReleasePartitionID]
-		if ok && time.Now().Unix()-vg.LastLoadTime >= releaseVolAfterLoadVolSeconds {
-			partitions = append(partitions, vg)
+		dp, ok := dpMap.dataPartitionMap[dpMap.lastReleasePartitionID]
+		if ok && time.Now().Unix()-dp.LastLoadTime >= releaseVolAfterLoadVolSeconds {
+			partitions = append(partitions, dp)
 		}
 	}
 
@@ -116,12 +116,12 @@ func (dpMap *DataPartitionMap) releaseDataPartitions(partitions []*DataPartition
 		}
 	}()
 	var wg sync.WaitGroup
-	for _, vg := range partitions {
+	for _, dp := range partitions {
 		wg.Add(1)
-		go func(vg *DataPartition) {
-			vg.ReleaseVol()
+		go func(dp *DataPartition) {
+			dp.ReleaseDataPartition()
 			wg.Done()
-		}(vg)
+		}(dp)
 	}
 	wg.Wait()
 
