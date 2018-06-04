@@ -159,7 +159,7 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 	}()
 	if request.nextConn == nil {
 		err = errors.Annotatef(fmt.Errorf(ConnIsNullErr), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
-		request.PackErrorBody(ActionReciveFromNext, err.Error())
+		request.PackErrorBody(ActionReceiveFromNext, err.Error())
 		msgH.DelListElement(request, e, s, ForceCloseConnect)
 		return
 	}
@@ -167,9 +167,9 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 	//if local execute failed,then
 	if request.IsErrPack() {
 		err = errors.Annotatef(fmt.Errorf(request.getErr()), "Request[%v] receiveFromNext Error", request.GetUniqLogId())
-		request.PackErrorBody(ActionReciveFromNext, err.Error())
+		request.PackErrorBody(ActionReceiveFromNext, err.Error())
 		msgH.DelListElement(request, e, s, ForceCloseConnect)
-		log.LogErrorf("action[DataNode.receiveFromNext] %dp.", request.ActionMsg(ActionReciveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
+		log.LogErrorf("action[DataNode.receiveFromNext] %dp.", request.ActionMsg(ActionReceiveFromNext, LocalProcessAddr, request.StartT, fmt.Errorf(request.getErr())))
 		return
 	}
 
@@ -179,15 +179,15 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 			goto success
 		}
 		if err = msgH.checkReplyAvail(reply); err != nil {
-			request.PackErrorBody(ActionReciveFromNext, err.Error())
+			request.PackErrorBody(ActionReceiveFromNext, err.Error())
 			msgH.DelListElement(request, e, s, ForceCloseConnect)
 			log.LogErrorf("action[DataNode.receiveFromNext] %dp.", err.Error())
 			return request, true
 		}
 	} else {
-		log.LogErrorf("action[DataNode.receiveFromNext] %dp.", request.ActionMsg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
+		log.LogErrorf("action[DataNode.receiveFromNext] %dp.", request.ActionMsg(ActionReceiveFromNext, request.nextAddr, request.StartT, err))
 		err = errors.Annotatef(err, "Request[%v] receiveFromNext Error", request.GetUniqLogId())
-		request.PackErrorBody(ActionReciveFromNext, err.Error())
+		request.PackErrorBody(ActionReceiveFromNext, err.Error())
 		msgH.DelListElement(request, e, s, ForceCloseConnect)
 		return
 	}
@@ -196,14 +196,14 @@ func (s *DataNode) receiveFromNext(msgH *MessageHandler) (request *Packet, exit 
 
 success:
 	if reply.IsErrPack() {
-		err = fmt.Errorf(ActionReciveFromNext+"remote [%v] do failed[%v]",
+		err = fmt.Errorf(ActionReceiveFromNext+"remote [%v] do failed[%v]",
 			request.nextAddr, string(reply.Data[:reply.Size]))
 		err = errors.Annotatef(err, "Request[%v] receiveFromNext Error", request.GetUniqLogId())
 		request.CopyFrom(reply)
-		request.PackErrorBody(ActionReciveFromNext, err.Error())
+		request.PackErrorBody(ActionReceiveFromNext, err.Error())
 	}
 	msgH.DelListElement(request, e, s, NOCloseConnect)
-	log.LogDebugf("action[DataNode.receiveFromNext] %dp.", reply.ActionMsg(ActionReciveFromNext, request.nextAddr, request.StartT, err))
+	log.LogDebugf("action[DataNode.receiveFromNext] %dp.", reply.ActionMsg(ActionReceiveFromNext, request.nextAddr, request.StartT, err))
 
 	return
 }

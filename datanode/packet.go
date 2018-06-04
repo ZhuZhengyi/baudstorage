@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	ErrBadNodes          = errors.New("BadNodesErr")
-	ErrArgLenUnmatch     = errors.New("ArgLenMismatchErr")
-	ErrAddrsNodesUnmatch = errors.New("AddrsNodesMismatchErr")
+	ErrBadNodes           = errors.New("BadNodesErr")
+	ErrArgLenMismatch     = errors.New("ArgLenMismatchErr")
+	ErrAddrsNodesMismatch = errors.New("AddrsNodesMismatchErr")
 )
 
 type Packet struct {
@@ -46,7 +46,7 @@ func (p *Packet) beforeTp(clusterId string) (ok bool) {
 
 func (p *Packet) UnmarshalAddrs() (addrs []string, err error) {
 	if len(p.Arg) < int(p.Arglen) {
-		return nil, ErrArgLenUnmatch
+		return nil, ErrArgLenMismatch
 	}
 	str := string(p.Arg[:int(p.Arglen)])
 	goalAddrs := strings.SplitN(str, proto.AddrSplit, -1)
@@ -80,7 +80,7 @@ func (p *Packet) IsMasterCommand() bool {
 func (p *Packet) GetNextAddr(addrs []string) error {
 	sub := p.goals - p.Nodes
 	if sub < 0 || sub > p.goals || (sub == p.goals && p.Nodes != 0) {
-		return ErrAddrsNodesUnmatch
+		return ErrAddrsNodesMismatch
 	}
 	if sub == p.goals && p.Nodes == 0 {
 		return nil
@@ -190,14 +190,14 @@ func (p *Packet) getErr() (m string) {
 }
 
 func (p *Packet) ClassifyErrorOp(errLog string, errMsg string) {
-	if strings.Contains(errLog, ActionReciveFromNext) || strings.Contains(errLog, ActionSendToNext) ||
-		strings.Contains(errLog, ConnIsNullErr) || strings.Contains(errLog, ActioncheckAndAddInfos) {
+	if strings.Contains(errLog, ActionReceiveFromNext) || strings.Contains(errLog, ActionSendToNext) ||
+		strings.Contains(errLog, ConnIsNullErr) || strings.Contains(errLog, ActionCheckAndAddInfos) {
 		p.ResultCode = proto.OpIntraGroupNetErr
 		return
 	}
 
 	if strings.Contains(errMsg, storage.ErrorUnmatchPara.Error()) ||
-		strings.Contains(errMsg, ErrorUnknowOp.Error()) {
+		strings.Contains(errMsg, ErrorUnknownOp.Error()) {
 		p.ResultCode = proto.OpArgUnmatchErr
 	} else if strings.Contains(errMsg, storage.ErrorObjNotFound.Error()) ||
 		strings.Contains(errMsg, storage.ErrorHasDelete.Error()) {

@@ -86,7 +86,7 @@ func (client *ExtentClient) getStreamReader(inode uint64) (stream *StreamReader,
 	inodeReferCnt := client.referCnt[inode]
 	client.referLock.Unlock()
 	if inodeReferCnt == 0 {
-		return nil, fmt.Errorf("Please Open inode[%v] Before ReadIt", inode)
+		return nil, fmt.Errorf("please open inode[%v] before read it", inode)
 	}
 	client.readerLock.RLock()
 	stream = client.readers[inode]
@@ -102,7 +102,7 @@ func (client *ExtentClient) Write(inode uint64, data []byte) (write int, err err
 	inodeReferCnt := client.referCnt[inode]
 	client.referLock.Unlock()
 	if inodeReferCnt == 0 {
-		return 0, fmt.Errorf("Please Open inode[%v] Before Write", inode)
+		return 0, fmt.Errorf("please open inode[%v] before write", inode)
 	}
 	stream := client.getStreamWriter(inode)
 	if stream == nil {

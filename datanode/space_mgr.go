@@ -43,7 +43,7 @@ func (space *SpaceManager) getDisk(path string) (d *Disk, err error) {
 	defer space.diskLock.RUnlock()
 	d = space.disks[path]
 	if d == nil {
-		return nil, fmt.Errorf("Disk[%v] not exsit", path)
+		return nil, fmt.Errorf("disk[%v] not exsit", path)
 	}
 	return
 }
@@ -76,7 +76,7 @@ func (space *SpaceManager) updateMetrics() {
 		}
 	}
 	space.diskLock.RUnlock()
-	log.LogInfof("macheile total[%v] used[%v] free[%v]createdPartitionWeights[%v]  remainWeightsForCreatePartition[%v]"+
+	log.LogInfof("machine total[%v] used[%v] free[%v]createdPartitionWeights[%v]  remainWeightsForCreatePartition[%v]"+
 		"partitionCnt[%v]maxWeightsForCreatePartition[%v] ", total, used, free, createdPartitionWeights, remainWeightsForCreatePartition, partitionCnt, maxWeightsForCreatePartition)
 	space.stats.updateMetrics(total, used, free, createdPartitionWeights,
 		remainWeightsForCreatePartition, maxWeightsForCreatePartition, partitionCnt)

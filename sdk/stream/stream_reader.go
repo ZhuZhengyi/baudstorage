@@ -83,7 +83,7 @@ func (stream *StreamReader) toString() (m string) {
 func (stream *StreamReader) initCheck(offset, size int) (canread int, err error) {
 	stream.Lock()
 	defer stream.Unlock()
-	if size > CFSEXTENTSIZE {
+	if size > ExtentSize {
 		return 0, io.EOF
 	}
 	if offset+size < int(stream.fileSize) {

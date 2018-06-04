@@ -55,11 +55,11 @@ func (reader *ExtentReader) readDataFromDataPartition(p *Packet, data []byte) (e
 	host := reader.dp.Hosts[index]
 	if _, err = reader.readDataFromHost(p, host, data); err != nil {
 		log.LogError(err.Error())
-		goto FORLOOP
+		goto forLoop
 	}
 	return
 
-FORLOOP:
+forLoop:
 	for _, host := range reader.dp.Hosts {
 		_, err = reader.readDataFromHost(p, host, data)
 		if err == nil {
@@ -72,7 +72,7 @@ FORLOOP:
 	return
 }
 
-func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte) (acatualReadSize int, err error) {
+func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte) (actualReadSize int, err error) {
 	expectReadSize := int(p.Size)
 	conn, err := reader.wrapper.GetConnect(host)
 	if err != nil {
@@ -95,30 +95,30 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 		return 0, err
 	}
 	for {
-		if acatualReadSize >= expectReadSize {
-			return acatualReadSize, err
+		if actualReadSize >= expectReadSize {
+			return actualReadSize, err
 		}
 		err = p.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
 			err = errors.Annotatef(err, reader.toString()+"readDataFromHost host[%v]  error reqeust[%v]",
 				host, p.GetUniqLogId())
-			return acatualReadSize, err
+			return actualReadSize, err
 
 		}
 		if p.ResultCode != proto.OpOk {
 			err = errors.Annotatef(fmt.Errorf(string(p.Data[:p.Size])),
 				reader.toString()+"readDataFromHost host [%v] request[%v] reply[%v]",
 				host, p.GetUniqLogId(), p.GetUniqLogId())
-			return acatualReadSize, err
+			return actualReadSize, err
 		}
-		copy(data[acatualReadSize:acatualReadSize+int(p.Size)], p.Data[:p.Size])
-		acatualReadSize += int(p.Size)
-		if acatualReadSize >= expectReadSize {
-			return acatualReadSize, err
+		copy(data[actualReadSize:actualReadSize+int(p.Size)], p.Data[:p.Size])
+		actualReadSize += int(p.Size)
+		if actualReadSize >= expectReadSize {
+			return actualReadSize, err
 		}
 
 	}
-	return acatualReadSize, nil
+	return actualReadSize, nil
 }
 
 func (reader *ExtentReader) updateKey(key proto.ExtentKey) (update bool) {

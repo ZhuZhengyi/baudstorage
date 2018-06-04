@@ -39,7 +39,7 @@ type Stats struct {
 	Total                           uint64
 	Used                            uint64
 	Free                            uint64
-	CreatedPartitionWeights         uint64 //dataPartitionCnt*dataPartitionsize
+	CreatedPartitionWeights         uint64 //dataPartitionCnt*dataPartitionSize
 	RemainWeightsForCreatePartition uint64 //all-useddataPartitionsWieghts
 	CreatedPartitionCnt             uint64
 	MaxWeightsForCreatePartition    uint64
