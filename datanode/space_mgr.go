@@ -83,8 +83,8 @@ func (space *SpaceManager) updateMetrics() {
 }
 
 func (space *SpaceManager) getMinPartitionCntDisk() (d *Disk) {
-	space.diskLock.RLock()
-	defer space.diskLock.RUnlock()
+	space.diskLock.Lock()
+	defer space.diskLock.Unlock()
 	var minVolCnt uint64
 	minVolCnt = math.MaxUint64
 	var path string
