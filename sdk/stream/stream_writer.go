@@ -86,7 +86,7 @@ func (stream *StreamWriter) toString() (m string) {
 	if stream.getWriter() != nil {
 		currentWriterMsg = stream.getWriter().toString()
 	}
-	return fmt.Sprintf("inode[%v] currentVol[%v] currentExtentId[%v]"+
+	return fmt.Sprintf("inode[%v] currentDataPartion[%v] currentExtentId[%v]"+
 		" errCount[%v]", stream.currentInode, stream.currentPartionId, currentWriterMsg,
 		stream.errCount)
 }
