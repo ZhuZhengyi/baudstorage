@@ -95,7 +95,7 @@ func (p *Packet) IsEqual(q *Packet) bool {
 }
 
 func (p *Packet) fill(data []byte, size int) (canWrite int) {
-	blockSpace := CFSBLOCKSIZE - (p.Offset % CFSBLOCKSIZE)
+	blockSpace := BlockSize - (p.Offset % BlockSize)
 	remain := int(blockSpace) - int(p.Size)
 	canWrite = util.Min(remain, size)
 	p.Data = append(p.Data, data[:canWrite]...)
@@ -105,7 +105,7 @@ func (p *Packet) fill(data []byte, size int) (canWrite int) {
 }
 
 func (p *Packet) isFullPacket() bool {
-	return p.Size-CFSBLOCKSIZE == 0
+	return p.Size-BlockSize == 0
 }
 
 func (p *Packet) getPacketLength() int {

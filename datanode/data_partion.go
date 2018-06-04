@@ -19,7 +19,7 @@ var (
 	AdminGetDataPartition     = "/admin/getDataPartition"
 	ErrNotLeader              = errors.New("not leader")
 	LeastGoalNum              = 2
-	ErrLackOfGoal             = errors.New("dataPartitionGoal is not equare dataPartitionhosts")
+	ErrLackOfGoal             = errors.New("dataPartitionGoal is not equal dataPartitionHosts")
 	ErrDataPartitionOnBadDisk = errors.New("error bad disk")
 )
 
@@ -100,7 +100,7 @@ func (dp *DataPartition) getMembers() (bool, *DataPartitionMembers, error) {
 	members := new(DataPartitionMembers)
 
 	if err = json.Unmarshal(HostsBuf, &members); err != nil {
-		log.LogError(fmt.Sprintf(ActionGetFoolwers+" v[%v] json unmarshal [%v] err[%v]", dp.partitionId, string(HostsBuf), err))
+		log.LogError(fmt.Sprintf(ActionGetFollowers+" v[%v] json unmarshal [%v] err[%v]", dp.partitionId, string(HostsBuf), err))
 		return false, nil, err
 	}
 

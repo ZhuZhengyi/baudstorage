@@ -147,7 +147,7 @@ func isExcluded(partitionId uint32, excludes []uint32) bool {
 func (wrapper *DataPartitionWrapper) GetWriteDataPartition(exclude []uint32) (*DataPartition, error) {
 	rwPartitionGroups := wrapper.rwPartition
 	if len(rwPartitionGroups) == 0 {
-		return nil, fmt.Errorf("No writable DataPartition")
+		return nil, fmt.Errorf("no writable data partition")
 	}
 
 	rand.Seed(time.Now().UnixNano())
@@ -162,7 +162,7 @@ func (wrapper *DataPartitionWrapper) GetWriteDataPartition(exclude []uint32) (*D
 			return partition, nil
 		}
 	}
-	return nil, fmt.Errorf("No writable DataPartition")
+	return nil, fmt.Errorf("no writable data partition")
 }
 
 func (wrapper *DataPartitionWrapper) GetDataPartition(partitionID uint32) (*DataPartition, error) {

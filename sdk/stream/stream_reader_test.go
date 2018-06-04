@@ -41,7 +41,7 @@ func TestStreamReader_GetReader(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		rand.Seed(time.Now().UnixNano())
 		ek := proto.ExtentKey{PartitionId: uint32(i), ExtentId: atomic.AddUint64(&extentId, 1),
-			Size: uint32(rand.Intn(CFSEXTENTSIZE))}
+			Size: uint32(rand.Intn(ExtentSize))}
 		sk.Put(ek)
 
 	}
@@ -54,7 +54,7 @@ func TestStreamReader_GetReader(t *testing.T) {
 			break
 		}
 		rand.Seed(time.Now().UnixNano())
-		currReadSize := rand.Intn(CFSEXTENTSIZE)
+		currReadSize := rand.Intn(ExtentSize)
 		if haveReadSize+currReadSize > int(sk.Size()) {
 			currReadSize = int(sk.Size()) - haveReadSize
 		}
@@ -108,7 +108,7 @@ func TestStreamReader_GetReader(t *testing.T) {
 		haveReadSize += currReadSize
 		rand.Seed(time.Now().UnixNano())
 		ek := proto.ExtentKey{PartitionId: uint32(rand.Intn(1000)), ExtentId: atomic.AddUint64(&extentId, 1),
-			Size: uint32(rand.Intn(CFSEXTENTSIZE))}
+			Size: uint32(rand.Intn(ExtentSize))}
 		sk.Put(ek)
 	}
 }

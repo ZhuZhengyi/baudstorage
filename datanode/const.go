@@ -20,19 +20,19 @@ const (
 )
 
 const (
-	ActionSendToNext                                 = "ActionSendToNext"
-	LocalProcessAddr                                 = "LocalProcess"
-	ActionReciveFromNext                             = "ActionReciveFromNext"
-	ActionStreamRead                                 = "ActionStreamRead"
-	ActionWriteToCli                                 = "ActionWriteToCli"
-	ActioncheckAndAddInfos                           = "ActioncheckAndAddInfos"
-	ActionCheckChunkInfo                             = "ActionCheckChunkInfo"
-	ActionPostToMaster                               = "ActionPostToMaster"
-	ActionLeaderToFollowerOpCRepairReadPackResponse  = "ActionLeaderToFollowerOpCRepairReadPackResponse"
-	ActionLeaderToFollowerOpRepairReadPackBuffer     = "ActionLeaderToFollowerOpRepairReadPackBuffer"
+	ActionSendToNext                                = "ActionSendToNext"
+	LocalProcessAddr                                = "LocalProcess"
+	ActionReceiveFromNext                           = "ActionReceiveFromNext"
+	ActionStreamRead                                = "ActionStreamRead"
+	ActionWriteToCli                                = "ActionWriteToCli"
+	ActionCheckAndAddInfos                          = "ActionCheckAndAddInfos"
+	ActionCheckChunkInfo                            = "ActionCheckChunkInfo"
+	ActionPostToMaster                              = "ActionPostToMaster"
+	ActionLeaderToFollowerOpCRepairReadPackResponse = "ActionLeaderToFollowerOpCRepairReadPackResponse"
+	ActionLeaderToFollowerOpRepairReadPackBuffer    = "ActionLeaderToFollowerOpRepairReadPackBuffer"
 	ActionLeaderToFollowerOpRepairReadSendPackBuffer = "ActionLeaderToFollowerOpRepairReadSendPackBuffer"
 
-	ActionGetFoolwers     = "ActionGetFoolwers"
+	ActionGetFollowers    = "ActionGetFollowers"
 	ActionCheckReplyAvail = "ActionCheckReplyAvail"
 )
 

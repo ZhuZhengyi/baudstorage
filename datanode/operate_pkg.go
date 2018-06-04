@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	ErrorUnknowOp = errors.New("unknown opcode")
+	ErrorUnknownOp = errors.New("unknown opcode")
 )
 
 func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
@@ -76,7 +76,7 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 	case proto.OpDataNodeHeartbeat:
 		s.heartBeats(pkg)
 	default:
-		pkg.PackErrorBody(ErrorUnknowOp.Error(), ErrorUnknowOp.Error()+strconv.Itoa(int(pkg.Opcode)))
+		pkg.PackErrorBody(ErrorUnknownOp.Error(), ErrorUnknownOp.Error()+strconv.Itoa(int(pkg.Opcode)))
 	}
 
 	return

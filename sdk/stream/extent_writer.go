@@ -16,18 +16,18 @@ import (
 )
 
 const (
-	CFSBLOCKSIZE  = 64 * util.KB
-	CFSEXTENTSIZE = 64 * util.MB
+	BlockSize  = 64 * util.KB
+	ExtentSize = 64 * util.MB
 
-	ContinueRecive         = true
-	NotRecive              = false
+	ContinueReceive        = true
+	NotReceive             = false
 	ExtentWriterRecoverCnt = 0
 
 	DefaultWriteBufferSize = 2 * util.MB
 )
 
 var (
-	FlushErr      = errors.New(" backEndlush error")
+	FlushErr      = errors.New("backend flush error")
 	FullExtentErr = errors.New("full extent")
 )
 
@@ -146,7 +146,7 @@ func (writer *ExtentWriter) sendCurrPacket() (err error) {
 	writer.Unlock()
 	err = packet.writeTo(writer.connect) //if send packet,then signal recive goroutine for recive from connect
 	if err == nil {
-		writer.handleCh <- ContinueRecive
+		writer.handleCh <- ContinueReceive
 		return
 	} else {
 		writer.cleanHandleCh() //if send packet failed,clean handleCh
@@ -180,7 +180,7 @@ func (writer *ExtentWriter) recover() (sucess bool) {
 		log.LogError(err.Error())
 
 	}()
-	//get connect from Wraper
+	// get connect from wrapper
 	if connect, err = writer.wrapper.GetConnect(writer.dp.Hosts[0]); err != nil {
 		log.LogError(err)
 		return
@@ -194,7 +194,7 @@ func (writer *ExtentWriter) recover() (sucess bool) {
 			return
 		}
 		writer.recoverCnt = 0
-		writer.handleCh <- ContinueRecive //signal recive goroutine,recive ack from connect
+		writer.handleCh <- ContinueReceive //signal recive goroutine,recive ack from connect
 	}
 
 	return true
@@ -213,7 +213,7 @@ func (writer *ExtentWriter) cleanHandleCh() {
 
 //every extent is FULL,must is 64MB
 func (writer *ExtentWriter) isFullExtent() bool {
-	return writer.offset+CFSBLOCKSIZE >= CFSEXTENTSIZE
+	return writer.offset+BlockSize >= ExtentSize
 }
 
 //check allPacket has Ack
@@ -235,7 +235,7 @@ func (writer *ExtentWriter) toString() string {
 
 func (writer *ExtentWriter) checkIsStopReciveGoRoutine() {
 	if writer.isAllFlushed() && writer.isFullExtent() {
-		writer.handleCh <- NotRecive
+		writer.handleCh <- NotReceive
 	}
 	return
 }
@@ -279,11 +279,11 @@ func (writer *ExtentWriter) flush() (err error) {
 
 func (writer *ExtentWriter) close() (err error) {
 	if writer.isAllFlushed() {
-		writer.handleCh <- NotRecive
+		writer.handleCh <- NotReceive
 	} else {
 		err = writer.flush()
 		if err == nil && writer.isAllFlushed() {
-			writer.handleCh <- NotRecive
+			writer.handleCh <- NotReceive
 		}
 	}
 	return
@@ -320,7 +320,7 @@ func (writer *ExtentWriter) recive() {
 	for {
 		select {
 		case code := <-writer.handleCh:
-			if code == NotRecive {
+			if code == NotReceive {
 				return
 			}
 			e := writer.getFrontRequest()
