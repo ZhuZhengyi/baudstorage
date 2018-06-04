@@ -86,7 +86,7 @@ func (s *DataNode) createFile(pkg *Packet) {
 	var err error
 	switch pkg.StoreMode {
 	case proto.TinyStoreMode:
-		err = errors.Annotatef(ErrStoreTypeMismatch, " CreateFile only support ExtentMode Vol")
+		err = errors.Annotatef(ErrStoreTypeMismatch, " CreateFile only support ExtentMode DataReplica")
 	case proto.ExtentStoreMode:
 		err = pkg.vol.store.(*storage.ExtentStore).Create(pkg.FileID)
 	}

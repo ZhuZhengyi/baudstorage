@@ -9,14 +9,14 @@ import (
 	"time"
 )
 
-type VolGroup struct {
-	VolID            uint64
+type DataPartition struct {
+	PartitionID      uint64
 	LastLoadTime     int64
 	ReplicaNum       uint8
 	Status           uint8
 	isRecover        bool
-	Locations        []*Vol
-	VolType          string
+	Locations        []*DataReplica
+	PartitionType    string
 	PersistenceHosts []string
 	sync.Mutex
 
@@ -24,57 +24,57 @@ type VolGroup struct {
 	MissNodes     map[string]int64
 }
 
-func newVolGroup(volID uint64, replicaNum uint8, volType string) (vg *VolGroup) {
-	vg = new(VolGroup)
-	vg.ReplicaNum = replicaNum
-	vg.VolID = volID
-	vg.VolType = volType
-	vg.PersistenceHosts = make([]string, 0)
-	vg.Locations = make([]*Vol, 0)
-	vg.FileInCoreMap = make(map[string]*FileInCore, 0)
-	vg.MissNodes = make(map[string]int64)
+func newDataPartition(ID uint64, replicaNum uint8, partitionType string) (partition *DataPartition) {
+	partition = new(DataPartition)
+	partition.ReplicaNum = replicaNum
+	partition.PartitionID = ID
+	partition.PartitionType = partitionType
+	partition.PersistenceHosts = make([]string, 0)
+	partition.Locations = make([]*DataReplica, 0)
+	partition.FileInCoreMap = make(map[string]*FileInCore, 0)
+	partition.MissNodes = make(map[string]int64)
 	return
 }
 
-func (vg *VolGroup) addMember(vl *Vol) {
-	vg.Lock()
-	defer vg.Unlock()
-	for _, vol := range vg.Locations {
-		if vl.Addr == vol.Addr {
+func (partition *DataPartition) addMember(replica *DataReplica) {
+	partition.Lock()
+	defer partition.Unlock()
+	for _, vol := range partition.Locations {
+		if replica.Addr == vol.Addr {
 			return
 		}
 	}
-	vg.Locations = append(vg.Locations, vl)
+	partition.Locations = append(partition.Locations, replica)
 }
 
-func (vg *VolGroup) checkBadStatus() {
+func (partition *DataPartition) checkBadStatus() {
 
 }
 
-func (vg *VolGroup) generateCreateVolGroupTasks() (tasks []*proto.AdminTask) {
+func (partition *DataPartition) generateCreateDataPartitionTasks() (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
-	for _, addr := range vg.PersistenceHosts {
-		t := proto.NewAdminTask(proto.OpCreateVol, addr, newCreateVolRequest(vg.VolType, vg.VolID))
-		t.ID = fmt.Sprintf("%v_volID[%v]", t.ID, vg.VolID)
+	for _, addr := range partition.PersistenceHosts {
+		t := proto.NewAdminTask(proto.OpCreateVol, addr, newCreateVolRequest(partition.PartitionType, partition.PartitionID))
+		t.ID = fmt.Sprintf("%v_volID[%v]", t.ID, partition.PartitionID)
 		tasks = append(tasks, t)
 	}
 	return
 }
 
-func (vg *VolGroup) hasMissOne() (err error) {
-	availPersistenceHostLen := len(vg.PersistenceHosts)
-	if availPersistenceHostLen <= (int)(vg.ReplicaNum)-1 {
+func (partition *DataPartition) hasMissOne() (err error) {
+	availPersistenceHostLen := len(partition.PersistenceHosts)
+	if availPersistenceHostLen <= (int)(partition.ReplicaNum)-1 {
 		log.LogError(fmt.Sprintf("action[%v],volID:%v,err:%v",
-			"hasMissOne", vg.VolID, VolReplicationHasMissOneError))
-		err = VolReplicationHasMissOneError
+			"hasMissOne", partition.PartitionID, DataReplicaHasMissOneError))
+		err = DataReplicaHasMissOneError
 	}
 	return
 }
 
-func (vg *VolGroup) canOffLine(offlineAddr string) (err error) {
+func (partition *DataPartition) canOffLine(offlineAddr string) (err error) {
 	msg := fmt.Sprintf("action[canOffLine],vol:%v  RocksDBHost:%v  offLine:%v ",
-		vg.VolID, vg.PersistenceHosts, offlineAddr)
-	liveLocs := vg.getLiveVols(DefaultVolTimeOutSec)
+		partition.PartitionID, partition.PersistenceHosts, offlineAddr)
+	liveLocs := partition.getLiveVols(DefaultVolTimeOutSec)
 	if len(liveLocs) < 2 {
 		msg = fmt.Sprintf(msg+" err:%v  liveLocs:%v ", CannotOffLineErr, len(liveLocs))
 		log.LogError(msg)
@@ -84,10 +84,10 @@ func (vg *VolGroup) canOffLine(offlineAddr string) (err error) {
 	return
 }
 
-func (vg *VolGroup) generatorVolOffLineLog(offlineAddr string) (msg string) {
+func (partition *DataPartition) generatorVolOffLineLog(offlineAddr string) (msg string) {
 	msg = fmt.Sprintf("action[GeneratorVolOffLineLogInfo],vol:%v  offlineaddr:%v  ",
-		vg.VolID, offlineAddr)
-	vols := vg.GetAvailableVols()
+		partition.PartitionID, offlineAddr)
+	vols := partition.GetAvailableVols()
 	for i := 0; i < len(vols); i++ {
 		vol := vols[i]
 		msg += fmt.Sprintf(" addr:%v  volStatus:%v  FileCount :%v ", vol.Addr,
@@ -99,11 +99,11 @@ func (vg *VolGroup) generatorVolOffLineLog(offlineAddr string) (msg string) {
 }
 
 /*获取该副本目前有效的node,即Node在汇报心跳正常，并且该Node不是unavailable*/
-func (vg *VolGroup) GetAvailableVols() (vols []*Vol) {
-	vols = make([]*Vol, 0)
-	for i := 0; i < len(vg.Locations); i++ {
-		vol := vg.Locations[i]
-		if vol.CheckLocIsAvailContainsDiskError() == true && vg.isInPersistenceHosts(vol.Addr) == true {
+func (partition *DataPartition) GetAvailableVols() (vols []*DataReplica) {
+	vols = make([]*DataReplica, 0)
+	for i := 0; i < len(partition.Locations); i++ {
+		vol := partition.Locations[i]
+		if vol.CheckLocIsAvailContainsDiskError() == true && partition.isInPersistenceHosts(vol.Addr) == true {
 			vols = append(vols, vol)
 		}
 	}
@@ -111,101 +111,101 @@ func (vg *VolGroup) GetAvailableVols() (vols []*Vol) {
 	return
 }
 
-func (vg *VolGroup) volOffLineInMem(addr string) {
+func (partition *DataPartition) volOffLineInMem(addr string) {
 	delIndex := -1
-	var loc *Vol
-	for i := 0; i < len(vg.Locations); i++ {
-		vol := vg.Locations[i]
+	var loc *DataReplica
+	for i := 0; i < len(partition.Locations); i++ {
+		vol := partition.Locations[i]
 		if vol.Addr == addr {
 			loc = vol
 			delIndex = i
 			break
 		}
 	}
-	msg := fmt.Sprintf("action[VolOffLineInMem],vol:%v  on Node:%v  OffLine,the node is in volLocs:%v", vg.VolID, addr, loc != nil)
+	msg := fmt.Sprintf("action[VolOffLineInMem],vol:%v  on Node:%v  OffLine,the node is in volLocs:%v", partition.PartitionID, addr, loc != nil)
 	log.LogDebug(msg)
 	if loc == nil {
 		return
 	}
 
-	for _, fc := range vg.FileInCoreMap {
-		fc.deleteFileInNode(vg.VolID, loc)
+	for _, fc := range partition.FileInCoreMap {
+		fc.deleteFileInNode(partition.PartitionID, loc)
 	}
-	vg.DeleteVolByIndex(delIndex)
+	partition.DeleteVolByIndex(delIndex)
 
 	return
 }
 
-func (vg *VolGroup) DeleteVolByIndex(index int) {
+func (partition *DataPartition) DeleteVolByIndex(index int) {
 	var locArr []string
-	for _, loc := range vg.Locations {
+	for _, loc := range partition.Locations {
 		locArr = append(locArr, loc.Addr)
 	}
-	msg := fmt.Sprintf("DeleteVolByIndex vol:%v  index:%v  locations :%v ", vg.VolID, index, locArr)
+	msg := fmt.Sprintf("DeleteVolByIndex vol:%v  index:%v  locations :%v ", partition.PartitionID, index, locArr)
 	log.LogInfo(msg)
-	volLocsAfter := vg.Locations[index+1:]
-	vg.Locations = vg.Locations[:index]
-	vg.Locations = append(vg.Locations, volLocsAfter...)
+	volLocsAfter := partition.Locations[index+1:]
+	partition.Locations = partition.Locations[:index]
+	partition.Locations = append(partition.Locations, volLocsAfter...)
 }
 
-func (vg *VolGroup) generateLoadVolTasks() (tasks []*proto.AdminTask) {
+func (partition *DataPartition) generateLoadVolTasks() (tasks []*proto.AdminTask) {
 
-	vg.Lock()
-	defer vg.Unlock()
-	for _, addr := range vg.PersistenceHosts {
-		vol, err := vg.getVolLocation(addr)
+	partition.Lock()
+	defer partition.Unlock()
+	for _, addr := range partition.PersistenceHosts {
+		vol, err := partition.getVolLocation(addr)
 		if err != nil || vol.IsLive(DefaultVolTimeOutSec) == false {
 			continue
 		}
-		vol.LoadVolIsResponse = false
-		t := proto.NewAdminTask(proto.OpLoadVol, vol.Addr, newLoadVolMetricRequest(vg.VolType, vg.VolID))
-		t.ID = fmt.Sprintf("%v_volID[%v]", t.ID, vg.VolID)
+		vol.LoadPartitionIsResponse = false
+		t := proto.NewAdminTask(proto.OpLoadVol, vol.Addr, newLoadVolMetricRequest(partition.PartitionType, partition.PartitionID))
+		t.ID = fmt.Sprintf("%v_volID[%v]", t.ID, partition.PartitionID)
 		tasks = append(tasks, t)
 	}
-	vg.LastLoadTime = time.Now().Unix()
+	partition.LastLoadTime = time.Now().Unix()
 	return
 }
 
-func (vg *VolGroup) getVolLocation(addr string) (vol *Vol, err error) {
-	for index := 0; index < len(vg.Locations); index++ {
-		vol = vg.Locations[index]
+func (partition *DataPartition) getVolLocation(addr string) (vol *DataReplica, err error) {
+	for index := 0; index < len(partition.Locations); index++ {
+		vol = partition.Locations[index]
 		if vol.Addr == addr {
 			return
 		}
 	}
 	log.LogError(fmt.Sprintf("action[getVolLocation],volID:%v,locations:%v,err:%v",
-		vg.VolID, addr, VolLocationNotFound))
-	return nil, VolLocationNotFound
+		partition.PartitionID, addr, DataReplicaNotFound))
+	return nil, DataReplicaNotFound
 }
 
-func (vg *VolGroup) convertToVolResponse() (vr *VolResponse) {
+func (partition *DataPartition) convertToVolResponse() (vr *VolResponse) {
 	vr = new(VolResponse)
-	vg.Lock()
-	defer vg.Unlock()
-	vr.VolID = vg.VolID
-	vr.Status = vg.Status
-	vr.ReplicaNum = vg.ReplicaNum
-	vr.VolType = vg.VolType
-	vr.Hosts = make([]string, len(vg.PersistenceHosts))
-	copy(vr.Hosts, vg.PersistenceHosts)
+	partition.Lock()
+	defer partition.Unlock()
+	vr.VolID = partition.PartitionID
+	vr.Status = partition.Status
+	vr.ReplicaNum = partition.ReplicaNum
+	vr.VolType = partition.PartitionType
+	vr.Hosts = make([]string, len(partition.PersistenceHosts))
+	copy(vr.Hosts, partition.PersistenceHosts)
 	return
 }
 
-func (vg *VolGroup) checkLoadVolResponse(volTimeOutSec int64) (isResponse bool) {
-	vg.Lock()
-	defer vg.Unlock()
-	for _, addr := range vg.PersistenceHosts {
-		volLoc, err := vg.getVolLocation(addr)
+func (partition *DataPartition) checkLoadVolResponse(volTimeOutSec int64) (isResponse bool) {
+	partition.Lock()
+	defer partition.Unlock()
+	for _, addr := range partition.PersistenceHosts {
+		volLoc, err := partition.getVolLocation(addr)
 		if err != nil {
 			return
 		}
-		loadVolTime := time.Now().Unix() - vg.LastLoadTime
-		if volLoc.LoadVolIsResponse == false && loadVolTime > LoadVolWaitTime {
-			msg := fmt.Sprintf("action[checkLoadVolResponse], volId:%v on Node:%v no response, spent time %v s", vg.VolID, addr, loadVolTime)
+		loadVolTime := time.Now().Unix() - partition.LastLoadTime
+		if volLoc.LoadPartitionIsResponse == false && loadVolTime > LoadVolWaitTime {
+			msg := fmt.Sprintf("action[checkLoadVolResponse], volId:%v on Node:%v no response, spent time %v s", partition.PartitionID, addr, loadVolTime)
 			log.LogWarn(msg)
 			return
 		}
-		if volLoc.IsLive(volTimeOutSec) == false || volLoc.LoadVolIsResponse == false {
+		if volLoc.IsLive(volTimeOutSec) == false || volLoc.LoadPartitionIsResponse == false {
 			return
 		}
 	}
@@ -214,19 +214,19 @@ func (vg *VolGroup) checkLoadVolResponse(volTimeOutSec int64) (isResponse bool) 
 	return
 }
 
-func (vg *VolGroup) getVolLocationByIndex(index uint8) (volLoc *Vol) {
-	return vg.Locations[int(index)]
+func (partition *DataPartition) getVolLocationByIndex(index uint8) (volLoc *DataReplica) {
+	return partition.Locations[int(index)]
 }
 
-func (vg *VolGroup) getFileCount() {
+func (partition *DataPartition) getFileCount() {
 	var msg string
 	needDelFiles := make([]string, 0)
-	vg.Lock()
-	defer vg.Unlock()
-	for _, volLoc := range vg.Locations {
+	partition.Lock()
+	defer partition.Unlock()
+	for _, volLoc := range partition.Locations {
 		volLoc.FileCount = 0
 	}
-	for _, fc := range vg.FileInCoreMap {
+	for _, fc := range partition.FileInCoreMap {
 		if fc.MarkDel == true {
 			continue
 		}
@@ -234,42 +234,42 @@ func (vg *VolGroup) getFileCount() {
 			needDelFiles = append(needDelFiles, fc.Name)
 		}
 		for _, vfNode := range fc.Metas {
-			volLoc := vg.getVolLocationByIndex(vfNode.LocIndex)
+			volLoc := partition.getVolLocationByIndex(vfNode.LocIndex)
 			volLoc.FileCount++
 		}
 
 	}
 
 	for _, vfName := range needDelFiles {
-		delete(vg.FileInCoreMap, vfName)
+		delete(partition.FileInCoreMap, vfName)
 	}
 
-	for _, volLoc := range vg.Locations {
+	for _, volLoc := range partition.Locations {
 		msg = fmt.Sprintf(GetVolLocationFileCountInfo+"vol:%v  volLocation:%v  FileCount:%v  "+
-			"NodeIsActive:%v  VlocIsActive:%v  .VolStatusOnNode:%v ", vg.VolID, volLoc.Addr, volLoc.FileCount,
+			"NodeIsActive:%v  VlocIsActive:%v  .VolStatusOnNode:%v ", partition.PartitionID, volLoc.Addr, volLoc.FileCount,
 			volLoc.GetVolLocationNode().isActive, volLoc.IsActive(DefaultVolTimeOutSec), volLoc.Status)
 		log.LogInfo(msg)
 	}
 
 }
 
-func (vg *VolGroup) ReleaseVol() {
-	vg.Lock()
-	defer vg.Unlock()
-	liveLocs := vg.getLiveVolsByPersistenceHosts(DefaultVolTimeOutSec)
+func (partition *DataPartition) ReleaseVol() {
+	partition.Lock()
+	defer partition.Unlock()
+	liveLocs := partition.getLiveVolsByPersistenceHosts(DefaultVolTimeOutSec)
 	for _, volLoc := range liveLocs {
-		volLoc.LoadVolIsResponse = false
+		volLoc.LoadPartitionIsResponse = false
 	}
-	for name, fc := range vg.FileInCoreMap {
+	for name, fc := range partition.FileInCoreMap {
 		fc.Metas = nil
-		delete(vg.FileInCoreMap, name)
+		delete(partition.FileInCoreMap, name)
 	}
-	vg.FileInCoreMap = make(map[string]*FileInCore, 0)
+	partition.FileInCoreMap = make(map[string]*FileInCore, 0)
 
 }
 
-func (vg *VolGroup) IsInVolLocs(host string) (volLoc *Vol, ok bool) {
-	for _, volLoc = range vg.Locations {
+func (partition *DataPartition) IsInVolLocs(host string) (volLoc *DataReplica, ok bool) {
+	for _, volLoc = range partition.Locations {
 		if volLoc.Addr == host {
 			ok = true
 			break
@@ -278,35 +278,35 @@ func (vg *VolGroup) IsInVolLocs(host string) (volLoc *Vol, ok bool) {
 	return
 }
 
-func (vg *VolGroup) checkReplicaNum(c *Cluster, nsName string) {
-	vg.Lock()
-	defer vg.Unlock()
-	if int(vg.ReplicaNum) != len(vg.PersistenceHosts) {
-		orgGoal := vg.ReplicaNum
-		vg.ReplicaNum = (uint8)(len(vg.PersistenceHosts))
-		vg.UpdateVolHosts(c, nsName)
+func (partition *DataPartition) checkReplicaNum(c *Cluster, nsName string) {
+	partition.Lock()
+	defer partition.Unlock()
+	if int(partition.ReplicaNum) != len(partition.PersistenceHosts) {
+		orgGoal := partition.ReplicaNum
+		partition.ReplicaNum = (uint8)(len(partition.PersistenceHosts))
+		partition.UpdateVolHosts(c, nsName)
 		msg := fmt.Sprintf("FIX VOL GOAL,vol:%v orgGoal:%v volHOST:%v",
-			vg.VolID, orgGoal, vg.VolHostsToString())
+			partition.PartitionID, orgGoal, partition.VolHostsToString())
 		log.LogWarn(msg)
 	}
 }
 
-func (vg *VolGroup) VolHostsToString() (hosts string) {
-	return strings.Join(vg.PersistenceHosts, UnderlineSeparator)
+func (partition *DataPartition) VolHostsToString() (hosts string) {
+	return strings.Join(partition.PersistenceHosts, UnderlineSeparator)
 }
 
-func (vg *VolGroup) UpdateVolHosts(c *Cluster, nsName string) error {
-	return c.syncUpdateVolGroup(nsName, vg)
+func (partition *DataPartition) UpdateVolHosts(c *Cluster, nsName string) error {
+	return c.syncUpdateVolGroup(nsName, partition)
 }
 
-func (vg *VolGroup) setVolToNormal() {
-	vg.Lock()
-	defer vg.Unlock()
-	vg.isRecover = false
+func (partition *DataPartition) setVolToNormal() {
+	partition.Lock()
+	defer partition.Unlock()
+	partition.isRecover = false
 }
 
-func (vg *VolGroup) isInPersistenceHosts(volAddr string) (ok bool) {
-	for _, addr := range vg.PersistenceHosts {
+func (partition *DataPartition) isInPersistenceHosts(volAddr string) (ok bool) {
+	for _, addr := range partition.PersistenceHosts {
 		if addr == volAddr {
 			ok = true
 			break
@@ -316,26 +316,26 @@ func (vg *VolGroup) isInPersistenceHosts(volAddr string) (ok bool) {
 	return
 }
 
-func (vg *VolGroup) checkVolReplicationTask() (tasks []*proto.AdminTask) {
+func (partition *DataPartition) checkVolReplicationTask() (tasks []*proto.AdminTask) {
 	var msg string
 	tasks = make([]*proto.AdminTask, 0)
-	if excessAddr, excessErr := vg.deleteExcessReplication(); excessErr != nil {
+	if excessAddr, excessErr := partition.deleteExcessReplication(); excessErr != nil {
 		msg = fmt.Sprintf("action[%v], vol:%v  Excess Replication"+
-			" On :%v  Err:%v  rocksDBRecords:%v  so please Delete Vol BY SHOUGONG",
-			DeleteExcessReplicationErr, vg.VolID, excessAddr, excessErr.Error(), vg.PersistenceHosts)
+			" On :%v  Err:%v  rocksDBRecords:%v  so please Delete DataReplica BY SHOUGONG",
+			DeleteExcessReplicationErr, partition.PartitionID, excessAddr, excessErr.Error(), partition.PersistenceHosts)
 		log.LogWarn(msg)
 	}
-	if vg.Status == VolReadWrite {
+	if partition.Status == VolReadWrite {
 		return
 	}
-	if lackTask, lackAddr, lackErr := vg.addLackReplication(); lackErr != nil {
+	if lackTask, lackAddr, lackErr := partition.addLackReplication(); lackErr != nil {
 		tasks = append(tasks, lackTask)
 		msg = fmt.Sprintf("action[%v], vol:%v  Lack Replication"+
-			" On :%v  Err:%v  rocksDBRecords:%v  NewTask Create Vol",
-			AddLackReplicationErr, vg.VolID, lackAddr, lackErr.Error(), vg.PersistenceHosts)
+			" On :%v  Err:%v  rocksDBRecords:%v  NewTask Create DataReplica",
+			AddLackReplicationErr, partition.PartitionID, lackAddr, lackErr.Error(), partition.PersistenceHosts)
 		log.LogWarn(msg)
 	} else {
-		vg.setVolToNormal()
+		partition.setVolToNormal()
 	}
 
 	return
@@ -343,16 +343,16 @@ func (vg *VolGroup) checkVolReplicationTask() (tasks []*proto.AdminTask) {
 
 /*delete vol excess replication ,range all volLocs
 if volLocation not in volRocksDBHosts then generator task to delete volume*/
-func (vg *VolGroup) deleteExcessReplication() (excessAddr string, err error) {
-	vg.Lock()
-	defer vg.Unlock()
-	for i := 0; i < len(vg.Locations); i++ {
-		volLoc := vg.Locations[i]
-		if ok := vg.isInPersistenceHosts(volLoc.Addr); !ok {
+func (partition *DataPartition) deleteExcessReplication() (excessAddr string, err error) {
+	partition.Lock()
+	defer partition.Unlock()
+	for i := 0; i < len(partition.Locations); i++ {
+		volLoc := partition.Locations[i]
+		if ok := partition.isInPersistenceHosts(volLoc.Addr); !ok {
 			excessAddr = volLoc.Addr
 			log.LogError(fmt.Sprintf("action[deleteExcessReplication],volID:%v,has excess replication:%v",
-				vg.VolID, excessAddr))
-			err = VolReplicationExcessError
+				partition.PartitionID, excessAddr))
+			err = DataReplicaExcessError
 			break
 		}
 	}
@@ -362,31 +362,31 @@ func (vg *VolGroup) deleteExcessReplication() (excessAddr string, err error) {
 
 /*add vol lack replication,range all volRocksDBHost if volHosts not in volLocations,
 then generator a task to OpRecoverCreateVol to a new Node*/
-func (vg *VolGroup) addLackReplication() (t *proto.AdminTask, lackAddr string, err error) {
-	vg.Lock()
-	for _, addr := range vg.PersistenceHosts {
-		if ok := vg.isInPersistenceHosts(addr); !ok {
+func (partition *DataPartition) addLackReplication() (t *proto.AdminTask, lackAddr string, err error) {
+	partition.Lock()
+	for _, addr := range partition.PersistenceHosts {
+		if ok := partition.isInPersistenceHosts(addr); !ok {
 			log.LogError(fmt.Sprintf("action[addLackReplication],volID:%v lack replication:%v",
-				vg.VolID, addr))
-			err = VolReplicationLackError
+				partition.PartitionID, addr))
+			err = DataReplicaLackError
 			lackAddr = addr
 
-			t = proto.NewAdminTask(proto.OpCreateVol, addr, newCreateVolRequest(vg.VolType, vg.VolID))
-			t.ID = fmt.Sprintf("%v_volID[%v]", t.ID, vg.VolID)
-			vg.isRecover = true
+			t = proto.NewAdminTask(proto.OpCreateVol, addr, newCreateVolRequest(partition.PartitionType, partition.PartitionID))
+			t.ID = fmt.Sprintf("%v_volID[%v]", t.ID, partition.PartitionID)
+			partition.isRecover = true
 			break
 		}
 	}
-	vg.Unlock()
+	partition.Unlock()
 
 	return
 }
 
-func (vg *VolGroup) getLiveVols(volTimeOutSec int64) (vols []*Vol) {
-	vols = make([]*Vol, 0)
-	for i := 0; i < len(vg.Locations); i++ {
-		vol := vg.Locations[i]
-		if vol.IsLive(volTimeOutSec) == true && vg.isInPersistenceHosts(vol.Addr) == true {
+func (partition *DataPartition) getLiveVols(volTimeOutSec int64) (vols []*DataReplica) {
+	vols = make([]*DataReplica, 0)
+	for i := 0; i < len(partition.Locations); i++ {
+		vol := partition.Locations[i]
+		if vol.IsLive(volTimeOutSec) == true && partition.isInPersistenceHosts(vol.Addr) == true {
 			vols = append(vols, vol)
 		}
 	}
@@ -395,10 +395,10 @@ func (vg *VolGroup) getLiveVols(volTimeOutSec int64) (vols []*Vol) {
 }
 
 //live vol that host is in the persistenceHosts, and vol location is alive
-func (vg *VolGroup) getLiveVolsByPersistenceHosts(volTimeOutSec int64) (vols []*Vol) {
-	vols = make([]*Vol, 0)
-	for _, host := range vg.PersistenceHosts {
-		volLoc, ok := vg.IsInVolLocs(host)
+func (partition *DataPartition) getLiveVolsByPersistenceHosts(volTimeOutSec int64) (vols []*DataReplica) {
+	vols = make([]*DataReplica, 0)
+	for _, host := range partition.PersistenceHosts {
+		volLoc, ok := partition.IsInVolLocs(host)
 		if !ok {
 			continue
 		}
@@ -410,102 +410,102 @@ func (vg *VolGroup) getLiveVolsByPersistenceHosts(volTimeOutSec int64) (vols []*
 	return
 }
 
-func (vg *VolGroup) checkAndRemoveMissVol(addr string) {
-	if _, ok := vg.MissNodes[addr]; ok {
-		delete(vg.MissNodes, addr)
+func (partition *DataPartition) checkAndRemoveMissVol(addr string) {
+	if _, ok := partition.MissNodes[addr]; ok {
+		delete(partition.MissNodes, addr)
 	}
 }
 
-func (vg *VolGroup) LoadFile(dataNode *DataNode, resp *proto.LoadVolResponse) {
-	vg.Lock()
-	defer vg.Unlock()
+func (partition *DataPartition) LoadFile(dataNode *DataNode, resp *proto.LoadVolResponse) {
+	partition.Lock()
+	defer partition.Unlock()
 
-	index, err := vg.getVolLocationIndex(dataNode.Addr)
+	index, err := partition.getVolLocationIndex(dataNode.Addr)
 	if err != nil {
-		msg := fmt.Sprintf("LoadFile volID:%v  on Node:%v  don't report :%v ", vg.VolID, dataNode.Addr, err)
+		msg := fmt.Sprintf("LoadFile volID:%v  on Node:%v  don't report :%v ", partition.PartitionID, dataNode.Addr, err)
 		log.LogWarn(msg)
 		return
 	}
-	volLoc := vg.Locations[index]
-	volLoc.LoadVolIsResponse = true
+	volLoc := partition.Locations[index]
+	volLoc.LoadPartitionIsResponse = true
 	for _, vf := range resp.VolSnapshot {
 		if vf == nil {
 			continue
 		}
-		fc, ok := vg.FileInCoreMap[vf.Name]
+		fc, ok := partition.FileInCoreMap[vf.Name]
 		if !ok {
 			fc = NewFileInCore(vf.Name)
-			vg.FileInCoreMap[vf.Name] = fc
+			partition.FileInCoreMap[vf.Name] = fc
 		}
-		fc.updateFileInCore(vg.VolID, vf, volLoc, index)
+		fc.updateFileInCore(partition.PartitionID, vf, volLoc, index)
 	}
 }
 
-func (vg *VolGroup) getVolLocationIndex(addr string) (volLocIndex int, err error) {
-	for volLocIndex = 0; volLocIndex < len(vg.Locations); volLocIndex++ {
-		volLoc := vg.Locations[volLocIndex]
+func (partition *DataPartition) getVolLocationIndex(addr string) (volLocIndex int, err error) {
+	for volLocIndex = 0; volLocIndex < len(partition.Locations); volLocIndex++ {
+		volLoc := partition.Locations[volLocIndex]
 		if volLoc.Addr == addr {
 			return
 		}
 	}
 	log.LogError(fmt.Sprintf("action[getVolLocationIndex],volID:%v,location:%v,err:%v",
-		vg.VolID, addr, VolLocationNotFound))
-	return -1, VolLocationNotFound
+		partition.PartitionID, addr, DataReplicaNotFound))
+	return -1, DataReplicaNotFound
 }
 
-func (vg *VolGroup) DeleteFileOnNode(delAddr, FileID string) {
-	vg.Lock()
-	defer vg.Unlock()
-	fc, ok := vg.FileInCoreMap[FileID]
+func (partition *DataPartition) DeleteFileOnNode(delAddr, FileID string) {
+	partition.Lock()
+	defer partition.Unlock()
+	fc, ok := partition.FileInCoreMap[FileID]
 	if !ok || fc.MarkDel == false {
 		return
 	}
-	volLoc, err := vg.getVolLocation(delAddr)
+	volLoc, err := partition.getVolLocation(delAddr)
 	if err != nil {
 		return
 	}
-	fc.deleteFileInNode(vg.VolID, volLoc)
+	fc.deleteFileInNode(partition.PartitionID, volLoc)
 
 	msg := fmt.Sprintf("vol:%v  File:%v  on node:%v  delete success",
-		vg.VolID, fc.Name, delAddr)
+		partition.PartitionID, fc.Name, delAddr)
 	log.LogInfo(msg)
 
 	if len(fc.Metas) == 0 {
-		delete(vg.FileInCoreMap, fc.Name)
-		msg = fmt.Sprintf("vol:%v  File:%v  delete success on allNode", vg.VolID, fc.Name)
+		delete(partition.FileInCoreMap, fc.Name)
+		msg = fmt.Sprintf("vol:%v  File:%v  delete success on allNode", partition.PartitionID, fc.Name)
 		log.LogInfo(msg)
 	}
 
 	return
 }
 
-func (vg *VolGroup) removeVolHosts(removeAddr string, c *Cluster, nsName string) (err error) {
-	orgGoal := len(vg.PersistenceHosts)
-	orgVolHosts := make([]string, len(vg.PersistenceHosts))
-	copy(orgVolHosts, vg.PersistenceHosts)
+func (partition *DataPartition) removeVolHosts(removeAddr string, c *Cluster, nsName string) (err error) {
+	orgGoal := len(partition.PersistenceHosts)
+	orgVolHosts := make([]string, len(partition.PersistenceHosts))
+	copy(orgVolHosts, partition.PersistenceHosts)
 
-	if ok := vg.removeVolHostOnUnderStore(removeAddr); !ok {
+	if ok := partition.removeVolHostOnUnderStore(removeAddr); !ok {
 		return
 	}
-	vg.ReplicaNum = (uint8)(len(vg.PersistenceHosts))
-	if err = vg.UpdateVolHosts(c, nsName); err != nil {
-		vg.ReplicaNum = (uint8)(orgGoal)
-		vg.PersistenceHosts = orgVolHosts
+	partition.ReplicaNum = (uint8)(len(partition.PersistenceHosts))
+	if err = partition.UpdateVolHosts(c, nsName); err != nil {
+		partition.ReplicaNum = (uint8)(orgGoal)
+		partition.PersistenceHosts = orgVolHosts
 	}
 
 	msg := fmt.Sprintf("RemoveVolHostsInfo  vol:%v  Delete host:%v  on PersistenceHosts:%v ",
-		vg.VolID, removeAddr, vg.PersistenceHosts)
+		partition.PartitionID, removeAddr, partition.PersistenceHosts)
 	log.LogDebug(msg)
 
 	return
 }
 
-func (vg *VolGroup) removeVolHostOnUnderStore(removeAddr string) (ok bool) {
-	for index, addr := range vg.PersistenceHosts {
+func (partition *DataPartition) removeVolHostOnUnderStore(removeAddr string) (ok bool) {
+	for index, addr := range partition.PersistenceHosts {
 		if addr == removeAddr {
-			after := vg.PersistenceHosts[index+1:]
-			vg.PersistenceHosts = vg.PersistenceHosts[:index]
-			vg.PersistenceHosts = append(vg.PersistenceHosts, after...)
+			after := partition.PersistenceHosts[index+1:]
+			partition.PersistenceHosts = partition.PersistenceHosts[:index]
+			partition.PersistenceHosts = append(partition.PersistenceHosts, after...)
 			ok = true
 			break
 		}
@@ -514,45 +514,45 @@ func (vg *VolGroup) removeVolHostOnUnderStore(removeAddr string) (ok bool) {
 	return
 }
 
-func (vg *VolGroup) addVolHosts(addAddr string, c *Cluster, nsName string) (err error) {
-	orgVolHosts := make([]string, len(vg.PersistenceHosts))
-	orgGoal := len(vg.PersistenceHosts)
-	copy(orgVolHosts, vg.PersistenceHosts)
-	for _, addr := range vg.PersistenceHosts {
+func (partition *DataPartition) addVolHosts(addAddr string, c *Cluster, nsName string) (err error) {
+	orgVolHosts := make([]string, len(partition.PersistenceHosts))
+	orgGoal := len(partition.PersistenceHosts)
+	copy(orgVolHosts, partition.PersistenceHosts)
+	for _, addr := range partition.PersistenceHosts {
 		if addr == addAddr {
 			return
 		}
 	}
-	vg.PersistenceHosts = append(vg.PersistenceHosts, addAddr)
-	vg.ReplicaNum = uint8(len(vg.PersistenceHosts))
-	if err = vg.UpdateVolHosts(c, nsName); err != nil {
-		vg.PersistenceHosts = orgVolHosts
-		vg.ReplicaNum = uint8(orgGoal)
+	partition.PersistenceHosts = append(partition.PersistenceHosts, addAddr)
+	partition.ReplicaNum = uint8(len(partition.PersistenceHosts))
+	if err = partition.UpdateVolHosts(c, nsName); err != nil {
+		partition.PersistenceHosts = orgVolHosts
+		partition.ReplicaNum = uint8(orgGoal)
 		return
 	}
 	msg := fmt.Sprintf(" AddVolHostsInfo vol:%v  Add host:%v  PersistenceHosts:%v ",
-		vg.VolID, addAddr, vg.PersistenceHosts)
+		partition.PartitionID, addAddr, partition.PersistenceHosts)
 	log.LogDebug(msg)
 	return
 }
 
-func (vg *VolGroup) UpdateVol(vr *proto.VolReport, dataNode *DataNode) {
-	vg.Lock()
-	volLoc, err := vg.getVolLocation(dataNode.Addr)
-	vg.Unlock()
+func (partition *DataPartition) UpdateVol(vr *proto.VolReport, dataNode *DataNode) {
+	partition.Lock()
+	volLoc, err := partition.getVolLocation(dataNode.Addr)
+	partition.Unlock()
 
-	if err != nil && !vg.isInPersistenceHosts(dataNode.Addr) {
+	if err != nil && !partition.isInPersistenceHosts(dataNode.Addr) {
 		return
 	}
-	if err != nil && vg.isInPersistenceHosts(dataNode.Addr) {
-		volLoc = NewVol(dataNode)
-		vg.addMember(volLoc)
+	if err != nil && partition.isInPersistenceHosts(dataNode.Addr) {
+		volLoc = NewDataReplica(dataNode)
+		partition.addMember(volLoc)
 	}
 	volLoc.Status = (uint8)(vr.VolStatus)
 	volLoc.Total = vr.Total
 	volLoc.Used = vr.Used
-	volLoc.SetVolAlive()
-	vg.Lock()
-	vg.checkAndRemoveMissVol(dataNode.Addr)
-	vg.Unlock()
+	volLoc.SetAlive()
+	partition.Lock()
+	partition.checkAndRemoveMissVol(dataNode.Addr)
+	partition.Unlock()
 }

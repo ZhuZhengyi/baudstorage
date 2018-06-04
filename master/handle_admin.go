@@ -125,7 +125,7 @@ func (m *Master) getVol(w http.ResponseWriter, r *http.Request) {
 		nsName string
 		ns     *NameSpace
 		body   []byte
-		vol    *VolGroup
+		vol    *DataPartition
 		volID  uint64
 		err    error
 	)
@@ -156,7 +156,7 @@ func (m *Master) loadVol(w http.ResponseWriter, r *http.Request) {
 		nsName string
 		ns     *NameSpace
 		msg    string
-		v      *VolGroup
+		v      *DataPartition
 		volID  uint64
 		err    error
 	)
@@ -189,7 +189,7 @@ func (m *Master) volOffline(w http.ResponseWriter, r *http.Request) {
 		nsName string
 		ns     *NameSpace
 		rstMsg string
-		vg     *VolGroup
+		vg     *DataPartition
 		addr   string
 		volID  uint64
 		err    error
@@ -631,7 +631,7 @@ func parseCreateVolPara(r *http.Request) (count int, name, volType string, err e
 	}
 
 	if !(strings.TrimSpace(volType) == proto.ExtentVol || strings.TrimSpace(volType) == proto.TinyVol) {
-		err = InvalidVolType
+		err = InvalidDataPartitionType
 		return
 	}
 	return

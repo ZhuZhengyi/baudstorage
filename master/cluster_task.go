@@ -44,7 +44,7 @@ func (c *Cluster) checkVolGroups(ns *NameSpace) {
 	for _, vg := range ns.volGroups.volGroupMap {
 		vg.checkLocationStatus(c.cfg.VolTimeOutSec)
 		vg.checkStatus(true, c.cfg.VolTimeOutSec)
-		vg.checkVolGroupMiss(c.cfg.VolMissSec, c.cfg.VolWarnInterval)
+		vg.checkVolGroupMiss(c.Name, c.cfg.VolMissSec, c.cfg.VolWarnInterval)
 		vg.checkReplicaNum(c, ns.Name)
 		if vg.Status == VolReadWrite {
 			newReadWriteVolGroups++
@@ -72,11 +72,11 @@ func (c *Cluster) backendLoadVolGroup(ns *NameSpace) {
 	}
 	c.waitLoadVolResponse(needCheckVols)
 	msg := fmt.Sprintf("action[BackendLoadVol] checkstart:%v everyCheckCount:%v",
-		needCheckVols[0].VolID, c.cfg.everyLoadVolCount)
+		needCheckVols[0].PartitionID, c.cfg.everyLoadVolCount)
 	log.LogInfo(msg)
 }
 
-func (c *Cluster) waitLoadVolResponse(needCheckVols []*VolGroup) {
+func (c *Cluster) waitLoadVolResponse(needCheckVols []*DataPartition) {
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -89,7 +89,7 @@ func (c *Cluster) waitLoadVolResponse(needCheckVols []*VolGroup) {
 	var wg sync.WaitGroup
 	for _, v := range needCheckVols {
 		wg.Add(1)
-		go func(v *VolGroup) {
+		go func(v *DataPartition) {
 			c.processLoadVol(v, false)
 			wg.Done()
 		}(v)
@@ -104,11 +104,11 @@ func (c *Cluster) processReleaseVolAfterLoadVolGroup(ns *NameSpace) {
 	}
 	ns.volGroups.releaseVolGroups(needReleaseVols)
 	msg := fmt.Sprintf("action[processReleaseVolAfterLoadVolGroup]  release vol start:%v everyReleaseVolCount:%v",
-		needReleaseVols[0].VolID, c.cfg.everyReleaseVolCount)
+		needReleaseVols[0].PartitionID, c.cfg.everyReleaseVolCount)
 	log.LogInfo(msg)
 }
 
-func (c *Cluster) loadVolAndCheckResponse(v *VolGroup, isRecover bool) {
+func (c *Cluster) loadVolAndCheckResponse(v *DataPartition, isRecover bool) {
 	go func() {
 		c.processLoadVol(v, isRecover)
 	}()
@@ -185,13 +185,13 @@ func (c *Cluster) processLoadMetaPartition(mp *MetaPartition, isRecover bool) {
 	//todo check response
 }
 
-func (c *Cluster) processLoadVol(v *VolGroup, isRecover bool) {
-	log.LogInfo(fmt.Sprintf("action[processLoadVol],volID:%v,isRecover:%v", v.VolID, isRecover))
+func (c *Cluster) processLoadVol(v *DataPartition, isRecover bool) {
+	log.LogInfo(fmt.Sprintf("action[processLoadVol],volID:%v,isRecover:%v", v.PartitionID, isRecover))
 	loadVolTasks := v.generateLoadVolTasks()
 	c.putDataNodeTasks(loadVolTasks)
 	for i := 0; i < LoadVolWaitTime; i++ {
 		if v.checkLoadVolResponse(c.cfg.VolTimeOutSec) {
-			log.LogInfo(fmt.Sprintf("action[%v] triger all replication,volID:%v ", "loadVolAndCheckResponse", v.VolID))
+			log.LogInfo(fmt.Sprintf("action[%v] triger all replication,volID:%v ", "loadVolAndCheckResponse", v.PartitionID))
 			break
 		}
 		time.Sleep(time.Second)
@@ -213,7 +213,7 @@ func (c *Cluster) checkMetaGroups(ns *NameSpace) {
 	for _, mp := range ns.MetaPartitions {
 		mp.checkStatus(true, int(ns.mpReplicaNum))
 		mp.checkReplicas(c, ns.Name, ns.mpReplicaNum)
-		mp.checkReplicaMiss()
+		mp.checkReplicaMiss(DefaultMetaPartitionWarnInterval)
 		tasks = append(tasks, mp.generateReplicaTask(ns.Name)...)
 	}
 	c.putMetaNodeTasks(tasks)
@@ -233,7 +233,7 @@ func (c *Cluster) dealMetaNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	if metaNode, err = c.getMetaNode(nodeAddr); err != nil {
 		goto errDeal
 	}
-	if _, ok := metaNode.Sender.TaskMap[task.ID]; !ok {
+	if isExist := metaNode.Sender.IsExist(task); !isExist {
 		err = taskNotFound(task.ID)
 		goto errDeal
 	}
@@ -426,10 +426,12 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	if err != nil {
 		goto errDeal
 	}
-	if _, ok := dataNode.sender.TaskMap[task.ID]; !ok {
+	if isExist := dataNode.sender.IsExist(task); !isExist {
 		err = taskNotFound(task.ID)
 		goto errDeal
 	}
+
+
 	if err := UnmarshalTaskResponse(task); err != nil {
 		goto errDeal
 	}
@@ -484,8 +486,8 @@ func (c *Cluster) dealCreateVolResponse(t *proto.AdminTask, resp *proto.CreateVo
 func (c *Cluster) createVolSuccessTriggerOperator(nodeAddr string, resp *proto.CreateVolResponse) (err error) {
 	var (
 		dataNode *DataNode
-		vg       *VolGroup
-		vol      *Vol
+		vg       *DataPartition
+		vol      *DataReplica
 	)
 
 	if vg, err = c.getVolGroupByVolID(resp.VolId); err != nil {
@@ -495,7 +497,7 @@ func (c *Cluster) createVolSuccessTriggerOperator(nodeAddr string, resp *proto.C
 	if dataNode, err = c.getDataNode(nodeAddr); err != nil {
 		goto errDeal
 	}
-	vol = NewVol(dataNode)
+	vol = NewDataReplica(dataNode)
 	vol.Status = VolReadWrite
 	vg.addMember(vol)
 
@@ -517,7 +519,7 @@ func (c *Cluster) createVolFailTriggerOperator(t *proto.AdminTask, resp *proto.C
 
 func (c *Cluster) dealDeleteVolResponse(nodeAddr string, resp *proto.DeleteVolResponse) (err error) {
 	var (
-		vg *VolGroup
+		vg *DataPartition
 	)
 	if resp.Status == proto.TaskSuccess {
 		if vg, err = c.getVolGroupByVolID(resp.VolId); err != nil {
@@ -549,7 +551,7 @@ func (c *Cluster) dealLoadVolResponse(nodeAddr string, resp *proto.LoadVolRespon
 
 func (c *Cluster) dealDeleteFileResponse(nodeAddr string, resp *proto.DeleteFileResponse) (err error) {
 	var (
-		vg *VolGroup
+		vg *DataPartition
 	)
 	if resp.Status == proto.TaskSuccess {
 		if vg, err = c.getVolGroupByVolID(resp.VolId); err != nil {

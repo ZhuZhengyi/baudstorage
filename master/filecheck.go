@@ -7,52 +7,52 @@ import (
 )
 
 /*check File: recover File,if File lack or timeOut report or crc bad*/
-func (vg *VolGroup) checkFile(isRecoverVolFlag bool, clusterID string) (tasks []*proto.AdminTask) {
+func (partition *DataPartition) checkFile(isRecoverVolFlag bool, clusterID string) (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
-	vg.Lock()
-	defer vg.Unlock()
-	liveVols := vg.getLiveVols(DefaultVolTimeOutSec)
+	partition.Lock()
+	defer partition.Unlock()
+	liveVols := partition.getLiveVols(DefaultVolTimeOutSec)
 	if len(liveVols) == 0 {
 		return
 	}
 
-	switch vg.VolType {
+	switch partition.PartitionType {
 	case ExtentVol:
-		vg.checkExtentFile(liveVols, isRecoverVolFlag, clusterID)
+		partition.checkExtentFile(liveVols, isRecoverVolFlag, clusterID)
 	case ChunkVol:
-		vg.checkChunkFile(liveVols, clusterID)
+		partition.checkChunkFile(liveVols, clusterID)
 	}
 
 	return
 }
 
-func (vg *VolGroup) checkChunkFile(liveVols []*Vol, clusterID string) (tasks []*proto.AdminTask) {
-	for _, fc := range vg.FileInCoreMap {
-		tasks = append(tasks, fc.generateFileCrcTask(vg.VolID, liveVols, ChunkVol, clusterID)...)
+func (partition *DataPartition) checkChunkFile(liveVols []*DataReplica, clusterID string) (tasks []*proto.AdminTask) {
+	for _, fc := range partition.FileInCoreMap {
+		tasks = append(tasks, fc.generateFileCrcTask(partition.PartitionID, liveVols, ChunkVol, clusterID)...)
 	}
 	return
 }
 
-func (vg *VolGroup) checkExtentFile(liveVols []*Vol, isRecoverVolFlag bool, clusterID string) (tasks []*proto.AdminTask) {
-	for _, fc := range vg.FileInCoreMap {
+func (partition *DataPartition) checkExtentFile(liveVols []*DataReplica, isRecoverVolFlag bool, clusterID string) (tasks []*proto.AdminTask) {
+	for _, fc := range partition.FileInCoreMap {
 		if fc.MarkDel == true {
-			tasks = append(tasks, fc.generatorDeleteFileTask(vg.VolID)...)
+			tasks = append(tasks, fc.generatorDeleteFileTask(partition.PartitionID)...)
 			continue
 		}
 		if isRecoverVolFlag == true {
-			tasks = append(tasks, fc.generatorLackFileTask(vg.VolID, liveVols)...)
+			tasks = append(tasks, fc.generatorLackFileTask(partition.PartitionID, liveVols)...)
 		} else {
 			if fc.isDelayCheck() {
-				tasks = append(tasks, fc.generatorLackFileTask(vg.VolID, liveVols)...)
+				tasks = append(tasks, fc.generatorLackFileTask(partition.PartitionID, liveVols)...)
 			}
-			tasks = append(tasks, fc.generateFileCrcTask(vg.VolID, liveVols, ExtentVol, clusterID)...)
+			tasks = append(tasks, fc.generateFileCrcTask(partition.PartitionID, liveVols, ExtentVol, clusterID)...)
 		}
 	}
 	return
 }
 
 /*if File on a node is delete by other  ,so need recover it */
-func (fc *FileInCore) generatorLackFileTask(volID uint64, liveVols []*Vol) (tasks []*proto.AdminTask) {
+func (fc *FileInCore) generatorLackFileTask(volID uint64, liveVols []*DataReplica) (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	for i := 0; i < len(liveVols); i++ {
 		lackLoc := liveVols[i]
@@ -79,7 +79,7 @@ func (fc *FileInCore) generatorLackFileTask(volID uint64, liveVols []*Vol) (task
 	return
 }
 
-func (fc *FileInCore) generatorLackFileLog(volID uint64, lackLoc *Vol, liveLocs []*Vol) (log string) {
+func (fc *FileInCore) generatorLackFileLog(volID uint64, lackLoc *DataReplica, liveLocs []*DataReplica) (log string) {
 	allNodeInfoAddrs := make([]string, 0)
 	allLiveLocsAddrs := make([]string, len(liveLocs))
 	for _, fm := range fc.Metas {
@@ -98,6 +98,6 @@ func (fc *FileInCore) generatorLackFileLog(volID uint64, lackLoc *Vol, liveLocs 
 	return
 }
 
-func (fc *FileInCore) generatorReplicateFileTask(volID uint64, badLoc *Vol, liveLocs []*Vol) (t *proto.AdminTask) {
+func (fc *FileInCore) generatorReplicateFileTask(volID uint64, badLoc *DataReplica, liveLocs []*DataReplica) (t *proto.AdminTask) {
 	return proto.NewAdminTask(proto.OpReplicateFile, badLoc.Addr, nil)
 }

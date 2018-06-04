@@ -153,7 +153,7 @@ func (m *Master) getMetaPartition(w http.ResponseWriter, r *http.Request) {
 		goto errDeal
 	}
 	if mp, ok = namespace.MetaPartitions[partitionID]; !ok {
-		err = MetaGroupNotFound
+		err = MetaPartitionNotFound
 		goto errDeal
 	}
 	if body, err = json.Marshal(mp); err != nil {

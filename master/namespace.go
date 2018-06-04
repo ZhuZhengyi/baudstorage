@@ -36,7 +36,7 @@ func (ns *NameSpace) AddMetaPartition(mp *MetaPartition) {
 	}
 }
 
-func (ns *NameSpace) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error) {
+func (ns *NameSpace) getVolGroupByVolID(volID uint64) (vol *DataPartition, err error) {
 	return ns.volGroups.getVol(volID)
 }
 

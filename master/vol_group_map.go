@@ -11,38 +11,38 @@ import (
 
 type VolGroupMap struct {
 	sync.RWMutex
-	volGroupMap        map[uint64]*VolGroup
+	volGroupMap        map[uint64]*DataPartition
 	volGroupCount      int
 	readWriteVolGroups int
 	lastCheckVolID     uint64
 	lastReleaseVolID   uint64
-	volGroups          []*VolGroup
+	volGroups          []*DataPartition
 	cacheVolResponse   []byte
 }
 
 func NewVolMap() (vm *VolGroupMap) {
 	vm = new(VolGroupMap)
-	vm.volGroupMap = make(map[uint64]*VolGroup, 0)
+	vm.volGroupMap = make(map[uint64]*DataPartition, 0)
 	vm.volGroupCount = 1
-	vm.volGroups = make([]*VolGroup, 0)
+	vm.volGroups = make([]*DataPartition, 0)
 
 	return
 }
 
-func (vm *VolGroupMap) getVol(volID uint64) (*VolGroup, error) {
+func (vm *VolGroupMap) getVol(volID uint64) (*DataPartition, error) {
 	vm.RLock()
 	defer vm.RUnlock()
 	if v, ok := vm.volGroupMap[volID]; ok {
 		return v, nil
 	}
-	log.LogError(fmt.Sprintf("action[getVol],VolId:%v,err:%v", volID, VolNotFound))
-	return nil, VolNotFound
+	log.LogError(fmt.Sprintf("action[getVol],VolId:%v,err:%v", volID, DataPartitionNotFound))
+	return nil, DataPartitionNotFound
 }
 
-func (vm *VolGroupMap) putVol(v *VolGroup) {
+func (vm *VolGroupMap) putVol(v *DataPartition) {
 	vm.Lock()
 	defer vm.Unlock()
-	vm.volGroupMap[v.VolID] = v
+	vm.volGroupMap[v.PartitionID] = v
 	vm.volGroups = append(vm.volGroups, v)
 }
 
@@ -54,15 +54,15 @@ func (vm *VolGroupMap) updateVolResponseCache(needUpdate bool, minVolID uint64) 
 		vrs := vm.GetVolsView(minVolID)
 		if len(vrs) == 0 {
 			log.LogError(fmt.Sprintf("action[updateVolResponseCache],minVolID:%v,err:%v",
-				minVolID, NoAvailVol))
-			return nil, NoAvailVol
+				minVolID, NoAvailDataPartition))
+			return nil, NoAvailDataPartition
 		}
 		cv := NewVolsView()
 		cv.Vols = vrs
 		if body, err = json.Marshal(cv); err != nil {
 			log.LogError(fmt.Sprintf("action[updateVolResponseCache],minVolID:%v,err:%v",
 				minVolID, err.Error()))
-			return nil, fmt.Errorf("%v,marshal err:%v", NoAvailVol, err.Error())
+			return nil, fmt.Errorf("%v,marshal err:%v", NoAvailDataPartition, err.Error())
 		}
 		vm.cacheVolResponse = body
 		return
@@ -77,7 +77,7 @@ func (vm *VolGroupMap) GetVolsView(minVolID uint64) (vrs []*VolResponse) {
 	vrs = make([]*VolResponse, 0)
 	log.LogDebugf("volGroupMapLen[%v],volGroupsLen[%v],minVolID[%v],volGroupMap[%v],volGroups[%v]", len(vm.volGroupMap), len(vm.volGroups), minVolID, vm.volGroupMap, vm.volGroups)
 	for _, vol := range vm.volGroupMap {
-		if vol.VolID <= minVolID {
+		if vol.PartitionID <= minVolID {
 			continue
 		}
 		vr := vol.convertToVolResponse()
@@ -87,8 +87,8 @@ func (vm *VolGroupMap) GetVolsView(minVolID uint64) (vrs []*VolResponse) {
 	return
 }
 
-func (vm *VolGroupMap) getNeedReleaseVolGroups(everyReleaseVolCount int, releaseVolAfterLoadVolSeconds int64) (needReleaseVolGroups []*VolGroup) {
-	needReleaseVolGroups = make([]*VolGroup, 0)
+func (vm *VolGroupMap) getNeedReleaseVolGroups(everyReleaseVolCount int, releaseVolAfterLoadVolSeconds int64) (needReleaseVolGroups []*DataPartition) {
+	needReleaseVolGroups = make([]*DataPartition, 0)
 	vm.RLock()
 	defer vm.RUnlock()
 
@@ -106,7 +106,7 @@ func (vm *VolGroupMap) getNeedReleaseVolGroups(everyReleaseVolCount int, release
 	return
 }
 
-func (vm *VolGroupMap) releaseVolGroups(needReleaseVols []*VolGroup) {
+func (vm *VolGroupMap) releaseVolGroups(needReleaseVols []*DataPartition) {
 	defer func() {
 		if err := recover(); err != nil {
 			const size = RuntimeStackBufSize
@@ -118,7 +118,7 @@ func (vm *VolGroupMap) releaseVolGroups(needReleaseVols []*VolGroup) {
 	var wg sync.WaitGroup
 	for _, vg := range needReleaseVols {
 		wg.Add(1)
-		go func(vg *VolGroup) {
+		go func(vg *DataPartition) {
 			vg.ReleaseVol()
 			wg.Done()
 		}(vg)
@@ -127,8 +127,8 @@ func (vm *VolGroupMap) releaseVolGroups(needReleaseVols []*VolGroup) {
 
 }
 
-func (vm *VolGroupMap) getNeedCheckVolGroups(everyLoadVolCount int, loadVolFrequencyTime int64) (needCheckVols []*VolGroup) {
-	needCheckVols = make([]*VolGroup, 0)
+func (vm *VolGroupMap) getNeedCheckVolGroups(everyLoadVolCount int, loadVolFrequencyTime int64) (needCheckVols []*DataPartition) {
+	needCheckVols = make([]*DataPartition, 0)
 	vm.RLock()
 	defer vm.RUnlock()
 

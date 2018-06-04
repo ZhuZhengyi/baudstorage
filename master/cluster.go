@@ -187,7 +187,7 @@ errDeal:
 	return err
 }
 
-func (c *Cluster) getVolGroupByVolID(volID uint64) (vol *VolGroup, err error) {
+func (c *Cluster) getVolGroupByVolID(volID uint64) (vol *DataPartition, err error) {
 	for _, ns := range c.namespaces {
 		if vol, err = ns.getVolGroupByVolID(volID); err == nil {
 			return
@@ -213,7 +213,7 @@ func (c *Cluster) getNamespace(nsName string) (ns *NameSpace, err error) {
 	return
 }
 
-func (c *Cluster) createVolGroup(nsName, volType string) (vg *VolGroup, err error) {
+func (c *Cluster) createVolGroup(nsName, volType string) (vg *DataPartition, err error) {
 	var (
 		ns          *NameSpace
 		volID       uint64
@@ -232,12 +232,12 @@ func (c *Cluster) createVolGroup(nsName, volType string) (vg *VolGroup, err erro
 	if volID, err = c.idAlloc.allocatorVolID(); err != nil {
 		goto errDeal
 	}
-	vg = newVolGroup(volID, ns.volReplicaNum, volType)
+	vg = newDataPartition(volID, ns.volReplicaNum, volType)
 	vg.PersistenceHosts = targetHosts
 	if err = c.syncAddVolGroup(nsName, vg); err != nil {
 		goto errDeal
 	}
-	tasks = vg.generateCreateVolGroupTasks()
+	tasks = vg.generateCreateDataPartitionTasks()
 	c.putDataNodeTasks(tasks)
 	ns.volGroups.putVol(vg)
 
@@ -272,7 +272,7 @@ func (c *Cluster) ChooseTargetDataHosts(replicaNum int) (hosts []string, err err
 	}
 	hosts = append(hosts, slaveAddrs...)
 	if len(hosts) != replicaNum {
-		return nil, NoAnyDataNodeForCreateVol
+		return nil, NoAnyDataNodeForCreateDataPartition
 	}
 	return
 }
@@ -309,7 +309,7 @@ func (c *Cluster) dataNodeOffLine(dataNode *DataNode) {
 
 }
 
-func (c *Cluster) volOffline(offlineAddr, nsName string, vg *VolGroup, errMsg string) {
+func (c *Cluster) volOffline(offlineAddr, nsName string, vg *DataPartition, errMsg string) {
 	var (
 		newHosts []string
 		newAddr  string
@@ -348,8 +348,8 @@ func (c *Cluster) volOffline(offlineAddr, nsName string, vg *VolGroup, errMsg st
 	}
 	vg.volOffLineInMem(offlineAddr)
 	vg.checkAndRemoveMissVol(offlineAddr)
-	task = proto.NewAdminTask(proto.OpCreateVol, offlineAddr, newCreateVolRequest(vg.VolType, vg.VolID))
-	task.ID = fmt.Sprintf("%v_volID[%v]", task.ID, vg.VolID)
+	task = proto.NewAdminTask(proto.OpCreateVol, offlineAddr, newCreateVolRequest(vg.PartitionType, vg.PartitionID))
+	task.ID = fmt.Sprintf("%v_volID[%v]", task.ID, vg.PartitionID)
 	tasks = make([]*proto.AdminTask, 0)
 	tasks = append(tasks, task)
 	c.putDataNodeTasks(tasks)
@@ -357,7 +357,7 @@ func (c *Cluster) volOffline(offlineAddr, nsName string, vg *VolGroup, errMsg st
 errDeal:
 	msg = fmt.Sprintf(errMsg+" vol:%v  on Node:%v  "+
 		"DiskError  TimeOut Report Then Fix It on newHost:%v   Err:%v , PersistenceHosts:%v  ",
-		vg.VolID, offlineAddr, newAddr, err, vg.PersistenceHosts)
+		vg.PartitionID, offlineAddr, newAddr, err, vg.PersistenceHosts)
 	if err != nil {
 		Warn(c.Name, msg)
 	}
@@ -461,7 +461,7 @@ func (c *Cluster) ChooseTargetMetaHosts(replicaNum int) (hosts []string, peers [
 	hosts = append(hosts, slaveAddrs...)
 	peers = append(peers, slavePeers...)
 	if len(hosts) != replicaNum {
-		return nil, nil, NoAnyMetaNodeForCreateVol
+		return nil, nil, NoAnyMetaNodeForCreateMetaPartition
 	}
 	return
 }

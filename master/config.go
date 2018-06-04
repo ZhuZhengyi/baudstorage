@@ -36,6 +36,8 @@ const (
 	DefaultLoadVolFrequencyTime                  = 60 * 60
 	DefaultEveryLoadVolCount                     = 10
 	DefaultMetaPartitionTimeOutSec               = 5 * DefaultCheckHeartbeatIntervalSeconds
+	DefaultMetaPartitionMissSec                  = 3600
+	DefaultMetaPartitionWarnInterval             = 10 * 60
 	DefaultMetaPartitionThreshold        float32 = 0.75
 )
 

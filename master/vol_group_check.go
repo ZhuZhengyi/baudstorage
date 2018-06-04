@@ -6,27 +6,27 @@ import (
 	"time"
 )
 
-func (vg *VolGroup) checkStatus(needLog bool, volTimeOutSec int64) {
-	vg.Lock()
-	defer vg.Unlock()
-	liveVolLocs := vg.getLiveVolsByPersistenceHosts(volTimeOutSec)
+func (partition *DataPartition) checkStatus(needLog bool, volTimeOutSec int64) {
+	partition.Lock()
+	defer partition.Unlock()
+	liveVolLocs := partition.getLiveVolsByPersistenceHosts(volTimeOutSec)
 	switch len(liveVolLocs) {
-	case (int)(vg.ReplicaNum):
-		vg.Status = VolReadOnly
-		if vg.checkVolLocStatusOnLiveNode(liveVolLocs) == true {
-			vg.Status = VolReadWrite
+	case (int)(partition.ReplicaNum):
+		partition.Status = VolReadOnly
+		if partition.checkVolLocStatusOnLiveNode(liveVolLocs) == true {
+			partition.Status = VolReadWrite
 		}
 	default:
-		vg.Status = VolReadOnly
+		partition.Status = VolReadOnly
 	}
 	if needLog == true {
 		msg := fmt.Sprintf("action[checkStatus],volID:%v  goal:%v  liveLocation:%v   VolStatus:%v  RocksDBHost:%v ",
-			vg.VolID, vg.ReplicaNum, len(liveVolLocs), vg.Status, vg.PersistenceHosts)
+			partition.PartitionID, partition.ReplicaNum, len(liveVolLocs), partition.Status, partition.PersistenceHosts)
 		log.LogInfo(msg)
 	}
 }
 
-func (vg *VolGroup) checkVolLocStatusOnLiveNode(liveLocs []*Vol) (volEqual bool) {
+func (partition *DataPartition) checkVolLocStatusOnLiveNode(liveLocs []*DataReplica) (volEqual bool) {
 	for _, volLoc := range liveLocs {
 		if volLoc.Status != VolReadWrite {
 			return
@@ -36,20 +36,20 @@ func (vg *VolGroup) checkVolLocStatusOnLiveNode(liveLocs []*Vol) (volEqual bool)
 	return true
 }
 
-func (vg *VolGroup) checkLocationStatus(volTimeOutSec int64) {
-	vg.Lock()
-	defer vg.Unlock()
-	for _, volLoc := range vg.Locations {
+func (partition *DataPartition) checkLocationStatus(volTimeOutSec int64) {
+	partition.Lock()
+	defer partition.Unlock()
+	for _, volLoc := range partition.Locations {
 		volLoc.IsLive(volTimeOutSec)
 	}
 
 }
 
-func (vg *VolGroup) checkVolGroupMiss(volMissSec, volWarnInterval int64) {
-	vg.Lock()
-	defer vg.Unlock()
-	for _, volLoc := range vg.Locations {
-		if _, ok := vg.IsInVolLocs(volLoc.Addr); ok && volLoc.CheckVolMiss(volMissSec) == true && vg.needWarnMissVol(volLoc.Addr, volWarnInterval) {
+func (partition *DataPartition) checkVolGroupMiss(clusterID string, volMissSec, volWarnInterval int64) {
+	partition.Lock()
+	defer partition.Unlock()
+	for _, volLoc := range partition.Locations {
+		if partition.isInPersistenceHosts(volLoc.Addr) && volLoc.CheckMiss(volMissSec) == true && partition.needWarnMissVol(volLoc.Addr, volWarnInterval) {
 			dataNode := volLoc.GetVolLocationNode()
 			var (
 				lastReportTime time.Time
@@ -60,38 +60,38 @@ func (vg *VolGroup) checkVolGroupMiss(volMissSec, volWarnInterval int64) {
 				isActive = dataNode.isActive
 			}
 			msg := fmt.Sprintf("action[checkVolMissErr], vol:%v  on Node:%v  "+
-				"miss time > :%v  vlocLastRepostTime:%v   dnodeLastReportTime:%v  nodeisActive:%v So Migrate", vg.VolID,
+				"miss time > :%v  vlocLastRepostTime:%v   dnodeLastReportTime:%v  nodeisActive:%v So Migrate", partition.PartitionID,
 				volLoc.Addr, volMissSec, volLoc.ReportTime, lastReportTime, isActive)
-			log.LogError(msg)
+			Warn(clusterID, msg)
 		}
 	}
 
-	for _, addr := range vg.PersistenceHosts {
-		if vg.missVol(addr) == true && vg.needWarnMissVol(addr, volWarnInterval) {
+	for _, addr := range partition.PersistenceHosts {
+		if partition.missVol(addr) == true && partition.needWarnMissVol(addr, volWarnInterval) {
 			msg := fmt.Sprintf("action[checkVolMissErr], vol:%v  on Node:%v  "+
-				"miss time  > :%v  but server not exsit So Migrate", vg.VolID, addr, volMissSec)
-			log.LogError(msg)
+				"miss time  > :%v  but server not exsit So Migrate", partition.PartitionID, addr, volMissSec)
+			Warn(clusterID, msg)
 		}
 	}
 }
 
-func (vg *VolGroup) needWarnMissVol(addr string, volWarnInterval int64) (isWarn bool) {
-	warnTime, ok := vg.MissNodes[addr]
+func (partition *DataPartition) needWarnMissVol(addr string, volWarnInterval int64) (isWarn bool) {
+	warnTime, ok := partition.MissNodes[addr]
 	if !ok {
-		vg.MissNodes[addr] = time.Now().Unix()
+		partition.MissNodes[addr] = time.Now().Unix()
 		isWarn = true
 	} else {
 		if time.Now().Unix()-warnTime > volWarnInterval {
 			isWarn = true
-			vg.MissNodes[addr] = time.Now().Unix()
+			partition.MissNodes[addr] = time.Now().Unix()
 		}
 	}
 
 	return
 }
 
-func (vg *VolGroup) missVol(addr string) (isMiss bool) {
-	_, addrIsInLocs := vg.IsInVolLocs(addr)
+func (partition *DataPartition) missVol(addr string) (isMiss bool) {
+	_, addrIsInLocs := partition.IsInVolLocs(addr)
 
 	if addrIsInLocs == false {
 		isMiss = true
@@ -100,11 +100,11 @@ func (vg *VolGroup) missVol(addr string) (isMiss bool) {
 	return
 }
 
-func (vg *VolGroup) checkVolDiskError() (volDiskErrorAddrs []string) {
+func (partition *DataPartition) checkVolDiskError() (volDiskErrorAddrs []string) {
 	volDiskErrorAddrs = make([]string, 0)
-	vg.Lock()
-	for _, addr := range vg.PersistenceHosts {
-		volLoc, ok := vg.IsInVolLocs(addr)
+	partition.Lock()
+	for _, addr := range partition.PersistenceHosts {
+		volLoc, ok := partition.IsInVolLocs(addr)
 		if !ok {
 			continue
 		}
@@ -113,13 +113,13 @@ func (vg *VolGroup) checkVolDiskError() (volDiskErrorAddrs []string) {
 		}
 	}
 
-	if len(volDiskErrorAddrs) != (int)(vg.ReplicaNum) && len(volDiskErrorAddrs) > 0 {
-		vg.Status = VolReadOnly
+	if len(volDiskErrorAddrs) != (int)(partition.ReplicaNum) && len(volDiskErrorAddrs) > 0 {
+		partition.Status = VolReadOnly
 	}
-	vg.Unlock()
+	partition.Unlock()
 
 	for _, diskAddr := range volDiskErrorAddrs {
-		msg := fmt.Sprintf("action[%v],vol:%v  On :%v  Disk Error,So Remove it From RocksDBHost", CheckVolDiskErrorErr, vg.VolID, diskAddr)
+		msg := fmt.Sprintf("action[%v],vol:%v  On :%v  Disk Error,So Remove it From RocksDBHost", CheckVolDiskErrorErr, partition.PartitionID, diskAddr)
 		log.LogError(msg)
 	}
 

@@ -52,7 +52,7 @@ func NewFileInCore(name string) (fc *FileInCore) {
 
 /*use a File and volLocation update FileInCore,
 range all FileInCore.NodeInfos,update crc and reportTime*/
-func (fc *FileInCore) updateFileInCore(volID uint64, vf *proto.File, volLoc *Vol, volLocIndex int) {
+func (fc *FileInCore) updateFileInCore(volID uint64, vf *proto.File, volLoc *DataReplica, volLocIndex int) {
 	if vf.MarkDel == true {
 		fc.MarkDel = true
 	}
@@ -93,7 +93,7 @@ func (fc *FileInCore) generatorDeleteFileTask(volID uint64) (tasks []*proto.Admi
 }
 
 /*delete File nodeInfo on location*/
-func (fc *FileInCore) deleteFileInNode(volID uint64, loc *Vol) {
+func (fc *FileInCore) deleteFileInNode(volID uint64, loc *DataReplica) {
 	for i := 0; i < len(fc.Metas); i++ {
 		fm := fc.Metas[i]
 		if fm.LocAddr == loc.Addr {
@@ -106,8 +106,8 @@ func (fc *FileInCore) deleteFileInNode(volID uint64, loc *Vol) {
 }
 
 /*get volFile replication source exclude badLoc*/
-func (fc *FileInCore) getLiveLocExcludeBadLoc(volLocs []*Vol, badLoc *Vol) (loc *Vol, err error) {
-	err = VolPersistedNotAnyReplicates
+func (fc *FileInCore) getLiveLocExcludeBadLoc(volLocs []*DataReplica, badLoc *DataReplica) (loc *DataReplica, err error) {
+	err = DataPartitionPersistedNotAnyReplicas
 
 	if len(volLocs) < 0 {
 		return
@@ -118,17 +118,17 @@ func (fc *FileInCore) getLiveLocExcludeBadLoc(volLocs []*Vol, badLoc *Vol) (loc 
 	return
 }
 
-func (fc *FileInCore) randSelectReplicateSource(volLocs []*Vol, badLoc *Vol) (loc *Vol, err error) {
+func (fc *FileInCore) randSelectReplicateSource(volLocs []*DataReplica, badLoc *DataReplica) (loc *DataReplica, err error) {
 	index := rand.Intn(len(volLocs))
 	loc = volLocs[index]
 	if loc.Addr != badLoc.Addr && fc.locIsInNodeInfos(loc) == true {
 		return
 	}
 
-	return nil, VolPersistedNotAnyReplicates
+	return nil, DataPartitionPersistedNotAnyReplicas
 }
 
-func (fc *FileInCore) orderSelectReplicateSource(volLocs []*Vol, badLoc *Vol) (loc *Vol, err error) {
+func (fc *FileInCore) orderSelectReplicateSource(volLocs []*DataReplica, badLoc *DataReplica) (loc *DataReplica, err error) {
 	for i := 0; i < len(volLocs); i++ {
 		loc = volLocs[i]
 		if loc.Addr != badLoc.Addr && fc.locIsInNodeInfos(loc) == true {
@@ -136,10 +136,10 @@ func (fc *FileInCore) orderSelectReplicateSource(volLocs []*Vol, badLoc *Vol) (l
 		}
 	}
 
-	return nil, VolPersistedNotAnyReplicates
+	return nil, DataPartitionPersistedNotAnyReplicas
 }
 
-func (fc *FileInCore) locIsInNodeInfos(loc *Vol) (ok bool) {
+func (fc *FileInCore) locIsInNodeInfos(loc *DataReplica) (ok bool) {
 	for i := 0; i < len(fc.Metas); i++ {
 		if fc.Metas[i].LocAddr == loc.Addr {
 			return true
@@ -149,7 +149,7 @@ func (fc *FileInCore) locIsInNodeInfos(loc *Vol) (ok bool) {
 	return
 }
 
-func (fc *FileInCore) getFileMetaByVolAddr(vol *Vol) (fm *FileMetaOnNode, ok bool) {
+func (fc *FileInCore) getFileMetaByVolAddr(vol *DataReplica) (fm *FileMetaOnNode, ok bool) {
 	for i := 0; i < len(fc.Metas); i++ {
 		fm = fc.Metas[i]
 		if fm.LocAddr == vol.Addr {

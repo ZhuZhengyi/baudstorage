@@ -49,10 +49,10 @@ func NewMembersFiles() (mf *MembersFileMetas) {
 
 func (v *Vol) extentsRepair() {
 	startTime := time.Now().UnixNano()
-	log.LogDebugf("action[Vol.extentsRepair] extents repair start.")
+	log.LogDebugf("action[DataReplica.extentsRepair] extents repair start.")
 	allMembers, err := v.getAllMemberFileMetas()
 	if err != nil {
-		log.LogErrorf("action[Vol.extentsRepair] %v.", errors.ErrorStack(err))
+		log.LogErrorf("action[DataReplica.extentsRepair] %v.", errors.ErrorStack(err))
 		return
 	}
 	v.generatorExtentsRepairTasks(allMembers)
@@ -64,7 +64,7 @@ func (v *Vol) extentsRepair() {
 		v.server.streamRepairExtent(fixExtentFile, v)
 	}
 	finishTime := time.Now().UnixNano()
-	log.LogDebugf("action[Vol.extentsRepair] extents repair finish cost %vms.",
+	log.LogDebugf("action[DataReplica.extentsRepair] extents repair finish cost %vms.",
 		(finishTime - startTime) / int64(time.Millisecond))
 }
 

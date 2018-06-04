@@ -173,6 +173,13 @@ func (sender *AdminTaskSender) PutTask(t *proto.AdminTask) {
 	}
 }
 
+func (sender *AdminTaskSender) IsExist(t *proto.AdminTask) ( bool){
+	sender.Lock()
+	defer sender.Unlock()
+	_, ok := sender.TaskMap[t.ID]
+	return ok
+}
+
 func (sender *AdminTaskSender) getNeedDealTask() (tasks []*proto.AdminTask) {
 	sender.Lock()
 	defer sender.Unlock()

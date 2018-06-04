@@ -207,7 +207,7 @@ func (mp *MetaPartition) deleteExcessReplication() (excessAddr string, t *proto.
 	for _, mr := range mp.Replicas {
 		if !contains(mp.PersistenceHosts, mr.Addr) {
 			t = mr.generateDeleteReplicaTask(mp.PartitionID)
-			err = MetaPartitionReplicationExcessError
+			err = MetaReplicaExcessError
 			break
 		}
 	}
@@ -300,9 +300,61 @@ func (mp *MetaPartition) updateInfoToStore(newHosts []string, newPeers []proto.P
 	return
 }
 
+func (mp *MetaPartition) getLiveAddrs() (liveAddrs []string) {
+	liveAddrs = make([]string, 0)
+	for _, mr := range mp.Replicas {
+		if mr.isActive() {
+			liveAddrs = append(liveAddrs, mr.Addr)
+		}
+	}
+	return liveAddrs
+}
 
-func (mp *MetaPartition) checkReplicaMiss(){
+func (mp *MetaPartition) missedReplica(addr string) bool {
+	return !contains(mp.getLiveAddrs(), addr)
+}
 
+func (mp *MetaPartition) needWarnMissReplica(addr string, warnInterval int64) (isWarn bool) {
+	lastWarnTime, ok := mp.MissNodes[addr]
+	if !ok {
+		isWarn = true
+		mp.MissNodes[addr] = time.Now().Unix()
+	} else if (time.Now().Unix() - lastWarnTime) > warnInterval {
+		isWarn = true
+		mp.MissNodes[addr] = time.Now().Unix()
+	}
+	return false
+}
+
+func (mp *MetaPartition) checkReplicaMiss(clusterID string, volMissSec, warnInterval int64) {
+	mp.Lock()
+	defer mp.Unlock()
+	//has report
+	for _, replica := range mp.Replicas {
+		if contains(mp.PersistenceHosts, replica.Addr) && replica.isMissed() == true && mp.needWarnMissReplica(replica.Addr, warnInterval) {
+			metaNode := replica.metaNode
+			var (
+				lastReportTime time.Time
+			)
+			isActive := true
+			if metaNode != nil {
+				lastReportTime = metaNode.ReportTime
+				isActive = metaNode.IsActive
+			}
+			msg := fmt.Sprintf("action[checkReplicaMiss], partition:%v  on Node:%v  "+
+				"miss time > :%v  vlocLastRepostTime:%v   dnodeLastReportTime:%v  nodeisActive:%v So Migrate", mp.PartitionID,
+				replica.Addr, volMissSec, replica.ReportTime, lastReportTime, isActive)
+			Warn(clusterID, msg)
+		}
+	}
+	// never report
+	for _, addr := range mp.PersistenceHosts {
+		if mp.missedReplica(addr) && mp.needWarnMissReplica(addr, warnInterval) {
+			msg := fmt.Sprintf("action[checkReplicaMiss], partition:%v  on Node:%v  "+
+				"miss time  > :%v  but server not exsit So Migrate", mp.PartitionID, addr, DefaultMetaPartitionTimeOutSec)
+			Warn(clusterID, msg)
+		}
+	}
 }
 
 func (mp *MetaPartition) generateReplicaTask(nsName string) (tasks []*proto.AdminTask) {

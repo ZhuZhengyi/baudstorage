@@ -51,7 +51,7 @@ func (fileCrcArr FileCrcSorterByCount) log() (msg string) {
 	return
 }
 
-func (fc *FileInCore) generateFileCrcTask(volID uint64, liveVols []*Vol, volType, clusterID string) (tasks []*proto.AdminTask) {
+func (fc *FileInCore) generateFileCrcTask(volID uint64, liveVols []*DataReplica, volType, clusterID string) (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	if fc.isCheckCrc() == false {
 		return
@@ -101,7 +101,7 @@ func (fc *FileInCore) isDelayCheck() bool {
 	return time.Now().Unix()-fc.LastModify > DefaultFileDelayCheckLackSec
 }
 
-func (fc *FileInCore) needCrcRepair(liveVols []*Vol, volType string) (fms []*FileMetaOnNode, needRepair bool) {
+func (fc *FileInCore) needCrcRepair(liveVols []*DataReplica, volType string) (fms []*FileMetaOnNode, needRepair bool) {
 	var baseCrc uint32
 	fms = make([]*FileMetaOnNode, 0)
 

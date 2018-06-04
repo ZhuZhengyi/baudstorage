@@ -62,7 +62,7 @@ func NewVol(volId uint32, volMode, name, diskPath string, storeMode bool, storeS
 	case proto.TinyVol:
 		v.store, err = storage.NewTinyStore(v.path, storeSize, storeMode)
 	default:
-		return nil, fmt.Errorf("NewVol[%v] WrongVolMode[%v]", volId, volMode)
+		return nil, fmt.Errorf("NewDataReplica[%v] WrongVolMode[%v]", volId, volMode)
 	}
 	go v.checkExtent()
 	return

@@ -63,12 +63,12 @@ type VolGroupValue struct {
 	VolType    string
 }
 
-func newVolGroupValue(vg *VolGroup) (vgv *VolGroupValue) {
+func newVolGroupValue(vg *DataPartition) (vgv *VolGroupValue) {
 	vgv = &VolGroupValue{
-		VolID:      vg.VolID,
+		VolID:      vg.PartitionID,
 		ReplicaNum: vg.ReplicaNum,
 		Hosts:      vg.VolHostsToString(),
-		VolType:    vg.VolType,
+		VolType:    vg.PartitionType,
 	}
 	return
 }
@@ -88,18 +88,18 @@ func (m *Metadata) Unmarshal(data []byte) (err error) {
 }
 
 //key=#vg#nsName#volID,value=json.Marshal(VolGroupValue)
-func (c *Cluster) syncAddVolGroup(nsName string, vg *VolGroup) (err error) {
+func (c *Cluster) syncAddVolGroup(nsName string, vg *DataPartition) (err error) {
 	return c.putVolGroupInfo(OpSyncAddVolGroup, nsName, vg)
 }
 
-func (c *Cluster) syncUpdateVolGroup(nsName string, vg *VolGroup) (err error) {
+func (c *Cluster) syncUpdateVolGroup(nsName string, vg *DataPartition) (err error) {
 	return c.putVolGroupInfo(OpSyncUpdateVolGroup, nsName, vg)
 }
 
-func (c *Cluster) putVolGroupInfo(opType uint32, nsName string, vg *VolGroup) (err error) {
+func (c *Cluster) putVolGroupInfo(opType uint32, nsName string, vg *DataPartition) (err error) {
 	metadata := new(Metadata)
 	metadata.Op = opType
-	metadata.K = VolGroupPrefix + nsName + KeySeparator + strconv.FormatUint(vg.VolID, 10)
+	metadata.K = VolGroupPrefix + nsName + KeySeparator + strconv.FormatUint(vg.PartitionID, 10)
 	vgv := newVolGroupValue(vg)
 	metadata.V, err = json.Marshal(vgv)
 	if err != nil {
@@ -255,7 +255,7 @@ func (c *Cluster) applyAddVolGroup(cmd *Metadata) {
 	if keys[1] == VolGroupAcronym {
 		vgv := &VolGroupValue{}
 		json.Unmarshal(cmd.V, vgv)
-		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum, vgv.VolType)
+		vg := newDataPartition(vgv.VolID, vgv.ReplicaNum, vgv.VolType)
 		ns, _ := c.getNamespace(keys[2])
 		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
 		ns.volGroups.putVol(vg)
@@ -417,7 +417,7 @@ func (c *Cluster) loadVolGroups() (err error) {
 			err = fmt.Errorf("action[decodeVolValue],value:%v,err:%v", encodedValue.Data(), err)
 			return err
 		}
-		vg := newVolGroup(vgv.VolID, vgv.ReplicaNum, vgv.VolType)
+		vg := newDataPartition(vgv.VolID, vgv.ReplicaNum, vgv.VolType)
 		vg.PersistenceHosts = strings.Split(vgv.Hosts, UnderlineSeparator)
 		ns.volGroups.putVol(vg)
 		encodedKey.Free()
