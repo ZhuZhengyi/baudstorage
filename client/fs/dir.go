@@ -1,8 +1,6 @@
 package fs
 
 import (
-	"time"
-
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"golang.org/x/net/context"
@@ -13,6 +11,7 @@ import (
 type Dir struct {
 	super *Super
 	inode *Inode
+	dents map[string]uint64
 }
 
 //functions that Dir needs to implement
@@ -31,7 +30,11 @@ var (
 )
 
 func NewDir(s *Super, i *Inode) *Dir {
-	return &Dir{super: s, inode: i}
+	return &Dir{
+		super: s,
+		inode: i,
+		dents: make(map[string]uint64),
+	}
 }
 
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
@@ -105,16 +108,22 @@ func (d *Dir) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
 }
 
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
+	var (
+		ino  uint64
+		mode uint32
+		err  error
+	)
+
 	log.LogDebugf("Dir Lookup: parent(%v) name(%v)", d.inode.ino, req.Name)
 
-	start := time.Now()
-	ino, mode, err := d.super.mw.Lookup_ll(d.inode.ino, req.Name)
-	if err != nil {
-		log.LogErrorf("Dir Lookup: parent(%v) name(%v) err(%v)", d.inode.ino, req.Name, err.Error())
-		return nil, ParseError(err)
+	ino, ok := d.dents[req.Name]
+	if !ok {
+		ino, mode, err = d.super.mw.Lookup_ll(d.inode.ino, req.Name)
+		if err != nil {
+			log.LogErrorf("Dir Lookup: parent(%v) name(%v) err(%v)", d.inode.ino, req.Name, err.Error())
+			return nil, ParseError(err)
+		}
 	}
-	elapsed := time.Since(start)
-	log.LogDebugf("Lookup cost (%v)ns", elapsed.Nanoseconds())
 
 	inode, err := d.super.InodeGet(ino)
 	if err != nil {
@@ -122,6 +131,7 @@ func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 		return nil, ParseError(err)
 	}
 	inode.fillAttr(&resp.Attr)
+	mode = inode.mode
 
 	var child fs.Node
 	if mode == ModeDir {
@@ -152,6 +162,7 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 			Name:  child.Name,
 		}
 		dirents = append(dirents, dentry)
+		d.dents[child.Name] = child.Inode
 	}
 	return dirents, nil
 }
