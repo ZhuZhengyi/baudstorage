@@ -105,7 +105,7 @@ func (space *SpaceManager) getMinPartitionCntDisk() (d *Disk) {
 func (space *SpaceManager) getDataPartition(partitionId uint32) (dp *DataPartition) {
 	space.dataPartitionLock.RLock()
 	defer space.dataPartitionLock.RUnlock()
-	v = space.partitions[partitionId]
+	dp = space.partitions[partitionId]
 
 	return
 }

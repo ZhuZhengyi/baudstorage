@@ -39,7 +39,7 @@ type DataPartition struct {
 
 type DataPartitionMembers struct {
 	PartitionId     uint64
-	PartitionStatus uint8
+	PartitionStatus int8
 	ReplicaNum      uint8
 	PartitionType   string
 	Hosts           []string
