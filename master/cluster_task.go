@@ -437,15 +437,15 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 
 	switch task.OpCode {
 	case proto.OpCreateDataPartion:
-		response := task.Response.(*proto.CreateDataPartionResponse)
+		response := task.Response.(*proto.CreateDataPartitionResponse)
 		taskStatus = response.Status
 		err = c.dealCreateVolResponse(task, response)
 	case proto.OpDeleteDataPartion:
-		response := task.Response.(*proto.DeleteDataPartionResponse)
+		response := task.Response.(*proto.DeleteDataPartitionResponse)
 		taskStatus = response.Status
 		err = c.dealDeleteVolResponse(task.OperatorAddr, response)
 	case proto.OpLoadDataPartion:
-		response := task.Response.(*proto.LoadDataPartionResponse)
+		response := task.Response.(*proto.LoadDataPartitionResponse)
 		taskStatus = response.Status
 		err = c.dealLoadVolResponse(task.OperatorAddr, response)
 	case proto.OpDeleteFile:
@@ -472,7 +472,7 @@ errDeal:
 	return
 }
 
-func (c *Cluster) dealCreateVolResponse(t *proto.AdminTask, resp *proto.CreateDataPartionResponse) (err error) {
+func (c *Cluster) dealCreateVolResponse(t *proto.AdminTask, resp *proto.CreateDataPartitionResponse) (err error) {
 	if resp.Status == proto.TaskSuccess {
 		c.createVolSuccessTriggerOperator(t.OperatorAddr, resp)
 	} else if resp.Status == proto.TaskFail {
@@ -482,14 +482,14 @@ func (c *Cluster) dealCreateVolResponse(t *proto.AdminTask, resp *proto.CreateDa
 	return
 }
 
-func (c *Cluster) createVolSuccessTriggerOperator(nodeAddr string, resp *proto.CreateDataPartionResponse) (err error) {
+func (c *Cluster) createVolSuccessTriggerOperator(nodeAddr string, resp *proto.CreateDataPartitionResponse) (err error) {
 	var (
 		dataNode *DataNode
 		vg       *DataPartition
 		vol      *DataReplica
 	)
 
-	if vg, err = c.getVolGroupByVolID(resp.PartionId); err != nil {
+	if vg, err = c.getVolGroupByVolID(resp.PartitionId); err != nil {
 		goto errDeal
 	}
 
@@ -509,19 +509,19 @@ errDeal:
 	return
 }
 
-func (c *Cluster) createVolFailTriggerOperator(t *proto.AdminTask, resp *proto.CreateDataPartionResponse) (err error) {
+func (c *Cluster) createVolFailTriggerOperator(t *proto.AdminTask, resp *proto.CreateDataPartitionResponse) (err error) {
 	msg := fmt.Sprintf("action[createVolFailTriggerOperator],taskID:%v, vol:%v on :%v  "+
-		"Fail And TrigerChangeOpAddr Fail:%v ", t.ID, resp.PartionId, t.OperatorAddr, err)
+		"Fail And TrigerChangeOpAddr Fail:%v ", t.ID, resp.PartitionId, t.OperatorAddr, err)
 	log.LogWarn(msg)
 	return
 }
 
-func (c *Cluster) dealDeleteVolResponse(nodeAddr string, resp *proto.DeleteDataPartionResponse) (err error) {
+func (c *Cluster) dealDeleteVolResponse(nodeAddr string, resp *proto.DeleteDataPartitionResponse) (err error) {
 	var (
 		vg *DataPartition
 	)
 	if resp.Status == proto.TaskSuccess {
-		if vg, err = c.getVolGroupByVolID(resp.PartionId); err != nil {
+		if vg, err = c.getVolGroupByVolID(resp.PartitionId); err != nil {
 			return
 		}
 		vg.Lock()
@@ -534,10 +534,10 @@ func (c *Cluster) dealDeleteVolResponse(nodeAddr string, resp *proto.DeleteDataP
 	return
 }
 
-func (c *Cluster) dealLoadVolResponse(nodeAddr string, resp *proto.LoadDataPartionResponse) (err error) {
+func (c *Cluster) dealLoadVolResponse(nodeAddr string, resp *proto.LoadDataPartitionResponse) (err error) {
 	var dataNode *DataNode
-	vg, err := c.getVolGroupByVolID(resp.PartionId)
-	if err != nil || resp.Status == proto.TaskFail || resp.PartionSnapshot == nil {
+	vg, err := c.getVolGroupByVolID(resp.PartitionId)
+	if err != nil || resp.Status == proto.TaskFail || resp.PartitionSnapshot == nil {
 		return
 	}
 	if dataNode, err = c.getDataNode(nodeAddr); err != nil {
@@ -598,7 +598,7 @@ func (c *Cluster) UpdateDataNode(dataNode *DataNode) {
 		if vr == nil {
 			continue
 		}
-		if vol, err := c.getVolGroupByVolID(vr.PartionID); err == nil {
+		if vol, err := c.getVolGroupByVolID(vr.PartitionID); err == nil {
 			vol.UpdateVol(vr, dataNode)
 		}
 	}

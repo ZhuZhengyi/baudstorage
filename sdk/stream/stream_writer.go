@@ -33,7 +33,7 @@ type StreamWriter struct {
 	wrapper          *data.DataPartionWrapper
 	currentWriter    *ExtentWriter //current ExtentWriter
 	errCount         int           //error count
-	currentPartionId uint32        //current PartionId
+	currentPartionId uint32        //current PartitionId
 	currentExtentId  uint64        //current FileIdId
 	currentInode     uint64        //inode
 	flushLock        sync.Mutex

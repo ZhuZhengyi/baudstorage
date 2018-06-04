@@ -9,19 +9,19 @@ import (
 	"github.com/tiglabs/baudstorage/util/ump"
 )
 
-func newCreateVolRequest(volType string, volId uint64) (req *proto.CreateDataPartionRequest) {
-	req = &proto.CreateDataPartionRequest{
-		DataPartionType: volType,
-		PartionId:       volId,
-		PartionSize:     util.DefaultVolSize,
+func newCreateVolRequest(volType string, volId uint64) (req *proto.CreateDataPartitionRequest) {
+	req = &proto.CreateDataPartitionRequest{
+		PartitionType: volType,
+		PartitionId:   volId,
+		PartitionSize: util.DefaultVolSize,
 	}
 	return
 }
 
-func newLoadVolMetricRequest(volType string, volId uint64) (req *proto.LoadDataPartionRequest) {
-	req = &proto.LoadDataPartionRequest{
-		DataPartionType: volType,
-		PartionId:       volId,
+func newLoadVolMetricRequest(volType string, volId uint64) (req *proto.LoadDataPartitionRequest) {
+	req = &proto.LoadDataPartitionRequest{
+		PartitionType: volType,
+		PartitionId:   volId,
 	}
 	return
 }
@@ -43,11 +43,11 @@ func UnmarshalTaskResponse(task *proto.AdminTask) (err error) {
 	var response interface{}
 	switch task.OpCode {
 	case proto.OpCreateDataPartion:
-		response = &proto.CreateDataPartionResponse{}
+		response = &proto.CreateDataPartitionResponse{}
 	case proto.OpDeleteDataPartion:
-		response = &proto.DeleteDataPartionResponse{}
+		response = &proto.DeleteDataPartitionResponse{}
 	case proto.OpLoadDataPartion:
-		response = &proto.LoadDataPartionResponse{}
+		response = &proto.LoadDataPartitionResponse{}
 	case proto.OpCreateMetaPartition:
 		response = &proto.CreateMetaPartitionResponse{}
 	case proto.OpDeleteFile:

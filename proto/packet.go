@@ -108,7 +108,7 @@ type Packet struct {
 	Crc        uint32
 	Size       uint32
 	Arglen     uint32
-	PartionID  uint32
+	PartitionID  uint32
 	FileID     uint64
 	Offset     int64
 	ReqID      int64
@@ -243,7 +243,7 @@ func (p *Packet) MarshalHeader(out []byte) {
 	binary.BigEndian.PutUint32(out[5:9], p.Crc)
 	binary.BigEndian.PutUint32(out[9:13], p.Size)
 	binary.BigEndian.PutUint32(out[13:17], p.Arglen)
-	binary.BigEndian.PutUint32(out[17:21], p.PartionID)
+	binary.BigEndian.PutUint32(out[17:21], p.PartitionID)
 	binary.BigEndian.PutUint64(out[21:29], p.FileID)
 	binary.BigEndian.PutUint64(out[29:37], uint64(p.Offset))
 	binary.BigEndian.PutUint64(out[37:HeaderSize], uint64(p.ReqID))
@@ -264,7 +264,7 @@ func (p *Packet) UnmarshalHeader(in []byte) error {
 	p.Crc = binary.BigEndian.Uint32(in[5:9])
 	p.Size = binary.BigEndian.Uint32(in[9:13])
 	p.Arglen = binary.BigEndian.Uint32(in[13:17])
-	p.PartionID = binary.BigEndian.Uint32(in[17:21])
+	p.PartitionID = binary.BigEndian.Uint32(in[17:21])
 	p.FileID = binary.BigEndian.Uint64(in[21:29])
 	p.Offset = int64(binary.BigEndian.Uint64(in[29:37]))
 	p.ReqID = int64(binary.BigEndian.Uint64(in[37:HeaderSize]))
@@ -414,7 +414,7 @@ func (p *Packet) PackErrorWithBody(errCode uint8, reply []byte) {
 }
 
 func (p *Packet) GetUniqLogId() (m string) {
-	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v_%v", p.ReqID, p.PartionID, p.FileID,
+	m = fmt.Sprintf("%v_%v_%v_%v_%v_%v_%v", p.ReqID, p.PartitionID, p.FileID,
 		p.Offset, p.Size, p.GetOpMsg(), p.GetResultMesg())
 
 	return
