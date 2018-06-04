@@ -16,11 +16,11 @@ const (
 )
 
 var (
-	GetVolMember    = "/datanode/member"
-	ErrNotLeader    = errors.New("not leader")
-	LeastGoalNum    = 2
-	ErrLackOfGoal   = errors.New("volGoal is not equare volhosts")
-	ErrVolOnBadDisk = errors.New("error bad disk")
+	GetDataPartionMember = "/datanode/member"
+	ErrNotLeader         = errors.New("not leader")
+	LeastGoalNum         = 2
+	ErrLackOfGoal        = errors.New("volGoal is not equare volhosts")
+	ErrVolOnBadDisk      = errors.New("error bad disk")
 )
 
 type DataPartion struct {
@@ -44,7 +44,7 @@ type PartionMembers struct {
 	PartionHosts  []string
 }
 
-func NewVol(partionId uint32, partionType, name, diskPath string, storeMode bool, storeSize int) (dp *DataPartion, err error) {
+func NewDataPartion(partionId uint32, partionType, name, diskPath string, storeMode bool, storeSize int) (dp *DataPartion, err error) {
 	dp = new(DataPartion)
 	dp.partionId = partionId
 	dp.partionType = partionType
@@ -61,7 +61,7 @@ func NewVol(partionId uint32, partionType, name, diskPath string, storeMode bool
 	case proto.TinyVol:
 		dp.store, err = storage.NewTinyStore(dp.path, storeSize, storeMode)
 	default:
-		return nil, fmt.Errorf("NewVol[%v] WrongVolMode[%v]", partionId, partionType)
+		return nil, fmt.Errorf("NewDataPartion[%v] WrongVolMode[%v]", partionId, partionType)
 	}
 	go dp.checkExtent()
 	return
@@ -88,18 +88,18 @@ func (dp *DataPartion) parseVolMember() (err error) {
 
 func (dp *DataPartion) getMembers() (bool, *PartionMembers, error) {
 	var (
-		volHostsBuf []byte
-		err         error
+		HostsBuf []byte
+		err      error
 	)
 
-	url := fmt.Sprintf(GetVolMember+"?vol=%v", dp.partionId)
-	if volHostsBuf, err = PostToMaster(nil, url); err != nil {
+	url := fmt.Sprintf(GetDataPartionMember+"?vol=%v", dp.partionId)
+	if HostsBuf, err = PostToMaster(nil, url); err != nil {
 		return false, nil, err
 	}
 	members := new(PartionMembers)
 
-	if err = json.Unmarshal(volHostsBuf, &members); err != nil {
-		log.LogError(fmt.Sprintf(ActionGetFoolwers+" v[%v] json unmarshal [%v] err[%v]", dp.partionId, string(volHostsBuf), err))
+	if err = json.Unmarshal(HostsBuf, &members); err != nil {
+		log.LogError(fmt.Sprintf(ActionGetFoolwers+" v[%v] json unmarshal [%v] err[%v]", dp.partionId, string(HostsBuf), err))
 		return false, nil, err
 	}
 
@@ -121,7 +121,7 @@ func (dp *DataPartion) getMembers() (bool, *PartionMembers, error) {
 	return true, members, nil
 }
 
-func (dp *DataPartion) LoadVol() (response *proto.LoadDataPartionResponse) {
+func (dp *DataPartion) Load() (response *proto.LoadDataPartionResponse) {
 	response = new(proto.LoadDataPartionResponse)
 	response.PartionId = uint64(dp.partionId)
 	response.PartionStatus = uint8(dp.status)

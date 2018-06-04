@@ -61,7 +61,7 @@ func (dp *DataPartion) extentsRepair() {
 		log.LogError(errors.ErrorStack(err))
 	}
 	for _, fixExtentFile := range allMembers[0].NeedFixFileSizeTasks {
-		StreamRepairExtent(fixExtentFile, v)
+		StreamRepairExtent(fixExtentFile, dp)
 	}
 	finishTime := time.Now().UnixNano()
 	log.LogDebugf("action[DataPartion.extentsRepair] extents repair finish cost %vms.",

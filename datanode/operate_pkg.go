@@ -68,11 +68,11 @@ func (s *DataNode) operatePacket(pkg *Packet, c *net.TCPConn) {
 	case proto.OpGetAllWatermark:
 		s.getAllWatermark(pkg)
 	case proto.OpCreateDataPartion:
-		s.createVol(pkg)
+		s.createDataPartion(pkg)
 	case proto.OpLoadDataPartion:
-		s.loadVol(pkg)
+		s.loadDataPartion(pkg)
 	case proto.OpDeleteDataPartion:
-		s.deleteVol(pkg)
+		s.deleteDataPartion(pkg)
 	case proto.OpDataNodeHeartbeat:
 		s.heartBeats(pkg)
 	default:
@@ -100,7 +100,7 @@ func (s *DataNode) createFile(pkg *Packet) {
 	return
 }
 
-func (s *DataNode) createVol(pkg *Packet) {
+func (s *DataNode) createDataPartion(pkg *Packet) {
 	task := &proto.AdminTask{}
 	json.Unmarshal(pkg.Data, task)
 	pkg.PackOkReply()
@@ -163,7 +163,7 @@ func (s *DataNode) heartBeats(pkg *Packet) {
 	}
 }
 
-func (s *DataNode) deleteVol(pkg *Packet) {
+func (s *DataNode) deleteDataPartion(pkg *Packet) {
 	task := &proto.AdminTask{}
 	json.Unmarshal(pkg.Data, task)
 	pkg.PackOkReply()
@@ -197,7 +197,7 @@ func (s *DataNode) deleteVol(pkg *Packet) {
 	}
 }
 
-func (s *DataNode) loadVol(pkg *Packet) {
+func (s *DataNode) loadDataPartion(pkg *Packet) {
 	task := &proto.AdminTask{}
 	json.Unmarshal(pkg.Data, task)
 	pkg.PackOkReply()
@@ -206,14 +206,14 @@ func (s *DataNode) loadVol(pkg *Packet) {
 	if task.OpCode == proto.OpLoadDataPartion {
 		bytes, _ := json.Marshal(task.Request)
 		json.Unmarshal(bytes, request)
-		v := s.space.getVol(uint32(request.PartionId))
-		if v == nil {
+		dp := s.space.getDataPartion(uint32(request.PartionId))
+		if dp == nil {
 			response.Status = proto.TaskFail
 			response.PartionId = uint64(request.PartionId)
 			response.Result = fmt.Sprintf("vol[%v] not found", request.PartionId)
 			log.LogErrorf("from master Task[%v] failed,error[%v]", task.ToString(), response.Result)
 		} else {
-			response = dp.LoadVol()
+			response = dp.Load()
 			response.PartionId = uint64(request.PartionId)
 		}
 	} else {
@@ -412,7 +412,7 @@ func (s *DataNode) compactChunk(pkg *Packet) {
 }
 
 func (s *DataNode) repair(pkg *Packet) {
-	v := s.space.getVol(pkg.PartionID)
+	v := s.space.getDataPartion(pkg.PartionID)
 	if v == nil {
 		err := errors.Annotatef(fmt.Errorf("vol not exsit"), "Request[%v] compactChunk Error", pkg.GetUniqLogId())
 		pkg.PackErrorBody(LogRepair, err.Error())

@@ -101,8 +101,8 @@ func (d *Disk) compact() {
 	for {
 		select {
 		case t := <-d.compactCh:
-			v := d.space.getVol(t.partionId)
-			if v == nil {
+			dp := d.space.getDataPartion(t.partionId)
+			if dp == nil {
 				continue
 			}
 			err, release := dp.store.(*storage.TinyStore).DoCompactWork(t.chunkId)
@@ -182,7 +182,7 @@ func (d *Disk) addVol(dp *DataPartion) {
 	d.CreatedPartionWeights += uint64(dp.partionSize)
 }
 
-func (d *Disk) getVols() (partionIds []uint32) {
+func (d *Disk) getDataPartions() (partionIds []uint32) {
 	d.Lock()
 	defer d.Unlock()
 	partionIds = make([]uint32, 0)
@@ -229,16 +229,16 @@ func (d *Disk) loadDataPartion(space *SpaceManager) {
 		partionId, volSize, partionType, err := UnmarshDataPartionName(fileInfo.Name())
 		log.LogDebugf("acton[Disk.loadDataPartion] disk info path[%v] name[%v] partionId[%v] partionSize[%v] partionType[%v] err[%v].", d.Path, fileInfo.Name(), partionId, volSize, partionType, err)
 		if err != nil {
-			log.LogError(fmt.Sprintf("LoadVol[%v] from Disk[%v] Err[%v] ", partionId, d.Path, err.Error()))
+			log.LogError(fmt.Sprintf("Load[%v] from Disk[%v] Err[%v] ", partionId, d.Path, err.Error()))
 			continue
 		}
-		v, err = NewVol(partionId, partionType, path.Join(d.Path, fileInfo.Name()), d.Path, storage.ReBootStoreMode, volSize)
+		dp, err = NewDataPartion(partionId, partionType, path.Join(d.Path, fileInfo.Name()), d.Path, storage.ReBootStoreMode, volSize)
 		if err != nil {
-			log.LogError(fmt.Sprintf("LoadVol[%v] from Disk[%v] Err[%v] ", partionId, d.Path, err.Error()))
+			log.LogError(fmt.Sprintf("Load[%v] from Disk[%v] Err[%v] ", partionId, d.Path, err.Error()))
 			continue
 		}
-		if space.getVol(dp.partionId) == nil {
-			space.putVol(v)
+		if space.getDataPartion(dp.partionId) == nil {
+			space.putDataPartion(dp)
 		}
 
 	}
@@ -248,8 +248,8 @@ func (s *DataNode) AddDiskErrs(partionId uint32, err error, flag uint8) {
 	if err == nil {
 		return
 	}
-	v := s.space.getVol(partionId)
-	if v == nil {
+	dp := s.space.getDataPartion(partionId)
+	if dp == nil {
 		return
 	}
 	d, _ := s.space.getDisk(dp.path)

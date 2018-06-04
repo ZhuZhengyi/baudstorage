@@ -173,7 +173,7 @@ func (m *Master) loadVol(w http.ResponseWriter, r *http.Request) {
 	}
 
 	m.cluster.loadVolAndCheckResponse(v, false)
-	msg = fmt.Sprintf(AdminLoadVol+"volID :%v  LoadVol success", volID)
+	msg = fmt.Sprintf(AdminLoadVol+"volID :%v  Load success", volID)
 	io.WriteString(w, msg)
 	log.LogInfo(msg)
 
@@ -443,7 +443,7 @@ func (m *Master) loadMetaPartition(w http.ResponseWriter, r *http.Request) {
 	}
 
 	m.cluster.loadMetaPartitionAndCheckResponse(mp, false)
-	msg = fmt.Sprintf(AdminLoadMetaPartition+"partitionID :%v  LoadVol success", partitionID)
+	msg = fmt.Sprintf(AdminLoadMetaPartition+"partitionID :%v  Load success", partitionID)
 	io.WriteString(w, msg)
 	log.LogInfo(msg)
 

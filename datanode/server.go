@@ -142,13 +142,13 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 		s.rackName = DefaultRackName
 	}
 
-	log.LogDebugf("action[DataNode.LoadVol] load port[%v].", s.port)
-	log.LogDebugf("action[DataNode.LoadVol] load clusterId[%v].", s.clusterId)
-	log.LogDebugf("action[DataNode.LoadVol] load rackName[%v].", s.rackName)
-	log.LogDebugf("action[DataNode.LoadVol] load profPort[%v].", s.profPort)
+	log.LogDebugf("action[DataNode.Load] load port[%v].", s.port)
+	log.LogDebugf("action[DataNode.Load] load clusterId[%v].", s.clusterId)
+	log.LogDebugf("action[DataNode.Load] load rackName[%v].", s.rackName)
+	log.LogDebugf("action[DataNode.Load] load profPort[%v].", s.profPort)
 
 	for _, d := range cfg.GetArray(ConfigKeyDisks) {
-		log.LogDebugf("action[DataNode.LoadVol] load disk raw config[%v].", d)
+		log.LogDebugf("action[DataNode.Load] load disk raw config[%v].", d)
 		// Format "PATH:RESET_SIZE:MAX_ERR
 		arr := strings.Split(d.(string), ":")
 		if len(arr) != 3 {
@@ -199,7 +199,7 @@ func (s *DataNode) registerToMaster() (err error) {
 
 func (s *DataNode) startRestService() {
 	http.HandleFunc("/disks", s.HandleGetDisk)
-	http.HandleFunc("/vols", s.HandleVol)
+	http.HandleFunc("/partions", s.HandleVol)
 	http.HandleFunc("/stats", s.HandleStat)
 
 	address := fmt.Sprintf("%s:%d", LocalIP, s.profPort)
@@ -286,8 +286,8 @@ func NewServer() *DataNode {
 }
 
 func (s *DataNode) AddCompactTask(t *CompactTask) (err error) {
-	v := s.space.getVol(t.partionId)
-	if v == nil {
+	dp := s.space.getDataPartion(t.partionId)
+	if dp == nil {
 		return nil
 	}
 	d, _ := s.space.getDisk(dp.path)

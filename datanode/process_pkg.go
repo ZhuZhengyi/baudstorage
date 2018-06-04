@@ -250,7 +250,7 @@ func (s *DataNode) CheckPacket(pkg *Packet) error {
 	if err != nil {
 		return err
 	}
-	pkg.vol = s.space.getVol(pkg.PartionID)
+	pkg.vol = s.space.getDataPartion(pkg.PartionID)
 	if pkg.vol == nil {
 		return ErrVolNotExist
 	}
