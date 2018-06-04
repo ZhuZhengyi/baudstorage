@@ -416,7 +416,7 @@ func (partition *DataPartition) checkAndRemoveMissVol(addr string) {
 	}
 }
 
-func (partition *DataPartition) LoadFile(dataNode *DataNode, resp *proto.LoadVolResponse) {
+func (partition *DataPartition) LoadFile(dataNode *DataNode, resp *proto.LoadDataPartionResponse) {
 	partition.Lock()
 	defer partition.Unlock()
 
@@ -428,7 +428,7 @@ func (partition *DataPartition) LoadFile(dataNode *DataNode, resp *proto.LoadVol
 	}
 	volLoc := partition.Locations[index]
 	volLoc.LoadPartitionIsResponse = true
-	for _, vf := range resp.VolSnapshot {
+	for _, vf := range resp.PartionSnapshot {
 		if vf == nil {
 			continue
 		}
@@ -536,7 +536,7 @@ func (partition *DataPartition) addVolHosts(addAddr string, c *Cluster, nsName s
 	return
 }
 
-func (partition *DataPartition) UpdateVol(vr *proto.VolReport, dataNode *DataNode) {
+func (partition *DataPartition) UpdateVol(vr *proto.PartionReport, dataNode *DataNode) {
 	partition.Lock()
 	volLoc, err := partition.getReplica(dataNode.Addr)
 	partition.Unlock()
