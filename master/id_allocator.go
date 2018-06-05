@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	MaxVolIDKey       = "max_vol_id"
-	MaxPartitionIDKey = "max_partition_id"
-	MaxMetaNodeIDKey  = "max_metaNode_id"
+	MaxDataPartitionIDKey = "max_dp_id"
+	MaxMetaPartitionIDKey = "max_mp_id"
+	MaxMetaNodeIDKey      = "max_metaNode_id"
 )
 
 type IDAllocator struct {
@@ -40,7 +40,7 @@ func (alloc *IDAllocator) restore() {
 }
 
 func (alloc *IDAllocator) restoreMaxDataPartitionID() {
-	value, err := alloc.store.Get(MaxVolIDKey)
+	value, err := alloc.store.Get(MaxDataPartitionIDKey)
 	bytes := value.([]byte)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to restore maxDataPartitionId,err:%v ", err.Error()))
@@ -58,7 +58,7 @@ func (alloc *IDAllocator) restoreMaxDataPartitionID() {
 }
 
 func (alloc *IDAllocator) restoreMaxMetaPartitionID() {
-	value, err := alloc.store.Get(MaxPartitionIDKey)
+	value, err := alloc.store.Get(MaxMetaPartitionIDKey)
 	bytes := value.([]byte)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to restore maxPartitionID,err:%v ", err.Error()))
@@ -101,7 +101,7 @@ func (alloc *IDAllocator) allocateDataPartitionID() (ID uint64, err error) {
 	var cmd []byte
 	metadata := new(Metadata)
 	ID = atomic.AddUint64(&alloc.dataPartitionID, 1)
-	metadata.K = MaxVolIDKey
+	metadata.K = MaxDataPartitionIDKey
 	value := strconv.FormatUint(uint64(ID), 10)
 	metadata.V = []byte(value)
 	cmd, err = metadata.Marshal()
@@ -122,7 +122,7 @@ func (alloc *IDAllocator) allocateMetaPartitionID() (partitionID uint64, err err
 	alloc.metaPartitionIDLock.Lock()
 	defer alloc.metaPartitionIDLock.Unlock()
 	metadata := new(Metadata)
-	metadata.K = MaxPartitionIDKey
+	metadata.K = MaxMetaPartitionIDKey
 	partitionID = atomic.AddUint64(&alloc.metaPartitionID, 1)
 	value := strconv.FormatUint(uint64(partitionID), 10)
 	metadata.V = []byte(value)
