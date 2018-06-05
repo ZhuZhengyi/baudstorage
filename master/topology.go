@@ -19,6 +19,7 @@ type Topology struct {
 func NewTopology() (t *Topology) {
 	t = new(Topology)
 	t.rackMap = make(map[string]*Rack)
+	t.racks = make([]string, 0)
 	return
 }
 
@@ -50,6 +51,19 @@ func (t *Topology) putRack(rack *Rack) {
 	t.rackLock.Lock()
 	defer t.rackLock.Unlock()
 	t.rackMap[rack.name] = rack
+	if ok := t.isExist(rack.name); !ok {
+		t.racks = append(t.racks, rack.name)
+	}
+}
+
+func (t *Topology) isExist(rackName string) (ok bool) {
+	for _, name := range t.racks {
+		if name == rackName {
+			ok = true
+			return
+		}
+	}
+	return
 }
 
 func (t *Topology) removeRack(name string) {
