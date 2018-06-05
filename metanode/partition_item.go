@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 
+	"bytes"
+	"encoding/binary"
 	"github.com/google/btree"
 )
 
@@ -13,20 +15,76 @@ type MetaItem struct {
 	V  []byte `json:"v"`
 }
 
+// MarshalJson
 func (s *MetaItem) MarshalJson() ([]byte, error) {
 	return json.Marshal(s)
 }
 
+// MarshalBinary marshal this MetaItem entity to binary data.
+// Binary frame structure:
+//  +------+----+------+------+------+------+
+//  | Item | Op | LenK |   K  | LenV |   V  |
+//  +------+----+------+------+------+------+
+//  | byte | 4  |  4   | LenK |  4   | LenV |
+//  +------+----+------+------+------+------+
 func (s *MetaItem) MarshalBinary() (result []byte, err error) {
-	panic("not implement yet")
+	buff := bytes.NewBuffer(make([]byte, 0))
+	buff.Grow(4 + len(s.K) + len(s.V))
+	if err = binary.Write(buff, binary.BigEndian, s.Op); err != nil {
+		return
+	}
+	if err = binary.Write(buff, binary.BigEndian, uint32(len(s.K))); err != nil {
+		return
+	}
+	if _, err = buff.Write(s.K); err != nil {
+		return
+	}
+	if err = binary.Write(buff, binary.BigEndian, uint32(len(s.V))); err != nil {
+		return
+	}
+	if _, err = buff.Write(s.V); err != nil {
+		return
+	}
+	result = buff.Bytes()
+	return
 }
 
+// UnmarshalJson unmarshal binary data to MetaItem entity.
 func (s *MetaItem) UnmarshalJson(data []byte) error {
 	return json.Unmarshal(data, s)
 }
 
+// MarshalBinary unmarshal this MetaItem entity from binary data.
+// Binary frame structure:
+//  +------+----+------+------+------+------+
+//  | Item | Op | LenK |   K  | LenV |   V  |
+//  +------+----+------+------+------+------+
+//  | byte | 4  |  4   | LenK |  4   | LenV |
+//  +------+----+------+------+------+------+
 func (s *MetaItem) UnmarshalBinary(raw []byte) (err error) {
-	panic("not implement yet")
+	var (
+		lenK uint32
+		lenV uint32
+	)
+	buff := bytes.NewBuffer(raw)
+	if err = binary.Read(buff, binary.BigEndian, &s.Op); err != nil {
+		return
+	}
+	if err = binary.Read(buff, binary.BigEndian, &lenK); err != nil {
+		return
+	}
+	s.K = make([]byte, lenK)
+	if _, err = buff.Read(s.K); err != nil {
+		return
+	}
+	if err = binary.Read(buff, binary.BigEndian, &lenV); err != nil {
+		return
+	}
+	s.V = make([]byte, lenV)
+	if _, err = buff.Read(s.V); err != nil {
+		return
+	}
+	return
 }
 
 func NewMetaPartitionSnapshot(op uint32, key, value []byte) *MetaItem {
@@ -69,6 +127,7 @@ func (si *ItemIterator) Close() {
 }
 
 func (si *ItemIterator) Next() (data []byte, err error) {
+	// TODO: Redesign iterator to improve performance. [Mervin]
 	if si.cur > si.total {
 		err = io.EOF
 		return
@@ -83,7 +142,7 @@ func (si *ItemIterator) Next() (data []byte, err error) {
 			si.curItem = ino
 			snap := NewMetaPartitionSnapshot(opCreateInode, ino.MarshalKey(),
 				ino.MarshalValue())
-			data, err = snap.MarshalJson()
+			data, err = snap.MarshalBinary()
 			si.cur++
 			return false
 		})
@@ -102,7 +161,7 @@ func (si *ItemIterator) Next() (data []byte, err error) {
 		si.curItem = dentry
 		snap := NewMetaPartitionSnapshot(opCreateDentry, dentry.MarshalKey(),
 			dentry.MarshalValue())
-		data, err = snap.MarshalJson()
+		data, err = snap.MarshalBinary()
 		si.cur++
 		return false
 	})

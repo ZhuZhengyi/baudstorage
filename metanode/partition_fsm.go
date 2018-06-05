@@ -18,7 +18,7 @@ func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 		}
 	}()
 	msg := &MetaItem{}
-	if err = msg.UnmarshalJson(command); err != nil {
+	if err = msg.UnmarshalBinary(command); err != nil {
 		return
 	}
 	switch msg.Op {
@@ -110,7 +110,7 @@ func (mp *metaPartition) ApplySnapshot(peers []raftproto.Peer,
 			return err
 		}
 		snap := NewMetaPartitionSnapshot(0, nil, nil)
-		if err = snap.UnmarshalJson(data); err != nil {
+		if err = snap.UnmarshalBinary(data); err != nil {
 			return err
 		}
 		switch snap.Op {

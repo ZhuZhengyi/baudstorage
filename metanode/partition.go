@@ -346,7 +346,7 @@ func (mp *metaPartition) DeleteRaft() (err error) {
 // If Inode ID is out of this metaPartition limit then return ErrInodeOutOfRange error.
 func (mp *metaPartition) nextInodeID() (inodeId uint64, err error) {
 	for {
-		cur := mp.config.Cursor
+		cur := atomic.LoadUint64(&mp.config.Cursor)
 		end := mp.config.End
 		if cur >= end {
 			return 0, ErrInodeOutOfRange

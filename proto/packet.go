@@ -47,32 +47,34 @@ const (
 	OpNotifyCompact   uint8 = 0x0D
 
 	// Operations: Client -> MetaNode.
-	OpMetaCreateInode  uint8 = 0x0E
-	OpMetaDeleteInode  uint8 = 0x0F
-	OpMetaCreateDentry uint8 = 0x10
-	OpMetaDeleteDentry uint8 = 0x11
-	OpMetaOpen         uint8 = 0x13
-	OpMetaLookup       uint8 = 0x14
-	OpMetaReadDir      uint8 = 0x15
-	OpMetaInodeGet     uint8 = 0x16
-	OpMetaExtentsAdd   uint8 = 0x17
-	OpMetaExtentsDel   uint8 = 0x18
-	OpMetaExtentsList  uint8 = 0x19
+	OpMetaCreateInode   uint8 = 0x20
+	OpMetaDeleteInode   uint8 = 0x21
+	OpMetaCreateDentry  uint8 = 0x22
+	OpMetaDeleteDentry  uint8 = 0x23
+	OpMetaOpen          uint8 = 0x24
+	OpMetaLookup        uint8 = 0x25
+	OpMetaReadDir       uint8 = 0x26
+	OpMetaInodeGet      uint8 = 0x27
+	OpMetaBatchInodeGet uint8 = 0x28
+	OpMetaExtentsAdd    uint8 = 0x29
+	OpMetaExtentsDel    uint8 = 0x2A
+	OpMetaExtentsList   uint8 = 0x2B
 
 	// Operations: Master -> MetaNode
-	OpCreateMetaPartition  uint8 = 0x20
-	OpMetaNodeHeartbeat    uint8 = 0x21
-	OpDeleteMetaPartition  uint8 = 0x22
-	OpUpdateMetaPartition  uint8 = 0x23
-	OpLoadMetaPartition    uint8 = 0x24
-	OpOfflineMetaPartition uint8 = 0x25
+	OpCreateMetaPartition  uint8 = 0x40
+	OpMetaNodeHeartbeat    uint8 = 0x41
+	OpDeleteMetaPartition  uint8 = 0x42
+	OpUpdateMetaPartition  uint8 = 0x43
+	OpLoadMetaPartition    uint8 = 0x44
+	OpOfflineMetaPartition uint8 = 0x45
 
-	OpCreateDataPartition uint8 = 0x26
-	OpDeleteDataPartition uint8 = 0x27
-	OpLoadDataPartition   uint8 = 0x28
-	OpDataNodeHeartbeat uint8 = 0x29
-	OpReplicateFile     uint8 = 0x2A
-	OpDeleteFile        uint8 = 0x2B
+	// Operations: Master -> DataNode
+	OpCreateDataPartition uint8 = 0x60
+	OpDeleteDataPartition uint8 = 0x61
+	OpLoadDataPartition   uint8 = 0x62
+	OpDataNodeHeartbeat   uint8 = 0x63
+	OpReplicateFile       uint8 = 0x64
+	OpDeleteFile          uint8 = 0x65
 
 	// Commons
 	OpIntraGroupNetErr uint8 = 0xF3
@@ -100,21 +102,21 @@ const (
 )
 
 type Packet struct {
-	Magic      uint8
-	StoreMode  uint8
-	Opcode     uint8
-	ResultCode uint8
-	Nodes      uint8
-	Crc        uint32
-	Size       uint32
-	Arglen     uint32
-	PartitionID  uint32
-	FileID     uint64
-	Offset     int64
-	ReqID      int64
-	Arg        []byte //if create or append ops, data contains addrs
-	Data       []byte
-	StartT     int64
+	Magic       uint8
+	StoreMode   uint8
+	Opcode      uint8
+	ResultCode  uint8
+	Nodes       uint8
+	Crc         uint32
+	Size        uint32
+	Arglen      uint32
+	PartitionID uint32
+	FileID      uint64
+	Offset      int64
+	ReqID       int64
+	Arg         []byte //if create or append ops, data contains addrs
+	Data        []byte
+	StartT      int64
 }
 
 func NewPacket() *Packet {
