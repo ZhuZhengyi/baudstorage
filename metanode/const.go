@@ -83,10 +83,10 @@ const (
 
 // Configuration keys
 const (
-	cfgListen              = "listen"
-	cfgMetaDir             = "metaDir"
-	cfgRaftDir             = "raftDir"
-	cfgMasterAddrs         = "masterAddrs"
-	cfgRaftHeartbeatPort   = "raftHeartbeatPort"
-	cfgRaftReplicationPort = "raftReplicationPort"
+	cfgListen            = "listen"
+	cfgMetaDir           = "metaDir"
+	cfgRaftDir           = "raftDir"
+	cfgMasterAddrs       = "masterAddrs"
+	cfgRaftHeartbeatPort = "raftHeartbeatPort"
+	cfgRaftReplicatePort = "raftReplicatePort"
 )

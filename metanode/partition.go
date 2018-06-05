@@ -2,6 +2,7 @@ package metanode
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -22,6 +23,11 @@ const (
 
 const (
 	storeTimeTicker = time.Minute * 5
+)
+
+var (
+	ErrIllegalHeartbeatAddress = errors.New("illegal heartbeat address")
+	ErrIllegalReplicateAddress = errors.New("illegal replicate address")
 )
 
 // Errors
@@ -235,14 +241,23 @@ func (mp *metaPartition) stopSchedule() {
 }
 
 func (mp *metaPartition) startRaft() (err error) {
-	var peers []raftstore.PeerAddress
+	var (
+		heartbeatPort int
+		replicatePort int
+		peers         []raftstore.PeerAddress
+	)
+	if heartbeatPort, replicatePort, err = mp.getRaftPort(); err != nil {
+		return
+	}
 	for _, peer := range mp.config.Peers {
 		addr := strings.Split(peer.Addr, ":")[0]
 		rp := raftstore.PeerAddress{
 			Peer: raftproto.Peer{
 				ID: peer.ID,
 			},
-			Address: addr,
+			Address:       addr,
+			HeartbeatPort: heartbeatPort,
+			ReplicatePort: replicatePort,
 		}
 		peers = append(peers, rp)
 	}
@@ -261,6 +276,29 @@ func (mp *metaPartition) startRaft() (err error) {
 func (mp *metaPartition) stopRaft() {
 	if mp.raftPartition != nil {
 		mp.raftPartition.Stop()
+	}
+	return
+}
+
+func (mp *metaPartition) getRaftPort() (heartbeat, replicate int, err error) {
+	raftConfig := mp.config.RaftStore.RaftConfig()
+	heartbeatAddrParts := strings.Split(raftConfig.HeartbeatAddr, ":")
+	replicateAddrParts := strings.Split(raftConfig.ReplicateAddr, ":")
+	if len(heartbeatAddrParts) != 2 {
+		err = ErrIllegalHeartbeatAddress
+		return
+	}
+	if len(replicateAddrParts) != 2 {
+		err = ErrIllegalReplicateAddress
+		return
+	}
+	heartbeat, err = strconv.Atoi(heartbeatAddrParts[1])
+	if err != nil {
+		return
+	}
+	replicate, err = strconv.Atoi(replicateAddrParts[1])
+	if err != nil {
+		return
 	}
 	return
 }

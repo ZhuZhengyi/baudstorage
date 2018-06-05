@@ -26,19 +26,19 @@ import (
 // through the RaftStore algorithm and other MetaNodes in the RageGroup for reliable
 // data synchronization to maintain data consistency within the MetaGroup.
 type MetaNode struct {
-	nodeId              uint64
-	listen              string
-	metaDir             string //metaNode store root dir
-	raftDir             string //raftStore log store base dir
-	metaManager         MetaManager
-	localAddr           string
-	retryCount          int
-	raftStore           raftstore.RaftStore
-	raftHeartbeatPort   string
-	raftReplicationPort string
-	httpStopC           chan uint8
-	state               uint32
-	wg                  sync.WaitGroup
+	nodeId            uint64
+	listen            string
+	metaDir           string //metaNode store root dir
+	raftDir           string //raftStore log store base dir
+	metaManager       MetaManager
+	localAddr         string
+	retryCount        int
+	raftStore         raftstore.RaftStore
+	raftHeartbeatPort string
+	raftReplicatePort string
+	httpStopC         chan uint8
+	state             uint32
+	wg                sync.WaitGroup
 }
 
 // Start this MeteNode with specified configuration.
@@ -122,13 +122,13 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 	m.metaDir = cfg.GetString(cfgMetaDir)
 	m.raftDir = cfg.GetString(cfgRaftDir)
 	m.raftHeartbeatPort = cfg.GetString(cfgRaftHeartbeatPort)
-	m.raftReplicationPort = cfg.GetString(cfgRaftReplicationPort)
+	m.raftReplicatePort = cfg.GetString(cfgRaftReplicatePort)
 
 	log.LogDebugf("action[parseConfig] load listen[%v].", m.listen)
 	log.LogDebugf("action[parseConfig] load metaDir[%v].", m.metaDir)
 	log.LogDebugf("action[parseConfig] load raftDir[%v].", m.raftDir)
 	log.LogDebugf("action[parseConfig] load raftHeartbeatPort[%v].", m.raftHeartbeatPort)
-	log.LogDebugf("action[parseConfig] load raftReplicationPort[%v].", m.raftReplicationPort)
+	log.LogDebugf("action[parseConfig] load raftReplicatePort[%v].", m.raftReplicatePort)
 
 	addrs := cfg.GetArray(cfgMasterAddrs)
 	for _, addr := range addrs {

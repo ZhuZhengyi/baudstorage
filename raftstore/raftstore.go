@@ -12,6 +12,7 @@ import (
 type RaftStore interface {
 	CreatePartition(cfg *PartitionConfig) (Partition, error)
 	Stop()
+	RaftConfig() *raft.Config
 	NodeManager
 }
 
@@ -21,6 +22,10 @@ type raftStore struct {
 	raftConfig *raft.Config
 	raftServer *raft.RaftServer
 	walPath    string
+}
+
+func (s *raftStore) RaftConfig() *raft.Config {
+	return s.raftConfig
 }
 
 func (s *raftStore) AddNode(nodeId uint64, addr string) {

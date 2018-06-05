@@ -18,14 +18,14 @@ func (m *MetaNode) startRaftServer() (err error) {
 	}
 
 	heartbeatPort, _ := strconv.Atoi(m.raftHeartbeatPort)
-	replicationPort, _ := strconv.Atoi(m.raftReplicationPort)
+	replicatePort, _ := strconv.Atoi(m.raftReplicatePort)
 
 	raftConf := &raftstore.Config{
 		NodeID:        m.nodeId,
 		WalPath:       m.raftDir,
 		IpAddr:        m.localAddr,
 		HeartbeatPort: heartbeatPort,
-		ReplicatePort: replicationPort,
+		ReplicatePort: replicatePort,
 	}
 	m.raftStore, err = raftstore.NewRaftStore(raftConf)
 	if err != nil {
