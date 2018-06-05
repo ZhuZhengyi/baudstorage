@@ -71,7 +71,7 @@ func main() {
 	role := cfg.GetString(ConfigKeyRole)
 	logDir := cfg.GetString(ConfigKeyLogDir)
 	logLevel := cfg.GetString(ConfigKeyLogLevel)
-	profPort := cfg.GetString(ConfigKeyProfPort)
+	profPort := int(cfg.GetFloat(ConfigKeyProfPort))
 
 	//for multi-cpu scheduling
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -114,9 +114,12 @@ func main() {
 		level = log.ErrorLevel
 	}
 
-	go func() {
-		log.Println(http.ListenAndServe(fmt.Sprintf(":%v",profPort), nil))
-	}()
+	if profPort > 0 {
+		go func() {
+			log.Println(http.ListenAndServe(fmt.Sprintf(":%d",profPort), nil))
+		}()
+	}
+
 	if _, err := log.NewLog(logDir, module, level); err != nil {
 		os.Exit(1)
 		return
