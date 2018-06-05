@@ -1,6 +1,7 @@
 package meta
 
 import (
+	"fmt"
 	"io"
 	"net"
 
@@ -18,6 +19,10 @@ type MetaConn struct {
 
 // Connection managements
 //
+
+func (mc *MetaConn) String() string {
+	return fmt.Sprintf("partitionID(%v) addr(%v)", mc.id, mc.addr)
+}
 
 func (mw *MetaWrapper) getConn(mp *MetaPartition) (*MetaConn, error) {
 	addr := mp.LeaderAddr
