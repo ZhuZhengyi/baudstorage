@@ -123,6 +123,13 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 	m.raftDir = cfg.GetString(cfgRaftDir)
 	m.raftHeartbeatPort = cfg.GetString(cfgRaftHeartbeatPort)
 	m.raftReplicationPort = cfg.GetString(cfgRaftReplicationPort)
+
+	log.LogDebugf("action[parseConfig] load listen[%v].", m.listen)
+	log.LogDebugf("action[parseConfig] load metaDir[%v].", m.metaDir)
+	log.LogDebugf("action[parseConfig] load raftDir[%v].", m.raftDir)
+	log.LogDebugf("action[parseConfig] load raftHeartbeatPort[%v].", m.raftHeartbeatPort)
+	log.LogDebugf("action[parseConfig] load raftReplicationPort[%v].", m.raftReplicationPort)
+
 	addrs := cfg.GetArray(cfgMasterAddrs)
 	for _, addr := range addrs {
 		masterAddrs = append(masterAddrs, addr.(string))

@@ -87,6 +87,6 @@ const (
 	cfgMetaDir             = "metaDir"
 	cfgRaftDir             = "raftDir"
 	cfgMasterAddrs         = "masterAddrs"
-	cfgRaftHeartbeatPort   = "raftHeartbeat"
-	cfgRaftReplicationPort = "raftReplication"
+	cfgRaftHeartbeatPort   = "raftHeartbeatPort"
+	cfgRaftReplicationPort = "raftReplicationPort"
 )
