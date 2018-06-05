@@ -2,6 +2,7 @@ package metanode
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/raftstore"
@@ -15,10 +16,16 @@ func (m *MetaNode) startRaftServer() (err error) {
 			return
 		}
 	}
+
+	heartbeatPort, _ := strconv.Atoi(m.raftHeartbeatPort)
+	replicationPort, _ := strconv.Atoi(m.raftReplicationPort)
+
 	raftConf := &raftstore.Config{
-		NodeID:  m.nodeId,
-		WalPath: m.raftDir,
-		IpAddr:  m.localAddr,
+		NodeID:        m.nodeId,
+		WalPath:       m.raftDir,
+		IpAddr:        m.localAddr,
+		HeartbeatPort: heartbeatPort,
+		ReplicatePort: replicationPort,
 	}
 	m.raftStore, err = raftstore.NewRaftStore(raftConf)
 	if err != nil {

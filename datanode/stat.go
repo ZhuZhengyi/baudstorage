@@ -73,7 +73,9 @@ func (s *Stats) AddOutDataSize(size uint64) {
 	atomic.AddUint64(&s.outDataSize, size)
 }
 
-func (s *Stats) updateMetrics(total, used, free, createdVolWeights, remainWeightsForCreateVol, maxWeightsForCreateVol, dataPartitioncnt uint64) {
+func (s *Stats) updateMetrics(
+	total, used, free, createdVolWeights, remainWeightsForCreateVol,
+	maxWeightsForCreateVol, dataPartitionCnt uint64) {
 	s.Lock()
 	defer s.Unlock()
 	s.Total = total
@@ -82,7 +84,7 @@ func (s *Stats) updateMetrics(total, used, free, createdVolWeights, remainWeight
 	s.CreatedPartitionWeights = createdVolWeights
 	s.RemainWeightsForCreatePartition = remainWeightsForCreateVol
 	s.MaxWeightsForCreatePartition = maxWeightsForCreateVol
-	s.CreatedPartitionCnt = dataPartitioncnt
+	s.CreatedPartitionCnt = dataPartitionCnt
 }
 
 func post(data []byte, url string) (*http.Response, error) {
