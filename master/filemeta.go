@@ -149,10 +149,10 @@ func (fc *FileInCore) locIsInNodeInfos(loc *DataReplica) (ok bool) {
 	return
 }
 
-func (fc *FileInCore) getFileMetaByVolAddr(vol *DataReplica) (fm *FileMetaOnNode, ok bool) {
+func (fc *FileInCore) getFileMetaByAddr(replica *DataReplica) (fm *FileMetaOnNode, ok bool) {
 	for i := 0; i < len(fc.Metas); i++ {
 		fm = fc.Metas[i]
-		if fm.LocAddr == vol.Addr {
+		if fm.LocAddr == replica.Addr {
 			ok = true
 			return
 		}

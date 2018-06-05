@@ -40,25 +40,25 @@ func (c *Cluster) putMetaNodeTasks(tasks []*proto.AdminTask) {
 
 func (c *Cluster) checkDataPartitions(ns *NameSpace) {
 	ns.dataPartitions.RLock()
-	newReadWriteVolGroups := 0
-	for _, vg := range ns.dataPartitions.dataPartitionMap {
-		vg.checkReplicaStatus(c.cfg.DataPartitionTimeOutSec)
-		vg.checkStatus(true, c.cfg.DataPartitionTimeOutSec)
-		vg.checkMiss(c.Name, c.cfg.DataPartitionMissSec, c.cfg.DataPartitionWarnInterval)
-		vg.checkReplicaNum(c, ns.Name)
-		if vg.Status == DataPartitionReadWrite {
-			newReadWriteVolGroups++
+	newReadWriteDataPartitions := 0
+	for _, dp := range ns.dataPartitions.dataPartitionMap {
+		dp.checkReplicaStatus(c.cfg.DataPartitionTimeOutSec)
+		dp.checkStatus(true, c.cfg.DataPartitionTimeOutSec)
+		dp.checkMiss(c.Name, c.cfg.DataPartitionMissSec, c.cfg.DataPartitionWarnInterval)
+		dp.checkReplicaNum(c, ns.Name)
+		if dp.Status == DataPartitionReadWrite {
+			newReadWriteDataPartitions++
 		}
-		volDiskErrorAddrs := vg.checkDiskError()
-		if volDiskErrorAddrs != nil {
-			for _, addr := range volDiskErrorAddrs {
-				c.dataPartitionOffline(addr, ns.Name, vg, CheckDataPartitionDiskErrorErr)
+		diskErrorAddrs := dp.checkDiskError()
+		if diskErrorAddrs != nil {
+			for _, addr := range diskErrorAddrs {
+				c.dataPartitionOffline(addr, ns.Name, dp, CheckDataPartitionDiskErrorErr)
 			}
 		}
-		volTasks := vg.checkReplicationTask()
-		c.putDataNodeTasks(volTasks)
+		tasks := dp.checkReplicationTask()
+		c.putDataNodeTasks(tasks)
 	}
-	ns.dataPartitions.readWriteDataPartitions = newReadWriteVolGroups
+	ns.dataPartitions.readWriteDataPartitions = newReadWriteDataPartitions
 	ns.dataPartitions.RUnlock()
 	ns.dataPartitions.updateDataPartitionResponseCache(true, 0)
 	msg := fmt.Sprintf("action[checkDataPartitions],can readWrite dataPartitions:%v  ", ns.dataPartitions.readWriteDataPartitions)
@@ -185,24 +185,24 @@ func (c *Cluster) processLoadMetaPartition(mp *MetaPartition, isRecover bool) {
 	//todo check response
 }
 
-func (c *Cluster) processLoadDataPartition(v *DataPartition, isRecover bool) {
-	log.LogInfo(fmt.Sprintf("action[processLoadDataPartition],volID:%v,isRecover:%v", v.PartitionID, isRecover))
-	loadTasks := v.generateLoadTasks()
+func (c *Cluster) processLoadDataPartition(dp *DataPartition, isRecover bool) {
+	log.LogInfo(fmt.Sprintf("action[processLoadDataPartition],partitionID:%v,isRecover:%v", dp.PartitionID, isRecover))
+	loadTasks := dp.generateLoadTasks()
 	c.putDataNodeTasks(loadTasks)
 	for i := 0; i < LoadDataPartitionWaitTime; i++ {
-		if v.checkLoadResponse(c.cfg.DataPartitionTimeOutSec) {
-			log.LogInfo(fmt.Sprintf("action[%v] triger all replication,volID:%v ", "loadDataPartitionAndCheckResponse", v.PartitionID))
+		if dp.checkLoadResponse(c.cfg.DataPartitionTimeOutSec) {
+			log.LogInfo(fmt.Sprintf("action[%v] triger all replication,partitionID:%v ", "loadDataPartitionAndCheckResponse", dp.PartitionID))
 			break
 		}
 		time.Sleep(time.Second)
 	}
 	// response is time out
-	if v.checkLoadResponse(c.cfg.DataPartitionTimeOutSec) == false {
+	if dp.checkLoadResponse(c.cfg.DataPartitionTimeOutSec) == false {
 		return
 	}
-	v.getFileCount()
-	checkFileTasks := v.checkFile(isRecover, c.Name)
-	v.setToNormal()
+	dp.getFileCount()
+	checkFileTasks := dp.checkFile(isRecover, c.Name)
+	dp.setToNormal()
 	c.putDataNodeTasks(checkFileTasks)
 }
 
@@ -439,15 +439,15 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 	case proto.OpCreateDataPartition:
 		response := task.Response.(*proto.CreateDataPartitionResponse)
 		taskStatus = response.Status
-		err = c.dealCreateVolResponse(task, response)
+		err = c.dealCreateDataPartitionResponse(task, response)
 	case proto.OpDeleteDataPartition:
 		response := task.Response.(*proto.DeleteDataPartitionResponse)
 		taskStatus = response.Status
-		err = c.dealDeleteVolResponse(task.OperatorAddr, response)
+		err = c.dealDeleteDataPartitionResponse(task.OperatorAddr, response)
 	case proto.OpLoadDataPartition:
 		response := task.Response.(*proto.LoadDataPartitionResponse)
 		taskStatus = response.Status
-		err = c.dealLoadVolResponse(task.OperatorAddr, response)
+		err = c.dealLoadDataPartitionResponse(task.OperatorAddr, response)
 	case proto.OpDeleteFile:
 		response := task.Response.(*proto.DeleteFileResponse)
 		taskStatus = response.Status
@@ -472,78 +472,78 @@ errDeal:
 	return
 }
 
-func (c *Cluster) dealCreateVolResponse(t *proto.AdminTask, resp *proto.CreateDataPartitionResponse) (err error) {
+func (c *Cluster) dealCreateDataPartitionResponse(t *proto.AdminTask, resp *proto.CreateDataPartitionResponse) (err error) {
 	if resp.Status == proto.TaskSuccess {
-		c.createVolSuccessTriggerOperator(t.OperatorAddr, resp)
+		c.createDataPartitionSuccessTriggerOperator(t.OperatorAddr, resp)
 	} else if resp.Status == proto.TaskFail {
-		c.createVolFailTriggerOperator(t, resp)
+		c.createDataPartitionFailTriggerOperator(t, resp)
 	}
 
 	return
 }
 
-func (c *Cluster) createVolSuccessTriggerOperator(nodeAddr string, resp *proto.CreateDataPartitionResponse) (err error) {
+func (c *Cluster) createDataPartitionSuccessTriggerOperator(nodeAddr string, resp *proto.CreateDataPartitionResponse) (err error) {
 	var (
 		dataNode *DataNode
-		vg       *DataPartition
-		vol      *DataReplica
+		dp       *DataPartition
+		replica  *DataReplica
 	)
 
-	if vg, err = c.getDataPartitionByID(resp.PartitionId); err != nil {
+	if dp, err = c.getDataPartitionByID(resp.PartitionId); err != nil {
 		goto errDeal
 	}
 
 	if dataNode, err = c.getDataNode(nodeAddr); err != nil {
 		goto errDeal
 	}
-	vol = NewDataReplica(dataNode)
-	vol.Status = DataPartitionReadWrite
-	vg.addMember(vol)
+	replica = NewDataReplica(dataNode)
+	replica.Status = DataPartitionReadWrite
+	dp.addMember(replica)
 
-	vg.Lock()
-	vg.checkAndRemoveMissReplica(vol.Addr)
-	vg.Unlock()
+	dp.Lock()
+	dp.checkAndRemoveMissReplica(replica.Addr)
+	dp.Unlock()
 	return
 errDeal:
-	log.LogError(fmt.Sprintf("createVolSuccessTriggerOperatorErr %v", err))
+	log.LogError(fmt.Sprintf("createDataPartitionSuccessTriggerOperatorErr %v", err))
 	return
 }
 
-func (c *Cluster) createVolFailTriggerOperator(t *proto.AdminTask, resp *proto.CreateDataPartitionResponse) (err error) {
-	msg := fmt.Sprintf("action[createVolFailTriggerOperator],taskID:%v, vol:%v on :%v  "+
+func (c *Cluster) createDataPartitionFailTriggerOperator(t *proto.AdminTask, resp *proto.CreateDataPartitionResponse) (err error) {
+	msg := fmt.Sprintf("action[createDataPartitionFailTriggerOperator],taskID:%v, partitionID:%v on :%v  "+
 		"Fail And TrigerChangeOpAddr Fail:%v ", t.ID, resp.PartitionId, t.OperatorAddr, err)
 	log.LogWarn(msg)
 	return
 }
 
-func (c *Cluster) dealDeleteVolResponse(nodeAddr string, resp *proto.DeleteDataPartitionResponse) (err error) {
+func (c *Cluster) dealDeleteDataPartitionResponse(nodeAddr string, resp *proto.DeleteDataPartitionResponse) (err error) {
 	var (
-		vg *DataPartition
+		dp *DataPartition
 	)
 	if resp.Status == proto.TaskSuccess {
-		if vg, err = c.getDataPartitionByID(resp.PartitionId); err != nil {
+		if dp, err = c.getDataPartitionByID(resp.PartitionId); err != nil {
 			return
 		}
-		vg.Lock()
-		vg.offLineInMem(nodeAddr)
-		vg.Unlock()
+		dp.Lock()
+		dp.offLineInMem(nodeAddr)
+		dp.Unlock()
 	} else {
-		Warn(c.Name, fmt.Sprintf("delete vol[%v] failed", nodeAddr))
+		Warn(c.Name, fmt.Sprintf("delete data partition[%v] failed", nodeAddr))
 	}
 
 	return
 }
 
-func (c *Cluster) dealLoadVolResponse(nodeAddr string, resp *proto.LoadDataPartitionResponse) (err error) {
+func (c *Cluster) dealLoadDataPartitionResponse(nodeAddr string, resp *proto.LoadDataPartitionResponse) (err error) {
 	var dataNode *DataNode
-	vg, err := c.getDataPartitionByID(resp.PartitionId)
+	dp, err := c.getDataPartitionByID(resp.PartitionId)
 	if err != nil || resp.Status == proto.TaskFail || resp.PartitionSnapshot == nil {
 		return
 	}
 	if dataNode, err = c.getDataNode(nodeAddr); err != nil {
 		return
 	}
-	vg.LoadFile(dataNode, resp)
+	dp.LoadFile(dataNode, resp)
 
 	return
 }

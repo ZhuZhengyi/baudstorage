@@ -76,9 +76,9 @@ func (m *Master) checkConfig(cfg *config.Config) (err error) {
 	m.ip = cfg.GetString(IP)
 	m.port = cfg.GetString(Port)
 	vfDelayCheckCrcSec := cfg.GetString(FileDelayCheckCrc)
-	volMissSec := cfg.GetString(DataPartitionMissSec)
-	volTimeOutSec := cfg.GetString(DataPartitionTimeOutSec)
-	everyLoadVolCount := cfg.GetString(EveryLoadDataPartitionCount)
+	dataPartitionMissSec := cfg.GetString(DataPartitionMissSec)
+	dataPartitionTimeOutSec := cfg.GetString(DataPartitionTimeOutSec)
+	everyLoadDataPartitionCount := cfg.GetString(EveryLoadDataPartitionCount)
 	replicaNum := cfg.GetString(ReplicaNum)
 	m.walDir = cfg.GetString(WalDir)
 	m.storeDir = cfg.GetString(StoreDir)
@@ -111,18 +111,18 @@ func (m *Master) checkConfig(cfg *config.Config) (err error) {
 		}
 	}
 
-	if volMissSec != "" {
-		if m.config.DataPartitionMissSec, err = strconv.ParseInt(volMissSec, 10, 0); err != nil {
+	if dataPartitionMissSec != "" {
+		if m.config.DataPartitionMissSec, err = strconv.ParseInt(dataPartitionMissSec, 10, 0); err != nil {
 			return fmt.Errorf("%v,err:%v", ErrBadConfFile, err.Error())
 		}
 	}
-	if volTimeOutSec != "" {
-		if m.config.DataPartitionTimeOutSec, err = strconv.ParseInt(volTimeOutSec, 10, 0); err != nil {
+	if dataPartitionTimeOutSec != "" {
+		if m.config.DataPartitionTimeOutSec, err = strconv.ParseInt(dataPartitionTimeOutSec, 10, 0); err != nil {
 			return fmt.Errorf("%v,err:%v", ErrBadConfFile, err.Error())
 		}
 	}
-	if everyLoadVolCount != "" {
-		if m.config.everyLoadDataPartitionCount, err = strconv.Atoi(everyLoadVolCount); err != nil {
+	if everyLoadDataPartitionCount != "" {
+		if m.config.everyLoadDataPartitionCount, err = strconv.Atoi(everyLoadDataPartitionCount); err != nil {
 			return fmt.Errorf("%v,err:%v", ErrBadConfFile, err.Error())
 		}
 	}

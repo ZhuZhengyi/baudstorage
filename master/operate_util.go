@@ -9,11 +9,11 @@ import (
 	"github.com/tiglabs/baudstorage/util/ump"
 )
 
-func newCreateVolRequest(partitionType string, ID uint64) (req *proto.CreateDataPartitionRequest) {
+func newCreateDataPartitionRequest(partitionType string, ID uint64) (req *proto.CreateDataPartitionRequest) {
 	req = &proto.CreateDataPartitionRequest{
 		PartitionType: partitionType,
 		PartitionId:   ID,
-		PartitionSize: util.DefaultVolSize,
+		PartitionSize: util.DefaultDataPartitionSize,
 	}
 	return
 }
@@ -25,7 +25,7 @@ func newDeleteDataPartitionRequest(ID uint64) (req *proto.DeleteDataPartitionReq
 	return
 }
 
-func newLoadVolMetricRequest(partitionType string, ID uint64) (req *proto.LoadDataPartitionRequest) {
+func newLoadDataPartitionMetricRequest(partitionType string, ID uint64) (req *proto.LoadDataPartitionRequest) {
 	req = &proto.LoadDataPartitionRequest{
 		PartitionType: partitionType,
 		PartitionId:   ID,

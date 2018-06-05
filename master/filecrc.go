@@ -107,7 +107,7 @@ func (fc *FileInCore) needCrcRepair(liveVols []*DataReplica, volType string) (fm
 
 	for i := 0; i < len(liveVols); i++ {
 		vol := liveVols[i]
-		if fm, ok := fc.getFileMetaByVolAddr(vol); ok {
+		if fm, ok := fc.getFileMetaByAddr(vol); ok {
 			fms = append(fms, fm)
 		}
 	}

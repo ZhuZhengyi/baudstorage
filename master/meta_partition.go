@@ -283,20 +283,20 @@ func (mp *MetaPartition) getLiveReplica() (liveReplicas []*MetaReplica) {
 }
 
 func (mp *MetaPartition) updateInfoToStore(newHosts []string, newPeers []proto.Peer, nsName string, c *Cluster) (err error) {
-	oldVolHosts := make([]string, len(mp.PersistenceHosts))
-	copy(oldVolHosts, mp.PersistenceHosts)
+	oldHosts := make([]string, len(mp.PersistenceHosts))
+	copy(oldHosts, mp.PersistenceHosts)
 	oldPeers := make([]proto.Peer, len(mp.Peers))
 	copy(oldPeers, mp.Peers)
 	mp.PersistenceHosts = newHosts
 	mp.Peers = newPeers
 	if err = c.syncUpdateMetaPartition(nsName, mp); err != nil {
-		mp.PersistenceHosts = oldVolHosts
+		mp.PersistenceHosts = oldHosts
 		mp.Peers = oldPeers
 		log.LogWarnf("action[updateInfoToStore] failed,partitionID:%v  old hosts:%v new hosts:%v oldPeers:%v  newPeers",
 			mp.PartitionID, mp.PersistenceHosts, newHosts, mp.Peers, newPeers)
 	}
 	log.LogDebugf("action[updateInfoToStore] success,partitionID:%v  old hosts:%v  new hosts:%v ",
-		mp.PartitionID, oldVolHosts, mp.PersistenceHosts, oldPeers, mp.Peers)
+		mp.PartitionID, oldHosts, mp.PersistenceHosts, oldPeers, mp.Peers)
 	return
 }
 

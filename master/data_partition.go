@@ -39,8 +39,8 @@ func newDataPartition(ID uint64, replicaNum uint8, partitionType string) (partit
 func (partition *DataPartition) addMember(replica *DataReplica) {
 	partition.Lock()
 	defer partition.Unlock()
-	for _, vol := range partition.Replicas {
-		if replica.Addr == vol.Addr {
+	for _, r := range partition.Replicas {
+		if replica.Addr == r.Addr {
 			return
 		}
 	}
@@ -50,7 +50,7 @@ func (partition *DataPartition) addMember(replica *DataReplica) {
 func (partition *DataPartition) generateCreateTasks() (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	for _, addr := range partition.PersistenceHosts {
-		t := proto.NewAdminTask(proto.OpCreateDataPartition, addr, newCreateVolRequest(partition.PartitionType, partition.PartitionID))
+		t := proto.NewAdminTask(proto.OpCreateDataPartition, addr, newCreateDataPartitionRequest(partition.PartitionType, partition.PartitionID))
 		partition.resetTaskID(t)
 		tasks = append(tasks, t)
 	}
@@ -157,7 +157,7 @@ func (partition *DataPartition) generateLoadTasks() (tasks []*proto.AdminTask) {
 			continue
 		}
 		replica.LoadPartitionIsResponse = false
-		t := proto.NewAdminTask(proto.OpLoadDataPartition, replica.Addr, newLoadVolMetricRequest(partition.PartitionType, partition.PartitionID))
+		t := proto.NewAdminTask(proto.OpLoadDataPartition, replica.Addr, newLoadDataPartitionMetricRequest(partition.PartitionType, partition.PartitionID))
 		partition.resetTaskID(t)
 		tasks = append(tasks, t)
 	}
@@ -190,7 +190,7 @@ func (partition *DataPartition) convertToDataPartitionResponse() (dpr *DataParti
 	return
 }
 
-func (partition *DataPartition) checkLoadResponse(volTimeOutSec int64) (isResponse bool) {
+func (partition *DataPartition) checkLoadResponse(timeOutSec int64) (isResponse bool) {
 	partition.Lock()
 	defer partition.Unlock()
 	for _, addr := range partition.PersistenceHosts {
@@ -198,14 +198,14 @@ func (partition *DataPartition) checkLoadResponse(volTimeOutSec int64) (isRespon
 		if err != nil {
 			return
 		}
-		loadVolTime := time.Now().Unix() - partition.LastLoadTime
-		if replica.LoadPartitionIsResponse == false && loadVolTime > LoadDataPartitionWaitTime {
+		timePassed := time.Now().Unix() - partition.LastLoadTime
+		if replica.LoadPartitionIsResponse == false && timePassed > LoadDataPartitionWaitTime {
 			msg := fmt.Sprintf("action[checkLoadResponse], partitionID:%v on Node:%v no response, spent time %v s",
-				partition.PartitionID, addr, loadVolTime)
+				partition.PartitionID, addr, timePassed)
 			log.LogWarn(msg)
 			return
 		}
-		if replica.IsLive(volTimeOutSec) == false || replica.LoadPartitionIsResponse == false {
+		if replica.IsLive(timeOutSec) == false || replica.LoadPartitionIsResponse == false {
 			return
 		}
 	}
@@ -247,7 +247,7 @@ func (partition *DataPartition) getFileCount() {
 	for _, replica := range partition.Replicas {
 		msg = fmt.Sprintf(GetDataReplicaFileCountInfo+"partitionID:%v  replicaAddr:%v  FileCount:%v  "+
 			"NodeIsActive:%v  replicaIsActive:%v  .replicaStatusOnNode:%v ", partition.PartitionID, replica.Addr, replica.FileCount,
-			replica.GetVolLocationNode().isActive, replica.IsActive(DefaultDataPartitionTimeOutSec), replica.Status)
+			replica.GetReplicaNode().isActive, replica.IsActive(DefaultDataPartitionTimeOutSec), replica.Status)
 		log.LogInfo(msg)
 	}
 
@@ -305,9 +305,9 @@ func (partition *DataPartition) setToNormal() {
 	partition.isRecover = false
 }
 
-func (partition *DataPartition) isInPersistenceHosts(volAddr string) (ok bool) {
+func (partition *DataPartition) isInPersistenceHosts(addr string) (ok bool) {
 	for _, addr := range partition.PersistenceHosts {
-		if addr == volAddr {
+		if addr == addr {
 			ok = true
 			break
 		}
@@ -343,8 +343,8 @@ func (partition *DataPartition) checkReplicationTask() (tasks []*proto.AdminTask
 	return
 }
 
-/*delete vol excess replication ,range all volLocs
-if volLocation not in volRocksDBHosts then generator task to delete volume*/
+/*delete data replica excess replication ,range all data replicas
+if data replica not in persistenceHosts then generator task to delete the replica*/
 func (partition *DataPartition) deleteExcessReplication() (excessAddr string, task *proto.AdminTask, err error) {
 	partition.Lock()
 	defer partition.Unlock()
@@ -374,7 +374,7 @@ func (partition *DataPartition) addLackReplication() (t *proto.AdminTask, lackAd
 			err = DataReplicaLackError
 			lackAddr = addr
 
-			t = proto.NewAdminTask(proto.OpCreateDataPartition, addr, newCreateVolRequest(partition.PartitionType, partition.PartitionID))
+			t = proto.NewAdminTask(proto.OpCreateDataPartition, addr, newCreateDataPartitionRequest(partition.PartitionType, partition.PartitionID))
 			t.ID = fmt.Sprintf("%v_partitionID[%v]", t.ID, partition.PartitionID)
 			partition.isRecover = true
 			break
@@ -425,7 +425,7 @@ func (partition *DataPartition) LoadFile(dataNode *DataNode, resp *proto.LoadDat
 
 	index, err := partition.getReplicaIndex(dataNode.Addr)
 	if err != nil {
-		msg := fmt.Sprintf("LoadFile volID:%v  on Node:%v  don't report :%v ", partition.PartitionID, dataNode.Addr, err)
+		msg := fmt.Sprintf("LoadFile partitionID:%v  on Node:%v  don't report :%v ", partition.PartitionID, dataNode.Addr, err)
 		log.LogWarn(msg)
 		return
 	}

@@ -26,7 +26,7 @@ func (partition *DataPartition) checkStatus(needLog bool, dpTimeOutSec int64) {
 	}
 }
 
-func (partition *DataPartition) checkReplicaStatusOnLiveNode(liveReplicas []*DataReplica) (volEqual bool) {
+func (partition *DataPartition) checkReplicaStatusOnLiveNode(liveReplicas []*DataReplica) (equal bool) {
 	for _, replica := range liveReplicas {
 		if replica.Status != DataPartitionReadWrite {
 			return
@@ -50,7 +50,7 @@ func (partition *DataPartition) checkMiss(clusterID string, dataPartitionMissSec
 	defer partition.Unlock()
 	for _, replica := range partition.Replicas {
 		if partition.isInPersistenceHosts(replica.Addr) && replica.CheckMiss(dataPartitionMissSec) == true && partition.needWarnMissDataPartition(replica.Addr, dataPartitionWarnInterval) {
-			dataNode := replica.GetVolLocationNode()
+			dataNode := replica.GetReplicaNode()
 			var (
 				lastReportTime time.Time
 			)

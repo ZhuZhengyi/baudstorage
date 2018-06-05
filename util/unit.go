@@ -3,14 +3,14 @@ package util
 import "regexp"
 
 const (
-	_  = iota
-	KB = 1 << (10 * iota)
+	_                          = iota
+	KB                        = 1 << (10 * iota)
 	MB
 	GB
 	TB
 	PB
-	DefaultVolSize     = 120 * GB
-	TaskWorkerInterval = 1
+	DefaultDataPartitionSize = 120 * GB
+	TaskWorkerInterval       = 1
 )
 
 func Min(a, b int) int {

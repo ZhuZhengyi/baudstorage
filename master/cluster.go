@@ -382,7 +382,7 @@ func (c *Cluster) dataPartitionOffline(offlineAddr, nsName string, dp *DataParti
 	}
 	dp.offLineInMem(offlineAddr)
 	dp.checkAndRemoveMissReplica(offlineAddr)
-	task = proto.NewAdminTask(proto.OpCreateDataPartition, offlineAddr, newCreateVolRequest(dp.PartitionType, dp.PartitionID))
+	task = proto.NewAdminTask(proto.OpCreateDataPartition, offlineAddr, newCreateDataPartitionRequest(dp.PartitionType, dp.PartitionID))
 	task.ID = fmt.Sprintf("%v_volID[%v]", task.ID, dp.PartitionID)
 	tasks = make([]*proto.AdminTask, 0)
 	tasks = append(tasks, task)
@@ -546,7 +546,7 @@ func (c *Cluster) getDataPartitionCapacity(ns *NameSpace) (count int) {
 	defer mutex.Unlock()
 	c.dataNodes.Range(func(addr, value interface{}) bool {
 		dataNode := value.(*DataNode)
-		totalCount = totalCount + dataNode.RemainWeightsForCreateVol/util.DefaultVolSize
+		totalCount = totalCount + dataNode.RemainWeightsForCreateVol/util.DefaultDataPartitionSize
 		return true
 	})
 	count = int(totalCount / uint64(ns.dpReplicaNum))
