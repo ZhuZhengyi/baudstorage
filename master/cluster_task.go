@@ -201,9 +201,8 @@ func (c *Cluster) processLoadDataPartition(dp *DataPartition, isRecover bool) {
 		return
 	}
 	dp.getFileCount()
-	checkFileTasks := dp.checkFile(isRecover, c.Name)
+	dp.checkFile(isRecover, c.Name)
 	dp.setToNormal()
-	c.putDataNodeTasks(checkFileTasks)
 }
 
 func (c *Cluster) checkMetaPartitions(ns *NameSpace) {
@@ -448,10 +447,6 @@ func (c *Cluster) dealDataNodeTaskResponse(nodeAddr string, task *proto.AdminTas
 		response := task.Response.(*proto.LoadDataPartitionResponse)
 		taskStatus = response.Status
 		err = c.dealLoadDataPartitionResponse(task.OperatorAddr, response)
-	case proto.OpDeleteFile:
-		response := task.Response.(*proto.DeleteFileResponse)
-		taskStatus = response.Status
-		err = c.dealDeleteFileResponse(task.OperatorAddr, response)
 	case proto.OpDataNodeHeartbeat:
 		response := task.Response.(*proto.DataNodeHeartBeatResponse)
 		taskStatus = response.Status
@@ -544,20 +539,6 @@ func (c *Cluster) dealLoadDataPartitionResponse(nodeAddr string, resp *proto.Loa
 		return
 	}
 	dp.LoadFile(dataNode, resp)
-
-	return
-}
-
-func (c *Cluster) dealDeleteFileResponse(nodeAddr string, resp *proto.DeleteFileResponse) (err error) {
-	var (
-		vg *DataPartition
-	)
-	if resp.Status == proto.TaskSuccess {
-		if vg, err = c.getDataPartitionByID(resp.VolId); err != nil {
-			return
-		}
-		vg.DeleteFileOnNode(nodeAddr, resp.Name)
-	}
 
 	return
 }

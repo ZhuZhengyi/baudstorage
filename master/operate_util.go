@@ -33,14 +33,6 @@ func newLoadDataPartitionMetricRequest(partitionType string, ID uint64) (req *pr
 	return
 }
 
-func newDeleteFileRequest(volId uint64, name string) (req *proto.DeleteFileRequest) {
-	req = &proto.DeleteFileRequest{
-		VolId: volId,
-		Name:  name,
-	}
-	return
-}
-
 func UnmarshalTaskResponse(task *proto.AdminTask) (err error) {
 	bytes, err := json.Marshal(task.Response)
 	if err != nil {

@@ -127,9 +127,6 @@ func (partition *DataPartition) offLineInMem(addr string) {
 		return
 	}
 
-	for _, fc := range partition.FileInCoreMap {
-		fc.deleteFileInNode(partition.PartitionID, replica)
-	}
 	partition.DeleteReplicaByIndex(delIndex)
 
 	return
@@ -454,32 +451,6 @@ func (partition *DataPartition) getReplicaIndex(addr string) (index int, err err
 	log.LogError(fmt.Sprintf("action[getReplicaIndex],partitionID:%v,location:%v,err:%v",
 		partition.PartitionID, addr, DataReplicaNotFound))
 	return -1, DataReplicaNotFound
-}
-
-func (partition *DataPartition) DeleteFileOnNode(delAddr, FileID string) {
-	partition.Lock()
-	defer partition.Unlock()
-	fc, ok := partition.FileInCoreMap[FileID]
-	if !ok || fc.MarkDel == false {
-		return
-	}
-	replica, err := partition.getReplica(delAddr)
-	if err != nil {
-		return
-	}
-	fc.deleteFileInNode(partition.PartitionID, replica)
-
-	msg := fmt.Sprintf("partitionID:%v  File:%v  on node:%v  delete success",
-		partition.PartitionID, fc.Name, delAddr)
-	log.LogInfo(msg)
-
-	if len(fc.Metas) == 0 {
-		delete(partition.FileInCoreMap, fc.Name)
-		msg = fmt.Sprintf("partitionID:%v  File:%v  delete success on allNode", partition.PartitionID, fc.Name)
-		log.LogInfo(msg)
-	}
-
-	return
 }
 
 func (partition *DataPartition) removeHosts(removeAddr string, c *Cluster, nsName string) (err error) {

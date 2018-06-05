@@ -5,8 +5,7 @@ import (
 )
 
 /*check File: recover File,if File lack or timeOut report or crc bad*/
-func (partition *DataPartition) checkFile(isRecoverFlag bool, clusterID string) (tasks []*proto.AdminTask) {
-	tasks = make([]*proto.AdminTask, 0)
+func (partition *DataPartition) checkFile(isRecoverFlag bool, clusterID string) {
 	partition.Lock()
 	defer partition.Unlock()
 	liveReplicas := partition.getLiveReplicas(DefaultDataPartitionTimeOutSec)
@@ -24,16 +23,16 @@ func (partition *DataPartition) checkFile(isRecoverFlag bool, clusterID string) 
 	return
 }
 
-func (partition *DataPartition) checkChunkFile(liveReplicas []*DataReplica, clusterID string) (tasks []*proto.AdminTask) {
+func (partition *DataPartition) checkChunkFile(liveReplicas []*DataReplica, clusterID string) {
 	for _, fc := range partition.FileInCoreMap {
-		tasks = append(tasks, fc.generateFileCrcTask(partition.PartitionID, liveReplicas, ChunkDataPartition, clusterID)...)
+		fc.generateFileCrcTask(partition.PartitionID, liveReplicas, proto.TinyVol, clusterID)
 	}
 	return
 }
 
 func (partition *DataPartition) checkExtentFile(liveReplicas []*DataReplica, isRecoverFlag bool, clusterID string) (tasks []*proto.AdminTask) {
 	for _, fc := range partition.FileInCoreMap {
-		tasks = append(tasks, fc.generateFileCrcTask(partition.PartitionID, liveReplicas, ExtentDataPartition, clusterID)...)
+		fc.generateFileCrcTask(partition.PartitionID, liveReplicas, proto.ExtentVol, clusterID)
 	}
 	return
 }
