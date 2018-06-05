@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	DataPartitionViewUrl       = "/client/datapartition?name="
+	DataPartitionViewUrl       = "/client/dataPartitions?name="
 	ActionGetDataPartitionView = "ActionGetDataPartitionView"
 )
 
@@ -36,6 +36,10 @@ type DataPartition struct {
 
 type DataPartitionView struct {
 	DataPartitions []*DataPartition
+}
+
+func (dp *DataPartition) String() string {
+	return fmt.Sprintf("PartitionID(%v) Status(%v) ReplicaNum(%v) PartitionType(%v) Hosts(%v)", dp.PartitionID, dp.Status, dp.ReplicaNum, dp.PartitionType, dp.Hosts)
 }
 
 func (dp *DataPartition) GetAllAddrs() (m string) {
@@ -94,10 +98,10 @@ func (wrapper *DataPartitionWrapper) getDataPartitionFromMaster() (err error) {
 		}
 		views := new(DataPartitionView)
 		if err = json.Unmarshal(body, views); err != nil {
-			log.LogError(fmt.Sprintf(ActionGetDataPartitionView+"get VolView from master[%v] err[%v]", m, err.Error()))
+			log.LogError(fmt.Sprintf(ActionGetDataPartitionView+"get VolView from master[%v] err[%v] body(%v)", m, err.Error(), string(body)))
 			continue
 		}
-		log.LogInfof("Get VolView from master: %v", string(body))
+		log.LogInfof("Get DataPartitions from master: (%v)", *views)
 		wrapper.updateDataPartition(views.DataPartitions)
 		break
 	}
@@ -117,6 +121,7 @@ func (wrapper *DataPartitionWrapper) replaceOrInsertPartition(dp *DataPartition)
 func (wrapper *DataPartitionWrapper) updateDataPartition(partitions []*DataPartition) {
 	rwPartitionGroups := make([]*DataPartition, 0)
 	for _, dp := range partitions {
+		//log.LogInfof("Get dp(%v)", dp)
 		if dp.Status == storage.ReadWriteStore {
 			rwPartitionGroups = append(rwPartitionGroups, dp)
 		}
@@ -127,6 +132,7 @@ func (wrapper *DataPartitionWrapper) updateDataPartition(partitions []*DataParti
 	// between master and datanode. So do not update the vol group view for
 	// now, and use the old information.
 	if len(rwPartitionGroups) < MinWritableDataPartitionNum {
+		log.LogWarnf("RW Partitions(%v) Minimum(%v)", len(rwPartitionGroups), MinWritableDataPartitionNum)
 		return
 	}
 	wrapper.rwPartition = rwPartitionGroups
