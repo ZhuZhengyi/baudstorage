@@ -154,24 +154,24 @@ func (space *SpaceManager) deleteVol(vodId uint32) {
 	}
 }
 
-func (space *SpaceManager)closeActiveFiles(){
-	partitions:=make([]*DataPartition,0)
+func (space *SpaceManager) closeActiveFiles() {
+	partitions := make([]*DataPartition, 0)
 	space.dataPartitionLock.RLock()
-	for _,partition:=range space.partitions{
-		partitions=append(partitions,partition)
+	for _, partition := range space.partitions {
+		partitions = append(partitions, partition)
 	}
 	defer space.dataPartitionLock.RUnlock()
-	activeFiles:=0
-	for _,partition:=range partitions{
-		if partition.partitionType==proto.ExtentVol{
-			store:=partition.store.(*storage.ExtentStore)
-			activeFiles+=store.GetStoreActiveFiles()
+	activeFiles := 0
+	for _, partition := range partitions {
+		if partition.partitionType == proto.ExtentVol {
+			store := partition.store.(*storage.ExtentStore)
+			activeFiles += store.GetStoreActiveFiles()
 		}
 	}
-	if activeFiles>=MaxActiveExtents{
-		for _,partition:=range partitions{
-			if partition.partitionType==proto.ExtentVol{
-				store:=partition.store.(*storage.ExtentStore)
+	if activeFiles >= MaxActiveExtents {
+		for _, partition := range partitions {
+			if partition.partitionType == proto.ExtentVol {
+				store := partition.store.(*storage.ExtentStore)
 				store.CloseStoreActiveFiles()
 			}
 		}

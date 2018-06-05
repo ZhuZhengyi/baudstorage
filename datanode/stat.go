@@ -123,20 +123,20 @@ func PostToMaster(data []byte, url string) (msg []byte, err error) {
 			CurrMaster = MasterAddrs[index]
 			resp, err = post(data, "http://"+CurrMaster+url)
 		}
-		scode := resp.StatusCode
+		stateCode := resp.StatusCode
 		msg, _ = ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
-		if scode == http.StatusForbidden {
+		if stateCode == http.StatusForbidden {
 			CurrMaster = string(msg)
 			CurrMaster = strings.Replace(CurrMaster, "\n", "", 100)
 			log.LogWarn(fmt.Sprintf("action[DataNode.postToMaster] master Addr change to %v, retry post to master", string(msg)))
 			continue
 		}
-		if scode != http.StatusOK {
-			return nil, fmt.Errorf("postTo %v scode %v msg %v", url, scode, string(msg))
+		if stateCode != http.StatusOK {
+			return nil, fmt.Errorf("postTo %v stateCode %v msg %v", url, stateCode, string(msg))
 		}
 		success = true
-		log.LogInfof("action[DataNode.postToMaster] url[%v] to master[%v] response[%v] code[%v]", url, MasterAddrs, string(msg), scode)
+		log.LogInfof("action[DataNode.postToMaster] url[%v] to master[%v] response[%v] code[%v]", url, MasterAddrs, string(msg), stateCode)
 		break
 	}
 	if !success {
