@@ -87,5 +87,4 @@ const (
 	cfgMetaDir     = "metaDir"
 	cfgRaftDir     = "raftDir"
 	cfgMasterAddrs = "masterAddrs"
-	cfgPProfPort   = "pprof"
 )

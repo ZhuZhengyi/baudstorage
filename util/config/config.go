@@ -49,37 +49,49 @@ func (c *Config) parse(fileName string) error {
 
 // Returns a string for the config variable key
 func (c *Config) GetString(key string) string {
-	result, present := c.data[key]
+	x, present := c.data[key]
 	if !present {
 		return ""
 	}
-	return result.(string)
+	if result, isString := x.(string); isString {
+		return result
+	}
+	return ""
 }
 
 // Returns a float for the config variable key
 func (c *Config) GetFloat(key string) float64 {
-	x, ok := c.data[key]
-	if !ok {
+	x, present := c.data[key]
+	if !present {
 		return -1
 	}
-	return x.(float64)
+	if result, isFloat := x.(float64); isFloat {
+		return result
+	}
+	return 0
 }
 
 // Returns a bool for the config variable key
 func (c *Config) GetBool(key string) bool {
-	x, ok := c.data[key]
-	if !ok {
+	x, present := c.data[key]
+	if !present {
 		return false
 	}
-	return x.(bool)
+	if result, isBool := x.(bool); isBool {
+		return result
+	}
+	return false
 }
 
 func (c *Config) GetInt(key string) int64 {
-	result, present := c.data[key]
+	x, present := c.data[key]
 	if !present {
 		return 0
 	}
-	return result.(int64)
+	if result, isInt := x.(int64); isInt {
+		return result
+	}
+	return 0
 }
 
 // Returns an array for the config variable key

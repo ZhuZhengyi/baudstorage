@@ -12,7 +12,6 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/baudstorage/util/pool"
 	"github.com/tiglabs/baudstorage/util/ump"
-	"io"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -50,20 +49,17 @@ const (
 	ConfigKeyClusterID  = "clusterID"  // string
 	ConfigKeyMasterAddr = "masterAddr" // array
 	ConfigKeyRack       = "rack"       // string
-	ConfigKeyProfPort   = "profPort"   // int
 	ConfigKeyDisks      = "disks"      // array
 )
 
 type DataNode struct {
 	space            *SpaceManager
-	port             int
-	profPort         int
+	port             string
 	rackName         string
 	clusterId        string
 	localIp          string
 	localServeAddr   string
 	tcpListener      net.Listener
-	httpServerCloser io.Closer
 	state            uint32
 	wg               sync.WaitGroup
 }
@@ -103,7 +99,7 @@ func (s *DataNode) onStart(cfg *config.Config) (err error) {
 	if err = s.LoadVol(cfg); err != nil {
 		return
 	}
-	s.startRestService()
+	s.registerProfHandler()
 	if err = s.startTcpService(); err != nil {
 		return
 	}
@@ -113,12 +109,11 @@ func (s *DataNode) onStart(cfg *config.Config) (err error) {
 
 func (s *DataNode) onShutdown() {
 	s.stopTcpService()
-	s.stopRestService()
 	return
 }
 
 func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
-	s.port = int(cfg.GetFloat(ConfigKeyPort))
+	s.port = cfg.GetString(ConfigKeyPort)
 	s.clusterId = cfg.GetString(ConfigKeyClusterID)
 	if len(cfg.GetArray(ConfigKeyMasterAddr)) == 0 {
 		return ErrBadConfFile
@@ -131,10 +126,9 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	if err = s.registerToMaster(); err != nil {
 		return
 	}
-	s.profPort = int(cfg.GetFloat(ConfigKeyProfPort))
 	s.space = NewSpaceManager(s.rackName)
 
-	if err != nil || s.port == 0 {
+	if err != nil || len(strings.TrimSpace(s.port)) == 0 {
 		err = ErrBadConfFile
 		return
 	}
@@ -145,7 +139,6 @@ func (s *DataNode) LoadVol(cfg *config.Config) (err error) {
 	log.LogDebugf("action[DataNode.Load] load port[%v].", s.port)
 	log.LogDebugf("action[DataNode.Load] load clusterId[%v].", s.clusterId)
 	log.LogDebugf("action[DataNode.Load] load rackName[%v].", s.rackName)
-	log.LogDebugf("action[DataNode.Load] load profPort[%v].", s.profPort)
 
 	for _, d := range cfg.GetArray(ConfigKeyDisks) {
 		log.LogDebugf("action[DataNode.Load] load disk raw config[%v].", d)
@@ -197,26 +190,10 @@ func (s *DataNode) registerToMaster() (err error) {
 	return
 }
 
-func (s *DataNode) startRestService() {
+func (s *DataNode) registerProfHandler() {
 	http.HandleFunc("/disks", s.HandleGetDisk)
 	http.HandleFunc("/partitions", s.HandleVol)
 	http.HandleFunc("/stats", s.HandleStat)
-
-	address := fmt.Sprintf("%s:%d", LocalIP, s.profPort)
-
-	server := &http.Server{
-		Addr: address,
-	}
-	go server.ListenAndServe()
-	log.LogDebugf("action[DataNode.startRestService] listen and serve address[%v].", address)
-	s.httpServerCloser = server
-}
-
-func (s *DataNode) stopRestService() {
-	if s.httpServerCloser != nil {
-		s.httpServerCloser.Close()
-		log.LogDebugf("action[DataNode.stopRestService] stop reset service.")
-	}
 }
 
 func (s *DataNode) startTcpService() (err error) {

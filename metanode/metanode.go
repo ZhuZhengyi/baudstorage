@@ -27,7 +27,7 @@ import (
 // data synchronization to maintain data consistency within the MetaGroup.
 type MetaNode struct {
 	nodeId      uint64
-	listen      int
+	listen      string
 	metaDir     string //metaNode store root dir
 	raftDir     string //raftStore log store base dir
 	metaManager MetaManager
@@ -116,7 +116,7 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 		err = errors.New("invalid configuration")
 		return
 	}
-	m.listen = int(cfg.GetFloat(cfgListen))
+	m.listen = cfg.GetString(cfgListen)
 	m.metaDir = cfg.GetString(cfgMetaDir)
 	m.raftDir = cfg.GetString(cfgRaftDir)
 	addrs := cfg.GetArray(cfgMasterAddrs)
@@ -128,8 +128,8 @@ func (m *MetaNode) parseConfig(cfg *config.Config) (err error) {
 }
 
 func (m *MetaNode) validConfig() (err error) {
-	if m.listen <= 0 || m.listen >= 65535 {
-		err = errors.Errorf("listen port: %d", m.listen)
+	if len(strings.TrimSpace(m.listen)) == 0 {
+		err = errors.New("illegal listen")
 		return
 	}
 	if m.metaDir == "" {
