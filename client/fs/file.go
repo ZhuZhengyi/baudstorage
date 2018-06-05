@@ -72,19 +72,17 @@ func (f *File) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadR
 
 	data := make([]byte, req.Size)
 	size, err := f.super.ec.Read(f.inode.ino, data, int(req.Offset), req.Size)
-	if err != nil {
-		if err == io.EOF && size == 0 {
-			return nil
-		} else {
-			log.LogErrorf("Read error: (%v) size(%v)", err.Error(), size)
-			return fuse.EIO
-		}
+	if err != nil && err != io.EOF {
+		log.LogErrorf("Read error: (%v) size(%v)", err.Error(), size)
+		return fuse.EIO
 	}
 	if size > req.Size {
 		log.LogErrorf("Read error: request size(%v) read size(%v)", req.Size, size)
 		return fuse.ERANGE
 	}
-	resp.Data = append(resp.Data, data[:size]...)
+	if size > 0 {
+		resp.Data = append(resp.Data, data[:size]...)
+	}
 	return nil
 }
 
