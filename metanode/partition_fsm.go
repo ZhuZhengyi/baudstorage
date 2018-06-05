@@ -3,6 +3,7 @@ package metanode
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
@@ -103,15 +104,23 @@ func (mp *metaPartition) Snapshot() (raftproto.Snapshot, error) {
 }
 
 func (mp *metaPartition) ApplySnapshot(peers []raftproto.Peer,
-	iter raftproto.SnapIterator) error {
+	iter raftproto.SnapIterator) (err error) {
+	var (
+		data []byte
+	)
+	defer func() {
+		if err == io.EOF {
+			mp.applyID = mp.raftPartition.AppliedIndex()
+		}
+	}()
 	for {
-		data, err := iter.Next()
+		data, err = iter.Next()
 		if err != nil {
-			return err
+			return
 		}
 		snap := NewMetaPartitionSnapshot(0, nil, nil)
 		if err = snap.UnmarshalBinary(data); err != nil {
-			return err
+			return
 		}
 		switch snap.Op {
 		case opCreateInode:
@@ -125,11 +134,10 @@ func (mp *metaPartition) ApplySnapshot(peers []raftproto.Peer,
 			dentry.UnmarshalValue(snap.V)
 			mp.createDentry(dentry)
 		default:
-			return fmt.Errorf("unknown op=%d", snap.Op)
+			err = fmt.Errorf("unknown op=%d", snap.Op)
+			return
 		}
 	}
-	mp.applyID = mp.raftPartition.AppliedIndex()
-	return nil
 }
 
 func (mp *metaPartition) HandleFatalEvent(err *raft.FatalError) {

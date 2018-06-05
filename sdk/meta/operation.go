@@ -37,20 +37,20 @@ func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *pro
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		err = errors.Annotatef(err, "icreate: req(%v)", *req)
+		err = errors.Annotatef(err, "icreate: mc(%v) req(%v)", mc, *req)
 		return
 	}
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
-		log.LogErrorf("icreate: req(%v) result(%v)", *req, packet.GetResultMesg())
+		log.LogErrorf("icreate: mc(%v) req(%v) result(%v)", mc, *req, packet.GetResultMesg())
 		return
 	}
 
 	resp := new(proto.CreateInodeResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
-		err = errors.Annotatef(err, "icreate: PacketData(%v)", string(packet.Data))
+		err = errors.Annotatef(err, "icreate: mc(%v) PacketData(%v)", mc, string(packet.Data))
 		return
 	}
 	return statusOK, resp.Info, nil
@@ -82,23 +82,22 @@ func (mw *MetaWrapper) idelete(mc *MetaConn, inode uint64) (status int, extents 
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		err = errors.Annotatef(err, "idelete: req(%v)", *req)
+		err = errors.Annotatef(err, "idelete: mc(%v) req(%v)", mc, *req)
 		return
 	}
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
-		log.LogErrorf("idelete: req(%v) result(%v)", *req, packet.GetResultMesg())
+		log.LogErrorf("idelete: mc(%v) req(%v) result(%v)", mc, *req, packet.GetResultMesg())
 		return
 	}
 
 	resp := new(proto.DeleteInodeResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
-		err = errors.Annotatef(err, "idelete: PacketData(%v)", string(packet.Data))
+		err = errors.Annotatef(err, "idelete: mc(%v) PacketData(%v)", mc, string(packet.Data))
 		return
 	}
-	log.LogDebugf("idelete: response(%v)", *resp)
 	return statusOK, resp.Extents, nil
 }
 
@@ -131,13 +130,13 @@ func (mw *MetaWrapper) dcreate(mc *MetaConn, parentID uint64, name string, inode
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		err = errors.Annotatef(err, "dcreate: req(%v)", *req)
+		err = errors.Annotatef(err, "dcreate: mc(%v) req(%v)", mc, *req)
 		return
 	}
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
-		log.LogErrorf("dcreate: req(%v) result(%v)", *req, packet.GetResultMesg())
+		log.LogErrorf("dcreate: mc(%v) req(%v) result(%v)", mc, *req, packet.GetResultMesg())
 	}
 	return
 }
@@ -169,20 +168,20 @@ func (mw *MetaWrapper) ddelete(mc *MetaConn, parentID uint64, name string) (stat
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		err = errors.Annotatef(err, "ddelete: req(%v)", *req)
+		err = errors.Annotatef(err, "ddelete: mc(%v) req(%v)", mc, *req)
 		return
 	}
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
-		log.LogErrorf("ddelete: req(%v) result(%v)", *req, packet.GetResultMesg())
+		log.LogErrorf("ddelete: mc(%v) req(%v) result(%v)", mc, *req, packet.GetResultMesg())
 		return
 	}
 
 	resp := new(proto.DeleteDentryResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
-		err = errors.Annotatef(err, "ddelete: PacketData(%v)", string(packet.Data))
+		err = errors.Annotatef(err, "ddelete: mc(%v) PacketData(%v)", mc, string(packet.Data))
 		return
 	}
 	return statusOK, resp.Inode, nil
@@ -195,7 +194,7 @@ func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (statu
 		}
 	}()
 
-	log.LogDebugf("lookup: partitionID(%v) parent(%v) name(%v)", mc.id, parentID, name)
+	log.LogDebugf("lookup: mc(%v) parent(%v) name(%v)", mc, parentID, name)
 	req := &proto.LookupRequest{
 		Namespace:   mw.namespace,
 		PartitionID: mc.id,
@@ -215,14 +214,14 @@ func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (statu
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		err = errors.Annotatef(err, "lookup: req(%v)", *req)
+		err = errors.Annotatef(err, "lookup: mc(%v) req(%v)", mc, *req)
 		return
 	}
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
 		if status != statusNoent {
-			log.LogErrorf("lookup: req(%v) result(%v)", *req, packet.GetResultMesg())
+			log.LogErrorf("lookup: mc(%v) req(%v) result(%v)", mc, *req, packet.GetResultMesg())
 		}
 		return
 	}
@@ -230,7 +229,7 @@ func (mw *MetaWrapper) lookup(mc *MetaConn, parentID uint64, name string) (statu
 	resp := new(proto.LookupResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
-		err = errors.Annotatef(err, "lookup: PacketData(%v)", string(packet.Data))
+		err = errors.Annotatef(err, "lookup: mc(%v) PacketData(%v)", mc, string(packet.Data))
 		return
 	}
 	return statusOK, resp.Inode, resp.Mode, nil
@@ -249,7 +248,7 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 		Inode:       inode,
 	}
 
-	log.LogDebugf("iget request: Namespace(%v) PartitionID(%v) Inode(%v)", mw.namespace, mc.id, inode)
+	log.LogDebugf("iget request: mc(%v) ino(%v)", mc, inode)
 
 	packet := proto.NewPacket()
 	packet.Opcode = proto.OpMetaInodeGet
@@ -264,20 +263,20 @@ func (mw *MetaWrapper) iget(mc *MetaConn, inode uint64) (status int, info *proto
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		err = errors.Annotatef(err, "iget: req(%v)", *req)
+		err = errors.Annotatef(err, "iget: mc(%v) req(%v)", mc, *req)
 		return
 	}
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
-		log.LogErrorf("iget: req(%v) result(%v)", *req, packet.GetResultMesg())
+		log.LogErrorf("iget: mc(%v) req(%v) result(%v)", mc, *req, packet.GetResultMesg())
 		return
 	}
 
 	resp := new(proto.InodeGetResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
-		err = errors.Annotatef(err, "iget: PacketData(%v)", string(packet.Data))
+		err = errors.Annotatef(err, "iget: mc(%v) PacketData(%v)", mc, string(packet.Data))
 		return
 	}
 	return statusOK, resp.Info, nil
@@ -309,21 +308,21 @@ func (mw *MetaWrapper) readdir(mc *MetaConn, parentID uint64) (status int, child
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		err = errors.Annotatef(err, "readdir: req(%v)", *req)
+		err = errors.Annotatef(err, "readdir: mc(%v) req(%v)", mc, *req)
 		return
 	}
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
 		children = make([]proto.Dentry, 0)
-		log.LogErrorf("readdir: req(%v) result(%v)", *req, packet.GetResultMesg())
+		log.LogErrorf("readdir: mc(%v) req(%v) result(%v)", mc, *req, packet.GetResultMesg())
 		return
 	}
 
 	resp := new(proto.ReadDirResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
-		err = errors.Annotatef(err, "readdir: PacketData(%v)", string(packet.Data))
+		err = errors.Annotatef(err, "readdir: mc(%v) PacketData(%v)", mc, string(packet.Data))
 		return
 	}
 	return statusOK, resp.Children, nil
@@ -356,11 +355,11 @@ func (mw *MetaWrapper) appendExtentKey(mc *MetaConn, inode uint64, extent proto.
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		err = errors.Annotatef(err, "appendExtentKey: req(%v)", *req)
+		err = errors.Annotatef(err, "appendExtentKey: mc(%v) req(%v)", mc, *req)
 		return
 	}
 	if packet.ResultCode != proto.OpOk {
-		log.LogErrorf("appendExtentKey: result(%v)", packet.GetResultMesg())
+		log.LogErrorf("appendExtentKey: mc(%v) result(%v)", mc, packet.GetResultMesg())
 	}
 	return parseStatus(packet.ResultCode), nil
 }
@@ -391,21 +390,21 @@ func (mw *MetaWrapper) getExtents(mc *MetaConn, inode uint64) (status int, exten
 
 	packet, err = mc.send(packet)
 	if err != nil {
-		err = errors.Annotatef(err, "getExtents: req(%v)", *req)
+		err = errors.Annotatef(err, "getExtents: mc(%v) req(%v)", mc, *req)
 		return
 	}
 
 	status = parseStatus(packet.ResultCode)
 	if status != statusOK {
 		extents = make([]proto.ExtentKey, 0)
-		log.LogErrorf("getExtents: result(%v)", packet.GetResultMesg())
+		log.LogErrorf("getExtents: mc(%v) result(%v)", mc, packet.GetResultMesg())
 		return
 	}
 
 	resp := new(proto.GetExtentsResponse)
 	err = packet.UnmarshalData(resp)
 	if err != nil {
-		err = errors.Annotatef(err, "getExtents: PacketData(%v)", string(packet.Data))
+		err = errors.Annotatef(err, "getExtents: mc(%v) PacketData(%v)", mc, string(packet.Data))
 		return
 	}
 	return statusOK, resp.Extents, nil

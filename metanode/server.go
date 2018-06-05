@@ -3,7 +3,6 @@ package metanode
 import (
 	"io"
 	"net"
-	"strconv"
 
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
@@ -13,7 +12,7 @@ import (
 func (m *MetaNode) startServer() (err error) {
 	// Init and start server.
 	m.httpStopC = make(chan uint8)
-	ln, err := net.Listen("tcp", ":"+strconv.Itoa(m.listen))
+	ln, err := net.Listen("tcp", ":"+m.listen)
 	if err != nil {
 		return
 	}

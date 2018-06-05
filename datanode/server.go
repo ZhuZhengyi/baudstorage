@@ -53,15 +53,15 @@ const (
 )
 
 type DataNode struct {
-	space            *SpaceManager
-	port             string
-	rackName         string
-	clusterId        string
-	localIp          string
-	localServeAddr   string
-	tcpListener      net.Listener
-	state            uint32
-	wg               sync.WaitGroup
+	space          *SpaceManager
+	port           string
+	rackName       string
+	clusterId      string
+	localIp        string
+	localServeAddr string
+	tcpListener    net.Listener
+	state          uint32
+	wg             sync.WaitGroup
 }
 
 func (s *DataNode) Start(cfg *config.Config) (err error) {
@@ -182,7 +182,7 @@ func (s *DataNode) registerToMaster() (err error) {
 		return
 	}
 	// Register this data node to master.
-	data, err = PostToMaster(nil, fmt.Sprintf("%s?addr=%s:%d", master.AddDataNode, LocalIP, s.port))
+	data, err = PostToMaster(nil, fmt.Sprintf("%s?addr=%s:%v", master.AddDataNode, LocalIP, s.port))
 	if err != nil {
 		err = fmt.Errorf("cannot add this data node to master[%v] err[%v]", MasterAddrs, err)
 		return
@@ -198,7 +198,7 @@ func (s *DataNode) registerProfHandler() {
 
 func (s *DataNode) startTcpService() (err error) {
 	log.LogInfo("Start: startTcpService")
-	addr := fmt.Sprintf(":%d", s.port)
+	addr := fmt.Sprintf(":%v", s.port)
 	l, err := net.Listen(NetType, addr)
 	log.LogDebugf("action[DataNode.startTcpService] listen %v address[%v].", NetType, addr)
 	if err != nil {

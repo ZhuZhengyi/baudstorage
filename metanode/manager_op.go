@@ -350,9 +350,8 @@ func (m *metaManager) opMetaExtentsList(conn net.Conn, p *Packet) (err error) {
 }
 
 func (m *metaManager) opMetaExtentsDel(conn net.Conn, p *Packet) (err error) {
-	//TODO: not implement yet
+	// TODO: not implement yet
 	panic("not implement yet")
-	return
 }
 
 func (m *metaManager) opDeleteMetaPartition(conn net.Conn, p *Packet) (err error) {

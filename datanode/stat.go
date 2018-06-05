@@ -73,7 +73,9 @@ func (s *Stats) AddOutDataSize(size uint64) {
 	atomic.AddUint64(&s.outDataSize, size)
 }
 
-func (s *Stats) updateMetrics(total, used, free, createdVolWeights, remainWeightsForCreateVol, maxWeightsForCreateVol, dataPartitioncnt uint64) {
+func (s *Stats) updateMetrics(
+	total, used, free, createdVolWeights, remainWeightsForCreateVol,
+	maxWeightsForCreateVol, dataPartitionCnt uint64) {
 	s.Lock()
 	defer s.Unlock()
 	s.Total = total
@@ -82,7 +84,7 @@ func (s *Stats) updateMetrics(total, used, free, createdVolWeights, remainWeight
 	s.CreatedPartitionWeights = createdVolWeights
 	s.RemainWeightsForCreatePartition = remainWeightsForCreateVol
 	s.MaxWeightsForCreatePartition = maxWeightsForCreateVol
-	s.CreatedPartitionCnt = dataPartitioncnt
+	s.CreatedPartitionCnt = dataPartitionCnt
 }
 
 func post(data []byte, url string) (*http.Response, error) {
@@ -123,20 +125,20 @@ func PostToMaster(data []byte, url string) (msg []byte, err error) {
 			CurrMaster = MasterAddrs[index]
 			resp, err = post(data, "http://"+CurrMaster+url)
 		}
-		scode := resp.StatusCode
+		stateCode := resp.StatusCode
 		msg, _ = ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
-		if scode == http.StatusForbidden {
+		if stateCode == http.StatusForbidden {
 			CurrMaster = string(msg)
 			CurrMaster = strings.Replace(CurrMaster, "\n", "", 100)
 			log.LogWarn(fmt.Sprintf("action[DataNode.postToMaster] master Addr change to %v, retry post to master", string(msg)))
 			continue
 		}
-		if scode != http.StatusOK {
-			return nil, fmt.Errorf("postTo %v scode %v msg %v", url, scode, string(msg))
+		if stateCode != http.StatusOK {
+			return nil, fmt.Errorf("postTo %v stateCode %v msg %v", url, stateCode, string(msg))
 		}
 		success = true
-		log.LogInfof("action[DataNode.postToMaster] url[%v] to master[%v] response[%v] code[%v]", url, MasterAddrs, string(msg), scode)
+		log.LogInfof("action[DataNode.postToMaster] url[%v] to master[%v] response[%v] code[%v]", url, MasterAddrs, string(msg), stateCode)
 		break
 	}
 	if !success {

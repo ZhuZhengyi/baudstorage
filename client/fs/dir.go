@@ -95,6 +95,7 @@ func (d *Dir) Remove(ctx context.Context, req *fuse.RemoveRequest) error {
 		log.LogErrorf("Dir Remove: ino(%v) name(%v) err(%v)", d.inode.ino, req.Name, err.Error())
 		return ParseError(err)
 	}
+	delete(d.dents, req.Name)
 
 	if extents != nil {
 		log.LogDebugf("Remove extents: %v", extents)
@@ -180,5 +181,6 @@ func (d *Dir) Rename(ctx context.Context, req *fuse.RenameRequest, newDir fs.Nod
 		log.LogErrorf("Dir Rename: srcIno(%v) oldName(%v) dstIno(%v) newName(%v) err(%v)", d.inode.ino, req.OldName, dstDir.inode.ino, req.NewName, err.Error())
 		return ParseError(err)
 	}
+	delete(d.dents, req.OldName)
 	return nil
 }
