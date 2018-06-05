@@ -3,7 +3,6 @@ package metanode
 import (
 	"io"
 	"net"
-	"strconv"
 
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"

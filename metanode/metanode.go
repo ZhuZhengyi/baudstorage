@@ -187,7 +187,7 @@ func (m *MetaNode) register() (err error) {
 }
 
 func (m *MetaNode) postNodeID() (err error) {
-	reqPath := fmt.Sprintf("%s?addr=%s:%d", metaNodeURL, m.localAddr, m.listen)
+	reqPath := fmt.Sprintf("%s?addr=%s:%s", metaNodeURL, m.localAddr, m.listen)
 	msg, err := postToMaster(reqPath, nil)
 	if err != nil {
 		err = errors.Errorf("[postNodeID] %s", err.Error())

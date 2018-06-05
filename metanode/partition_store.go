@@ -106,7 +106,6 @@ func (mp *metaPartition) loadInode() (err error) {
 		}
 		line = nil
 	}
-	return
 }
 
 // Load dentry from dentry snapshot file
@@ -157,7 +156,6 @@ func (mp *metaPartition) loadDentry() (err error) {
 		}
 		line = nil
 	}
-	return
 }
 
 func (mp *metaPartition) loadApplyID() (err error) {
