@@ -100,6 +100,15 @@ type InodeGetResponse struct {
 	Info *InodeInfo
 }
 
+type BatchInodeGetRequest struct {
+	Namespace string   `json:"namespace"`
+	Inode     []uint64 `json:"inodes"`
+}
+
+type BatchInodeGetResponse struct {
+	Info []*InodeInfo `json:"infos"`
+}
+
 type ReadDirRequest struct {
 	Namespace   string `json:"namespace"`
 	PartitionID uint64 `json:"partitionID"`
@@ -136,7 +145,7 @@ type ExtentKey struct {
 	Crc         uint32
 }
 
-func (ek *ExtentKey) isEquare(k ExtentKey) bool {
+func (ek *ExtentKey) Equal(k ExtentKey) bool {
 	return ek.PartitionId == k.PartitionId && ek.ExtentId == k.ExtentId
 }
 
