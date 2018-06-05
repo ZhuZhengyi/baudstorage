@@ -19,7 +19,7 @@ func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 		}
 	}()
 	msg := &MetaItem{}
-	if err = msg.UnmarshalBinary(command); err != nil {
+	if err = msg.UnmarshalJson(command); err != nil {
 		return
 	}
 	switch msg.Op {
@@ -161,7 +161,7 @@ func (mp *metaPartition) Put(key, val interface{}) (resp interface{}, err error)
 	if val != nil {
 		snap.V = val.([]byte)
 	}
-	cmd, err := json.Marshal(snap)
+	cmd, err := snap.MarshalJson()
 	if err != nil {
 		return
 	}
