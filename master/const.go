@@ -10,18 +10,11 @@ const (
 )
 
 const (
-	ExtentDataPartition = "extent"
-	ChunkDataPartition  = "chunk"
-)
-
-const (
 	DeleteExcessReplicationErr     = "DeleteExcessReplicationErr "
 	AddLackReplicationErr          = "AddLackReplicationErr "
 	CheckDataPartitionDiskErrorErr = "CheckDataPartitionDiskErrorErr  "
 	GetAvailDataNodeHostsErr       = "GetAvailDataNodeHostsErr "
 	GetAvailMetaNodeHostsErr       = "GetAvailMetaNodeHostsErr "
-	GetLackFileNodeTaskErr         = "GetLackFileNodeTaskErr "
-	DeleteFileInCoreInfo           = "DeleteFileInCoreInfo "
 	GetDataReplicaFileCountInfo    = "GetDataReplicaFileCountInfo "
 	DataNodeOfflineInfo            = "dataNodeOfflineInfo"
 	HandleDataPartitionOfflineErr  = "HandleDataPartitionOffLineErr "

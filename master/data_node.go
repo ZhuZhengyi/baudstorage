@@ -87,8 +87,8 @@ func (dataNode *DataNode) IsWriteAble() (ok bool) {
 	dataNode.Lock()
 	defer dataNode.Unlock()
 
-	if dataNode.isActive == true && dataNode.MaxDiskAvailWeight > (uint64)(util.DefaultVolSize) &&
-		dataNode.Total-dataNode.Used > (uint64)(util.DefaultVolSize)*ReservedVolCount {
+	if dataNode.isActive == true && dataNode.MaxDiskAvailWeight > (uint64)(util.DefaultDataPartitionSize) &&
+		dataNode.Total-dataNode.Used > (uint64)(util.DefaultDataPartitionSize)*ReservedVolCount {
 		ok = true
 	}
 
@@ -113,7 +113,7 @@ func (dataNode *DataNode) SelectNodeForWrite() {
 	defer dataNode.Unlock()
 	dataNode.ratio = float64(dataNode.Used) / float64(dataNode.Total)
 	dataNode.selectCount++
-	dataNode.Used += (uint64)(util.DefaultVolSize)
+	dataNode.Used += (uint64)(util.DefaultDataPartitionSize)
 	dataNode.carry = dataNode.carry - 1.0
 }
 

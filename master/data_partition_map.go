@@ -35,7 +35,7 @@ func (dpMap *DataPartitionMap) getDataPartition(ID uint64) (*DataPartition, erro
 	if v, ok := dpMap.dataPartitionMap[ID]; ok {
 		return v, nil
 	}
-	log.LogError(fmt.Sprintf("action[getDataPartition],VolId:%v,err:%v", ID, DataPartitionNotFound))
+	log.LogError(fmt.Sprintf("action[getDataPartition],partitionID:%v,err:%v", ID, DataPartitionNotFound))
 	return nil, DataPartitionNotFound
 }
 
@@ -87,7 +87,7 @@ func (dpMap *DataPartitionMap) GetDataPartitionsView(minPartitionID uint64) (dpR
 	return
 }
 
-func (dpMap *DataPartitionMap) getNeedReleaseDataPartitions(everyReleaseDataPartitionCount int, releaseVolAfterLoadVolSeconds int64) (partitions []*DataPartition) {
+func (dpMap *DataPartitionMap) getNeedReleaseDataPartitions(everyReleaseDataPartitionCount int, releaseDataPartitionAfterLoadSeconds int64) (partitions []*DataPartition) {
 	partitions = make([]*DataPartition, 0)
 	dpMap.RLock()
 	defer dpMap.RUnlock()
@@ -98,7 +98,7 @@ func (dpMap *DataPartitionMap) getNeedReleaseDataPartitions(everyReleaseDataPart
 		}
 		dpMap.lastReleasePartitionID++
 		dp, ok := dpMap.dataPartitionMap[dpMap.lastReleasePartitionID]
-		if ok && time.Now().Unix()-dp.LastLoadTime >= releaseVolAfterLoadVolSeconds {
+		if ok && time.Now().Unix()-dp.LastLoadTime >= releaseDataPartitionAfterLoadSeconds {
 			partitions = append(partitions, dp)
 		}
 	}

@@ -46,13 +46,13 @@ func (replica *DataReplica) IsActive(timeOutSec int64) bool {
 	return time.Now().Unix()-replica.ReportTime <= timeOutSec
 }
 
-func (replica *DataReplica) GetVolLocationNode() (node *DataNode) {
+func (replica *DataReplica) GetReplicaNode() (node *DataNode) {
 	return replica.dataNode
 }
 
 /*check replica location is avail ,must IsActive=true and replica.Status!=DataReplicaUnavailable*/
 func (replica *DataReplica) CheckLocIsAvailContainsDiskError() (avail bool) {
-	dataNode := replica.GetVolLocationNode()
+	dataNode := replica.GetReplicaNode()
 	dataNode.Lock()
 	defer dataNode.Unlock()
 	if dataNode.isActive == true && replica.IsActive(DefaultDataPartitionTimeOutSec) == true {

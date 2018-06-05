@@ -293,16 +293,20 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 	if !request.IsEqual(reply) {
 		writer.connect.Close()
 		return errors.Annotatef(fmt.Errorf("processReply recive [%v] but actual recive [%v]",
-			request.GetUniqLogId(), reply.GetUniqLogId()), "writer[%v]", writer.toString())
+			reply.GetUniqLogId(), request.GetUniqLogId()), "writer[%v]", writer.toString())
 	}
 	if reply.ResultCode != proto.OpOk {
 		writer.connect.Close()
-		return errors.Annotatef(fmt.Errorf("processReply recive [%v] error [%v]", reply.GetUniqLogId(),
-			string(reply.Data[:reply.Size])), "writer[%v]", writer.toString())
+		return errors.Annotatef(fmt.Errorf("processReply recive [%v] error [%v] request[%v]", reply.GetUniqLogId(),
+			string(reply.Data[:reply.Size]),request.GetUniqLogId()), "writer[%v]", writer.toString())
 	}
 	writer.addByteAck(uint64(request.Size))
 	writer.removeRquest(e)
-	log.LogDebug(fmt.Sprintf("ActionProcessReply[%v] is recived", reply.GetUniqLogId()))
+	orgReplySize:=reply.Size
+	reply.Size=request.Size
+	log.LogDebug(fmt.Sprintf("ActionProcessReply[%v] is recived Writer [%v]",
+					reply.GetUniqLogId(),writer.toString()))
+	reply.Size=orgReplySize
 
 	return nil
 }

@@ -16,6 +16,7 @@ import (
 
 	"github.com/tiglabs/baudstorage/util/config"
 	"net/http"
+	"fmt"
 )
 
 const (
@@ -26,6 +27,7 @@ const (
 	ConfigKeyRole     = "role"
 	ConfigKeyLogDir   = "logDir"
 	ConfigKeyLogLevel = "logLevel"
+	ConfigKeyProfPort = "prof"
 )
 
 const (
@@ -69,6 +71,7 @@ func main() {
 	role := cfg.GetString(ConfigKeyRole)
 	logDir := cfg.GetString(ConfigKeyLogDir)
 	logLevel := cfg.GetString(ConfigKeyLogLevel)
+	profPort := int(cfg.GetFloat(ConfigKeyProfPort))
 
 	//for multi-cpu scheduling
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -111,9 +114,12 @@ func main() {
 		level = log.ErrorLevel
 	}
 
-	go func() {
-		log.Println(http.ListenAndServe(":10080", nil))
-	}()
+	if profPort > 0 {
+		go func() {
+			log.Println(http.ListenAndServe(fmt.Sprintf(":%d",profPort), nil))
+		}()
+	}
+
 	if _, err := log.NewLog(logDir, module, level); err != nil {
 		os.Exit(1)
 		return

@@ -1,10 +1,7 @@
 package master
 
 import (
-	"fmt"
 	"github.com/tiglabs/baudstorage/proto"
-	"github.com/tiglabs/baudstorage/util/log"
-	"math/rand"
 )
 
 /*this struct define chunk file metadata on  dataNode */
@@ -77,82 +74,10 @@ func (fc *FileInCore) updateFileInCore(volID uint64, vf *proto.File, volLoc *Dat
 
 }
 
-func (fc *FileInCore) generatorDeleteFileTask(volID uint64) (tasks []*proto.AdminTask) {
-	tasks = make([]*proto.AdminTask, 0)
-	for i := 0; i < len(fc.Metas); i++ {
-		fm := fc.Metas[i]
-		vfDeleteNode := fm.getLocationAddr()
-		msg := fmt.Sprintf(DeleteFileInCoreInfo+"volID:%v  File:%v  Delete on Node:%v ", volID, fc.Name, vfDeleteNode)
-		log.LogDebug(msg)
-		t := proto.NewAdminTask(proto.OpDeleteFile, vfDeleteNode, newDeleteFileRequest(volID, fc.Name))
-		t.ID = fmt.Sprintf("%v_volID[%v]_fName[%v]", t.ID, volID, fc.Name)
-		tasks = append(tasks)
-	}
-
-	return
-}
-
-/*delete File nodeInfo on location*/
-func (fc *FileInCore) deleteFileInNode(volID uint64, loc *DataReplica) {
-	for i := 0; i < len(fc.Metas); i++ {
-		fm := fc.Metas[i]
-		if fm.LocAddr == loc.Addr {
-			afterNodes := fc.Metas[i+1:]
-			fc.Metas = fc.Metas[0:i]
-			fc.Metas = append(fc.Metas, afterNodes...)
-			break
-		}
-	}
-}
-
-/*get volFile replication source exclude badLoc*/
-func (fc *FileInCore) getLiveLocExcludeBadLoc(volLocs []*DataReplica, badLoc *DataReplica) (loc *DataReplica, err error) {
-	err = DataPartitionPersistedNotAnyReplicas
-
-	if len(volLocs) < 0 {
-		return
-	}
-	if loc, err = fc.randSelectReplicateSource(volLocs, badLoc); err != nil {
-		return fc.orderSelectReplicateSource(volLocs, badLoc)
-	}
-	return
-}
-
-func (fc *FileInCore) randSelectReplicateSource(volLocs []*DataReplica, badLoc *DataReplica) (loc *DataReplica, err error) {
-	index := rand.Intn(len(volLocs))
-	loc = volLocs[index]
-	if loc.Addr != badLoc.Addr && fc.locIsInNodeInfos(loc) == true {
-		return
-	}
-
-	return nil, DataPartitionPersistedNotAnyReplicas
-}
-
-func (fc *FileInCore) orderSelectReplicateSource(volLocs []*DataReplica, badLoc *DataReplica) (loc *DataReplica, err error) {
-	for i := 0; i < len(volLocs); i++ {
-		loc = volLocs[i]
-		if loc.Addr != badLoc.Addr && fc.locIsInNodeInfos(loc) == true {
-			return
-		}
-	}
-
-	return nil, DataPartitionPersistedNotAnyReplicas
-}
-
-func (fc *FileInCore) locIsInNodeInfos(loc *DataReplica) (ok bool) {
-	for i := 0; i < len(fc.Metas); i++ {
-		if fc.Metas[i].LocAddr == loc.Addr {
-			return true
-		}
-	}
-
-	return
-}
-
-func (fc *FileInCore) getFileMetaByVolAddr(vol *DataReplica) (fm *FileMetaOnNode, ok bool) {
+func (fc *FileInCore) getFileMetaByAddr(replica *DataReplica) (fm *FileMetaOnNode, ok bool) {
 	for i := 0; i < len(fc.Metas); i++ {
 		fm = fc.Metas[i]
-		if fm.LocAddr == vol.Addr {
+		if fm.LocAddr == replica.Addr {
 			ok = true
 			return
 		}

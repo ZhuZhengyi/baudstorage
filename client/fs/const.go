@@ -35,6 +35,7 @@ const (
 const (
 	InodeExpired           = int64(-1)
 	DefaultInodeExpiration = 600 * time.Second
+	MaxInodeCache          = 100000
 )
 
 func ParseError(err error) fuse.Errno {

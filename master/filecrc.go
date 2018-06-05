@@ -51,7 +51,7 @@ func (fileCrcArr FileCrcSorterByCount) log() (msg string) {
 	return
 }
 
-func (fc *FileInCore) generateFileCrcTask(volID uint64, liveVols []*DataReplica, volType, clusterID string) (tasks []*proto.AdminTask) {
+func (fc *FileInCore) generateFileCrcTask(partitionID uint64, liveVols []*DataReplica, volType, clusterID string) (tasks []*proto.AdminTask) {
 	tasks = make([]*proto.AdminTask, 0)
 	if fc.isCheckCrc() == false {
 		return
@@ -66,8 +66,8 @@ func (fc *FileInCore) generateFileCrcTask(volID uint64, liveVols []*DataReplica,
 	sort.Sort((FileCrcSorterByCount)(fileCrcArr))
 	maxCountFileCrcIndex := len(fileCrcArr) - 1
 	if fileCrcArr[maxCountFileCrcIndex].count == 1 {
-		msg := fmt.Sprintf("checkFileCrcTaskErr volID:%v  File:%v  Crc diffrent between all Node  "+
-			" it can not repair it ", volID, fc.Name)
+		msg := fmt.Sprintf("checkFileCrcTaskErr partitionID:%v  File:%v  Crc diffrent between all Node  "+
+			" it can not repair it ", partitionID, fc.Name)
 		msg += (FileCrcSorterByCount)(fileCrcArr).log()
 		Warn(clusterID, msg)
 		return
@@ -76,21 +76,14 @@ func (fc *FileInCore) generateFileCrcTask(volID uint64, liveVols []*DataReplica,
 	for index, crc := range fileCrcArr {
 		if index != maxCountFileCrcIndex {
 			badNode := crc.meta
-			tasks = append(tasks, generateOpDeleteFileTask(badNode.getLocationAddr(), volID, fc.Name))
-			msg := fmt.Sprintf("checkFileCrcTaskErr volID:%v  File:%v  badCrc On :%v  ",
-				volID, fc.Name, badNode.getLocationAddr())
+			msg := fmt.Sprintf("checkFileCrcTaskErr partitionID:%v  File:%v  badCrc On :%v  ",
+				partitionID, fc.Name, badNode.getLocationAddr())
 			msg += (FileCrcSorterByCount)(fileCrcArr).log()
 			Warn(clusterID, msg)
 		}
 	}
 
 	return
-}
-
-func generateOpDeleteFileTask(addr string, volId uint64, name string) (task *proto.AdminTask) {
-	t := proto.NewAdminTask(proto.OpDeleteFile, addr, newDeleteFileRequest(volId, name))
-	t.ID = fmt.Sprintf("%v_volID[%v]_fName[%v]", t.ID, volId, name)
-	return t
 }
 
 func (fc *FileInCore) isCheckCrc() bool {
@@ -107,7 +100,7 @@ func (fc *FileInCore) needCrcRepair(liveVols []*DataReplica, volType string) (fm
 
 	for i := 0; i < len(liveVols); i++ {
 		vol := liveVols[i]
-		if fm, ok := fc.getFileMetaByVolAddr(vol); ok {
+		if fm, ok := fc.getFileMetaByAddr(vol); ok {
 			fms = append(fms, fm)
 		}
 	}
@@ -115,7 +108,7 @@ func (fc *FileInCore) needCrcRepair(liveVols []*DataReplica, volType string) (fm
 		return
 	}
 
-	if volType == ChunkDataPartition {
+	if volType == proto.TinyVol {
 		if !isSameLastObjectID(fms) || !isSameNeedleCnt(fms) {
 			return
 		}
