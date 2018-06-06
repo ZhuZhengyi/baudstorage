@@ -155,10 +155,6 @@ func (p *Packet) GetOpMsg() (m string) {
 		m = "FlowInfo"
 	case OpIntraGroupNetErr:
 		m = "IntraGroupNetErr"
-	case OpArgMismatchErr:
-		m = "ArgUnmatchErr"
-	case OpNotExistErr:
-		m = "NotExistErr"
 	case OpMetaCreateInode:
 		m = "OpMetaCreateInode"
 	case OpMetaDeleteInode:
@@ -228,8 +224,12 @@ func (p *Packet) GetResultMesg() (m string) {
 		m = "ExistErr"
 	case OpInodeFullErr:
 		m = "InodeFullErr"
+	case OpArgMismatchErr:
+		m = "ArgUnmatchErr"
+	case OpNotExistErr:
+		m = "NotExistErr"
 	default:
-		return fmt.Sprintf("unknow opcode %v", p.Opcode)
+		return fmt.Sprintf("Unknown ResultCode(%v)", p.ResultCode)
 
 	}
 
