@@ -49,9 +49,13 @@ func (s *Super) InodeGet(ino uint64) (*Inode, error) {
 	}
 
 	info, err := s.mw.InodeGet_ll(ino)
-	if err != nil {
-		log.LogErrorf("InodeGet: ino(%v) err(%v)", ino, err.Error())
-		return nil, ParseError(err)
+	if err != nil || info == nil {
+		log.LogErrorf("InodeGet: ino(%v) err(%v) info(%v)", ino, err.Error(), info)
+		if err != nil {
+			return nil, ParseError(err)
+		} else {
+			return nil, fuse.ENOENT
+		}
 	}
 	inode = NewInode(info)
 	s.ic.Put(inode)
