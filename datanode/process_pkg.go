@@ -213,6 +213,9 @@ func (s *DataNode) sendToNext(pkg *Packet, msgH *MessageHandler) error {
 	var err error
 	msgH.PushListElement(pkg)
 	pkg.nextConn, err = s.GetNextConn(pkg.nextAddr)
+	if err != nil {
+		return err
+	}
 	pkg.Nodes--
 	if err == nil {
 		err = pkg.WriteToConn(pkg.nextConn)
