@@ -10,7 +10,6 @@ import (
 func (mp *metaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 	inoID, err := mp.nextInodeID()
 	if err != nil {
-		err = nil
 		p.PackErrorWithBody(proto.OpInodeFullErr, nil)
 		return
 	}

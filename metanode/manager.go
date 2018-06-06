@@ -185,7 +185,7 @@ func (m *metaManager) loadPartitions() (err error) {
 					RaftStore: m.raftStore,
 					RootDir:   path.Join(m.rootDir, fileName),
 				}
-				partitionConfig.BeforeStart = func() {
+				partitionConfig.AfterStop = func() {
 					m.detachPartition(id)
 				}
 				partition := NewMetaPartition(partitionConfig)

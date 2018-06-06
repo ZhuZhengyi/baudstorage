@@ -279,7 +279,6 @@ func (m *metaManager) opMetaInodeGet(conn net.Conn, p *Packet) (err error) {
 		return
 	}
 	if err = mp.InodeGet(req, p); err != nil {
-		p.PackErrorWithBody(proto.OpErr, nil)
 		err = errors.Errorf("[opMetaInodeGet] %s", err.Error())
 	}
 	m.respondToClient(conn, p)
