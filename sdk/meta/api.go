@@ -93,6 +93,7 @@ func (mw *MetaWrapper) Lookup_ll(parentID uint64, name string) (inode uint64, mo
 func (mw *MetaWrapper) InodeGet_ll(inode uint64) (info *proto.InodeInfo, err error) {
 	mc, err := mw.connect(inode)
 	if err != nil {
+		log.LogErrorf("InodeGet connect: ino(%v) err(%v)", inode, err)
 		return nil, syscall.EAGAIN
 	}
 	defer mw.putConn(mc, err)
