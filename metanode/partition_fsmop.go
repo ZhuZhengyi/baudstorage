@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/btree"
-	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"os"
 )
@@ -199,7 +198,7 @@ func (mp *metaPartition) deletePartition() (status uint8) {
 }
 
 func (mp *metaPartition) confAddNode(req *proto.
-	MetaPartitionOfflineRequest, index uint64) (err error) {
+	MetaPartitionOfflineRequest, index uint64) (updated bool, err error) {
 
 	var (
 		heartbeatPort int
@@ -208,26 +207,36 @@ func (mp *metaPartition) confAddNode(req *proto.
 	if heartbeatPort, replicatePort, err = mp.getRaftPort(); err != nil {
 		return
 	}
-	mp.config.Peers = append(mp.config.Peers, req.AddPeer)
-	// Write Disk
-	if err = mp.storeMeta(); err != nil {
-		err = errors.Errorf("[applyAddNode] %s", err.Error())
-		mp.config.Peers = mp.config.Peers[:len(mp.config.Peers)-1]
+
+	findAddPeer := false
+	for _, peer := range mp.config.Peers {
+		if peer.ID == req.AddPeer.ID {
+			findAddPeer = true
+			break
+		}
+	}
+	updated = !findAddPeer
+	if !updated {
 		return
 	}
+	mp.config.Peers = append(mp.config.Peers, req.AddPeer)
 	addr := strings.Split(req.AddPeer.Addr, ":")[0]
 	mp.raftPartition.AddNodeWithPort(req.AddPeer.ID, addr, heartbeatPort, replicatePort)
 	return
 }
 
-func (mp *metaPartition) confRemoveNode(req *proto.
-	MetaPartitionOfflineRequest, index uint64) (err error) {
+func (mp *metaPartition) confRemoveNode(req *proto.MetaPartitionOfflineRequest,
+	index uint64) (updated bool, err error) {
 	peerIndex := -1
 	for i, peer := range mp.config.Peers {
 		if peer.ID == req.RemovePeer.ID {
+			updated = true
 			peerIndex = i
 			break
 		}
+	}
+	if !updated {
+		return
 	}
 	if req.RemovePeer.ID == mp.config.NodeId {
 		mp.Stop()
@@ -235,10 +244,11 @@ func (mp *metaPartition) confRemoveNode(req *proto.
 		return
 	}
 	mp.config.Peers = append(mp.config.Peers[:peerIndex], mp.config.Peers[peerIndex+1:]...)
-	if err = mp.storeMeta(); err != nil {
-		err = errors.Errorf("[confRemoveNode] storeMeta: %s", err.Error())
-		mp.config.Peers = append(mp.config.Peers, req.RemovePeer)
-		return
-	}
+
+	return
+}
+
+func (mp *metaPartition) confUpdateNode(req *proto.MetaPartitionOfflineRequest,
+	index uint64) (updated bool, err error) {
 	return
 }
