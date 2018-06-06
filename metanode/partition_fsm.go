@@ -18,7 +18,7 @@ func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 			atomic.LoadUint64(&mp.applyID), index)
 	}
 	defer func() {
-		if err != nil {
+		if err == nil {
 			mp.uploadAppliedRaftLogId(index)
 		}
 	}()
@@ -80,7 +80,7 @@ func (mp *metaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, ind
 		return
 	}
 	defer func() {
-		if err != nil {
+		if err == nil {
 			mp.uploadAppliedRaftLogId(index)
 		}
 	}()
