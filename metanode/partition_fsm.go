@@ -18,7 +18,7 @@ func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 			atomic.LoadUint64(&mp.applyID), index)
 	}
 	defer func() {
-		if err != nil {
+		if err == nil {
 			mp.uploadAppliedRaftLogId(index)
 		}
 	}()
@@ -80,7 +80,7 @@ func (mp *metaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, ind
 		return
 	}
 	defer func() {
-		if err != nil {
+		if err == nil {
 			mp.uploadAppliedRaftLogId(index)
 		}
 	}()
@@ -89,18 +89,27 @@ func (mp *metaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, ind
 		return
 	}
 	// Change memory state
+	var (
+		updated bool
+	)
 	switch confChange.Type {
 	case raftproto.ConfAddNode:
-		err = mp.confAddNode(req, index)
+		updated, err = mp.confAddNode(req, index)
 	case raftproto.ConfRemoveNode:
-		err = mp.confRemoveNode(req, index)
+		updated, err = mp.confRemoveNode(req, index)
 	case raftproto.ConfUpdateNode:
-		//TODO
+		updated, err = mp.confUpdateNode(req, index)
 	}
 	if err != nil {
-		return nil, err
+		return
 	}
-	return nil, nil
+	if updated {
+		if err = mp.storeMeta(); err != nil {
+			log.LogErrorf("action[ApplyMemberChange] err[%v].", err)
+			return
+		}
+	}
+	return
 }
 
 func (mp *metaPartition) Snapshot() (raftproto.Snapshot, error) {
