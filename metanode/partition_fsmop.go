@@ -250,6 +250,7 @@ func (mp *metaPartition) confRemoveNode(req *proto.MetaPartitionOfflineRequest,
 	}
 	if req.RemovePeer.ID == mp.config.NodeId {
 		mp.Stop()
+		mp.raftPartition.Delete()
 		os.RemoveAll(mp.config.RootDir)
 		return
 	}

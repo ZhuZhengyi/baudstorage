@@ -135,6 +135,7 @@ func (mp *metaPartition) ApplySnapshot(peers []raftproto.Peer,
 		if err != nil {
 			return
 		}
+		mp.config.Cursor++
 		snap := NewMetaItem(0, nil, nil)
 		if err = snap.UnmarshalBinary(data); err != nil {
 			return

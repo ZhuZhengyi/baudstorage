@@ -191,8 +191,6 @@ func (m *metaManager) loadPartitions() (err error) {
 				partition := NewMetaPartition(partitionConfig)
 				err = m.attachPartition(id, partition)
 				wg.Done()
-				log.LogDebugf("load partition id=%d[%v]: %s.", id,
-					err == nil, err.Error())
 				if err != nil {
 					log.LogErrorf("load partition id=%d failed: %s.",
 						id, err.Error())
