@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 	"time"
+	"unsafe"
 )
 
 func (s *DataNode) readFromCliAndDeal(msgH *MessageHandler) (err error) {
@@ -294,9 +295,23 @@ func (s *DataNode) GetNextConn(nextAddr string) (conn net.Conn, err error) {
 }
 
 func (s *DataNode) CleanConn(conn net.Conn, isForceClose bool) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			log.LogErrorf("action[DataNode.CleanConn] err[%v].", conn)
+			panic(r)
+		}
+	}()
+
 	if conn == nil {
 		return
 	}
+	d := (*struct {
+		itab uintptr
+		data uintptr
+	})(unsafe.Pointer(&conn))
+	log.LogDebugf("action[DataNode.CleanConn] unsafePointer[%v].", d)
+
 	if isForceClose {
 		conn.Close()
 		return
