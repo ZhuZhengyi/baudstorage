@@ -8,7 +8,7 @@ import (
 	"github.com/juju/errors"
 
 	"github.com/tiglabs/baudstorage/proto"
-	//"github.com/tiglabs/baudstorage/util/log"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type MetaConn struct {
@@ -29,11 +29,13 @@ func (mw *MetaWrapper) getConn(mp *MetaPartition) (*MetaConn, error) {
 	//log.LogDebugf("Get connection: PartitionID(%v) addr(%v)\n", mp.PartitionID, addr)
 	conn, err := mw.conns.Get(addr)
 	if err != nil {
+		log.LogErrorf("Get conn: addr(%v) err(%v)", addr, err)
 		for _, addr = range mp.Members {
 			conn, err = mw.conns.Get(addr)
 			if err == nil {
 				break
 			}
+			log.LogErrorf("Get conn: addr(%v) err(%v)", addr, err)
 		}
 	}
 
