@@ -1,6 +1,7 @@
 package metanode
 
 import (
+	"github.com/tiglabs/baudstorage/util/log"
 	"strings"
 	"time"
 
@@ -99,7 +100,9 @@ func (mp *metaPartition) createInode(ino *Inode) (status uint8) {
 	status = proto.OpOk
 	mp.inodeMu.Lock()
 	defer mp.inodeMu.Unlock()
-	if mp.inodeTree.Has(ino) {
+	if existItem := mp.inodeTree.Get(ino); existItem != nil {
+		log.LogFatalf("action[createInode] exist[%v] expect[%v].",
+			existItem.(*Inode).String(), ino.String())
 		status = proto.OpExistErr
 		return
 	}

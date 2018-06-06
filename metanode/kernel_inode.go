@@ -3,6 +3,7 @@ package metanode
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
 	"strings"
@@ -37,6 +38,21 @@ type Inode struct {
 	AccessTime int64
 	ModifyTime int64
 	Extents    *proto.StreamKey
+}
+
+func (i *Inode) String() string {
+	buff := bytes.NewBuffer(make([]byte, 0))
+	buff.WriteString("Inode{")
+	buff.WriteString(fmt.Sprintf("Inode[%d]", i.Inode))
+	buff.WriteString(fmt.Sprintf("Type[%d]", i.Type))
+	buff.WriteString(fmt.Sprintf("Size[%d]", i.Size))
+	buff.WriteString(fmt.Sprintf("Gen[%d]", i.Generation))
+	buff.WriteString(fmt.Sprintf("CT[%d]", i.CreateTime))
+	buff.WriteString(fmt.Sprintf("AT[%d]", i.AccessTime))
+	buff.WriteString(fmt.Sprintf("MT[%d]", i.ModifyTime))
+	buff.WriteString(fmt.Sprintf("Extents[%s]", i.Extents))
+	buff.WriteString("}")
+	return buff.String()
 }
 
 // NewInode returns a new Inode instance pointer with specified Inode ID, name and Inode type code.

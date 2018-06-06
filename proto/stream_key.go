@@ -1,7 +1,9 @@
 package proto
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"sync"
 )
 
@@ -9,6 +11,15 @@ type StreamKey struct {
 	Inode   uint64
 	Extents []ExtentKey
 	sync.Mutex
+}
+
+func (sk *StreamKey) String() string {
+	buff := bytes.NewBuffer(make([]byte, 0))
+	buff.WriteString("Inode{")
+	buff.WriteString(fmt.Sprintf("Inode[%d]", sk.Inode))
+	buff.WriteString(fmt.Sprintf("Extents[%v]", sk.Extents))
+	buff.WriteString("}")
+	return buff.String()
 }
 
 func NewStreamKey(ino uint64) *StreamKey {
