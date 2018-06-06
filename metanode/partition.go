@@ -219,7 +219,7 @@ func (mp *metaPartition) startSchedule() {
 				timer.Stop()
 				return
 			case <-timer.C:
-				applyID := mp.applyID
+				applyID := atomic.LoadUint64(&mp.applyID)
 				if err := mp.store(); err != nil {
 					err = errors.Errorf(
 						"[startSchedule]: dump partition id=%d: %v",
@@ -354,7 +354,7 @@ func (mp *metaPartition) load() (err error) {
 }
 
 func (mp *metaPartition) store() (err error) {
-	appID := mp.applyID
+	appID := atomic.LoadUint64(&mp.applyID)
 	if err = mp.storeInode(); err != nil {
 		return
 	}

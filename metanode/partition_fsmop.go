@@ -101,7 +101,7 @@ func (mp *metaPartition) createInode(ino *Inode) (status uint8) {
 	mp.inodeMu.Lock()
 	defer mp.inodeMu.Unlock()
 	if existItem := mp.inodeTree.Get(ino); existItem != nil {
-		log.LogFatalf("action[createInode] exist[%v] expect[%v].",
+		log.LogErrorf("action[createInode] exist[%v] expect[%v].",
 			existItem.(*Inode).String(), ino.String())
 		status = proto.OpExistErr
 		return
@@ -208,18 +208,6 @@ func (mp *metaPartition) confAddNode(req *proto.
 	if heartbeatPort, replicatePort, err = mp.getRaftPort(); err != nil {
 		return
 	}
-
-	findAddPeer := false
-	for _, peer := range mp.config.Peers {
-		if peer.ID == req.AddPeer.ID {
-			findAddPeer = true
-			break
-		}
-	}
-	if findAddPeer {
-		mp.applyID = index
-		return
-	}
 	mp.config.Peers = append(mp.config.Peers, req.AddPeer)
 	// Write Disk
 	if err = mp.storeMeta(); err != nil {
@@ -229,27 +217,19 @@ func (mp *metaPartition) confAddNode(req *proto.
 	}
 	addr := strings.Split(req.AddPeer.Addr, ":")[0]
 	mp.raftPartition.AddNodeWithPort(req.AddPeer.ID, addr, heartbeatPort, replicatePort)
-	mp.applyID = index
 	return
 }
 
 func (mp *metaPartition) confRemoveNode(req *proto.
 	MetaPartitionOfflineRequest, index uint64) (err error) {
-	fondRemovePeer := false
 	peerIndex := -1
 	for i, peer := range mp.config.Peers {
 		if peer.ID == req.RemovePeer.ID {
-			fondRemovePeer = true
 			peerIndex = i
 			break
 		}
 	}
-	if !fondRemovePeer {
-		mp.applyID = index
-		return
-	}
 	if req.RemovePeer.ID == mp.config.NodeId {
-		mp.applyID = index
 		mp.Stop()
 		os.RemoveAll(mp.config.RootDir)
 		return
@@ -260,6 +240,5 @@ func (mp *metaPartition) confRemoveNode(req *proto.
 		mp.config.Peers = append(mp.config.Peers, req.RemovePeer)
 		return
 	}
-	mp.applyID = index
 	return
 }

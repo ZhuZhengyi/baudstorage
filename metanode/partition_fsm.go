@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sync/atomic"
 
-	"github.com/juju/errors"
 	"github.com/tiglabs/baudstorage/proto"
 	"github.com/tiglabs/baudstorage/util/log"
 	"github.com/tiglabs/raft"
@@ -13,9 +13,13 @@ import (
 )
 
 func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, err error) {
+	if mp.isRaftLogApplied(index) {
+		resp = proto.OpOk
+		return
+	}
 	defer func() {
 		if err != nil {
-			mp.applyID = index
+			mp.uploadAppliedRaftLogId(index)
 		}
 	}()
 	msg := &MetaItem{}
@@ -71,14 +75,18 @@ func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 	return
 }
 
-func (mp *metaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, index uint64) (interface{}, error) {
-	var err error
+func (mp *metaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, index uint64) (resp interface{}, err error) {
+	if mp.isRaftLogApplied(index) {
+		return
+	}
+	defer func() {
+		if err != nil {
+			mp.uploadAppliedRaftLogId(index)
+		}
+	}()
 	req := &proto.MetaPartitionOfflineRequest{}
 	if err = json.Unmarshal(confChange.Context, req); err != nil {
-		err = errors.Errorf(
-			"[ApplyMemberChange]: Unmarshal MetaPartitionOfflineRequest: %s",
-			err.Error())
-		return nil, err
+		return
 	}
 	// Change memory state
 	switch confChange.Type {
@@ -90,13 +98,13 @@ func (mp *metaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, ind
 		//TODO
 	}
 	if err != nil {
-		err = errors.Errorf("[ApplyMemberChange]->%s", err.Error())
+		return nil, err
 	}
-	return nil, err
+	return nil, nil
 }
 
 func (mp *metaPartition) Snapshot() (raftproto.Snapshot, error) {
-	applyID := mp.applyID
+	applyID := atomic.LoadUint64(&mp.applyID)
 	ino := mp.getInodeTree()
 	dentry := mp.dentryTree
 	snapIter := NewSnapshotIterator(applyID, ino, dentry)
@@ -128,11 +136,13 @@ func (mp *metaPartition) ApplySnapshot(peers []raftproto.Peer,
 			ino.UnmarshalKey(snap.K)
 			ino.UnmarshalValue(snap.V)
 			mp.createInode(ino)
+			log.LogDebugf("action[ApplySnapshot] create inode[%v].", ino)
 		case opCreateDentry:
 			dentry := &Dentry{}
 			dentry.UnmarshalKey(snap.K)
 			dentry.UnmarshalValue(snap.V)
 			mp.createDentry(dentry)
+			log.LogDebugf("action[ApplySnapshot] create dentry[%v].", dentry)
 		default:
 			err = fmt.Errorf("unknown op=%d", snap.Op)
 			return
@@ -142,7 +152,7 @@ func (mp *metaPartition) ApplySnapshot(peers []raftproto.Peer,
 
 func (mp *metaPartition) HandleFatalEvent(err *raft.FatalError) {
 	// Panic while fatal event happen.
-	panic(err)
+	log.LogFatalf("action[HandleFatalEvent] err[%v].", err)
 }
 
 func (mp *metaPartition) HandleLeaderChange(leader uint64) {
@@ -176,4 +186,13 @@ func (mp *metaPartition) Get(key interface{}) (interface{}, error) {
 
 func (mp *metaPartition) Del(key interface{}) (interface{}, error) {
 	return nil, nil
+}
+
+func (mp *metaPartition) isRaftLogApplied(applyId uint64) (applied bool) {
+	applied = atomic.LoadUint64(&mp.applyID) >= applyId
+	return
+}
+
+func (mp *metaPartition) uploadAppliedRaftLogId(applyId uint64) {
+	atomic.StoreUint64(&mp.applyID, applyId)
 }

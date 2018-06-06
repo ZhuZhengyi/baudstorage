@@ -13,7 +13,6 @@ import (
 const (
 	ChunkCount        = 40
 	ChunkOpenOpt      = os.O_CREATE | os.O_RDWR | os.O_APPEND
-	DiskErrStore      = -1
 	CompactThreshold  = 40
 	CompactMaxWait    = time.Second * 10
 	ReBootStoreMode   = false
