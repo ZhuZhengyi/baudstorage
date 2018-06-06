@@ -128,6 +128,7 @@ func (mp *metaPartition) ApplySnapshot(peers []raftproto.Peer,
 	defer func() {
 		if err == io.EOF {
 			mp.applyID = mp.raftPartition.AppliedIndex()
+			err = nil
 		}
 	}()
 	for {

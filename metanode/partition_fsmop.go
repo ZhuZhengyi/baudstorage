@@ -1,13 +1,13 @@
 package metanode
 
 import (
-	"github.com/tiglabs/baudstorage/util/log"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/google/btree"
 	"github.com/tiglabs/baudstorage/proto"
-	"os"
+	"github.com/tiglabs/baudstorage/util/log"
 )
 
 type ResponseDentry struct {
@@ -231,7 +231,7 @@ func (mp *metaPartition) confAddNode(req *proto.
 	}
 	mp.config.Peers = append(mp.config.Peers, req.AddPeer)
 	addr := strings.Split(req.AddPeer.Addr, ":")[0]
-	mp.raftPartition.AddNodeWithPort(req.AddPeer.ID, addr, heartbeatPort, replicatePort)
+	mp.config.RaftStore.AddNodeWithPort(req.AddPeer.ID, addr, heartbeatPort, replicatePort)
 	return
 }
 
@@ -250,7 +250,9 @@ func (mp *metaPartition) confRemoveNode(req *proto.MetaPartitionOfflineRequest,
 	}
 	if req.RemovePeer.ID == mp.config.NodeId {
 		mp.Stop()
-		mp.raftPartition.Delete()
+		if mp.raftPartition != nil {
+			mp.raftPartition.Delete()
+		}
 		os.RemoveAll(mp.config.RootDir)
 		return
 	}
