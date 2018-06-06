@@ -108,6 +108,12 @@ func (f *File) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadR
 }
 
 func (f *File) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
+	if uint64(req.Offset) > f.inode.size && len(req.Data) == 1 {
+		// Workaround: the fuse package is probably doing truncate size up
+		// if we reach here, which is not supported yet. So Just return.
+		return nil
+	}
+
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
@@ -164,6 +170,6 @@ func (f *File) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
 }
 
 func (f *File) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse.SetattrResponse) error {
-	log.LogDebugf("Fsync: ino(%v) size(%v)", f.inode.ino, req.Size)
+	log.LogDebugf("Setattr: ino(%v) size(%v)", f.inode.ino, req.Size)
 	return nil
 }
