@@ -19,6 +19,9 @@ const (
 	OpSyncAddMetaPartition    uint32 = 0x05
 	OpSyncUpdateDataPartition uint32 = 0x06
 	OpSyncUpdateMetaPartition uint32 = 0x07
+	OpSyncDeleteDataNode uint32 = 0x08
+	OpSyncDeleteMetaNode uint32 = 0x09
+
 )
 
 const (
@@ -157,10 +160,24 @@ func (c *Cluster) syncAddMetaNode(metaNode *MetaNode) (err error) {
 	return c.submit(metadata)
 }
 
+func (c *Cluster) syncDeleteMetaNode(metaNode *MetaNode) (err error) {
+	metadata := new(Metadata)
+	metadata.Op = OpSyncDeleteMetaNode
+	metadata.K = MetaNodePrefix + strconv.FormatUint(metaNode.ID, 10) + KeySeparator + metaNode.Addr
+	return c.submit(metadata)
+}
+
 //key=#dn#httpAddr,value = nil
 func (c *Cluster) syncAddDataNode(dataNode *DataNode) (err error) {
 	metadata := new(Metadata)
 	metadata.Op = OpSyncAddDataNode
+	metadata.K = DataNodePrefix + dataNode.Addr
+	return c.submit(metadata)
+}
+
+func (c *Cluster) syncDeleteDataNode(dataNode *DataNode) (err error) {
+	metadata := new(Metadata)
+	metadata.Op = OpSyncDeleteDataNode
 	metadata.K = DataNodePrefix + dataNode.Addr
 	return c.submit(metadata)
 }
@@ -201,8 +218,26 @@ func (c *Cluster) handleApply(cmd *Metadata) (err error) {
 		c.applyAddMetaPartition(cmd)
 	case OpSyncAddDataPartition:
 		c.applyAddDataPartition(cmd)
+	case OpSyncDeleteMetaNode:
+		c.applyDeleteMetaNode(cmd)
+	case OpSyncDeleteDataNode:
+		c.applyDeleteDataNode(cmd)
 	}
 	return
+}
+
+func (c *Cluster) applyDeleteDataNode(cmd *Metadata) {
+	keys := strings.Split(cmd.K, KeySeparator)
+	if keys[1] == DataNodeAcronym {
+		c.dataNodes.Delete(keys[2])
+	}
+}
+
+func (c *Cluster) applyDeleteMetaNode(cmd *Metadata) {
+	keys := strings.Split(cmd.K, KeySeparator)
+	if keys[1] == DataNodeAcronym {
+		c.metaNodes.Delete(keys[3])
+	}
 }
 
 func (c *Cluster) applyAddDataNode(cmd *Metadata) {

@@ -21,7 +21,6 @@ type RaftPeerChangeHandler func(confChange *proto.ConfChange) (err error)
 
 type RaftCmdApplyHandler func(cmd *Metadata) (err error)
 
-type RaftApplySnapshotHandler func() (err error)
 
 type MetadataFsm struct {
 	store                *raftstore.RocksDBStore
@@ -29,7 +28,6 @@ type MetadataFsm struct {
 	leaderChangeHandler  RaftLeaderChangeHandler
 	peerChangeHandler    RaftPeerChangeHandler
 	applyHandler         RaftCmdApplyHandler
-	applySnapshotHandler RaftApplySnapshotHandler
 }
 
 func newMetadataFsm(dir string) (fsm *MetadataFsm) {
@@ -48,10 +46,6 @@ func (mf *MetadataFsm) RegisterPeerChangeHandler(handler RaftPeerChangeHandler) 
 
 func (mf *MetadataFsm) RegisterApplyHandler(handler RaftCmdApplyHandler) {
 	mf.applyHandler = handler
-}
-
-func (mf *MetadataFsm) RegisterApplySnapshotHandler(handler RaftApplySnapshotHandler) {
-	mf.applySnapshotHandler = handler
 }
 
 func (mf *MetadataFsm) restore() {
@@ -84,8 +78,19 @@ func (mf *MetadataFsm) Apply(command []byte, index uint64) (resp interface{}, er
 	cmdMap := make(map[string][]byte)
 	cmdMap[cmd.K] = cmd.V
 	cmdMap[Applied] = []byte(strconv.FormatUint(uint64(index), 10))
-	if err = mf.BatchPut(cmdMap); err != nil {
-		return
+	switch cmd.Op {
+	case OpSyncDeleteDataNode:
+		if _,err = mf.Del(cmd.K);err != nil {
+			return
+		}
+	case OpSyncDeleteMetaNode:
+		if _,err = mf.Del(cmd.K);err != nil {
+			return
+		}
+	default:
+		if err = mf.BatchPut(cmdMap); err != nil {
+			return
+		}
 	}
 	if err = mf.applyHandler(cmd); err != nil {
 		return
@@ -128,9 +133,10 @@ func (mf *MetadataFsm) ApplySnapshot(peers []proto.Peer, iterator proto.SnapIter
 		if _, err = mf.store.Put(cmd.K, cmd.V); err != nil {
 			goto errDeal
 		}
-	}
-	if err = mf.applySnapshotHandler(); err != nil {
-		goto errDeal
+
+		if err = mf.applyHandler(cmd); err != nil {
+			goto errDeal
+		}
 	}
 	return
 errDeal:
