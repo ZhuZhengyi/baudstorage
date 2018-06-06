@@ -14,8 +14,8 @@ import (
 
 func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, err error) {
 	if mp.isRaftLogApplied(index) {
-		resp = proto.OpOk
-		return
+		log.LogWarnf("action[Apply] applied[%v], index[%v].",
+			atomic.LoadUint64(&mp.applyID), index)
 	}
 	defer func() {
 		if err != nil {
