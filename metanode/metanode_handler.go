@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/tiglabs/baudstorage/util/log"
+	"strconv"
 )
 
 func (m *MetaNode) registerHandler() (err error) {
@@ -27,7 +28,22 @@ func (m *MetaNode) allPartitionsHandle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *MetaNode) inodeInfoHandle(w http.ResponseWriter, r *http.Request) {
-
+	r.ParseForm()
+	id, err := strconv.Atoi(r.FormValue("id"))
+	if err != nil {
+		w.WriteHeader(400)
+		return
+	}
+	mm := m.metaManager.(*metaManager)
+	mm.mu.RLock()
+	mp, ok := mm.partitions[uint64(id)]
+	mm.mu.RUnlock()
+	if !ok {
+		w.WriteHeader(404)
+		return
+	}
+	data, _ := json.Marshal(mp)
+	w.Write(data)
 }
 
 func (m *MetaNode) updatePeer(w http.ResponseWriter, r *http.Request) {
