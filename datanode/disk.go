@@ -227,7 +227,8 @@ func (d *Disk) loadDataPartition(space *SpaceManager) {
 	for _, fileInfo := range fileInfoList {
 		var dp *DataPartition
 		partitionId, dataPartitionSize, partitionType, err := UnmarshDataPartitionName(fileInfo.Name())
-		log.LogDebugf("acton[Disk.loadDataPartition] disk info path[%v] name[%v] partitionId[%v] partitionSize[%v] partitionType[%v] err[%v].", d.Path, fileInfo.Name(), partitionId, dataPartitionSize, partitionType, err)
+		log.LogDebugf("acton[Disk.loadDataPartition] disk info path[%v] name[%v] partitionId[%v] partitionSize[%v] partitionType[%v] err[%v].",
+			d.Path, fileInfo.Name(), partitionId, dataPartitionSize, partitionType, err)
 		if err != nil {
 			log.LogError(fmt.Sprintf("Load[%v] from Disk[%v] Err[%v] ", partitionId, d.Path, err.Error()))
 			continue
