@@ -9,7 +9,7 @@ import (
 func (mp *metaPartition) ExtentAppend(req *proto.AppendExtentKeyRequest, p *Packet) (err error) {
 	ino := NewInode(req.Inode, 0)
 	ino.Extents.Put(req.Extent)
-	val, err := json.Marshal(ino)
+	val, err := ino.Marshal()
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		return

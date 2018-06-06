@@ -213,22 +213,28 @@ func (mp *metaPartition) startSchedule() {
 	mp.stopC = make(chan bool)
 	go func(stopC chan bool) {
 		timer := time.NewTicker(storeTimeTicker)
+		var nowAppID uint64
 		for {
 			select {
 			case <-stopC:
 				timer.Stop()
 				return
 			case <-timer.C:
-				applyID := atomic.LoadUint64(&mp.applyID)
-				if err := mp.store(); err != nil {
+				if mp.applyID <= nowAppID {
+					continue
+				}
+				if appID, err := mp.store(); err != nil {
 					err = errors.Errorf(
 						"[startSchedule]: dump partition id=%d: %v",
 						mp.config.PartitionId, err.Error())
 					log.LogErrorf(err.Error())
 					ump.Alarm(UMPKey, err.Error())
+					continue
+				} else {
+					nowAppID = appID
 				}
 				// Truncate raft log
-				mp.raftPartition.Truncate(applyID)
+				mp.raftPartition.Truncate(nowAppID)
 			}
 		}
 	}(mp.stopC)
@@ -353,18 +359,15 @@ func (mp *metaPartition) load() (err error) {
 	return
 }
 
-func (mp *metaPartition) store() (err error) {
-	appID := atomic.LoadUint64(&mp.applyID)
+func (mp *metaPartition) store() (applyID uint64, err error) {
+	applyID = mp.applyID
 	if err = mp.storeInode(); err != nil {
 		return
 	}
 	if err = mp.storeDentry(); err != nil {
 		return
 	}
-	if err = mp.storeMeta(); err != nil {
-		return
-	}
-	if err = mp.storeApplyID(appID); err != nil {
+	if err = mp.storeApplyID(applyID); err != nil {
 		return
 	}
 	return

@@ -14,7 +14,7 @@ func (mp *metaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 		return
 	}
 	ino := NewInode(inoID, req.Mode)
-	val, err := json.Marshal(ino)
+	val, err := ino.Marshal()
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		return
@@ -49,7 +49,7 @@ func (mp *metaPartition) CreateInode(req *CreateInoReq, p *Packet) (err error) {
 
 func (mp *metaPartition) DeleteInode(req *DeleteInoReq, p *Packet) (err error) {
 	ino := NewInode(req.Inode, 0)
-	val, err := json.Marshal(ino)
+	val, err := ino.Marshal()
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		return
@@ -76,7 +76,7 @@ func (mp *metaPartition) DeleteInode(req *DeleteInoReq, p *Packet) (err error) {
 
 func (mp *metaPartition) Open(req *OpenReq, p *Packet) (err error) {
 	ino := NewInode(req.Inode, 0)
-	val, err := json.Marshal(ino)
+	val, err := ino.Marshal()
 	if err != nil {
 		p.PackErrorWithBody(proto.OpErr, nil)
 		return

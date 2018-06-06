@@ -29,31 +29,31 @@ func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 	switch msg.Op {
 	case opCreateInode:
 		ino := NewInode(0, 0)
-		if err = json.Unmarshal(msg.V, ino); err != nil {
+		if err = ino.Unmarshal(msg.V); err != nil {
 			return
 		}
 		resp = mp.createInode(ino)
 	case opDeleteInode:
 		ino := NewInode(0, 0)
-		if err = json.Unmarshal(msg.V, ino); err != nil {
+		if err = ino.Unmarshal(msg.V); err != nil {
 			return
 		}
 		resp = mp.deleteInode(ino)
 	case opCreateDentry:
 		den := &Dentry{}
-		if err = json.Unmarshal(msg.V, den); err != nil {
+		if err = den.Unmarshal(msg.V); err != nil {
 			return
 		}
 		resp = mp.createDentry(den)
 	case opDeleteDentry:
 		den := &Dentry{}
-		if err = json.Unmarshal(msg.V, den); err != nil {
+		if err = den.Unmarshal(msg.V); err != nil {
 			return
 		}
 		resp = mp.deleteDentry(den)
 	case opOpen:
 		ino := NewInode(0, 0)
-		if err = json.Unmarshal(msg.V, ino); err != nil {
+		if err = ino.Unmarshal(msg.V); err != nil {
 			return
 		}
 		resp = mp.openFile(ino)
@@ -67,7 +67,7 @@ func (mp *metaPartition) Apply(command []byte, index uint64) (resp interface{}, 
 		resp, err = mp.updatePartition(req.End)
 	case opExtentsAdd:
 		ino := NewInode(0, 0)
-		if err = json.Unmarshal(msg.V, ino); err != nil {
+		if err = ino.Unmarshal(msg.V); err != nil {
 			return
 		}
 		resp = mp.appendExtents(ino)
@@ -115,8 +115,8 @@ func (mp *metaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, ind
 func (mp *metaPartition) Snapshot() (raftproto.Snapshot, error) {
 	applyID := atomic.LoadUint64(&mp.applyID)
 	ino := mp.getInodeTree()
-	dentry := mp.dentryTree
-	snapIter := NewSnapshotIterator(applyID, ino, dentry)
+	dentry := mp.getDentryTree()
+	snapIter := NewMetaItemIterator(applyID, ino, dentry)
 	return snapIter, nil
 }
 
@@ -135,7 +135,7 @@ func (mp *metaPartition) ApplySnapshot(peers []raftproto.Peer,
 		if err != nil {
 			return
 		}
-		snap := NewMetaPartitionSnapshot(0, nil, nil)
+		snap := NewMetaItem(0, nil, nil)
 		if err = snap.UnmarshalBinary(data); err != nil {
 			return
 		}
@@ -175,7 +175,7 @@ func (mp *metaPartition) HandleLeaderChange(leader uint64) {
 }
 
 func (mp *metaPartition) Put(key, val interface{}) (resp interface{}, err error) {
-	snap := NewMetaPartitionSnapshot(0, nil, nil)
+	snap := NewMetaItem(0, nil, nil)
 	snap.Op = key.(uint32)
 	if val != nil {
 		snap.V = val.([]byte)

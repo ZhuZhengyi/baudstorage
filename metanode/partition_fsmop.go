@@ -62,7 +62,17 @@ func (mp *metaPartition) getInode(ino *Inode) (resp *ResponseInode) {
 }
 
 func (mp *metaPartition) getInodeTree() *btree.BTree {
-	return mp.inodeTree
+	mp.inodeMu.RLock()
+	inoTree := mp.inodeTree.Clone()
+	mp.inodeMu.RUnlock()
+	return inoTree
+}
+
+func (mp *metaPartition) getDentryTree() *btree.BTree {
+	mp.dentryMu.RLock()
+	denTree := mp.dentryTree.Clone()
+	mp.dentryMu.RUnlock()
+	return denTree
 }
 
 // CreateDentry insert dentry into dentry tree.
