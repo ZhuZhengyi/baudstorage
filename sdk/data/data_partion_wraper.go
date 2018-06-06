@@ -23,7 +23,7 @@ const (
 )
 
 const (
-	MinWritableDataPartitionNum = 20
+	MinWritableDataPartitionNum = 1 //FIXME
 )
 
 type DataPartition struct {
