@@ -26,7 +26,6 @@ func (mc *MetaConn) String() string {
 
 func (mw *MetaWrapper) getConn(mp *MetaPartition) (*MetaConn, error) {
 	addr := mp.LeaderAddr
-	//log.LogDebugf("Get connection: PartitionID(%v) addr(%v)\n", mp.PartitionID, addr)
 	conn, err := mw.conns.Get(addr)
 	if err != nil {
 		log.LogErrorf("Get conn: addr(%v) err(%v)", addr, err)
@@ -43,8 +42,8 @@ func (mw *MetaWrapper) getConn(mp *MetaPartition) (*MetaConn, error) {
 		return nil, err
 	}
 
-	//log.LogDebugf("Get connection: PartitionID(%v) addr(%v)\n", mp.PartitionID, addr)
 	mc := &MetaConn{conn: conn, id: mp.PartitionID, addr: addr}
+	log.LogDebugf("Get connection: mc(%v)", mp.PartitionID)
 	return mc, nil
 }
 
@@ -59,10 +58,12 @@ func (mw *MetaWrapper) putConn(mc *MetaConn, err error) {
 func (mw *MetaWrapper) connect(inode uint64) (*MetaConn, error) {
 	mp := mw.getPartitionByInode(inode)
 	if mp == nil {
+		log.LogErrorf("connect: ino(%v) err(No such meta group)", inode)
 		return nil, errors.New("No such meta group")
 	}
 	mc, err := mw.getConn(mp)
 	if err != nil {
+		log.LogErrorf("connect: ino(%v) mp(%v) err(%v)", inode, mp, err)
 		return nil, err
 	}
 	return mc, nil

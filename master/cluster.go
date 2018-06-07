@@ -330,6 +330,8 @@ func (c *Cluster) dataNodeOffLine(dataNode *DataNode) {
 			c.dataPartitionOffline(dataNode.Addr, ns.Name, vg, DataNodeOfflineInfo)
 		}
 	}
+	msg = fmt.Sprintf("action[dataNodeOffLine], Node[%v] begin delete", dataNode.Addr)
+	log.LogWarn(msg)
 	if err := c.syncDeleteDataNode(dataNode); err != nil {
 		msg = fmt.Sprintf("action[dataNodeOffLine], Node[%v] OffLine failed,err[%v]", dataNode.Addr, err)
 		Warn(c.Name, msg)
@@ -372,6 +374,10 @@ func (c *Cluster) dataPartitionOffline(offlineAddr, nsName string, dp *DataParti
 	if dataNode, err = c.getDataNode(dp.PersistenceHosts[0]); err != nil {
 		goto errDeal
 	}
+
+	if dataNode.RackName == "" {
+		return
+	}
 	if rack, err = c.t.getRack(dataNode.RackName); err != nil {
 		goto errDeal
 	}
@@ -401,6 +407,7 @@ errDeal:
 		Warn(c.Name, msg)
 	}
 	log.LogWarn(msg)
+	return
 }
 
 func (c *Cluster) metaNodeOffLine(metaNode *MetaNode) {
@@ -486,7 +493,7 @@ func (c *Cluster) ChooseTargetMetaHosts(replicaNum int) (hosts []string, peers [
 		slavePeers []proto.Peer
 	)
 	hosts = make([]string, 0)
-	if masterAddr, masterPeer, err = c.getAvailMetaNodeHosts("", hosts, 1); err != nil {
+	if masterAddr, masterPeer, err = c.getAvailMetaNodeHosts(hosts, 1); err != nil {
 		return nil, nil, errors.Trace(err)
 	}
 	peers = append(peers, masterPeer...)
@@ -495,11 +502,7 @@ func (c *Cluster) ChooseTargetMetaHosts(replicaNum int) (hosts []string, peers [
 	if otherReplica == 0 {
 		return
 	}
-	metaNode, err := c.getMetaNode(masterAddr[0])
-	if err != nil {
-		return nil, nil, errors.Trace(err)
-	}
-	if slaveAddrs, slavePeers, err = c.getAvailMetaNodeHosts(metaNode.RackName, hosts, otherReplica); err != nil {
+	if slaveAddrs, slavePeers, err = c.getAvailMetaNodeHosts(hosts, otherReplica); err != nil {
 		return nil, nil, errors.Trace(err)
 	}
 	hosts = append(hosts, slaveAddrs...)

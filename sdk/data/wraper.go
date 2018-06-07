@@ -46,7 +46,7 @@ func (dp *DataPartition) GetAllAddrs() (m string) {
 	return strings.Join(dp.Hosts[1:], proto.AddrSplit) + proto.AddrSplit
 }
 
-type DataPartitionWrapper struct {
+type Wrapper struct {
 	sync.RWMutex
 	namespace   string
 	master      []string
@@ -55,38 +55,38 @@ type DataPartitionWrapper struct {
 	rwPartition []*DataPartition
 }
 
-func NewDataPartitionWrapper(namespace, masterHosts string) (wrapper *DataPartitionWrapper, err error) {
+func NewDataPartitionWrapper(namespace, masterHosts string) (w *Wrapper, err error) {
 	master := strings.Split(masterHosts, ",")
-	wrapper = new(DataPartitionWrapper)
-	wrapper.master = master
-	wrapper.namespace = namespace
-	wrapper.conns = pool.NewConnPool()
-	wrapper.rwPartition = make([]*DataPartition, 0)
-	wrapper.partitions = make(map[uint32]*DataPartition)
-	if err = wrapper.getDataPartitionFromMaster(); err != nil {
+	w = new(Wrapper)
+	w.master = master
+	w.namespace = namespace
+	w.conns = pool.NewConnPool()
+	w.rwPartition = make([]*DataPartition, 0)
+	w.partitions = make(map[uint32]*DataPartition)
+	if err = w.getDataPartitionFromMaster(); err != nil {
 		return
 	}
-	go wrapper.update()
+	go w.update()
 	return
 }
 
-func (wrapper *DataPartitionWrapper) update() {
+func (w *Wrapper) update() {
 	ticker := time.NewTicker(time.Minute * 5)
 	for {
 		select {
 		case <-ticker.C:
-			wrapper.getDataPartitionFromMaster()
+			w.getDataPartitionFromMaster()
 		}
 	}
 }
 
-func (wrapper *DataPartitionWrapper) getDataPartitionFromMaster() (err error) {
-	for _, m := range wrapper.master {
+func (w *Wrapper) getDataPartitionFromMaster() (err error) {
+	for _, m := range w.master {
 		if m == "" {
 			continue
 		}
 		var resp *http.Response
-		resp, err = http.Get("http://" + m + DataPartitionViewUrl + wrapper.namespace)
+		resp, err = http.Get("http://" + m + DataPartitionViewUrl + w.namespace)
 		if err != nil {
 			log.LogError(fmt.Sprintf(ActionGetDataPartitionView+"get VolView from master[%v] err[%v]", m, err.Error()))
 			continue
@@ -102,23 +102,23 @@ func (wrapper *DataPartitionWrapper) getDataPartitionFromMaster() (err error) {
 			continue
 		}
 		log.LogInfof("Get DataPartitions from master: (%v)", *views)
-		wrapper.updateDataPartition(views.DataPartitions)
+		w.updateDataPartition(views.DataPartitions)
 		break
 	}
 
 	return
 }
 
-func (wrapper *DataPartitionWrapper) replaceOrInsertPartition(dp *DataPartition) {
-	wrapper.Lock()
-	defer wrapper.Unlock()
-	if _, ok := wrapper.partitions[dp.PartitionID]; ok {
-		delete(wrapper.partitions, dp.PartitionID)
+func (w *Wrapper) replaceOrInsertPartition(dp *DataPartition) {
+	w.Lock()
+	defer w.Unlock()
+	if _, ok := w.partitions[dp.PartitionID]; ok {
+		delete(w.partitions, dp.PartitionID)
 	}
-	wrapper.partitions[dp.PartitionID] = dp
+	w.partitions[dp.PartitionID] = dp
 }
 
-func (wrapper *DataPartitionWrapper) updateDataPartition(partitions []*DataPartition) {
+func (w *Wrapper) updateDataPartition(partitions []*DataPartition) {
 	rwPartitionGroups := make([]*DataPartition, 0)
 	for _, dp := range partitions {
 		//log.LogInfof("Get dp(%v)", dp)
@@ -129,16 +129,16 @@ func (wrapper *DataPartitionWrapper) updateDataPartition(partitions []*DataParti
 
 	// If the view received from master cannot guarentee the minimum number
 	// of volume partitions, it is probably due to a **temporary** network problem
-	// between master and datanode. So do not update the vol group view for
+	// between master and datanode. So do not update the dp group view for
 	// now, and use the old information.
 	if len(rwPartitionGroups) < MinWritableDataPartitionNum {
 		log.LogWarnf("RW Partitions(%v) Minimum(%v)", len(rwPartitionGroups), MinWritableDataPartitionNum)
 		return
 	}
-	wrapper.rwPartition = rwPartitionGroups
+	w.rwPartition = rwPartitionGroups
 
 	for _, dp := range partitions {
-		wrapper.replaceOrInsertPartition(dp)
+		w.replaceOrInsertPartition(dp)
 	}
 }
 
@@ -151,8 +151,8 @@ func isExcluded(partitionId uint32, excludes []uint32) bool {
 	return false
 }
 
-func (wrapper *DataPartitionWrapper) GetWriteDataPartition(exclude []uint32) (*DataPartition, error) {
-	rwPartitionGroups := wrapper.rwPartition
+func (w *Wrapper) GetWriteDataPartition(exclude []uint32) (*DataPartition, error) {
+	rwPartitionGroups := w.rwPartition
 	if len(rwPartitionGroups) == 0 {
 		return nil, fmt.Errorf("no writable data partition")
 	}
@@ -172,20 +172,20 @@ func (wrapper *DataPartitionWrapper) GetWriteDataPartition(exclude []uint32) (*D
 	return nil, fmt.Errorf("no writable data partition")
 }
 
-func (wrapper *DataPartitionWrapper) GetDataPartition(partitionID uint32) (*DataPartition, error) {
-	wrapper.RLock()
-	defer wrapper.RUnlock()
-	dp, ok := wrapper.partitions[partitionID]
+func (w *Wrapper) GetDataPartition(partitionID uint32) (*DataPartition, error) {
+	w.RLock()
+	defer w.RUnlock()
+	dp, ok := w.partitions[partitionID]
 	if !ok {
 		return nil, fmt.Errorf("DataPartition[%v] not exsit", partitionID)
 	}
 	return dp, nil
 }
 
-func (wrapper *DataPartitionWrapper) GetConnect(addr string) (*net.TCPConn, error) {
-	return wrapper.conns.Get(addr)
+func (w *Wrapper) GetConnect(addr string) (*net.TCPConn, error) {
+	return w.conns.Get(addr)
 }
 
-func (wrapper *DataPartitionWrapper) PutConnect(conn *net.TCPConn, forceClose bool) {
-	wrapper.conns.Put(conn, forceClose)
+func (w *Wrapper) PutConnect(conn *net.TCPConn, forceClose bool) {
+	w.conns.Put(conn, forceClose)
 }

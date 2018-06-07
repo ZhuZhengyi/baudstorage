@@ -8,7 +8,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/tiglabs/baudstorage/sdk/meta"
-	"github.com/tiglabs/baudstorage/sdk/stream"
+	"github.com/tiglabs/baudstorage/sdk/data/stream"
 	"github.com/tiglabs/baudstorage/util/log"
 )
 

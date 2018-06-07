@@ -17,8 +17,8 @@ const (
 	MinTaskLen              = 30
 	TaskWaitResponseTimeOut = time.Second * time.Duration(5)
 	TaskWorkerInterval      = time.Microsecond * time.Duration(200)
-	ForceCloseConnect=true
-	NoCloseConnect=false
+	ForceCloseConnect       = true
+	NoCloseConnect          = false
 )
 
 /*
@@ -107,18 +107,26 @@ func (sender *AdminTaskSender) sendTasks(tasks []*proto.AdminTask) {
 			msg := fmt.Sprintf("get connection to %v,err,%v", sender.targetAddr, err.Error())
 			log.LogError(msg)
 			Warn(sender.clusterID, msg)
-			sender.connPool.Put(conn,ForceCloseConnect)
+			sender.connPool.Put(conn, ForceCloseConnect)
+			sender.updateTaskInfo(task)
 			//if get connection failed,the task is sent in the next ticker
 			break
 		}
 		if err = sender.singleSend(task, conn); err != nil {
 			log.LogError(fmt.Sprintf("send task %v to %v,err,%v", task.ToString(), sender.targetAddr, err.Error()))
-			sender.connPool.Put(conn,ForceCloseConnect)
+			sender.connPool.Put(conn, ForceCloseConnect)
+			sender.updateTaskInfo(task)
 			continue
 		}
-		sender.connPool.Put(conn,NoCloseConnect)
+		sender.updateTaskInfo(task)
+		sender.connPool.Put(conn, NoCloseConnect)
 	}
+}
 
+func (sender *AdminTaskSender) updateTaskInfo(task *proto.AdminTask) {
+	task.SendCount++
+	task.SendTime = time.Now().Unix()
+	task.Status = proto.TaskStart
 }
 
 func (sender *AdminTaskSender) buildPacket(task *proto.AdminTask) (packet *proto.Packet) {
@@ -143,11 +151,7 @@ func (sender *AdminTaskSender) singleSend(task *proto.AdminTask, conn net.Conn) 
 	if err = response.ReadFromConn(conn, TaskWaitResponseTimeOut); err != nil {
 		return errors.Annotatef(err, "action[singleSend],task:%v", task.ID)
 	}
-	if response.IsOkReply() {
-		task.SendTime = time.Now().Unix()
-		task.Status = proto.TaskStart
-		task.SendCount++
-	} else {
+	if !response.IsOkReply() {
 		log.LogErrorf("action[singleSend] send task failed,err %v", response.Data)
 	}
 	log.LogDebugf(fmt.Sprintf("action[singleSend] sender task:%v success", task.ToString()))
@@ -191,7 +195,6 @@ func (sender *AdminTaskSender) getNeedDealTask() (tasks []*proto.AdminTask) {
 	for _, task := range sender.TaskMap {
 		if !task.CheckTaskTimeOut() || task.CheckTaskNeedRetrySend() {
 			tasks = append(tasks, task)
-			continue
 		}
 		if len(tasks) == MinTaskLen {
 			break

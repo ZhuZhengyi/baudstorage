@@ -20,7 +20,7 @@ type ReadRequest struct {
 
 type StreamReader struct {
 	inode      uint64
-	wrapper    *data.DataPartitionWrapper
+	w    *data.Wrapper
 	readers    []*ExtentReader
 	getExtents GetExtentsFunc
 	extents    *proto.StreamKey
@@ -31,10 +31,10 @@ type StreamReader struct {
 	sync.Mutex
 }
 
-func NewStreamReader(inode uint64, wrapper *data.DataPartitionWrapper, getExtents GetExtentsFunc) (stream *StreamReader, err error) {
+func NewStreamReader(inode uint64, w *data.Wrapper, getExtents GetExtentsFunc) (stream *StreamReader, err error) {
 	stream = new(StreamReader)
 	stream.inode = inode
-	stream.wrapper = wrapper
+	stream.w = w
 	stream.getExtents = getExtents
 	stream.requestCh = make(chan *ReadRequest, 1000)
 	stream.replyCh = make(chan *ReadRequest, 1000)
@@ -49,7 +49,7 @@ func NewStreamReader(inode uint64, wrapper *data.DataPartitionWrapper, getExtent
 	stream.Lock()
 	defer stream.Unlock()
 	for _, key := range stream.extents.Extents {
-		if reader, err = NewExtentReader(inode, offset, key, stream.wrapper); err != nil {
+		if reader, err = NewExtentReader(inode, offset, key, stream.w); err != nil {
 			return nil, errors.Annotatef(err, "NewStreamReader inode[%v] "+
 				"key[%v] dp not found error", inode, key)
 		}
@@ -131,7 +131,7 @@ func (stream *StreamReader) updateLocalReader(newStreamKey *proto.StreamKey) (er
 			//	stream.inode, newOffSet)
 			continue
 		} else if index > oldReaderCnt-1 {
-			if r, err = NewExtentReader(stream.inode, newOffSet, key, stream.wrapper); err != nil {
+			if r, err = NewExtentReader(stream.inode, newOffSet, key, stream.w); err != nil {
 				return errors.Annotatef(err, "NewStreamReader inode[%v] key[%v] "+
 					"dp not found error", stream.inode, key)
 			}

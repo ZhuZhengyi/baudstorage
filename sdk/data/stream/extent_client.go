@@ -15,7 +15,7 @@ type AppendExtentKeyFunc func(inode uint64, key proto.ExtentKey) error
 type GetExtentsFunc func(inode uint64) ([]proto.ExtentKey, error)
 
 type ExtentClient struct {
-	wrapper         *data.DataPartitionWrapper
+	w         *data.Wrapper
 	writers         map[uint64]*StreamWriter
 	writerLock      sync.RWMutex
 	readers         map[uint64]*StreamReader
@@ -29,7 +29,7 @@ type ExtentClient struct {
 func NewExtentClient(namespace, master string, appendExtentKey AppendExtentKeyFunc, getExtents GetExtentsFunc) (client *ExtentClient, err error) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	client = new(ExtentClient)
-	client.wrapper, err = data.NewDataPartitionWrapper(namespace, master)
+	client.w, err = data.NewDataPartitionWrapper(namespace, master)
 	if err != nil {
 		return nil, fmt.Errorf("init dp Wrapper failed [%v]", err.Error())
 	}
@@ -42,7 +42,7 @@ func NewExtentClient(namespace, master string, appendExtentKey AppendExtentKeyFu
 }
 
 func (client *ExtentClient) InitWriteStream(inode uint64) (stream *StreamWriter) {
-	stream = NewStreamWriter(client.wrapper, inode, client.appendExtentKey)
+	stream = NewStreamWriter(client.w, inode, client.appendExtentKey)
 	client.writerLock.Lock()
 	client.writers[inode] = stream
 	client.writerLock.Unlock()
@@ -51,7 +51,7 @@ func (client *ExtentClient) InitWriteStream(inode uint64) (stream *StreamWriter)
 }
 
 func (client *ExtentClient) InitReadStream(inode uint64) (stream *StreamReader, err error) {
-	stream, err = NewStreamReader(inode, client.wrapper, client.getExtents)
+	stream, err = NewStreamReader(inode, client.w, client.getExtents)
 	if err != nil {
 		return
 	}
@@ -196,7 +196,7 @@ func (client *ExtentClient) Read(inode uint64, data []byte, offset int, size int
 
 func (client *ExtentClient) Delete(keys []proto.ExtentKey) (err error) {
 	for _, k := range keys {
-		dp, err := client.wrapper.GetDataPartition(k.PartitionId)
+		dp, err := client.w.GetDataPartition(k.PartitionId)
 		if err != nil {
 			continue
 		}
@@ -207,15 +207,15 @@ func (client *ExtentClient) Delete(keys []proto.ExtentKey) (err error) {
 }
 
 func (client *ExtentClient) delete(dp *data.DataPartition, extentId uint64) (err error) {
-	connect, err := client.wrapper.GetConnect(dp.Hosts[0])
+	connect, err := client.w.GetConnect(dp.Hosts[0])
 	if err != nil {
 		return
 	}
 	defer func() {
 		if err == nil {
-			client.wrapper.PutConnect(connect, false)
+			client.w.PutConnect(connect, false)
 		} else {
-			client.wrapper.PutConnect(connect, true)
+			client.w.PutConnect(connect, true)
 		}
 	}()
 	p := NewDeleteExtentPacket(dp, extentId)

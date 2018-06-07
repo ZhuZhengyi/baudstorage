@@ -30,7 +30,7 @@ type WriteRequest struct {
 
 type StreamWriter struct {
 	sync.Mutex
-	wrapper            *data.DataPartitionWrapper
+	w            *data.Wrapper
 	currentWriter      *ExtentWriter //current ExtentWriter
 	errCount           int           //error count
 	currentPartitionId uint32        //current PartitionId
@@ -45,9 +45,9 @@ type StreamWriter struct {
 	exitCh             chan bool
 }
 
-func NewStreamWriter(wrapper *data.DataPartitionWrapper, inode uint64, appendExtentKey AppendExtentKeyFunc) (stream *StreamWriter) {
+func NewStreamWriter(w *data.Wrapper, inode uint64, appendExtentKey AppendExtentKeyFunc) (stream *StreamWriter) {
 	stream = new(StreamWriter)
-	stream.wrapper = wrapper
+	stream.w = w
 	stream.appendExtentKey = appendExtentKey
 	stream.currentInode = inode
 	stream.isFlushIng = NoFlushIng
@@ -270,7 +270,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	)
 	err = fmt.Errorf("cannot alloct new extent after maxrery")
 	for i := 0; i < MaxSelectDataPartionForWrite; i++ {
-		if dp, err = stream.wrapper.GetWriteDataPartition(stream.excludePartition); err != nil {
+		if dp, err = stream.w.GetWriteDataPartition(stream.excludePartition); err != nil {
 			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter "+
 				"failed on getWriteDataPartion,error[%v] execludeDataPartion[%v]", err.Error(), stream.excludePartition))
 			continue
@@ -280,7 +280,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 				"create Extent,error[%v] execludeDataPartion[%v]", err.Error(), stream.excludePartition))
 			continue
 		}
-		if writer, err = NewExtentWriter(stream.currentInode, dp, stream.wrapper, extentId); err != nil {
+		if writer, err = NewExtentWriter(stream.currentInode, dp, stream.w, extentId); err != nil {
 			log.LogErrorf(fmt.Sprintf("ActionAllocNewExtentWriter "+
 				"NewExtentWriter[%v],error[%v] execludeDataPartion[%v]", extentId, err.Error(), stream.excludePartition))
 			continue
@@ -305,14 +305,14 @@ func (stream *StreamWriter) createExtent(dp *data.DataPartition) (extentId uint6
 		connect    *net.TCPConn
 		forceClose bool
 	)
-	connect, err = stream.wrapper.GetConnect(dp.Hosts[0])
+	connect, err = stream.w.GetConnect(dp.Hosts[0])
 	if err != nil {
 		err = errors.Annotatef(err, " get connect from datapartionHosts[%v]", dp.Hosts[0])
 		return
 	}
 
 	defer func() {
-		stream.wrapper.PutConnect(connect, forceClose)
+		stream.w.PutConnect(connect, forceClose)
 	}()
 
 	p := NewCreateExtentPacket(dp)
@@ -323,7 +323,7 @@ func (stream *StreamWriter) createExtent(dp *data.DataPartition) (extentId uint6
 	}
 	if err = p.ReadFromConn(connect, proto.ReadDeadlineTime); err != nil {
 		err = errors.Annotatef(err, "receive CreateExtent[%v] failed", p.GetUniqLogId(), dp.Hosts[0])
-		connect.Close()
+		forceClose = true
 		return
 	}
 	extentId = p.FileID
