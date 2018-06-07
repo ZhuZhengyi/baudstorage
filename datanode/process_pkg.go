@@ -9,6 +9,7 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 	"hash/crc32"
 	"io"
+	"net"
 	"time"
 )
 
@@ -208,12 +209,16 @@ success:
 }
 
 func (s *DataNode) sendToNext(pkg *Packet, msgH *MessageHandler) error {
-	var err error
+	var (
+		err      error
+		nextConn *net.TCPConn
+	)
 	msgH.PushListElement(pkg)
-	pkg.nextConn, err = gConnPool.Get(pkg.nextAddr)
+	nextConn, err = gConnPool.Get(pkg.nextAddr)
 	if err != nil {
 		return err
 	}
+	pkg.nextConn = nextConn
 	pkg.Nodes--
 	if err == nil {
 		err = pkg.WriteToConn(pkg.nextConn)
@@ -290,4 +295,3 @@ func (s *DataNode) statsFlow(pkg *Packet, flag bool) {
 	}
 
 }
-

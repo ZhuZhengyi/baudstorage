@@ -99,20 +99,20 @@ func (dp *DataPartition) getAllMemberFileMetas() (allMembers []*MembersFileMetas
 		}
 		err = p.WriteToConn(conn)
 		if err != nil {
-			gConnPool.Put(conn,ForceCloseConnect)
+			gConnPool.Put(conn, ForceCloseConnect)
 			err = errors.Annotatef(err, "getAllMemberFileMetas dataPartition[%v] write to host[%v]", dp.partitionId, target)
 			return
 		}
 		err = p.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
-			gConnPool.Put(conn,ForceCloseConnect)
+			gConnPool.Put(conn, ForceCloseConnect)
 			err = errors.Annotatef(err, "getAllMemberFileMetas dataPartition[%v] read from host[%v]", dp.partitionId, target)
 			return
 		}
 		mf := NewMembersFiles()
 		err = json.Unmarshal(p.Data[:p.Size], mf)
 		if err != nil {
-			gConnPool.Put(conn,ForceCloseConnect)
+			gConnPool.Put(conn, ForceCloseConnect)
 			err = errors.Annotatef(err, "getAllMemberFileMetas json unmarsh [%v]", dp.partitionId, string(p.Data[:p.Size]))
 			return
 		}
@@ -120,7 +120,7 @@ func (dp *DataPartition) getAllMemberFileMetas() (allMembers []*MembersFileMetas
 			mf.extents[fi.FileIdId] = fi
 		}
 		allMembers[i] = mf
-		gConnPool.Put(conn,NOCloseConnect)
+		gConnPool.Put(conn, NOCloseConnect)
 	}
 	return
 }
@@ -228,10 +228,10 @@ func (dp *DataPartition) NotifyRepair(members []*MembersFileMetas) (err error) {
 		p.Size = uint32(len(p.Data))
 		err = p.WriteToConn(conn)
 		if err != nil {
-			gConnPool.Put(conn,ForceCloseConnect)
+			gConnPool.Put(conn, ForceCloseConnect)
 			continue
 		}
-		gConnPool.Put(conn,NOCloseConnect)
+		gConnPool.Put(conn, NOCloseConnect)
 	}
 
 	return
@@ -292,22 +292,22 @@ func StreamRepairExtent(remoteExtentInfo *storage.FileInfo, dp *DataPartition) (
 	}
 	err = request.WriteToConn(conn)
 	if err != nil {
-		gConnPool.Put(conn,ForceCloseConnect)
+		gConnPool.Put(conn, ForceCloseConnect)
 		return errors.Annotatef(err, "streamRepairExtent send streamRead to host[%v] error", remoteExtentInfo.Source)
 	}
 	for {
 		localExtentInfo, err := store.GetWatermark(uint64(remoteExtentInfo.FileIdId))
 		if err != nil {
-			gConnPool.Put(conn,ForceCloseConnect)
+			gConnPool.Put(conn, ForceCloseConnect)
 			return errors.Annotatef(err, "streamRepairExtent GetWatermark error")
 		}
 		if localExtentInfo.Size >= remoteExtentInfo.Size {
-			gConnPool.Put(conn,NOCloseConnect)
+			gConnPool.Put(conn, NOCloseConnect)
 			break
 		}
 		err = request.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
-			gConnPool.Put(conn,ForceCloseConnect)
+			gConnPool.Put(conn, ForceCloseConnect)
 			return errors.Annotatef(err, "streamRepairExtent recive data error")
 		}
 		log.LogInfof("action[StreamRepairExtent] datapartition[%v] extent[%v] start fix from [%v]"+
@@ -315,7 +315,7 @@ func StreamRepairExtent(remoteExtentInfo *storage.FileInfo, dp *DataPartition) (
 			remoteExtentInfo.Source, remoteExtentInfo.Size, localExtentInfo.Size, needFixSize)
 		err = store.Write(uint64(localExtentInfo.FileIdId), int64(localExtentInfo.Size), int64(request.Size), request.Data, request.Crc)
 		if err != nil {
-			gConnPool.Put(conn,ForceCloseConnect)
+			gConnPool.Put(conn, ForceCloseConnect)
 			return errors.Annotatef(err, "streamRepairExtent repair data error")
 		}
 	}

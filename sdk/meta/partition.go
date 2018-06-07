@@ -1,6 +1,8 @@
 package meta
 
 import (
+	"fmt"
+
 	"github.com/google/btree"
 )
 
@@ -15,6 +17,10 @@ type MetaPartition struct {
 func (this *MetaPartition) Less(than btree.Item) bool {
 	that := than.(*MetaPartition)
 	return this.Start < that.Start
+}
+
+func (mp *MetaPartition) String() string {
+	return fmt.Sprintf("PartitionID(%v) Start(%v) End(%v) Members(%v) LeaderAddr(%v)")
 }
 
 // Meta partition managements

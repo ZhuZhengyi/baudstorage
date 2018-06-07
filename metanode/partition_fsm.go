@@ -104,6 +104,7 @@ func (mp *metaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, ind
 		return
 	}
 	if updated {
+		mp.config.sortPeers()
 		if err = mp.storeMeta(); err != nil {
 			log.LogErrorf("action[ApplyMemberChange] err[%v].", err)
 			return
@@ -143,7 +144,7 @@ func (mp *metaPartition) ApplySnapshot(peers []raftproto.Peer,
 		}
 		switch snap.Op {
 		case opCreateInode:
-			var ino = &Inode{}
+			ino := NewInode(0, 0)
 			ino.UnmarshalKey(snap.K)
 			ino.UnmarshalValue(snap.V)
 			mp.createInode(ino)

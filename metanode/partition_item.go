@@ -123,6 +123,7 @@ func (si *ItemIterator) ApplyIndex() uint64 {
 }
 
 func (si *ItemIterator) Close() {
+	si.cur = si.total + 1
 	return
 }
 
@@ -130,6 +131,7 @@ func (si *ItemIterator) Next() (data []byte, err error) {
 	// TODO: Redesign iterator to improve performance. [Mervin]
 	if si.cur > si.total {
 		err = io.EOF
+		data = nil
 		return
 	}
 	// ascend Inode tree

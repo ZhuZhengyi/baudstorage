@@ -254,10 +254,10 @@ func (mp *metaPartition) confRemoveNode(req *proto.MetaPartitionOfflineRequest,
 			mp.raftPartition.Delete()
 		}
 		os.RemoveAll(mp.config.RootDir)
+		updated = false
 		return
 	}
 	mp.config.Peers = append(mp.config.Peers[:peerIndex], mp.config.Peers[peerIndex+1:]...)
-
 	return
 }
 

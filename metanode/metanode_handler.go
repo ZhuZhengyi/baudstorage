@@ -42,7 +42,7 @@ func (m *MetaNode) inodeInfoHandle(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(404)
 		return
 	}
-	data, _ := json.Marshal(mp)
+	data, _ := json.Marshal(&mp)
 	w.Write(data)
 }
 
