@@ -39,7 +39,7 @@ func (s *Super) InodeGet(ino uint64) (*Inode, error) {
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
-		log.LogDebugf("InodeGet cost (%v)ns", elapsed.Nanoseconds())
+		log.LogDebugf("PERF: InodeGet (%v)ns", elapsed.Nanoseconds())
 	}()
 
 	inode := s.ic.Get(ino)
