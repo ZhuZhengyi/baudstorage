@@ -21,7 +21,7 @@ const (
 )
 
 const (
-	statusOK int = iota
+	statusOK int = iota + 1
 	statusExist
 	statusNoent
 	statusFull

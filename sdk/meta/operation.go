@@ -1,6 +1,8 @@
 package meta
 
 import (
+	"fmt"
+
 	"github.com/juju/errors"
 
 	"github.com/tiglabs/baudstorage/proto"
@@ -51,6 +53,11 @@ func (mw *MetaWrapper) icreate(mc *MetaConn, mode uint32) (status int, info *pro
 	err = packet.UnmarshalData(resp)
 	if err != nil {
 		err = errors.Annotatef(err, "icreate: mc(%v) PacketData(%v)", mc, string(packet.Data))
+		return
+	}
+	if resp.Info == nil {
+		err = errors.New(fmt.Sprintf("icreate: info is nil, mc(%v) req(%v) PacketData(%v)", mc, *req, string(packet.Data)))
+		log.LogWarn(err)
 		return
 	}
 	return statusOK, resp.Info, nil

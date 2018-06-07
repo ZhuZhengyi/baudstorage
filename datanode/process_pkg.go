@@ -9,9 +9,7 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 	"hash/crc32"
 	"io"
-	"net"
 	"time"
-	"unsafe"
 )
 
 func (s *DataNode) readFromCliAndDeal(msgH *MessageHandler) (err error) {
@@ -212,7 +210,7 @@ success:
 func (s *DataNode) sendToNext(pkg *Packet, msgH *MessageHandler) error {
 	var err error
 	msgH.PushListElement(pkg)
-	pkg.nextConn, err = s.GetNextConn(pkg.nextAddr)
+	pkg.nextConn, err = gConnPool.Get(pkg.nextAddr)
 	if err != nil {
 		return err
 	}
@@ -293,31 +291,3 @@ func (s *DataNode) statsFlow(pkg *Packet, flag bool) {
 
 }
 
-func (s *DataNode) GetNextConn(nextAddr string) (conn net.Conn, err error) {
-	return ConnPool.Get(nextAddr)
-}
-
-func (s *DataNode) CleanConn(conn net.Conn, isForceClose bool) {
-
-	defer func() {
-		if r := recover(); r != nil {
-			log.LogErrorf("action[DataNode.CleanConn] err[%v].", conn)
-			panic(r)
-		}
-	}()
-
-	if conn == nil {
-		return
-	}
-	d := (*struct {
-		itab uintptr
-		data uintptr
-	})(unsafe.Pointer(&conn))
-	log.LogDebugf("action[DataNode.CleanConn] unsafePointer[%v].", d)
-
-	if isForceClose {
-		conn.Close()
-		return
-	}
-	ConnPool.Put(conn)
-}

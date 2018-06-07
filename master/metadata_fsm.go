@@ -21,13 +21,12 @@ type RaftPeerChangeHandler func(confChange *proto.ConfChange) (err error)
 
 type RaftCmdApplyHandler func(cmd *Metadata) (err error)
 
-
 type MetadataFsm struct {
-	store                *raftstore.RocksDBStore
-	applied              uint64
-	leaderChangeHandler  RaftLeaderChangeHandler
-	peerChangeHandler    RaftPeerChangeHandler
-	applyHandler         RaftCmdApplyHandler
+	store               *raftstore.RocksDBStore
+	applied             uint64
+	leaderChangeHandler RaftLeaderChangeHandler
+	peerChangeHandler   RaftPeerChangeHandler
+	applyHandler        RaftCmdApplyHandler
 }
 
 func newMetadataFsm(dir string) (fsm *MetadataFsm) {
@@ -80,11 +79,11 @@ func (mf *MetadataFsm) Apply(command []byte, index uint64) (resp interface{}, er
 	cmdMap[Applied] = []byte(strconv.FormatUint(uint64(index), 10))
 	switch cmd.Op {
 	case OpSyncDeleteDataNode:
-		if _,err = mf.Del(cmd.K);err != nil {
+		if _, err = mf.Del(cmd.K); err != nil {
 			return
 		}
 	case OpSyncDeleteMetaNode:
-		if _,err = mf.Del(cmd.K);err != nil {
+		if _, err = mf.Del(cmd.K); err != nil {
 			return
 		}
 	default:
