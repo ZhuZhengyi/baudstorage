@@ -11,7 +11,6 @@ import (
 	"io"
 	"net"
 	"time"
-	"unsafe"
 )
 
 func (s *DataNode) readFromCliAndDeal(msgH *MessageHandler) (err error) {
@@ -293,17 +292,3 @@ func (s *DataNode) statsFlow(pkg *Packet, flag bool) {
 
 }
 
-func (s *DataNode) GetNextConn(nextAddr string) (conn *net.TCPConn, err error) {
-	return s.connPool.Get(nextAddr)
-}
-
-func (s *DataNode) CleanConn(conn *net.TCPConn, isForceClose bool) {
-	if conn == nil {
-		return
-	}
-	if isForceClose {
-		conn.Close()
-		return
-	}
-	s.connPool.Put(conn)
-}

@@ -61,8 +61,12 @@ func (connP *ConnPool) Get(targetAddr string) (c *net.TCPConn, err error) {
 	return
 }
 
-func (connP *ConnPool) Put(c *net.TCPConn) {
+func (connP *ConnPool) Put(c *net.TCPConn,forceClose bool) {
 	if c==nil {
+		return
+	}
+	if forceClose{
+		c.Close()
 		return
 	}
 	addr := c.RemoteAddr().String()
