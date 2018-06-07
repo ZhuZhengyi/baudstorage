@@ -1,6 +1,8 @@
 package fs
 
 import (
+	"syscall"
+
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"golang.org/x/net/context"
@@ -121,7 +123,9 @@ func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	if !ok {
 		ino, mode, err = d.super.mw.Lookup_ll(d.inode.ino, req.Name)
 		if err != nil {
-			log.LogErrorf("Dir Lookup: parent(%v) name(%v) err(%v)", d.inode.ino, req.Name, err.Error())
+			if err != syscall.ENOENT {
+				log.LogErrorf("Dir Lookup: parent(%v) name(%v) err(%v)", d.inode.ino, req.Name, err.Error())
+			}
 			return nil, ParseError(err)
 		}
 	}
