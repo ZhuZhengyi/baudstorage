@@ -220,23 +220,23 @@ func (stream *StreamWriter) flushCurrExtentWriter() (err error) {
 }
 
 func (stream *StreamWriter) recoverExtent() (err error) {
-	retryPackets := stream.getWriter().getNeedRetrySendPackets()  //get need retry recover packets
+	retryPackets := stream.getWriter().getNeedRetrySendPackets()                                 //get need retry recover packets
 	stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID) //exclude current PartionId
 	for i := 0; i < MaxSelectDataPartionForWrite; i++ {
-		err=nil
+		err = nil
 		ek := stream.getWriter().toKey() //first get currentExtent Key
 		if ek.Size != 0 {
 			err = stream.appendExtentKey(stream.currentInode, ek) //put it to metanode
 		}
 		if err != nil {
 			err = errors.Annotatef(err, "update extent[%v] to MetaNode Failed", ek.Size)
-			log.LogErrorf("stream[%v] err[%v]",stream.toString(),err.Error())
-			i--                //if put metanode error,so retry put it to metanode
+			log.LogErrorf("stream[%v] err[%v]", stream.toString(), err.Error())
+			i-- //if put metanode error,so retry put it to metanode
 			continue
 		}
-		if err = stream.allocateNewExtentWriter(); err != nil {  //allocate new extent
+		if err = stream.allocateNewExtentWriter(); err != nil { //allocate new extent
 			err = errors.Annotatef(err, "RecoverExtent Failed")
-			log.LogErrorf("stream[%v] err[%v]",stream.toString(),err.Error())
+			log.LogErrorf("stream[%v] err[%v]", stream.toString(), err.Error())
 			stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID) //if failed,then exclude
 			continue
 		}
@@ -244,8 +244,8 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 		for _, p := range retryPackets {
 			_, err = stream.getWriter().write(p.Data, int(p.Size))
 			if err != nil {
-				err = errors.Annotatef(err, "pkg[%v] RecoverExtent write failed",p.GetUniqLogId())
-				log.LogErrorf("stream[%v] err[%v]",stream.toString(),err.Error())
+				err = errors.Annotatef(err, "pkg[%v] RecoverExtent write failed", p.GetUniqLogId())
+				log.LogErrorf("stream[%v] err[%v]", stream.toString(), err.Error())
 				stream.excludePartition = append(stream.excludePartition, stream.getWriter().dp.PartitionID)
 				break
 			}
@@ -253,7 +253,7 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 		if err == nil {
 			stream.excludePartition = make([]uint32, 0)
 			break
-		}else {
+		} else {
 			continue
 		}
 	}
@@ -261,7 +261,6 @@ func (stream *StreamWriter) recoverExtent() (err error) {
 	return
 
 }
-
 
 func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 	var (
@@ -303,7 +302,7 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 
 func (stream *StreamWriter) createExtent(dp *data.DataPartition) (extentId uint64, err error) {
 	var (
-		connect net.Conn
+		connect *net.TCPConn
 	)
 	connect, err = stream.wrapper.GetConnect(dp.Hosts[0])
 	if err != nil {

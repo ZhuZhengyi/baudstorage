@@ -182,10 +182,10 @@ func (wrapper *DataPartitionWrapper) GetDataPartition(partitionID uint32) (*Data
 	return dp, nil
 }
 
-func (wrapper *DataPartitionWrapper) GetConnect(addr string) (net.Conn, error) {
+func (wrapper *DataPartitionWrapper) GetConnect(addr string) (*net.TCPConn, error) {
 	return wrapper.conns.Get(addr)
 }
 
-func (wrapper *DataPartitionWrapper) PutConnect(conn net.Conn) {
+func (wrapper *DataPartitionWrapper) PutConnect(conn *net.TCPConn) {
 	wrapper.conns.Put(conn)
 }
