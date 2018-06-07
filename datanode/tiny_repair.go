@@ -208,13 +208,13 @@ func (s *DataNode) streamRepairObjects(remoteFileInfo *storage.FileInfo, dp *Dat
 	request := NewStreamChunkRepairReadPacket(dp.partitionId, remoteFileInfo.FileIdId)
 	request.Data, _ = json.Marshal(task)
 	var conn *net.TCPConn
-	conn, err = s.GetNextConn(remoteFileInfo.Source)
+	conn, err = gConnPool.Get(remoteFileInfo.Source)
 	if err != nil {
 		return errors.Annotatef(err, "streamRepairObjects get conn from host[%v] error", remoteFileInfo.Source)
 	}
 	err = request.WriteToConn(conn)
 	if err != nil {
-		s.CleanConn(conn,ForceCloseConnect)
+		gConnPool.Put(conn,ForceCloseConnect)
 		return errors.Annotatef(err, "streamRepairObjects send streamRead to host[%v] error", remoteFileInfo.Source)
 	}
 	for {
@@ -224,24 +224,24 @@ func (s *DataNode) streamRepairObjects(remoteFileInfo *storage.FileInfo, dp *Dat
 			return errors.Annotatef(err, "streamRepairObjects GetWatermark error")
 		}
 		if localExtentInfo.Size >= remoteFileInfo.Size {
-			s.CleanConn(conn,ForceCloseConnect)
+			gConnPool.Put(conn,ForceCloseConnect)
 			break
 		}
 		err = request.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
-			s.CleanConn(conn,ForceCloseConnect)
+			gConnPool.Put(conn,ForceCloseConnect)
 			return errors.Annotatef(err, "streamRepairObjects recive data error")
 		}
 		newlastOid := uint64(request.Offset)
 		if newlastOid > uint64(remoteFileInfo.FileIdId) {
-			s.CleanConn(conn,ForceCloseConnect)
+			gConnPool.Put(conn,ForceCloseConnect)
 			err = fmt.Errorf("invalid offset of OpCRepairReadResp:"+
 				" %v, expect max objid is %v", newlastOid, remoteFileInfo.FileIdId)
 			return err
 		}
 		err = dp.applyRepairObjects(remoteFileInfo.FileIdId, request.Data, newlastOid)
 		if err != nil {
-			s.CleanConn(conn,ForceCloseConnect)
+			gConnPool.Put(conn,ForceCloseConnect)
 			err = errors.Annotatef(err, "streamRepairObjects apply data failed")
 			return err
 		}

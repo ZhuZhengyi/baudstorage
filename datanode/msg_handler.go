@@ -88,7 +88,7 @@ func (msgH *MessageHandler) ClearReqs(s *DataNode) {
 	for e := msgH.sentList.Front(); e != nil; e = e.Next() {
 		if e.Value.(*Packet).nextAddr != "" && !e.Value.(*Packet).IsTailNode() {
 			s.headNodePutChunk(e.Value.(*Packet))
-			s.CleanConn(e.Value.(*Packet).nextConn, ForceCloseConnect)
+			gConnPool.Put(e.Value.(*Packet).nextConn, ForceCloseConnect)
 		}
 	}
 	replys := len(msgH.replyCh)
@@ -113,12 +113,12 @@ func (msgH *MessageHandler) DelListElement(reply *Packet, e *list.Element, s *Da
 		if reply.ReqID == request.ReqID && reply.PartitionID == request.PartitionID &&
 			reply.FileID == request.FileID && reply.Offset == request.Offset {
 			msgH.sentList.Remove(e)
-			s.CleanConn(request.nextConn, isForClose)
+			gConnPool.Put(request.nextConn, isForClose)
 			pkg := e.Value.(*Packet)
 			msgH.replyCh <- pkg
 			break
 		} else {
-			s.CleanConn(request.nextConn, ForceCloseConnect)
+			gConnPool.Put(request.nextConn, ForceCloseConnect)
 		}
 	}
 
