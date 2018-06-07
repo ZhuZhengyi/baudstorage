@@ -36,7 +36,7 @@ type ExtentWriter struct {
 	requestQueue     *list.List //sendPacketList
 	requestQueueLock sync.Mutex
 	dp               *data.DataPartition
-	wrapper          *data.DataPartitionWrapper
+	w          *data.Wrapper
 	extentId         uint64 //current FileIdId
 	currentPacket    *Packet
 	seqNo            uint64 //Current Send Packet Seq
@@ -51,7 +51,7 @@ type ExtentWriter struct {
 	flushLock sync.Mutex
 }
 
-func NewExtentWriter(inode uint64, dp *data.DataPartition, wrapper *data.DataPartitionWrapper, extentId uint64) (writer *ExtentWriter, err error) {
+func NewExtentWriter(inode uint64, dp *data.DataPartition, w *data.Wrapper, extentId uint64) (writer *ExtentWriter, err error) {
 	if extentId <= 0 {
 		return nil, fmt.Errorf("inode[%v],dp[%v],unavalid extentId[%v]", inode, dp.PartitionID, extentId)
 	}
@@ -61,8 +61,8 @@ func NewExtentWriter(inode uint64, dp *data.DataPartition, wrapper *data.DataPar
 	writer.extentId = extentId
 	writer.dp = dp
 	writer.inode = inode
-	writer.wrapper = wrapper
-	writer.connect, err = wrapper.GetConnect(dp.Hosts[0])
+	writer.w = w
+	writer.connect, err = w.GetConnect(dp.Hosts[0])
 	if err != nil {
 		return
 	}
@@ -180,8 +180,8 @@ func (writer *ExtentWriter) recover() (sucess bool) {
 		log.LogError(err.Error())
 
 	}()
-	// get connect from wrapper
-	if connect, err = writer.wrapper.GetConnect(writer.dp.Hosts[0]); err != nil {
+	// get connect from w
+	if connect, err = writer.w.GetConnect(writer.dp.Hosts[0]); err != nil {
 		log.LogError(err)
 		return
 	}
