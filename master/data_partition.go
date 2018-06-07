@@ -123,7 +123,7 @@ func (partition *DataPartition) offLineInMem(addr string) {
 	}
 	msg := fmt.Sprintf("action[offLineInMem],data partition:%v  on Node:%v  OffLine,the node is in replicas:%v", partition.PartitionID, addr, replica != nil)
 	log.LogDebug(msg)
-	if replica == nil {
+	if delIndex == -1 {
 		return
 	}
 
