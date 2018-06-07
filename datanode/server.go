@@ -65,6 +65,10 @@ type DataNode struct {
 
 }
 
+func NewServer() *DataNode {
+	return &DataNode{}
+}
+
 func (s *DataNode) Start(cfg *config.Config) (err error) {
 	if atomic.CompareAndSwapUint32(&s.state, Standby, Start) {
 		defer func() {
