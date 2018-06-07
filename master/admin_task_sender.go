@@ -17,6 +17,8 @@ const (
 	MinTaskLen              = 30
 	TaskWaitResponseTimeOut = time.Second * time.Duration(5)
 	TaskWorkerInterval      = time.Microsecond * time.Duration(200)
+	ForceCloseConnect=true
+	NoCloseConnect=false
 )
 
 /*
@@ -105,14 +107,16 @@ func (sender *AdminTaskSender) sendTasks(tasks []*proto.AdminTask) {
 			msg := fmt.Sprintf("get connection to %v,err,%v", sender.targetAddr, err.Error())
 			log.LogError(msg)
 			Warn(sender.clusterID, msg)
+			sender.connPool.Put(conn,ForceCloseConnect)
 			//if get connection failed,the task is sent in the next ticker
 			break
 		}
 		if err = sender.singleSend(task, conn); err != nil {
 			log.LogError(fmt.Sprintf("send task %v to %v,err,%v", task.ToString(), sender.targetAddr, err.Error()))
+			sender.connPool.Put(conn,ForceCloseConnect)
 			continue
 		}
-		sender.connPool.Put(conn)
+		sender.connPool.Put(conn,NoCloseConnect)
 	}
 
 }
