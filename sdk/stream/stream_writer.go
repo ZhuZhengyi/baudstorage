@@ -323,7 +323,7 @@ func (stream *StreamWriter) createExtent(dp *data.DataPartition) (extentId uint6
 	}
 	if err = p.ReadFromConn(connect, proto.ReadDeadlineTime); err != nil {
 		err = errors.Annotatef(err, "receive CreateExtent[%v] failed", p.GetUniqLogId(), dp.Hosts[0])
-		connect.Close()
+		forceClose = true
 		return
 	}
 	extentId = p.FileID
