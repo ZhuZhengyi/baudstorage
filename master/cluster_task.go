@@ -120,7 +120,6 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 		mp         *MetaPartition
 		t          *proto.AdminTask
 		tasks      []*proto.AdminTask
-		racks      []string
 		newHosts   []string
 		newPeers   []proto.Peer
 		removePeer proto.Peer
@@ -141,8 +140,7 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 		goto errDeal
 	}
 
-	racks = mp.getRacks(nodeAddr)
-	if newHosts, newPeers, err = c.getAvailMetaNodeHosts(racks[0], mp.PersistenceHosts, 1); err != nil {
+	if newHosts, newPeers, err = c.getAvailMetaNodeHosts( mp.PersistenceHosts, 1); err != nil {
 		goto errDeal
 	}
 	for _, mr := range mp.Replicas {

@@ -66,7 +66,7 @@ func (c *Cluster) GetMetaNodeMaxTotal() (maxTotal uint64) {
 	return
 }
 
-func (c *Cluster) getAvailMetaNodeHosts(excludeRack string, excludeHosts []string, replicaNum int) (newHosts []string, peers []proto.Peer, err error) {
+func (c *Cluster) getAvailMetaNodeHosts(excludeHosts []string, replicaNum int) (newHosts []string, peers []proto.Peer, err error) {
 	orderHosts := make([]string, 0)
 	newHosts = make([]string, 0)
 	peers = make([]proto.Peer, 0)
@@ -75,7 +75,7 @@ func (c *Cluster) getAvailMetaNodeHosts(excludeRack string, excludeHosts []strin
 	}
 
 	maxTotal := c.GetMetaNodeMaxTotal()
-	nodeTabs, availCarryCount := c.GetAvailCarryMetaNodeTab(maxTotal, excludeRack, excludeHosts)
+	nodeTabs, availCarryCount := c.GetAvailCarryMetaNodeTab(maxTotal, excludeHosts)
 	if len(nodeTabs) < replicaNum {
 		err = fmt.Errorf(GetAvailMetaNodeHostsErr+" err:%v ,ActiveNodeCount:%v  MatchNodeCount:%v  ",
 			NoHaveAnyMetaNodeToWrite, c.DataNodeCount(), len(nodeTabs))
@@ -100,13 +100,10 @@ func (c *Cluster) getAvailMetaNodeHosts(excludeRack string, excludeHosts []strin
 	return
 }
 
-func (c *Cluster) GetAvailCarryMetaNodeTab(maxTotal uint64, excludeRack string, excludeHosts []string) (nodeTabs NodeTabArrSorterByCarry, availCount int) {
+func (c *Cluster) GetAvailCarryMetaNodeTab(maxTotal uint64, excludeHosts []string) (nodeTabs NodeTabArrSorterByCarry, availCount int) {
 	nodeTabs = make(NodeTabArrSorterByCarry, 0)
 	c.metaNodes.Range(func(key, value interface{}) bool {
 		metaNode := value.(*MetaNode)
-		//if metaNode.RackName == excludeRack {
-		//	return true
-		//}
 		if contains(excludeHosts, metaNode.Addr) == true {
 			return true
 		}

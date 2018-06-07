@@ -298,8 +298,8 @@ func (m *Master) dataNodeOffline(w http.ResponseWriter, r *http.Request) {
 	}
 	m.cluster.dataNodeOffLine(node)
 	rstMsg = fmt.Sprintf("dataNodeOffline node [%v] has offline SUCCESS", offLineAddr)
-	io.WriteString(w, rstMsg)
 	log.LogWarn(rstMsg)
+	io.WriteString(w, rstMsg)
 	return
 errDeal:
 	logMsg := getReturnMessage("dataNodeOffline", r.RemoteAddr, err.Error(), http.StatusBadRequest)
