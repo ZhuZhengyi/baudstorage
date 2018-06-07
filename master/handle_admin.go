@@ -319,14 +319,14 @@ func (m *Master) dataNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
 		code = http.StatusBadRequest
 		goto errDeal
 	}
-
+	io.WriteString(w, fmt.Sprintf("%v", http.StatusOK))
 	if dataNode, err = m.cluster.getDataNode(tr.OperatorAddr); err != nil {
 		code = http.StatusInternalServerError
 		goto errDeal
 	}
 
 	m.cluster.dealDataNodeTaskResponse(dataNode.Addr, tr)
-	io.WriteString(w, fmt.Sprintf("%v", http.StatusOK))
+
 	return
 
 errDeal:
@@ -488,18 +488,17 @@ func (m *Master) metaNodeTaskResponse(w http.ResponseWriter, r *http.Request) {
 		goto errDeal
 	}
 
+	io.WriteString(w, fmt.Sprintf("%v", http.StatusOK))
+
 	if metaNode, err = m.cluster.getMetaNode(tr.OperatorAddr); err != nil {
 		code = http.StatusInternalServerError
 		goto errDeal
 	}
-
 	m.cluster.dealMetaNodeTaskResponse(metaNode.Addr, tr)
-
-	io.WriteString(w, fmt.Sprintf("%v", http.StatusOK))
 	return
 
 errDeal:
-	logMsg := getReturnMessage("dataNodeTaskResponse", r.RemoteAddr, err.Error(),
+	logMsg := getReturnMessage("metaNodeTaskResponse", r.RemoteAddr, err.Error(),
 		http.StatusBadRequest)
 	HandleError(logMsg, err, code, w)
 	return
