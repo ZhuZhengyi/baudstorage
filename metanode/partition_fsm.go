@@ -137,7 +137,6 @@ func (mp *metaPartition) ApplySnapshot(peers []raftproto.Peer,
 		if err != nil {
 			return
 		}
-		mp.config.Cursor++
 		snap := NewMetaItem(0, nil, nil)
 		if err = snap.UnmarshalBinary(data); err != nil {
 			return
@@ -147,6 +146,9 @@ func (mp *metaPartition) ApplySnapshot(peers []raftproto.Peer,
 			ino := NewInode(0, 0)
 			ino.UnmarshalKey(snap.K)
 			ino.UnmarshalValue(snap.V)
+			if mp.config.Cursor < ino.Inode {
+				mp.config.Cursor = ino.Inode
+			}
 			mp.createInode(ino)
 			log.LogDebugf("action[ApplySnapshot] create inode[%v].", ino)
 		case opCreateDentry:
