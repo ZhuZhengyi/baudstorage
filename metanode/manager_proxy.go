@@ -9,7 +9,7 @@ import (
 func (m *metaManager) serveProxy(conn net.Conn, mp MetaPartition,
 	p *Packet) (ok bool) {
 	var (
-		mConn      net.Conn
+		mConn      *net.TCPConn
 		leaderAddr string
 		err        error
 	)

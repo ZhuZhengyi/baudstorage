@@ -2,6 +2,7 @@ package metanode
 
 import (
 	"encoding/json"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,6 +35,19 @@ var (
 var (
 	ErrInodeOutOfRange = errors.New("inode ID out of range")
 )
+
+type sortPeers []proto.Peer
+
+func (sp sortPeers) Len() int {
+	return len(sp)
+}
+func (sp sortPeers) Less(i, j int) bool {
+	return sp[i].ID < sp[j].ID
+}
+
+func (sp sortPeers) Swap(i, j int) {
+	sp[i], sp[j] = sp[j], sp[i]
+}
 
 /* MetRangeConfig used by create metaPartition and serialize
 PartitionId: Identity for raftStore group,RaftStore nodes in same raftStore group must have same groupID.
@@ -85,6 +99,11 @@ func (c *MetaPartitionConfig) checkMeta() (err error) {
 		return
 	}
 	return
+}
+
+func (c *MetaPartitionConfig) sortPeers() {
+	sp := sortPeers(c.Peers)
+	sort.Sort(sp)
 }
 
 type OpInode interface {
@@ -340,6 +359,7 @@ func (mp *metaPartition) GetCursor() uint64 {
 }
 
 func (mp *metaPartition) StoreMeta() (err error) {
+	mp.config.sortPeers()
 	err = mp.storeMeta()
 	return
 }

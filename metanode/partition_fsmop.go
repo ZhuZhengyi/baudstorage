@@ -257,7 +257,6 @@ func (mp *metaPartition) confRemoveNode(req *proto.MetaPartitionOfflineRequest,
 		return
 	}
 	mp.config.Peers = append(mp.config.Peers[:peerIndex], mp.config.Peers[peerIndex+1:]...)
-
 	return
 }
 

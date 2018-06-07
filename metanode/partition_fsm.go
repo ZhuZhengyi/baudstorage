@@ -104,6 +104,7 @@ func (mp *metaPartition) ApplyMemberChange(confChange *raftproto.ConfChange, ind
 		return
 	}
 	if updated {
+		mp.config.sortPeers()
 		if err = mp.storeMeta(); err != nil {
 			log.LogErrorf("action[ApplyMemberChange] err[%v].", err)
 			return
