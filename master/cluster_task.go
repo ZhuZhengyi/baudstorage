@@ -140,7 +140,7 @@ func (c *Cluster) metaPartitionOffline(nsName, nodeAddr string, partitionID uint
 		goto errDeal
 	}
 
-	if newHosts, newPeers, err = c.getAvailMetaNodeHosts( mp.PersistenceHosts, 1); err != nil {
+	if newHosts, newPeers, err = c.getAvailMetaNodeHosts(mp.PersistenceHosts, 1); err != nil {
 		goto errDeal
 	}
 	for _, mr := range mp.Replicas {
