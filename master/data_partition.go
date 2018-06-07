@@ -303,8 +303,8 @@ func (partition *DataPartition) setToNormal() {
 }
 
 func (partition *DataPartition) isInPersistenceHosts(addr string) (ok bool) {
-	for _, addr := range partition.PersistenceHosts {
-		if addr == addr {
+	for _, host := range partition.PersistenceHosts {
+		if host == addr {
 			ok = true
 			break
 		}
