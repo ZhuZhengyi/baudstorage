@@ -14,6 +14,7 @@ func (m *Master) handleLeaderChange(leader uint64) {
 	Warn(m.clusterName, fmt.Sprintf("leader is changed to %v", m.leaderInfo.addr))
 	//Once switched to the master, the checkHeartbeat is executed
 	if m.id == leader {
+		m.cluster.idAlloc.restore()
 		m.cluster.checkDataNodeHeartbeat()
 		m.cluster.checkDataNodeHeartbeat()
 	}

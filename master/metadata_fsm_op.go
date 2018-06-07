@@ -19,9 +19,8 @@ const (
 	OpSyncAddMetaPartition    uint32 = 0x05
 	OpSyncUpdateDataPartition uint32 = 0x06
 	OpSyncUpdateMetaPartition uint32 = 0x07
-	OpSyncDeleteDataNode uint32 = 0x08
-	OpSyncDeleteMetaNode uint32 = 0x09
-
+	OpSyncDeleteDataNode      uint32 = 0x08
+	OpSyncDeleteMetaNode      uint32 = 0x09
 )
 
 const (
@@ -211,7 +210,7 @@ func (c *Cluster) handleApply(cmd *Metadata) (err error) {
 	case OpSyncAddDataNode:
 		c.applyAddDataNode(cmd)
 	case OpSyncAddMetaNode:
-		c.applyAddMetaNode(cmd)
+		err = c.applyAddMetaNode(cmd)
 	case OpSyncAddNamespace:
 		c.applyAddNamespace(cmd)
 	case OpSyncAddMetaPartition:
@@ -249,16 +248,23 @@ func (c *Cluster) applyAddDataNode(cmd *Metadata) {
 	}
 }
 
-func (c *Cluster) applyAddMetaNode(cmd *Metadata) {
+func (c *Cluster) applyAddMetaNode(cmd *Metadata) (err error) {
 	keys := strings.Split(cmd.K, KeySeparator)
-
+	var (
+		id uint64
+	)
 	if keys[1] == MetaNodeAcronym {
 		addr := keys[3]
-		if _, err := c.getMetaNode(addr); err != nil {
+		if _, err = c.getMetaNode(addr); err != nil {
 			metaNode := NewMetaNode(addr, c.Name)
+			if id, err = strconv.ParseUint(keys[2], 10, 64); err != nil {
+				return
+			}
+			metaNode.ID = id
 			c.metaNodes.Store(metaNode.Addr, metaNode)
 		}
 	}
+	return nil
 }
 
 func (c *Cluster) applyAddNamespace(cmd *Metadata) {
