@@ -87,7 +87,7 @@ func (s *MetaItem) UnmarshalBinary(raw []byte) (err error) {
 	return
 }
 
-func NewMetaPartitionSnapshot(op uint32, key, value []byte) *MetaItem {
+func NewMetaItem(op uint32, key, value []byte) *MetaItem {
 	return &MetaItem{
 		Op: op,
 		K:  key,
@@ -106,7 +106,7 @@ type ItemIterator struct {
 	total      int
 }
 
-func NewSnapshotIterator(applyID uint64, ino, den *btree.BTree) *ItemIterator {
+func NewMetaItemIterator(applyID uint64, ino, den *btree.BTree) *ItemIterator {
 	si := new(ItemIterator)
 	si.applyID = applyID
 	si.inodeTree = ino
@@ -140,7 +140,7 @@ func (si *ItemIterator) Next() (data []byte, err error) {
 				return true
 			}
 			si.curItem = ino
-			snap := NewMetaPartitionSnapshot(opCreateInode, ino.MarshalKey(),
+			snap := NewMetaItem(opCreateInode, ino.MarshalKey(),
 				ino.MarshalValue())
 			data, err = snap.MarshalBinary()
 			si.cur++
@@ -159,7 +159,7 @@ func (si *ItemIterator) Next() (data []byte, err error) {
 			return true
 		}
 		si.curItem = dentry
-		snap := NewMetaPartitionSnapshot(opCreateDentry, dentry.MarshalKey(),
+		snap := NewMetaItem(opCreateDentry, dentry.MarshalKey(),
 			dentry.MarshalValue())
 		data, err = snap.MarshalBinary()
 		si.cur++

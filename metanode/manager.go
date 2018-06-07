@@ -185,15 +185,16 @@ func (m *metaManager) loadPartitions() (err error) {
 					RaftStore: m.raftStore,
 					RootDir:   path.Join(m.rootDir, fileName),
 				}
-				partitionConfig.BeforeStart = func() {
+				partitionConfig.AfterStop = func() {
 					m.detachPartition(id)
 				}
 				partition := NewMetaPartition(partitionConfig)
-				if err = m.attachPartition(id, partition); err != nil {
-					log.LogErrorf("start partition %d: %s", id, err.Error())
-				}
+				err = m.attachPartition(id, partition)
 				wg.Done()
-				log.LogDebugf("load partition id=%d success.", id)
+				if err != nil {
+					log.LogErrorf("load partition id=%d failed: %s.",
+						id, err.Error())
+				}
 			}(fileInfo.Name())
 		}
 	}

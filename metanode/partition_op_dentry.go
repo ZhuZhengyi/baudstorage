@@ -13,7 +13,7 @@ func (mp *metaPartition) CreateDentry(req *CreateDentryReq, p *Packet) (err erro
 		Inode:    req.Inode,
 		Type:     req.Mode,
 	}
-	val, err := json.Marshal(dentry)
+	val, err := dentry.Marshal()
 	if err != nil {
 		return
 	}
@@ -30,7 +30,7 @@ func (mp *metaPartition) DeleteDentry(req *DeleteDentryReq, p *Packet) (err erro
 		ParentId: req.ParentID,
 		Name:     req.Name,
 	}
-	val, err := json.Marshal(dentry)
+	val, err := dentry.Marshal()
 	if err != nil {
 		p.ResultCode = proto.OpErr
 		return
