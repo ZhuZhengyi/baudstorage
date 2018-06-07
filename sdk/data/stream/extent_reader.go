@@ -17,14 +17,14 @@ type ExtentReader struct {
 	endInodeOffset   int
 	dp               *data.DataPartition
 	key              proto.ExtentKey
-	wrapper          *data.DataPartitionWrapper
+	w          *data.Wrapper
 	sync.Mutex
 }
 
 func NewExtentReader(inode uint64, inInodeOffset int, key proto.ExtentKey,
-	wrapper *data.DataPartitionWrapper) (reader *ExtentReader, err error) {
+	w *data.Wrapper) (reader *ExtentReader, err error) {
 	reader = new(ExtentReader)
-	reader.dp, err = wrapper.GetDataPartition(key.PartitionId)
+	reader.dp, err = w.GetDataPartition(key.PartitionId)
 	if err != nil {
 		return
 	}
@@ -32,7 +32,7 @@ func NewExtentReader(inode uint64, inInodeOffset int, key proto.ExtentKey,
 	reader.key = key
 	reader.startInodeOffset = inInodeOffset
 	reader.endInodeOffset = reader.startInodeOffset + int(key.Size)
-	reader.wrapper = wrapper
+	reader.w = w
 
 	return
 }
@@ -74,7 +74,7 @@ forLoop:
 
 func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte) (actualReadSize int, err error) {
 	expectReadSize := int(p.Size)
-	conn, err := reader.wrapper.GetConnect(host)
+	conn, err := reader.w.GetConnect(host)
 	log.LogReadf("ActionReader expect reader[%v] host[%v] offset[%v] size[%v]", reader.toString(), host, p.Offset, expectReadSize)
 	if err != nil {
 		return 0, errors.Annotatef(err, reader.toString()+
@@ -85,9 +85,9 @@ func (reader *ExtentReader) readDataFromHost(p *Packet, host string, data []byte
 	defer func() {
 		if err != nil {
 			log.LogError(err.Error())
-			reader.wrapper.PutConnect(conn, true)
+			reader.w.PutConnect(conn, true)
 		} else {
-			reader.wrapper.PutConnect(conn, false)
+			reader.w.PutConnect(conn, false)
 		}
 	}()
 	if err = p.WriteToConn(conn); err != nil {
