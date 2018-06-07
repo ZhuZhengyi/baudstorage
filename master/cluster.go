@@ -331,8 +331,8 @@ func (c *Cluster) dataNodeOffLine(dataNode *DataNode) {
 		}
 	}
 	if err := c.syncDeleteDataNode(dataNode); err != nil {
-		msg = fmt.Sprintf("action[dataNodeOffLine], Node[%v] OffLine failed,err[%v]", dataNode.Addr,err)
-		Warn(c.Name,msg)
+		msg = fmt.Sprintf("action[dataNodeOffLine], Node[%v] OffLine failed,err[%v]", dataNode.Addr, err)
+		Warn(c.Name, msg)
 		return
 	}
 	c.dataNodes.Delete(dataNode.Addr)
@@ -412,8 +412,8 @@ func (c *Cluster) metaNodeOffLine(metaNode *MetaNode) {
 		}
 	}
 	if err := c.syncDeleteMetaNode(metaNode); err != nil {
-		msg = fmt.Sprintf("action[metaNodeOffLine], Node[%v] OffLine failed,err[%v]", metaNode.Addr,err)
-		Warn(c.Name,msg)
+		msg = fmt.Sprintf("action[metaNodeOffLine], Node[%v] OffLine failed,err[%v]", metaNode.Addr, err)
+		Warn(c.Name, msg)
 		return
 	}
 	c.metaNodes.Delete(metaNode.Addr)
