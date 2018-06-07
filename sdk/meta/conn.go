@@ -50,9 +50,9 @@ func (mw *MetaWrapper) getConn(mp *MetaPartition) (*MetaConn, error) {
 
 func (mw *MetaWrapper) putConn(mc *MetaConn, err error) {
 	if err != nil {
-		mc.conn.Close()
+		mw.conns.Put(mc.conn, true)
 	} else {
-		mw.conns.Put(mc.conn)
+		mw.conns.Put(mc.conn, false)
 	}
 }
 

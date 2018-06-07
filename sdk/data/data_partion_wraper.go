@@ -186,6 +186,6 @@ func (wrapper *DataPartitionWrapper) GetConnect(addr string) (*net.TCPConn, erro
 	return wrapper.conns.Get(addr)
 }
 
-func (wrapper *DataPartitionWrapper) PutConnect(conn *net.TCPConn) {
-	wrapper.conns.Put(conn)
+func (wrapper *DataPartitionWrapper) PutConnect(conn *net.TCPConn, forceClose bool) {
+	wrapper.conns.Put(conn, forceClose)
 }

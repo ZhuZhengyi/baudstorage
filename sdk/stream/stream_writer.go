@@ -302,17 +302,23 @@ func (stream *StreamWriter) allocateNewExtentWriter() (err error) {
 
 func (stream *StreamWriter) createExtent(dp *data.DataPartition) (extentId uint64, err error) {
 	var (
-		connect *net.TCPConn
+		connect    *net.TCPConn
+		forceClose bool
 	)
 	connect, err = stream.wrapper.GetConnect(dp.Hosts[0])
 	if err != nil {
 		err = errors.Annotatef(err, " get connect from datapartionHosts[%v]", dp.Hosts[0])
 		return
 	}
+
+	defer func() {
+		stream.wrapper.PutConnect(connect, forceClose)
+	}()
+
 	p := NewCreateExtentPacket(dp)
 	if err = p.WriteToConn(connect); err != nil {
 		err = errors.Annotatef(err, "send CreateExtent[%v] to datapartionHosts[%v]", p.GetUniqLogId(), dp.Hosts[0])
-		connect.Close()
+		forceClose = true
 		return
 	}
 	if err = p.ReadFromConn(connect, proto.ReadDeadlineTime); err != nil {
@@ -324,11 +330,10 @@ func (stream *StreamWriter) createExtent(dp *data.DataPartition) (extentId uint6
 	if p.FileID <= 0 {
 		err = errors.Annotatef(err, "illegal extentId[%v] from [%v] response",
 			extentId, dp.Hosts[0])
-		connect.Close()
+		forceClose = true
 		return
 
 	}
-	stream.wrapper.PutConnect(connect)
 
 	return extentId, nil
 }
