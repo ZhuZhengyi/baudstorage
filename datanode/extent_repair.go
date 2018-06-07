@@ -89,11 +89,10 @@ func (dp *DataPartition) getAllMemberFileMetas() (allMembers []*MembersFileMetas
 	}
 	allMembers[0] = mf
 	p := NewGetAllWaterMarker(dp.partitionId, proto.ExtentStoreMode)
-	server:=GetServer()
 	for i := 1; i < len(dp.replicaHosts); i++ {
 		var conn *net.TCPConn
 		target := dp.replicaHosts[i]
-		conn, err = server.GetNextConn(target)
+		conn, err = gConnPool.Get(target)
 		if err != nil {
 			err = errors.Annotatef(err, "getAllMemberFileMetas  dataPartition[%v] get host[%v] connect", dp.partitionId, target)
 			return
