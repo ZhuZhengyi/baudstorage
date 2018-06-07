@@ -12,7 +12,7 @@ import (
 )
 
 type MetaConn struct {
-	conn net.Conn
+	conn *net.TCPConn
 	id   uint64 //PartitionID
 	addr string //MetaNode addr
 }
