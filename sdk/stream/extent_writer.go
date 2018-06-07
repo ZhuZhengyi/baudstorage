@@ -225,9 +225,11 @@ func (writer *ExtentWriter) isAllFlushed() bool {
 
 func (writer *ExtentWriter) toString() string {
 	var currPkgMesg string
-	if writer.getPacket() != nil {
+	writer.Lock()
+	if writer.currentPacket != nil {
 		currPkgMesg = writer.currentPacket.GetUniqLogId()
 	}
+	writer.Unlock()
 	return fmt.Sprintf("extent{inode=%v dp=%v extentId=%v retryCnt=%v handleCh[%v] requestQueueLen[%v] currentPkg=%v}",
 		writer.inode, writer.dp.PartitionID, writer.extentId, writer.recoverCnt,
 		len(writer.handleCh), writer.getQueueListLen(), currPkgMesg)
@@ -298,15 +300,15 @@ func (writer *ExtentWriter) processReply(e *list.Element, request, reply *Packet
 	if reply.ResultCode != proto.OpOk {
 		writer.connect.Close()
 		return errors.Annotatef(fmt.Errorf("processReply recive [%v] error [%v] request[%v]", reply.GetUniqLogId(),
-			string(reply.Data[:reply.Size]),request.GetUniqLogId()), "writer[%v]", writer.toString())
+			string(reply.Data[:reply.Size]), request.GetUniqLogId()), "writer[%v]", writer.toString())
 	}
 	writer.addByteAck(uint64(request.Size))
 	writer.removeRquest(e)
-	orgReplySize:=reply.Size
-	reply.Size=request.Size
+	orgReplySize := reply.Size
+	reply.Size = request.Size
 	log.LogDebug(fmt.Sprintf("ActionProcessReply[%v] is recived Writer [%v]",
-					reply.GetUniqLogId(),writer.toString()))
-	reply.Size=orgReplySize
+		reply.GetUniqLogId(), writer.toString()))
+	reply.Size = orgReplySize
 
 	return nil
 }

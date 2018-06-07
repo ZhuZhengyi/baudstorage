@@ -213,9 +213,9 @@ func (client *ExtentClient) delete(dp *data.DataPartition, extentId uint64) (err
 	}
 	defer func() {
 		if err == nil {
-			client.wrapper.PutConnect(connect)
+			client.wrapper.PutConnect(connect, false)
 		} else {
-			connect.Close()
+			client.wrapper.PutConnect(connect, true)
 		}
 	}()
 	p := NewDeleteExtentPacket(dp, extentId)
