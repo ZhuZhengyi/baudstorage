@@ -172,9 +172,20 @@ func (mp *metaPartition) HandleFatalEvent(err *raft.FatalError) {
 func (mp *metaPartition) HandleLeaderChange(leader uint64) {
 	mp.leaderID = leader
 	if mp.config.Start == 0 && mp.config.Cursor == 0 {
-		id, _ := mp.nextInodeID()
-		if mp.createInode(NewInode(id, proto.ModeDir)) != proto.OpOk {
-			log.LogErrorf("[HandleLeaderChange]: create root dir inode failed!")
+		id, err := mp.nextInodeID()
+		if err != nil {
+			log.LogFatalf("[HandleLeaderChange] init root inode id: %s.", err.Error())
+		}
+		ino := NewInode(id, proto.ModeDir)
+		data, err := ino.Marshal()
+		if err != nil {
+			log.LogFatalf("[HandleLeaderChange] init root inode marshal: %s.",
+				err.Error())
+		}
+		resp, _ := mp.Put(opCreateInode, data)
+		if resp.(uint8) != proto.OpOk {
+			log.LogFatalf("[HandleLeaderChange] init root raft sync: response"+
+				" status =%v.", resp)
 		}
 	}
 }
