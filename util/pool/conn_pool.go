@@ -4,6 +4,7 @@ import (
 	"net"
 	"sync"
 	"time"
+	"strings"
 )
 
 type ConnPool struct {
@@ -15,7 +16,7 @@ func NewConnPool() (connP *ConnPool) {
 	return &ConnPool{pools: make(map[string]*ChannelPool)}
 }
 
-func (connP *ConnPool) Get(targetAddr string) (c net.Conn, err error) {
+func (connP *ConnPool) Get(targetAddr string) (c *net.TCPConn, err error) {
 	var obj interface{}
 	connP.Lock()
 	pool, ok := connP.pools[targetAddr]
@@ -44,7 +45,7 @@ func (connP *ConnPool) Get(targetAddr string) (c net.Conn, err error) {
 		pool, err = NewChannelPool(poolConfig)
 		if err != nil {
 			conn, err := factoryFunc(targetAddr)
-			return conn.(net.Conn), err
+			return conn.(*net.TCPConn), err
 		}
 		connP.Lock()
 		connP.pools[targetAddr] = pool
@@ -53,17 +54,21 @@ func (connP *ConnPool) Get(targetAddr string) (c net.Conn, err error) {
 
 	if obj, err = pool.Get(); err != nil {
 		conn, err := factoryFunc(targetAddr)
-		return conn.(net.Conn), err
+		return conn.(*net.TCPConn), err
 	}
-	c = obj.(net.Conn)
+	c = obj.(*net.TCPConn)
 
 	return
 }
 
-func (connP *ConnPool) Put(c net.Conn) {
+func (connP *ConnPool) Put(c *net.TCPConn) {
+	if c==nil {
+		return
+	}
 	addr := c.RemoteAddr().String()
+	arr:=strings.Split(addr,":")
 	connP.Lock()
-	pool, ok := connP.pools[addr]
+	pool, ok := connP.pools[arr[0]]
 	connP.Unlock()
 	if !ok {
 		c.Close()
