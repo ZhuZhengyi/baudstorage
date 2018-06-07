@@ -294,7 +294,7 @@ func (s *DataNode) statsFlow(pkg *Packet, flag bool) {
 }
 
 func (s *DataNode) GetNextConn(nextAddr string) (conn *net.TCPConn, err error) {
-	return ConnPool.Get(nextAddr)
+	return s.connPool.Get(nextAddr)
 }
 
 func (s *DataNode) CleanConn(conn *net.TCPConn, isForceClose bool) {
@@ -305,5 +305,5 @@ func (s *DataNode) CleanConn(conn *net.TCPConn, isForceClose bool) {
 		conn.Close()
 		return
 	}
-	ConnPool.Put(conn)
+	s.connPool.Put(conn)
 }

@@ -32,6 +32,7 @@ var (
 	LocalIP         string
 	MasterAddrs     []string
 	MasterAddrIndex uint32
+	server *DataNode
 )
 
 const (
@@ -260,8 +261,14 @@ exitDeal:
 }
 
 func NewServer() *DataNode {
-	return &DataNode{}
+	server=&DataNode{}
+	return server
 }
+
+func GetServer() *DataNode{
+	return server
+}
+
 
 func (s *DataNode) AddCompactTask(t *CompactTask) (err error) {
 	dp := s.space.getDataPartition(t.partitionId)

@@ -89,30 +89,31 @@ func (dp *DataPartition) getAllMemberFileMetas() (allMembers []*MembersFileMetas
 	}
 	allMembers[0] = mf
 	p := NewGetAllWaterMarker(dp.partitionId, proto.ExtentStoreMode)
+	server:=GetServer()
 	for i := 1; i < len(dp.replicaHosts); i++ {
-		var conn net.Conn
+		var conn *net.TCPConn
 		target := dp.replicaHosts[i]
-		conn, err = ConnPool.Get(target)
+		conn, err = server.GetNextConn(target)
 		if err != nil {
 			err = errors.Annotatef(err, "getAllMemberFileMetas  dataPartition[%v] get host[%v] connect", dp.partitionId, target)
 			return
 		}
 		err = p.WriteToConn(conn)
 		if err != nil {
-			conn.Close()
+			server.CleanConn(conn,ForceCloseConnect)
 			err = errors.Annotatef(err, "getAllMemberFileMetas dataPartition[%v] write to host[%v]", dp.partitionId, target)
 			return
 		}
 		err = p.ReadFromConn(conn, proto.ReadDeadlineTime)
 		if err != nil {
-			conn.Close()
+			server.CleanConn(conn,ForceCloseConnect)
 			err = errors.Annotatef(err, "getAllMemberFileMetas dataPartition[%v] read from host[%v]", dp.partitionId, target)
 			return
 		}
 		mf := NewMembersFiles()
 		err = json.Unmarshal(p.Data[:p.Size], mf)
 		if err != nil {
-			ConnPool.Put(conn)
+			server.CleanConn(conn,ForceCloseConnect)
 			err = errors.Annotatef(err, "getAllMemberFileMetas json unmarsh [%v]", dp.partitionId, string(p.Data[:p.Size]))
 			return
 		}
@@ -120,6 +121,7 @@ func (dp *DataPartition) getAllMemberFileMetas() (allMembers []*MembersFileMetas
 			mf.extents[fi.FileIdId] = fi
 		}
 		allMembers[i] = mf
+		server.CleanConn(conn,NOCloseConnect)
 	}
 	return
 }
