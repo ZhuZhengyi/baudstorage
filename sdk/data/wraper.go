@@ -129,7 +129,7 @@ func (w *Wrapper) updateDataPartition(partitions []*DataPartition) {
 
 	// If the view received from master cannot guarentee the minimum number
 	// of volume partitions, it is probably due to a **temporary** network problem
-	// between master and datanode. So do not update the vol group view for
+	// between master and datanode. So do not update the dp group view for
 	// now, and use the old information.
 	if len(rwPartitionGroups) < MinWritableDataPartitionNum {
 		log.LogWarnf("RW Partitions(%v) Minimum(%v)", len(rwPartitionGroups), MinWritableDataPartitionNum)
