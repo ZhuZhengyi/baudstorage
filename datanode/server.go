@@ -32,7 +32,6 @@ var (
 	LocalIP         string
 	MasterAddrs     []string
 	MasterAddrIndex uint32
-	ConnPool        = pool.NewConnPool()
 )
 
 const (
@@ -62,6 +61,7 @@ type DataNode struct {
 	tcpListener    net.Listener
 	state          uint32
 	wg             sync.WaitGroup
+	connPool        *pool.ConnPool
 }
 
 func (s *DataNode) Start(cfg *config.Config) (err error) {
@@ -96,6 +96,7 @@ func (s *DataNode) Sync() {
 }
 
 func (s *DataNode) onStart(cfg *config.Config) (err error) {
+	s.connPool=pool.NewConnPool()
 	if err = s.LoadVol(cfg); err != nil {
 		return
 	}

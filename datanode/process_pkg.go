@@ -293,28 +293,14 @@ func (s *DataNode) statsFlow(pkg *Packet, flag bool) {
 
 }
 
-func (s *DataNode) GetNextConn(nextAddr string) (conn net.Conn, err error) {
+func (s *DataNode) GetNextConn(nextAddr string) (conn *net.TCPConn, err error) {
 	return ConnPool.Get(nextAddr)
 }
 
-func (s *DataNode) CleanConn(conn net.Conn, isForceClose bool) {
-
-	defer func() {
-		if r := recover(); r != nil {
-			log.LogErrorf("action[DataNode.CleanConn] err[%v].", conn)
-			panic(r)
-		}
-	}()
-
+func (s *DataNode) CleanConn(conn *net.TCPConn, isForceClose bool) {
 	if conn == nil {
 		return
 	}
-	d := (*struct {
-		itab uintptr
-		data uintptr
-	})(unsafe.Pointer(&conn))
-	log.LogDebugf("action[DataNode.CleanConn] unsafePointer[%v].", d)
-
 	if isForceClose {
 		conn.Close()
 		return

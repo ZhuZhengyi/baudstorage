@@ -20,7 +20,7 @@ var (
 type Packet struct {
 	proto.Packet
 	goals         uint8
-	nextConn      net.Conn
+	nextConn      *net.TCPConn
 	nextAddr      string
 	addrs         []string
 	isReturn      bool
