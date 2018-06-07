@@ -9,7 +9,6 @@ import (
 	"github.com/tiglabs/baudstorage/util/log"
 	"hash/crc32"
 	"io"
-	"net"
 	"time"
 )
 
