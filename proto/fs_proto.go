@@ -14,101 +14,103 @@ const (
 )
 
 type InodeInfo struct {
-	Inode      uint64    `json:"inode"`
+	Inode      uint64    `json:"ino"`
 	Mode       uint32    `json:"mode"`
-	Size       uint64    `json:"size"`
-	ModifyTime time.Time `json:"modify_time"`
-	CreateTime time.Time `json:"create_time"`
-	AccessTime time.Time `json:"access_time"`
+	Size       uint64    `json:"sz"`
+	Generation uint64    `json:"gen"`
+	ModifyTime time.Time `json:"mt"`
+	CreateTime time.Time `json:"ct"`
+	AccessTime time.Time `json:"at"`
 }
 
 type Dentry struct {
 	Name  string `json:"name"`
-	Inode uint64 `json:"inode"`
+	Inode uint64 `json:"ino"`
 	Type  uint32 `json:"type"`
 }
 
 type CreateInodeRequest struct {
-	Namespace   string `json:"namespace"`
-	PartitionID uint64 `json:"partitionID"`
+	Namespace   string `json:"ns"`
+	PartitionID uint64 `json:"pid"`
 	Mode        uint32 `json:"mode"`
 }
 
 type CreateInodeResponse struct {
-	Info *InodeInfo
+	Info *InodeInfo `json:"info"`
 }
 
 type DeleteInodeRequest struct {
-	Namespace   string `json:"namespace"`
-	PartitionID uint64 `json:"partitionID"`
-	Inode       uint64 `json:"inode"`
+	Namespace   string `json:"ns"`
+	PartitionID uint64 `json:"pid"`
+	Inode       uint64 `json:"ino"`
 }
 
 type DeleteInodeResponse struct {
-	Extents []ExtentKey
+	Extents []ExtentKey `json:"ek"`
 }
 
 type CreateDentryRequest struct {
-	Namespace   string `json:"namespace"`
-	PartitionID uint64 `json:"partitionID"`
-	ParentID    uint64 `json:"parentID"`
-	Inode       uint64 `json:"inode"`
+	Namespace   string `json:"ns"`
+	PartitionID uint64 `json:"pid"`
+	ParentID    uint64 `json:"pino"`
+	Inode       uint64 `json:"ino"`
 	Name        string `json:"name"`
 	Mode        uint32 `json:"mode"`
 }
 
 type DeleteDentryRequest struct {
-	Namespace   string `json:"namespace"`
-	PartitionID uint64 `json:"partitionID"`
-	ParentID    uint64 `json:"parentID"`
+	Namespace   string `json:"ns"`
+	PartitionID uint64 `json:"pid"`
+	ParentID    uint64 `json:"pino"`
 	Name        string `json:"name"`
 }
 
 type DeleteDentryResponse struct {
-	Inode uint64 `json:"inode"`
+	Inode uint64 `json:"ino"`
 }
 
 type OpenRequest struct {
-	Namespace   string `json:"namespace"`
-	PartitionID uint64 `json:"partitionID"`
-	Inode       uint64 `json:"inode"`
+	Namespace   string `json:"ns"`
+	PartitionID uint64 `json:"pid"`
+	Inode       uint64 `json:"ino"`
 }
 
 type LookupRequest struct {
-	Namespace   string `json:"namespace"`
-	PartitionID uint64 `json:"partitionID"`
-	ParentID    uint64 `json:"parentID"`
+	Namespace   string `json:"ns"`
+	PartitionID uint64 `json:"pid"`
+	ParentID    uint64 `json:"pino"`
 	Name        string `json:"name"`
 }
 
 type LookupResponse struct {
-	Inode uint64 `json:"inode"`
+	Inode uint64 `json:"ino"`
 	Mode  uint32 `json:"mode"`
 }
 
 type InodeGetRequest struct {
-	Namespace   string `json:"namespace"`
-	PartitionID uint64 `json:"partitionID"`
-	Inode       uint64 `json:"inode"`
+	Namespace   string `json:"ns"`
+	PartitionID uint64 `json:"pid"`
+	Inode       uint64 `json:"ino"`
 }
 
 type InodeGetResponse struct {
-	Info *InodeInfo
+	Info *InodeInfo `json:"info"`
 }
 
 type BatchInodeGetRequest struct {
-	Namespace string   `json:"namespace"`
-	Inode     []uint64 `json:"inodes"`
+	Namespace   string   `json:"ns"`
+	PartitionID uint64   `json:"pid"`
+	Inodes      []uint64 `json:"inos"`
 }
 
 type BatchInodeGetResponse struct {
-	Info []*InodeInfo `json:"infos"`
+	Infos []*InodeInfo `json:"infos"`
 }
 
 type ReadDirRequest struct {
-	Namespace   string `json:"namespace"`
-	PartitionID uint64 `json:"partitionID"`
-	ParentID    uint64 `json:"parentID"`
+	Namespace   string `json:"ns"`
+	PartitionID uint64 `json:"pid"`
+	ParentID    uint64 `json:"pino"`
 }
 
 type ReadDirResponse struct {
@@ -116,18 +118,18 @@ type ReadDirResponse struct {
 }
 
 type AppendExtentKeyRequest struct {
-	Namespace   string `json:"namespace"`
-	PartitionID uint64 `json:"partitionID"`
-	Inode       uint64 `json:"inode"`
-	Extent      ExtentKey
+	Namespace   string    `json:"ns"`
+	PartitionID uint64    `json:"pid"`
+	Inode       uint64    `json:"ino"`
+	Extent      ExtentKey `json:"ek"`
 }
 
 type GetExtentsRequest struct {
-	Namespace   string `json:"namespace"`
-	PartitionID uint64 `json:"partitionID"`
-	Inode       uint64 `json:"inode"`
+	Namespace   string `json:"ns"`
+	PartitionID uint64 `json:"pid"`
+	Inode       uint64 `json:"ino"`
 }
 
 type GetExtentsResponse struct {
-	Extents []ExtentKey
+	Extents []ExtentKey `json:"eks"`
 }
